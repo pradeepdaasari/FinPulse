@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { DailyExpense, DailyExpenseCreate, ExpenseFilter, MonthComparison, SpendingSummary, TagSummary } from '../models/daily-expense.model';
+import { DailyExpense, DailyExpenseCreate, ExpenseFilter, MonthComparison, MultiMonthComparison, SpendingSummary, TagSummary } from '../models/daily-expense.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -56,6 +56,13 @@ export class DailyExpenseService {
     if (year) params['year'] = year.toString();
     if (month) params['month'] = month.toString();
     return this.http.get<MonthComparison>(`${this.baseUrl}/comparison`, { params });
+  }
+
+  getMultiComparison(year?: number, month?: number, months: number = 1): Observable<MultiMonthComparison> {
+    const params: Record<string, string> = { months: months.toString() };
+    if (year) params['year'] = year.toString();
+    if (month) params['month'] = month.toString();
+    return this.http.get<MultiMonthComparison>(`${this.baseUrl}/multi-comparison`, { params });
   }
 
   exportCsv(year: number, month: number): void {

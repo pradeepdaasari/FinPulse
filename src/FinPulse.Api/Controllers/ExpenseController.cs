@@ -281,6 +281,65 @@ public class ExpenseController : ControllerBase
         return Ok(summary);
     }
 
+    [HttpGet("multi-comparison")]
+    public async Task<ActionResult> GetMultiComparison([FromQuery] int? year, [FromQuery] int? month, [FromQuery] int months = 1)
+    {
+        months = Math.Clamp(months, 1, 12);
+        var endYear = year ?? DateTime.UtcNow.Year;
+        var endMonth = month ?? DateTime.UtcNow.Month;
+
+        var endDate = new DateTime(endYear, endMonth, 1).AddMonths(1);
+        var startDate = new DateTime(endYear, endMonth, 1).AddMonths(-(months - 1));
+
+        var expenses = await _db.DailyExpenses
+            .Include(e => e.Category)
+            .Where(e => e.UserId == UserId && e.TransactionType == TransactionType.Expense
+                && e.Date >= startDate && e.Date < endDate)
+            .ToListAsync();
+
+        var monthlyTotals = new List<object>();
+        var allCategoryIds = expenses.Select(e => e.CategoryId).Distinct().ToList();
+        var categoryInfo = expenses.GroupBy(e => e.CategoryId)
+            .ToDictionary(g => g.Key, g => g.First().Category);
+
+        for (int i = 0; i < months; i++)
+        {
+            var mStart = startDate.AddMonths(i);
+            var mEnd = mStart.AddMonths(1);
+            var monthExpenses = expenses.Where(e => e.Date >= mStart && e.Date < mEnd);
+            monthlyTotals.Add(new
+            {
+                Year = mStart.Year,
+                Month = mStart.Month,
+                Label = mStart.ToString("MMM yyyy"),
+                Total = monthExpenses.Sum(e => e.Amount)
+            });
+        }
+
+        var categories = allCategoryIds.Select(catId =>
+        {
+            var cat = categoryInfo.GetValueOrDefault(catId);
+            var monthlyAmounts = new List<object>();
+            for (int i = 0; i < months; i++)
+            {
+                var mStart = startDate.AddMonths(i);
+                var mEnd = mStart.AddMonths(1);
+                var amount = expenses.Where(e => e.CategoryId == catId && e.Date >= mStart && e.Date < mEnd).Sum(e => e.Amount);
+                monthlyAmounts.Add(new { Year = mStart.Year, Month = mStart.Month, Amount = amount });
+            }
+            return new
+            {
+                CategoryId = catId,
+                CategoryName = cat?.Name ?? "Unknown",
+                CategoryIcon = cat?.Icon,
+                MonthlyAmounts = monthlyAmounts,
+                Total = expenses.Where(e => e.CategoryId == catId).Sum(e => e.Amount)
+            };
+        }).OrderByDescending(c => c.Total).ToList();
+
+        return Ok(new { Months = monthlyTotals, Categories = categories });
+    }
+
     [HttpGet("comparison")]
     public async Task<ActionResult> GetComparison([FromQuery] int? year, [FromQuery] int? month)
     {
