@@ -14,6 +14,7 @@ import { PersonalLoan } from '../../core/models/personal-loan.model';
 import { CreditCard } from '../../core/models/credit-card.model';
 
 interface DebtSlider {
+  key: string;
   debtId: string;
   debtName: string;
   type: string;
@@ -33,7 +34,7 @@ interface DebtSlider {
       <mat-spinner></mat-spinner>
     } @else {
       <div class="sliders-container">
-        @for (debt of debts(); track debt.debtId) {
+        @for (debt of debts(); track debt.key) {
           <mat-card class="slider-card">
             <mat-card-content>
               <div class="slider-header">
@@ -163,7 +164,7 @@ export class WhatIfComponent implements OnInit {
     this.loanService.getAll().subscribe({
       next: (loans) => {
         const items = loans.map(l => ({
-          debtId: l.id, debtName: l.lenderName, type: 'Loan',
+          key: `Loan:${l.id}`, debtId: l.id, debtName: l.lenderName, type: 'Loan',
           balance: l.currentBalance, extraAmount: 0
         }));
         this.debts.set([...this.debts(), ...items]);
@@ -173,7 +174,7 @@ export class WhatIfComponent implements OnInit {
     this.cardService.getAll().subscribe({
       next: (cards) => {
         const items = cards.map(c => ({
-          debtId: c.id, debtName: c.cardName, type: 'CreditCard',
+          key: `CreditCard:${c.id}`, debtId: c.id, debtName: c.cardName, type: 'CreditCard',
           balance: c.currentBalance, extraAmount: 0
         }));
         this.debts.set([...this.debts(), ...items]);
@@ -185,7 +186,7 @@ export class WhatIfComponent implements OnInit {
 
   onSliderChange(debt: DebtSlider, value: number): void {
     const updated = this.debts().map(d =>
-      d.debtId === debt.debtId ? { ...d, extraAmount: value } : d
+      d.key === debt.key ? { ...d, extraAmount: value } : d
     );
     this.debts.set(updated);
     this.changeSubject.next();
