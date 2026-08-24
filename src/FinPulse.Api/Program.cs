@@ -5,9 +5,18 @@ using FinPulse.Core.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add EF Core with SQLite
-builder.Services.AddDbContext<FinPulseDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Add EF Core — SQL Server in production, SQLite in development
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddDbContext<FinPulseDbContext>(options =>
+        options.UseSqlite(connectionString));
+}
+else
+{
+    builder.Services.AddDbContext<FinPulseDbContext>(options =>
+        options.UseSqlServer(connectionString));
+}
 
 // Add Microsoft Identity Web authentication
 // TODO: Uncomment when Entra ID app registrations are configured
@@ -38,13 +47,14 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Seed sample data in development
-if (app.Environment.IsDevelopment())
+// Ensure database exists
+using (var scope = app.Services.CreateScope())
 {
-    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<FinPulseDbContext>();
     db.Database.EnsureCreated();
-    SeedData.Initialize(db);
+
+    if (app.Environment.IsDevelopment())
+        SeedData.Initialize(db);
 }
 
 // Configure the HTTP request pipeline.
@@ -63,6 +73,8 @@ if (!app.Environment.IsDevelopment())
 // app.UseAuthentication();
 // app.UseAuthorization();
 
+app.UseStaticFiles();
 app.MapControllers();
+app.MapFallbackToFile("index.html");
 
 app.Run();
