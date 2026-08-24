@@ -16,7 +16,7 @@ import { TrendData } from '../../core/models/dashboard.model';
       <mat-card-header>
         <mat-card-title>
           <div class="card-title-row">
-            <span>Debt Trend</span>
+            <span class="title-with-icon"><mat-icon class="card-title-icon">show_chart</mat-icon> Debt Trend</span>
             @if (trendData()) {
               <span class="mom-change" [class.positive]="trendData()!.monthOverMonthChange > 0" [class.negative]="trendData()!.monthOverMonthChange < 0">
                 <mat-icon>{{ trendData()!.monthOverMonthChange <= 0 ? 'trending_down' : 'trending_up' }}</mat-icon>
@@ -62,8 +62,10 @@ import { TrendData } from '../../core/models/dashboard.model';
       border-radius: 16px;
     }
     .mom-change mat-icon { font-size: 16px; width: 16px; height: 16px; }
-    .mom-change.negative { color: #166534; background: #dcfce7; }
-    .mom-change.positive { color: #991b1b; background: #fee2e2; }
+    .mom-change.negative { color: var(--color-success); background: var(--color-success-bg); }
+    .mom-change.positive { color: var(--color-danger); background: var(--color-danger-bg); }
+    .title-with-icon { display: flex; align-items: center; }
+    .card-title-icon { font-size: 20px; width: 20px; height: 20px; margin-right: 8px; color: var(--color-primary); }
     .chart-container { position: relative; height: 280px; }
     .empty-state {
       display: flex;

@@ -108,13 +108,13 @@ import { AuthService } from '../core/services/auth.service';
 
     .sidenav {
       width: 260px;
-      background: var(--color-surface);
-      border-right: 1px solid var(--color-border);
+      background: var(--gradient-sidebar);
+      border-right: none;
     }
 
     .sidenav-header {
       padding: 24px 20px 16px;
-      border-bottom: 1px solid var(--color-border);
+      border-bottom: 1px solid var(--color-sidebar-border);
     }
 
     .brand {
@@ -124,7 +124,7 @@ import { AuthService } from '../core/services/auth.service';
     }
 
     .brand-icon {
-      color: var(--color-primary);
+      color: var(--color-sidebar-accent);
       font-size: 28px;
       width: 28px;
       height: 28px;
@@ -134,7 +134,7 @@ import { AuthService } from '../core/services/auth.service';
       font-family: var(--font-primary);
       font-size: 1.25rem;
       font-weight: 700;
-      color: var(--color-text);
+      color: var(--color-sidebar-text-active);
       letter-spacing: -0.02em;
     }
 
@@ -147,22 +147,41 @@ import { AuthService } from '../core/services/auth.service';
       margin-bottom: 2px;
       font-family: var(--font-primary);
       font-weight: 500;
-      color: var(--color-text-secondary);
-      transition: all 0.15s ease;
+      color: var(--color-sidebar-text) !important;
+      transition: all var(--transition-fast);
+    }
+
+    .nav-list a mat-icon {
+      color: var(--color-sidebar-text) !important;
+    }
+
+    .nav-list a span {
+      color: var(--color-sidebar-text) !important;
     }
 
     .nav-list a:hover {
-      background-color: var(--color-surface-hover) !important;
-      color: var(--color-text);
+      background-color: var(--color-sidebar-hover) !important;
+      color: var(--color-sidebar-text-active) !important;
+    }
+
+    .nav-list a:hover mat-icon,
+    .nav-list a:hover span {
+      color: var(--color-sidebar-text-active) !important;
     }
 
     .nav-list a.active-link {
-      background-color: #e3f2fd !important;
-      color: var(--color-primary) !important;
+      background-color: var(--color-sidebar-active) !important;
+      color: var(--color-sidebar-text-active) !important;
+      border-left: 3px solid var(--color-sidebar-accent);
+      padding-left: 13px;
     }
 
     .nav-list a.active-link mat-icon {
-      color: var(--color-primary);
+      color: var(--color-sidebar-accent) !important;
+    }
+
+    .nav-list a.active-link span {
+      color: var(--color-sidebar-text-active) !important;
     }
 
     .app-toolbar {

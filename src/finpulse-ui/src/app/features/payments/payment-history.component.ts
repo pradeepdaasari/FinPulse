@@ -20,7 +20,7 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
   standalone: true,
   imports: [CommonModule, MatCardModule, MatTableModule, MatChipsModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
   template: `
-    <h2>Payment History</h2>
+    <h2><mat-icon class="section-icon">receipt_long</mat-icon> Payment History</h2>
 
     <div class="filter-row">
       <mat-chip-set>
@@ -175,12 +175,12 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
       text-transform: uppercase;
     }
     .type-PersonalLoan {
-      background: #eff6ff;
-      color: #1d4ed8;
+      background: var(--gradient-icon-blue);
+      color: var(--color-primary);
     }
     .type-CreditCard {
-      background: #fef3c7;
-      color: #92400e;
+      background: var(--gradient-icon-amber);
+      color: var(--color-warning);
     }
     .empty-card {
       padding: var(--spacing-xl) !important;

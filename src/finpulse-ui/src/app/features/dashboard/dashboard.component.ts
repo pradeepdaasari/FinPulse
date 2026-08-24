@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartData, ChartOptions } from 'chart.js';
@@ -19,6 +20,7 @@ import { DebtCountdownComponent } from './debt-countdown.component';
   imports: [
     CommonModule,
     MatCardModule,
+    MatIconModule,
     MatProgressSpinnerModule,
     BaseChartDirective,
     SummaryCardsComponent,
@@ -34,14 +36,15 @@ import { DebtCountdownComponent } from './debt-countdown.component';
         <mat-spinner></mat-spinner>
       </div>
     } @else if (summary()) {
-      <h2>Dashboard</h2>
+      <h2><mat-icon class="section-icon">space_dashboard</mat-icon> Dashboard</h2>
       <app-summary-cards [summary]="summary()!"></app-summary-cards>
       <app-payment-streak></app-payment-streak>
+      <app-monthly-payments></app-monthly-payments>
 
       <div class="dashboard-row">
         <mat-card class="chart-card">
           <mat-card-header>
-            <mat-card-title>Debt Breakdown</mat-card-title>
+            <mat-card-title><mat-icon class="card-title-icon">donut_large</mat-icon> Debt Breakdown</mat-card-title>
           </mat-card-header>
           <mat-card-content>
             <canvas baseChart
@@ -61,7 +64,6 @@ import { DebtCountdownComponent } from './debt-countdown.component';
 
       <app-debt-trend-chart></app-debt-trend-chart>
       <app-debt-countdown></app-debt-countdown>
-      <app-monthly-payments></app-monthly-payments>
     }
   `,
   styles: [`
@@ -76,6 +78,16 @@ import { DebtCountdownComponent } from './debt-countdown.component';
     }
     h2 {
       margin-bottom: var(--spacing-lg);
+      display: flex;
+      align-items: center;
+    }
+    .card-title-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      margin-right: 8px;
+      color: var(--color-primary);
+      vertical-align: middle;
     }
     .dashboard-row {
       display: grid;

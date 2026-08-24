@@ -13,7 +13,9 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
       <mat-card>
         <mat-card-content>
           <div class="stat-card">
-            <mat-icon class="stat-icon">account_balance_wallet</mat-icon>
+            <div class="stat-icon icon-blue">
+              <mat-icon>account_balance_wallet</mat-icon>
+            </div>
             <div class="stat-info">
               <span class="stat-label">Total Debt</span>
               <span class="stat-value">{{ summary.totalDebt | currency }}</span>
@@ -25,7 +27,9 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
       <mat-card>
         <mat-card-content>
           <div class="stat-card">
-            <mat-icon class="stat-icon">payments</mat-icon>
+            <div class="stat-icon icon-green">
+              <mat-icon>payments</mat-icon>
+            </div>
             <div class="stat-info">
               <span class="stat-label">Monthly Payment</span>
               <span class="stat-value">{{ summary.totalMonthlyPayment | currency }}</span>
@@ -37,7 +41,9 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
       <mat-card>
         <mat-card-content>
           <div class="stat-card">
-            <mat-icon class="stat-icon">event_available</mat-icon>
+            <div class="stat-icon icon-purple">
+              <mat-icon>event_available</mat-icon>
+            </div>
             <div class="stat-info">
               <span class="stat-label">Debt-Free Date</span>
               <span class="stat-value">{{ summary.estimatedDebtFreeDate | date:'mediumDate' }}</span>
@@ -49,7 +55,9 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
       <mat-card>
         <mat-card-content>
           <div class="stat-card">
-            <mat-icon class="stat-icon">format_list_numbered</mat-icon>
+            <div class="stat-icon icon-amber">
+              <mat-icon>format_list_numbered</mat-icon>
+            </div>
             <div class="stat-info">
               <span class="stat-label">Number of Debts</span>
               <span class="stat-value">{{ summary.numberOfDebts }}</span>
@@ -72,18 +80,37 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
       padding: var(--spacing-md);
     }
     .stat-icon {
-      font-size: 32px;
-      width: 32px;
-      height: 32px;
-      color: var(--color-primary);
-      background: #e3f2fd;
-      padding: 8px;
-      border-radius: 10px;
       width: 48px;
       height: 48px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: transform var(--transition-fast);
+    }
+    .stat-icon mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+    mat-card:hover .stat-icon {
+      transform: scale(1.08);
+    }
+    .icon-blue {
+      background: var(--gradient-icon-blue);
+      color: var(--color-primary);
+    }
+    .icon-green {
+      background: var(--gradient-icon-green);
+      color: var(--color-success);
+    }
+    .icon-purple {
+      background: var(--gradient-icon-purple);
+      color: var(--color-accent);
+    }
+    .icon-amber {
+      background: var(--gradient-icon-amber);
+      color: var(--color-warning);
     }
     .stat-info {
       display: flex;

@@ -3,6 +3,7 @@ import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { Subject, debounceTime } from 'rxjs';
 import { LoanService } from '../../core/services/loan.service';
@@ -23,9 +24,9 @@ interface DebtSlider {
 @Component({
   selector: 'app-what-if',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatSliderModule, MatProgressSpinnerModule, MatTableModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatSliderModule, MatProgressSpinnerModule, MatTableModule, CurrencyPipe, DatePipe],
   template: `
-    <h2>What-If Simulator</h2>
+    <h2><mat-icon class="section-icon">science</mat-icon> What-If Simulator</h2>
     <p>Use the sliders below to see how extra payments affect your payoff timeline.</p>
 
     @if (loadingDebts()) {

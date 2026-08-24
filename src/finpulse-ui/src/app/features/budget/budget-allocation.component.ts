@@ -14,7 +14,7 @@ import { BudgetAllocation } from '../../core/models/budget.model';
   standalone: true,
   imports: [CommonModule, MatCardModule, MatTableModule, MatProgressSpinnerModule, MatIconModule, BaseChartDirective, CurrencyPipe],
   template: `
-    <h2>Budget Allocation</h2>
+    <h2><mat-icon class="section-icon">pie_chart</mat-icon> Budget Allocation</h2>
 
     @if (loading()) {
       <mat-spinner></mat-spinner>

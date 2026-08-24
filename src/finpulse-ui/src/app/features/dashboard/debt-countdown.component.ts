@@ -16,7 +16,7 @@ import { DebtFreeCountdown } from '../../core/models/dashboard.model';
         <mat-card-header>
           <mat-card-title>
             <div class="card-title-row">
-              <span>Debt-Free Countdown</span>
+              <span class="title-with-icon"><mat-icon class="card-title-icon">timer</mat-icon> Debt-Free Countdown</span>
               <span class="overall-date">
                 <mat-icon>flag</mat-icon>
                 {{ countdown()!.overallDebtFreeDate | date:'MMM yyyy' }}
@@ -58,11 +58,13 @@ import { DebtFreeCountdown } from '../../core/models/dashboard.model';
       gap: 4px;
       font-size: 0.8125rem;
       font-weight: 600;
-      color: #166534;
-      background: #dcfce7;
+      color: var(--color-success);
+      background: var(--color-success-bg);
       padding: 4px 10px;
       border-radius: 16px;
     }
+    .title-with-icon { display: flex; align-items: center; }
+    .card-title-icon { font-size: 20px; width: 20px; height: 20px; margin-right: 8px; color: var(--color-primary); }
     .overall-date mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .projections { display: flex; flex-direction: column; gap: 14px; }
     .projection-row {
