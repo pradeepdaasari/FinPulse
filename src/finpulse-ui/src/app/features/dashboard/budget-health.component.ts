@@ -69,7 +69,7 @@ import { SpendingSummary } from '../../core/models/daily-expense.model';
   `,
   styles: [`
     .budget-health-card {
-      margin-top: var(--spacing-lg);
+      margin-top: var(--spacing-md);
     }
     .card-title-icon {
       font-size: 20px; width: 20px; height: 20px;

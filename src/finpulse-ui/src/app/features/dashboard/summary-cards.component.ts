@@ -77,7 +77,7 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
       display: flex;
       align-items: center;
       gap: var(--spacing-md);
-      padding: 24px;
+      padding: 16px;
     }
     .stat-icon {
       width: 48px;
@@ -129,6 +129,14 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
       color: var(--color-text);
       letter-spacing: -0.02em;
     }
+    .stat-card:nth-child(1) { border-left: 4px solid var(--color-danger); }
+    .stat-card:nth-child(2) { border-left: 4px solid var(--color-value-blue); }
+    .stat-card:nth-child(3) { border-left: 4px solid var(--color-value-green); }
+    .stat-card:nth-child(4) { border-left: 4px solid var(--color-value-purple); }
+    .stat-card:nth-child(1) .stat-value { color: var(--color-danger); }
+    .stat-card:nth-child(2) .stat-value { color: var(--color-value-blue); }
+    .stat-card:nth-child(3) .stat-value { color: var(--color-value-green); }
+    .stat-card:nth-child(4) .stat-value { color: var(--color-value-purple); }
     @media (max-width: 480px) {
       .summary-grid {
         grid-template-columns: 1fr 1fr;

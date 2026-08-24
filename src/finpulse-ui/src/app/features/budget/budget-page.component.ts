@@ -25,7 +25,6 @@ import { RouterLink } from '@angular/router';
   ],
   template: `
     <div class="budget-header">
-      <h2>Budget Planner</h2>
       <div class="month-nav">
         <button mat-icon-button (click)="prevMonth()"><mat-icon>chevron_left</mat-icon></button>
         <span class="month-label">{{ monthLabel() }}</span>
@@ -240,27 +239,26 @@ import { RouterLink } from '@angular/router';
     .budget-header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-end;
       flex-wrap: wrap;
       gap: var(--spacing-sm);
-      margin-bottom: var(--spacing-md);
+      margin-bottom: var(--spacing-sm);
     }
-    .budget-header h2 { margin: 0; }
     .month-nav {
       display: flex;
       align-items: center;
       gap: var(--spacing-xs);
     }
     .month-label { font-size: 1.1rem; font-weight: 500; min-width: 140px; text-align: center; }
-    .tab-content { padding: var(--spacing-md) 0; }
+    .tab-content { padding: var(--spacing-sm) 0; }
 
     .stat-cards {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: var(--spacing-lg);
-      margin-bottom: var(--spacing-lg);
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
     }
-    .stat-card .stat-value { font-size: 1.5rem; font-weight: 700; }
+    .stat-card .stat-value { font-size: 1.2rem; font-weight: 700; }
     .stat-card .stat-label { font-size: 0.85rem; opacity: 0.7; margin-top: 4px; }
     .stat-card.income .stat-value { color: var(--color-primary); }
     .stat-card.fixed .stat-value { color: var(--color-accent); }

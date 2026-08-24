@@ -45,7 +45,7 @@ import { DebtFreeCountdown } from '../../core/models/dashboard.model';
     }
   `,
   styles: [`
-    .countdown-card { margin-top: var(--spacing-lg); }
+    .countdown-card { margin-top: var(--spacing-md); }
     .card-title-row {
       display: flex;
       justify-content: space-between;

@@ -42,7 +42,6 @@ const ICON_OPTIONS = [
   ],
   template: `
     <div class="page-header">
-      <h2>Categories</h2>
       <button mat-raised-button color="primary" (click)="showAddParent.set(true)" [disabled]="showAddParent()">
         <mat-icon>add</mat-icon> Add Category
       </button>
@@ -239,17 +238,16 @@ const ICON_OPTIONS = [
   `,
   styles: [`
     .page-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: var(--spacing-lg); flex-wrap: wrap; gap: var(--spacing-sm);
+      display: flex; align-items: center; justify-content: flex-end;
+      margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);
     }
-    .page-header h2 { margin: 0; display: flex; align-items: center; }
 
     .add-form-card { margin-bottom: var(--spacing-md); }
     .inline-form { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .inline-form mat-form-field { flex: 1; min-width: 200px; }
     .type-toggle { font-size: 0.85rem; }
 
-    .tab-content { padding: var(--spacing-md) 0; }
+    .tab-content { padding: var(--spacing-sm) 0; }
     .child-form { margin-top: var(--spacing-sm); padding: var(--spacing-sm) 0; }
 
     .panel-actions { display: flex; align-items: center; gap: 8px; margin-bottom: var(--spacing-sm); }

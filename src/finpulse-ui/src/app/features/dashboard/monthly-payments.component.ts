@@ -292,7 +292,7 @@ interface MonthlyPayment {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: var(--spacing-lg);
+      padding: var(--spacing-md);
       color: var(--color-success);
     }
     .empty-state mat-icon {

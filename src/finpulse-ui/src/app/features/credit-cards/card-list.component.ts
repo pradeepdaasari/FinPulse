@@ -21,7 +21,6 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
   imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatProgressSpinnerModule, CurrencyPipe],
   template: `
     <div class="header-row">
-      <h2>My Credit Cards</h2>
       <button mat-raised-button color="primary" (click)="openAddCard()">
         <mat-icon>add</mat-icon> Add Card
       </button>
@@ -29,6 +28,17 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
 
     @if (loading()) {
       <mat-spinner></mat-spinner>
+    } @else if (cards().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon-wrap purple">
+          <mat-icon>credit_card</mat-icon>
+        </div>
+        <h3>Add your credit cards</h3>
+        <p>Track balances, payments, and interest to take control of your card debt.</p>
+        <button mat-raised-button color="primary" (click)="openAddCard()">
+          <mat-icon>add</mat-icon> Add Card
+        </button>
+      </div>
     } @else {
       <mat-card>
         <div class="table-wrapper">
@@ -91,13 +101,12 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
   styles: [`
     .header-row {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-end;
       align-items: center;
-      margin-bottom: var(--spacing-lg);
+      margin-bottom: var(--spacing-md);
       flex-wrap: wrap;
       gap: var(--spacing-sm);
     }
-    .header-row h2 { margin: 0; }
     mat-card {
       overflow: hidden;
       padding: 0 !important;

@@ -25,8 +25,7 @@ interface DebtSlider {
   standalone: true,
   imports: [CommonModule, MatCardModule, MatIconModule, MatSliderModule, MatProgressSpinnerModule, MatTableModule, CurrencyPipe, DatePipe],
   template: `
-    <h2>What-If Simulator</h2>
-    <p>Use the sliders below to see how extra payments affect your payoff timeline.</p>
+    <p class="page-subtitle">Use the sliders below to see how extra payments affect your payoff timeline.</p>
 
     @if (loadingDebts()) {
       <mat-spinner></mat-spinner>
@@ -103,13 +102,14 @@ interface DebtSlider {
     }
   `,
   styles: [`
+    .page-subtitle { margin: 0 0 var(--spacing-sm); font-size: 0.9rem; opacity: 0.7; }
     .sliders-container {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: var(--spacing-xl);
-      margin-bottom: var(--spacing-lg);
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
     }
-    .slider-card { padding: var(--spacing-lg); }
+    .slider-card { padding: var(--spacing-md); }
     .slider-header {
       display: flex;
       justify-content: space-between;
@@ -124,16 +124,16 @@ interface DebtSlider {
     }
     .slider-row mat-slider { flex: 1; }
     .extra-amount { min-width: 90px; font-weight: 600; color: var(--color-primary); }
-    .results-card { margin-top: var(--spacing-lg); }
+    .results-card { margin-top: var(--spacing-md); }
     .results-summary {
       display: flex;
-      gap: var(--spacing-xl);
-      margin: var(--spacing-md) 0 var(--spacing-lg);
+      gap: var(--spacing-md);
+      margin: var(--spacing-sm) 0 var(--spacing-md);
       flex-wrap: wrap;
     }
     .result-stat { display: flex; flex-direction: column; gap: 2px; }
     .label { font-size: 0.75rem; color: var(--color-text-muted); font-weight: 500; letter-spacing: 0.05em; }
-    .value { font-size: 1.25rem; font-weight: 700; }
+    .value { font-size: 1.1rem; font-weight: 700; }
     .highlight { color: var(--color-success); }
     .projection-table { width: 100%; }
     .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }

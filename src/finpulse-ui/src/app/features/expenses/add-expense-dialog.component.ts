@@ -33,28 +33,24 @@ export interface ExpenseDialogData {
     MatButtonModule, MatIconModule, MatButtonToggleModule, MatAutocompleteModule
   ],
   template: `
-    <h2 mat-dialog-title>{{ data?.expense ? 'Edit' : 'Log' }} Transaction</h2>
+    <div class="dialog-header">
+      <div class="dialog-header-icon">
+        <mat-icon>receipt_long</mat-icon>
+      </div>
+      <h2 mat-dialog-title>{{ data?.expense ? 'Edit' : 'Log' }} Transaction</h2>
+      <p class="dialog-subtitle">Track every dollar, build better habits</p>
+    </div>
     <mat-dialog-content>
       <form [formGroup]="form" class="expense-form">
         <mat-button-toggle-group formControlName="transactionType" class="txn-toggle">
-          <mat-button-toggle value="Expense">
-            <mat-icon>trending_down</mat-icon> Expense
-          </mat-button-toggle>
-          <mat-button-toggle value="Income">
-            <mat-icon>trending_up</mat-icon> Income
-          </mat-button-toggle>
-          <mat-button-toggle value="Transfer">
-            <mat-icon>swap_horiz</mat-icon> Transfer
-          </mat-button-toggle>
-          <mat-button-toggle value="Refund">
-            <mat-icon>undo</mat-icon> Refund
-          </mat-button-toggle>
-          <mat-button-toggle value="CardPayment">
-            <mat-icon>credit_card_off</mat-icon> Pay Card
-          </mat-button-toggle>
+          <mat-button-toggle value="Expense" class="toggle-expense">Expense</mat-button-toggle>
+          <mat-button-toggle value="Income" class="toggle-income">Income</mat-button-toggle>
+          <mat-button-toggle value="Transfer" class="toggle-transfer">Transfer</mat-button-toggle>
+          <mat-button-toggle value="Refund" class="toggle-refund">Refund</mat-button-toggle>
+          <mat-button-toggle value="CardPayment" class="toggle-card">Card Pay</mat-button-toggle>
         </mat-button-toggle-group>
 
-        <mat-form-field>
+        <mat-form-field appearance="outline">
           <mat-label>Date</mat-label>
           <input matInput [matDatepicker]="picker" formControlName="date">
           <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
@@ -62,7 +58,7 @@ export interface ExpenseDialogData {
         </mat-form-field>
 
         @if (form.value.transactionType !== 'Transfer' && form.value.transactionType !== 'CardPayment') {
-          <mat-form-field>
+          <mat-form-field appearance="outline">
             <mat-label>Category</mat-label>
             <mat-select formControlName="categoryId">
               @for (parent of categories(); track parent.id) {
@@ -80,11 +76,11 @@ export interface ExpenseDialogData {
 
           @if (showNewCategory()) {
             <div class="new-category-row">
-              <mat-form-field class="flex-1">
+              <mat-form-field appearance="outline" class="flex-1">
                 <mat-label>New Category Name</mat-label>
                 <input matInput formControlName="newCategoryName">
               </mat-form-field>
-              <mat-form-field>
+              <mat-form-field appearance="outline">
                 <mat-label>Under</mat-label>
                 <mat-select formControlName="newCategoryParent">
                   @for (parent of categories(); track parent.id) {
@@ -106,14 +102,14 @@ export interface ExpenseDialogData {
           }
         }
 
-        <mat-form-field>
+        <mat-form-field appearance="outline">
           <mat-label>{{ form.value.transactionType === 'Transfer' ? 'Transfer Amount' : form.value.transactionType === 'Refund' ? 'Refund Amount' : 'Amount' }}</mat-label>
           <input matInput type="number" formControlName="amount" min="0.01" step="0.01">
           <span matTextPrefix>$&nbsp;</span>
         </mat-form-field>
 
         @if (form.value.transactionType === 'Transfer') {
-          <mat-form-field>
+          <mat-form-field appearance="outline">
             <mat-label>From Account</mat-label>
             <mat-select formControlName="fundingSourceKey">
               @for (source of bankAccountSources(); track source.id) {
@@ -125,7 +121,7 @@ export interface ExpenseDialogData {
             </mat-select>
           </mat-form-field>
 
-          <mat-form-field>
+          <mat-form-field appearance="outline">
             <mat-label>To Account</mat-label>
             <mat-select formControlName="toFundingSourceKey">
               @for (source of toAccountSources(); track source.id) {
@@ -137,7 +133,7 @@ export interface ExpenseDialogData {
             </mat-select>
           </mat-form-field>
         } @else if (form.value.transactionType === 'CardPayment') {
-          <mat-form-field>
+          <mat-form-field appearance="outline">
             <mat-label>From Account</mat-label>
             <mat-select formControlName="fundingSourceKey">
               @for (source of bankAccountSources(); track source.id) {
@@ -149,7 +145,7 @@ export interface ExpenseDialogData {
             </mat-select>
           </mat-form-field>
 
-          <mat-form-field>
+          <mat-form-field appearance="outline">
             <mat-label>Pay Card</mat-label>
             <mat-select formControlName="toFundingSourceKey">
               @for (source of creditCardSources(); track source.id) {
@@ -161,7 +157,7 @@ export interface ExpenseDialogData {
             </mat-select>
           </mat-form-field>
         } @else {
-          <mat-form-field>
+          <mat-form-field appearance="outline">
             <mat-label>{{ form.value.transactionType === 'Income' ? 'Received into' : form.value.transactionType === 'Refund' ? 'Refunded to' : 'Paid with' }}</mat-label>
             <mat-select formControlName="fundingSourceKey">
               <mat-option [value]="null">-- None --</mat-option>
@@ -176,18 +172,18 @@ export interface ExpenseDialogData {
         }
 
         @if (form.value.transactionType !== 'Transfer' && form.value.transactionType !== 'CardPayment') {
-          <mat-form-field>
+          <mat-form-field appearance="outline">
             <mat-label>Merchant (optional)</mat-label>
             <input matInput formControlName="merchant" placeholder="e.g. Walmart, Shell, Chipotle">
           </mat-form-field>
         }
 
-        <mat-form-field>
+        <mat-form-field appearance="outline">
           <mat-label>Description</mat-label>
           <input matInput formControlName="description" placeholder="{{ form.value.transactionType === 'Transfer' ? 'e.g. Fund brokerage account' : 'What was this for?' }}">
         </mat-form-field>
 
-        <mat-form-field>
+        <mat-form-field appearance="outline">
           <mat-label>Tag (optional)</mat-label>
           <input matInput formControlName="tag" [matAutocomplete]="tagAutoDialog"
                  placeholder="e.g. Hawaii 2026" (input)="onTagDialogInput()">
@@ -199,7 +195,7 @@ export interface ExpenseDialogData {
           </mat-autocomplete>
         </mat-form-field>
 
-        <mat-form-field>
+        <mat-form-field appearance="outline">
           <mat-label>Tag Type (optional)</mat-label>
           <mat-select formControlName="tagType">
             <mat-option [value]="''">-- None --</mat-option>
@@ -212,7 +208,6 @@ export interface ExpenseDialogData {
           <mat-icon matPrefix>category</mat-icon>
         </mat-form-field>
       </form>
-    </mat-dialog-content>
     @if (splitMode()) {
       <div class="split-section">
         <div class="split-header">
@@ -223,7 +218,7 @@ export interface ExpenseDialogData {
         </div>
         @for (row of splitRows.controls; track $index) {
           <div class="split-row" [formGroup]="$any(row)">
-            <mat-form-field class="split-cat">
+            <mat-form-field appearance="outline" class="split-cat">
               <mat-label>Category</mat-label>
               <mat-select formControlName="categoryId">
                 @for (parent of categories(); track parent.id) {
@@ -238,7 +233,7 @@ export interface ExpenseDialogData {
                 }
               </mat-select>
             </mat-form-field>
-            <mat-form-field class="split-amt">
+            <mat-form-field appearance="outline" class="split-amt">
               <mat-label>Amount</mat-label>
               <input matInput type="number" formControlName="amount" min="0.01" step="0.01">
               <span matTextPrefix>$&nbsp;</span>
@@ -253,6 +248,7 @@ export interface ExpenseDialogData {
         </button>
       </div>
     }
+    </mat-dialog-content>
 
     <mat-dialog-actions align="end">
       @if (!data?.expense && form.value.transactionType === 'Expense' && !splitMode()) {
@@ -270,17 +266,74 @@ export interface ExpenseDialogData {
     </mat-dialog-actions>
   `,
   styles: [`
+    :host { display: block; }
+    .dialog-header {
+      text-align: center;
+      padding: 8px 0 16px;
+      border-bottom: 1px solid var(--color-border);
+      margin-bottom: var(--spacing-md);
+    }
+    .dialog-header-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.12) 0%, rgba(88, 86, 214, 0.12) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 12px;
+    }
+    .dialog-header-icon mat-icon {
+      font-size: 26px;
+      width: 26px;
+      height: 26px;
+      color: var(--color-primary);
+    }
+    h2[mat-dialog-title] {
+      margin: 0 !important;
+      padding: 0 !important;
+      font-size: var(--text-xl) !important;
+      font-weight: 700 !important;
+    }
+    .dialog-subtitle {
+      color: var(--color-text-secondary);
+      font-size: var(--text-sm);
+      margin: 4px 0 0;
+    }
     .expense-form {
       display: flex;
       flex-direction: column;
-      gap: var(--spacing-md);
-      min-width: 400px;
+      gap: 4px;
+      min-width: 380px;
     }
     .txn-toggle {
-      margin-bottom: 12px;
+      margin-bottom: 4px;
       width: 100%;
+      border-radius: var(--radius-sm) !important;
+      background: var(--color-surface-secondary) !important;
+      border: none !important;
+      padding: 4px !important;
     }
-    .txn-toggle mat-button-toggle { flex: 1; }
+    .txn-toggle .mat-button-toggle-checked.toggle-expense {
+      background: rgba(255, 59, 48, 0.12) !important;
+      color: var(--color-danger) !important;
+    }
+    .txn-toggle .mat-button-toggle-checked.toggle-income {
+      background: rgba(48, 209, 88, 0.12) !important;
+      color: var(--color-value-green) !important;
+    }
+    .txn-toggle .mat-button-toggle-checked.toggle-transfer {
+      background: rgba(0, 122, 255, 0.12) !important;
+      color: var(--color-primary) !important;
+    }
+    .txn-toggle .mat-button-toggle-checked.toggle-refund {
+      background: rgba(255, 159, 10, 0.12) !important;
+      color: var(--color-value-amber) !important;
+    }
+    .txn-toggle .mat-button-toggle-checked.toggle-card {
+      background: rgba(191, 90, 242, 0.12) !important;
+      color: var(--color-value-purple) !important;
+    }
     .new-category-row {
       display: flex;
       gap: 8px;

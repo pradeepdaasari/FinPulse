@@ -19,7 +19,7 @@ import { AuthService } from '../../core/services/auth.service';
         <div class="brand">
           <mat-icon class="brand-icon">account_balance_wallet</mat-icon>
           <h1>FinPulse</h1>
-          <p class="tagline">Personal Finance Tracker</p>
+          <p class="tagline">Take control of your finances</p>
         </div>
 
         <mat-tab-group [(selectedIndex)]="activeTab" animationDuration="200ms">
@@ -68,6 +68,7 @@ import { AuthService } from '../../core/services/auth.service';
           </mat-tab>
         </mat-tab-group>
       </mat-card>
+      <p class="login-quote">"Every dollar tracked is a step toward financial freedom."</p>
     </div>
   `,
   styles: [`
@@ -77,6 +78,19 @@ import { AuthService } from '../../core/services/auth.service';
       justify-content: center;
       min-height: 100vh;
       background: var(--gradient-login);
+      position: relative;
+      overflow: hidden;
+    }
+    .login-container::before {
+      content: '';
+      position: absolute;
+      top: 30%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(0, 122, 255, 0.15) 0%, transparent 70%);
+      pointer-events: none;
     }
     .login-card {
       padding: 48px;
@@ -126,6 +140,13 @@ import { AuthService } from '../../core/services/auth.service';
       color: var(--color-danger);
       font-size: 13px;
       margin: 0 0 8px;
+    }
+    .login-quote {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: var(--text-sm);
+      font-style: italic;
+      margin-top: var(--spacing-lg);
+      text-align: center;
     }
   `]
 })

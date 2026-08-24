@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
@@ -18,10 +19,8 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
 @Component({
   selector: 'app-payment-history',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatTableModule, MatChipsModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, RouterLink, MatCardModule, MatTableModule, MatChipsModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
   template: `
-    <h2>Payment History</h2>
-
     <div class="filter-row">
       <mat-chip-set>
         <mat-chip [highlighted]="activeFilter() === 'all'" (click)="filterByType('all')">
@@ -59,25 +58,25 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
       <mat-spinner></mat-spinner>
     } @else {
       <div class="summary-row">
-        <mat-card class="summary-card">
+        <mat-card class="summary-card stat-total">
           <div class="summary-item">
             <span class="summary-label">Total Paid</span>
             <span class="summary-value">{{ filteredSummary().totalPaid | currency }}</span>
           </div>
         </mat-card>
-        <mat-card class="summary-card">
+        <mat-card class="summary-card stat-loans">
           <div class="summary-item">
             <span class="summary-label">Loan Payments</span>
             <span class="summary-value">{{ filteredSummary().loanTotal | currency }}</span>
           </div>
         </mat-card>
-        <mat-card class="summary-card">
+        <mat-card class="summary-card stat-cards">
           <div class="summary-item">
             <span class="summary-label">Card Payments</span>
             <span class="summary-value">{{ filteredSummary().cardTotal | currency }}</span>
           </div>
         </mat-card>
-        <mat-card class="summary-card">
+        <mat-card class="summary-card stat-count">
           <div class="summary-item">
             <span class="summary-label">Transactions</span>
             <span class="summary-value">{{ filteredSummary().count }}</span>
@@ -86,12 +85,16 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
       </div>
 
       @if (filteredPayments().length === 0) {
-        <mat-card class="empty-card">
-          <div class="empty-state">
-            <mat-icon>receipt_long</mat-icon>
-            <span>No payments recorded yet</span>
+        <div class="empty-state">
+          <div class="empty-icon-wrap blue">
+            <mat-icon>payments</mat-icon>
           </div>
-        </mat-card>
+          <h3>Ready to crush your debt?</h3>
+          <p>Record your first payment and watch your progress grow. Every payment brings you closer to financial freedom.</p>
+          <button mat-raised-button color="primary" routerLink="/loans">
+            <mat-icon>trending_down</mat-icon> View Debts
+          </button>
+        </div>
       } @else {
         <mat-card>
           <div class="table-wrapper">
@@ -161,7 +164,7 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: var(--spacing-lg);
+      margin-bottom: var(--spacing-md);
       flex-wrap: wrap;
     }
     .debt-filter-label {
@@ -176,11 +179,11 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
     .summary-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: var(--spacing-xl);
-      margin-bottom: var(--spacing-lg);
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
     }
     .summary-card {
-      padding: var(--spacing-md) !important;
+      padding: var(--spacing-sm) var(--spacing-md) !important;
     }
     .summary-item {
       display: flex;
@@ -195,8 +198,32 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
       letter-spacing: 0.05em;
     }
     .summary-value {
-      font-size: 1.25rem;
+      font-size: 1.1rem;
       font-weight: 700;
+    }
+    .stat-total {
+      border-left: 4px solid var(--color-value-green);
+    }
+    .stat-total .summary-value {
+      color: var(--color-value-green);
+    }
+    .stat-loans {
+      border-left: 4px solid var(--color-value-blue);
+    }
+    .stat-loans .summary-value {
+      color: var(--color-value-blue);
+    }
+    .stat-cards {
+      border-left: 4px solid var(--color-value-purple);
+    }
+    .stat-cards .summary-value {
+      color: var(--color-value-purple);
+    }
+    .stat-count {
+      border-left: 4px solid var(--color-value-amber);
+    }
+    .stat-count .summary-value {
+      color: var(--color-value-amber);
     }
     .table-wrapper {
       overflow-x: auto;
@@ -237,21 +264,6 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
     .type-CreditCard {
       background: var(--gradient-icon-amber);
       color: var(--color-warning);
-    }
-    .empty-card {
-      padding: var(--spacing-xl) !important;
-    }
-    .empty-state {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      color: var(--color-text-muted);
-    }
-    .empty-state mat-icon {
-      font-size: 56px;
-      width: 56px;
-      height: 56px;
     }
     @media (max-width: 768px) {
       .summary-row { grid-template-columns: 1fr 1fr; }

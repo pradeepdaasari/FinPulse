@@ -17,7 +17,6 @@ import { GoalDialogComponent } from './goal-dialog.component';
   imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatProgressBarModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
   template: `
     <div class="header-row">
-      <h2>Savings Goals</h2>
       <button mat-raised-button color="primary" (click)="openAdd()">
         <mat-icon>add</mat-icon> Add Goal
       </button>
@@ -26,14 +25,20 @@ import { GoalDialogComponent } from './goal-dialog.component';
     @if (loading()) {
       <mat-spinner></mat-spinner>
     } @else if (goals().length === 0) {
-      <mat-card class="empty-state">
-        <mat-icon>flag</mat-icon>
-        <p>No savings goals yet. Set a target to track your progress toward financial goals!</p>
-      </mat-card>
+      <div class="empty-state">
+        <div class="empty-icon-wrap green">
+          <mat-icon>flag</mat-icon>
+        </div>
+        <h3>Set your first savings goal</h3>
+        <p>Every big achievement starts with a clear target. What are you saving for? A vacation, emergency fund, or new car?</p>
+        <button mat-raised-button color="primary" (click)="openAdd()">
+          <mat-icon>add</mat-icon> Create Goal
+        </button>
+      </div>
     } @else {
       <div class="goals-grid">
         @for (goal of goals(); track goal.id) {
-          <mat-card class="goal-card">
+          <mat-card class="goal-card" [class.near-complete]="getProgress(goal) >= 80 && getProgress(goal) < 100" [class.complete]="getProgress(goal) >= 100">
             <div class="goal-header">
               <span class="goal-icon">{{ goal.icon || '🎯' }}</span>
               <div class="goal-title">
@@ -82,15 +87,21 @@ import { GoalDialogComponent } from './goal-dialog.component';
   `,
   styles: [`
     .header-row {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: var(--spacing-lg); flex-wrap: wrap; gap: var(--spacing-sm);
+      display: flex; justify-content: flex-end; align-items: center;
+      margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);
     }
-    .header-row h2 { margin: 0; }
     .goals-grid {
       display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: var(--spacing-xl);
+      gap: var(--spacing-md);
     }
-    .goal-card { padding: var(--spacing-xl) !important; }
+    .goal-card { padding: var(--spacing-md) !important; transition: border-color 0.2s, background 0.2s; }
+    .goal-card.near-complete {
+      background: linear-gradient(135deg, rgba(48, 209, 88, 0.04) 0%, rgba(48, 209, 88, 0.08) 100%) !important;
+      border: 1px solid rgba(48, 209, 88, 0.15);
+    }
+    .goal-card.complete {
+      border: 2px solid var(--color-success);
+    }
     .goal-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
     .goal-icon { font-size: 2rem; line-height: 1; }
     .goal-title { flex: 1; }
@@ -98,13 +109,11 @@ import { GoalDialogComponent } from './goal-dialog.component';
     .linked-badge { font-size: 0.75rem; color: var(--color-text-secondary); }
     .goal-actions { display: flex; }
     .goal-amounts { margin-bottom: 8px; }
-    .goal-amounts .current { font-size: 1.25rem; font-weight: 700; color: var(--color-primary); }
+    .goal-amounts .current { font-size: 1.1rem; font-weight: 700; color: var(--color-primary); }
     .goal-amounts .target { font-size: 0.875rem; color: var(--color-text-secondary); margin-left: 4px; }
     .goal-footer { display: flex; justify-content: space-between; margin-top: 8px; }
     .goal-footer .percent { font-weight: 600; font-size: 0.9rem; }
     .goal-footer .target-date { font-size: 0.8rem; color: var(--color-text-secondary); }
-    .empty-state { text-align: center; padding: var(--spacing-xl) !important; }
-    .empty-state mat-icon { font-size: 56px; height: 56px; width: 56px; color: var(--color-text-muted); }
     .goal-complete-badge {
       display: flex;
       align-items: center;
