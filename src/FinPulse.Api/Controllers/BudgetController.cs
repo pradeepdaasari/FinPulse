@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -25,10 +26,12 @@ public class BudgetController : ControllerBase
         _budgetPlanService = budgetPlanService;
     }
 
+    private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
     [HttpGet("allocation")]
     public async Task<ActionResult<BudgetAllocationDto>> GetAllocation()
     {
-        var profile = await _db.UserProfiles.FirstOrDefaultAsync();
+        var profile = await _db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == UserId);
         if (profile is null)
             return BadRequest("User profile with monthly income is required.");
 
@@ -40,14 +43,14 @@ public class BudgetController : ControllerBase
     [HttpGet("plan")]
     public async Task<ActionResult<BudgetPlanDto>> GetPlan([FromQuery] int? year, [FromQuery] int? month)
     {
-        var profile = await _db.UserProfiles.FirstOrDefaultAsync();
+        var profile = await _db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == UserId);
         if (profile is null)
             return BadRequest("User profile is required.");
 
         var targetYear = year ?? DateTime.UtcNow.Year;
         var targetMonth = month ?? DateTime.UtcNow.Month;
 
-        var expenses = await _db.BudgetExpenses.Include(e => e.Category).ToListAsync();
+        var expenses = await _db.BudgetExpenses.Include(e => e.Category).Where(e => e.UserId == UserId).ToListAsync();
         var debts = await GetDebtSnapshots();
         var plan = _budgetPlanService.GeneratePlan(profile, expenses, debts, targetYear, targetMonth);
         return Ok(plan);
@@ -59,6 +62,7 @@ public class BudgetController : ControllerBase
         var expenses = await _db.BudgetExpenses
             .Include(e => e.Category)
             .ThenInclude(c => c.Parent)
+            .Where(e => e.UserId == UserId)
             .OrderByDescending(e => e.IsFixed)
             .ThenBy(e => e.DueDay)
             .ThenBy(e => e.Name)
@@ -92,7 +96,8 @@ public class BudgetController : ControllerBase
             IsFixed = dto.IsFixed,
             DueDay = dto.DueDay,
             Frequency = dto.Frequency,
-            IsAutopay = dto.IsAutopay
+            IsAutopay = dto.IsAutopay,
+            UserId = UserId
         };
 
         _db.BudgetExpenses.Add(expense);
@@ -122,7 +127,7 @@ public class BudgetController : ControllerBase
     [HttpPut("expenses/{id}")]
     public async Task<ActionResult> UpdateExpense(int id, BudgetExpenseCreateDto dto)
     {
-        var expense = await _db.BudgetExpenses.FindAsync(id);
+        var expense = await _db.BudgetExpenses.FirstOrDefaultAsync(e => e.Id == id && e.UserId == UserId);
         if (expense is null) return NotFound();
 
         expense.Name = dto.Name;
@@ -159,7 +164,7 @@ public class BudgetController : ControllerBase
     [HttpDelete("expenses/{id}")]
     public async Task<ActionResult> DeleteExpense(int id)
     {
-        var expense = await _db.BudgetExpenses.FindAsync(id);
+        var expense = await _db.BudgetExpenses.FirstOrDefaultAsync(e => e.Id == id && e.UserId == UserId);
         if (expense is null) return NotFound();
 
         _db.BudgetExpenses.Remove(expense);
@@ -169,8 +174,8 @@ public class BudgetController : ControllerBase
 
     private async Task<List<DebtSnapshotDto>> GetDebtSnapshots()
     {
-        var loans = await _db.PersonalLoans.ToListAsync();
-        var cards = await _db.CreditCards.ToListAsync();
+        var loans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
+        var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
         var snapshots = new List<DebtSnapshotDto>();
 
         foreach (var loan in loans)

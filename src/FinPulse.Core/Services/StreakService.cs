@@ -13,11 +13,11 @@ public class StreakService : IStreakService
         _db = db;
     }
 
-    public async Task<PaymentStreakDto> GetStreakAsync()
+    public async Task<PaymentStreakDto> GetStreakAsync(string userId)
     {
-        var loans = await _db.PersonalLoans.ToListAsync();
-        var cards = await _db.CreditCards.ToListAsync();
-        var payments = await _db.PaymentHistories.ToListAsync();
+        var loans = await _db.PersonalLoans.Where(l => l.UserId == userId).ToListAsync();
+        var cards = await _db.CreditCards.Where(c => c.UserId == userId).ToListAsync();
+        var payments = await _db.PaymentHistories.Where(p => p.UserId == userId).ToListAsync();
 
         var totalDebts = loans.Count + cards.Count;
         if (totalDebts == 0)

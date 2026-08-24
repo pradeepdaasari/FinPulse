@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -26,11 +27,13 @@ public class DashboardController : ControllerBase
         _streakService = streakService;
     }
 
+    private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
     [HttpGet("summary")]
     public async Task<ActionResult<DashboardSummaryDto>> GetSummary()
     {
-        var loans = await _db.PersonalLoans.ToListAsync();
-        var cards = await _db.CreditCards.ToListAsync();
+        var loans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
+        var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
 
         var totalDebt = loans.Sum(l => l.CurrentBalance) + cards.Sum(c => c.CurrentBalance);
         var totalMonthlyPayment = loans.Sum(l => l.MonthlyPayment) + cards.Sum(c => c.MinimumPayment);
@@ -117,22 +120,22 @@ public class DashboardController : ControllerBase
     [HttpGet("trends")]
     public async Task<ActionResult<TrendDataDto>> GetTrends([FromQuery] int months = 12)
     {
-        var trends = await _snapshotService.GetTrendsAsync(months);
+        var trends = await _snapshotService.GetTrendsAsync(UserId, months);
         return Ok(trends);
     }
 
     [HttpGet("streak")]
     public async Task<ActionResult<PaymentStreakDto>> GetStreak()
     {
-        var streak = await _streakService.GetStreakAsync();
+        var streak = await _streakService.GetStreakAsync(UserId);
         return Ok(streak);
     }
 
     [HttpGet("countdown")]
     public async Task<ActionResult<DebtFreeCountdownDto>> GetCountdown()
     {
-        var loans = await _db.PersonalLoans.ToListAsync();
-        var cards = await _db.CreditCards.ToListAsync();
+        var loans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
+        var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
 
         var projections = new List<DebtPayoffProjectionDto>();
 

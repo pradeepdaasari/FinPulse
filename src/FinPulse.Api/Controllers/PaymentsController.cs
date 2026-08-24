@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,10 +21,12 @@ public class PaymentsController : ControllerBase
         _db = db;
     }
 
+    private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
     [HttpGet]
     public async Task<ActionResult> GetAll([FromQuery] string? type, [FromQuery] int? debtId)
     {
-        var query = _db.PaymentHistories.AsQueryable();
+        var query = _db.PaymentHistories.Where(p => p.UserId == UserId).AsQueryable();
 
         if (!string.IsNullOrEmpty(type))
         {
@@ -61,7 +64,7 @@ public class PaymentsController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<PaymentHistory>> Update(int id, PaymentCreateDto dto)
     {
-        var payment = await _db.PaymentHistories.FindAsync(id);
+        var payment = await _db.PaymentHistories.FirstOrDefaultAsync(p => p.Id == id && p.UserId == UserId);
         if (payment is null) return NotFound();
 
         var difference = dto.AmountPaid - payment.AmountPaid;
@@ -90,7 +93,7 @@ public class PaymentsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<ActionResult> Delete(int id)
     {
-        var payment = await _db.PaymentHistories.FindAsync(id);
+        var payment = await _db.PaymentHistories.FirstOrDefaultAsync(p => p.Id == id && p.UserId == UserId);
         if (payment is null) return NotFound();
 
         if (payment.DebtType == DebtType.PersonalLoan)

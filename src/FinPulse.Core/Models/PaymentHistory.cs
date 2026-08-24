@@ -15,4 +15,6 @@ public class PaymentHistory
     public DateTime PaymentDate { get; set; }
 
     public string? Notes { get; set; }
+
+    public string? UserId { get; set; }
 }

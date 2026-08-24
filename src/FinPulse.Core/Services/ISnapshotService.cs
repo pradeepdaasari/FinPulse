@@ -4,6 +4,6 @@ namespace FinPulse.Core.Services;
 
 public interface ISnapshotService
 {
-    Task<TrendDataDto> GetTrendsAsync(int months = 12);
-    Task EnsureCurrentMonthSnapshotAsync();
+    Task<TrendDataDto> GetTrendsAsync(string userId, int months = 12);
+    Task EnsureCurrentMonthSnapshotAsync(string userId);
 }

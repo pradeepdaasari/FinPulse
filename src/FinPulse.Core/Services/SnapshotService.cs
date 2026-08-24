@@ -15,21 +15,21 @@ public class SnapshotService : ISnapshotService
         _db = db;
     }
 
-    public async Task EnsureCurrentMonthSnapshotAsync()
+    public async Task EnsureCurrentMonthSnapshotAsync(string userId)
     {
         var now = DateTime.UtcNow;
         var exists = await _db.MonthlySnapshots
-            .AnyAsync(s => s.Year == now.Year && s.Month == now.Month);
+            .AnyAsync(s => s.Year == now.Year && s.Month == now.Month && s.UserId == userId);
 
         if (exists) return;
 
-        var loans = await _db.PersonalLoans.ToListAsync();
-        var cards = await _db.CreditCards.ToListAsync();
+        var loans = await _db.PersonalLoans.Where(l => l.UserId == userId).ToListAsync();
+        var cards = await _db.CreditCards.Where(c => c.UserId == userId).ToListAsync();
         var totalDebt = loans.Sum(l => l.CurrentBalance) + cards.Sum(c => c.CurrentBalance);
 
         var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var payments = await _db.PaymentHistories
-            .Where(p => p.PaymentDate >= startOfMonth)
+            .Where(p => p.UserId == userId && p.PaymentDate >= startOfMonth)
             .ToListAsync();
         var totalPaid = payments.Sum(p => p.AmountPaid);
 
@@ -38,18 +38,20 @@ public class SnapshotService : ISnapshotService
             Year = now.Year,
             Month = now.Month,
             TotalDebt = totalDebt,
-            TotalPaidThisMonth = totalPaid
+            TotalPaidThisMonth = totalPaid,
+            UserId = userId
         };
 
         _db.MonthlySnapshots.Add(snapshot);
         await _db.SaveChangesAsync();
     }
 
-    public async Task<TrendDataDto> GetTrendsAsync(int months = 12)
+    public async Task<TrendDataDto> GetTrendsAsync(string userId, int months = 12)
     {
-        await EnsureCurrentMonthSnapshotAsync();
+        await EnsureCurrentMonthSnapshotAsync(userId);
 
         var snapshots = await _db.MonthlySnapshots
+            .Where(s => s.UserId == userId)
             .OrderByDescending(s => s.Year)
             .ThenByDescending(s => s.Month)
             .Take(months)

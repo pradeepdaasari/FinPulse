@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -22,12 +23,14 @@ public class StrategiesController : ControllerBase
         _strategyService = strategyService;
     }
 
+    private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
     [HttpGet("comparison")]
     public async Task<ActionResult<StrategyComparisonDto>> GetComparison()
     {
-        var loans = await _db.PersonalLoans.ToListAsync();
-        var cards = await _db.CreditCards.ToListAsync();
-        var profile = await _db.UserProfiles.FirstOrDefaultAsync();
+        var loans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
+        var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
+        var profile = await _db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == UserId);
 
         var snapshots = new List<DebtSnapshotDto>();
 
