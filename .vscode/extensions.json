@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "ms-dotnettools.csdevkit",
+    "Angular.ng-template",
+    "dbaeumer.vscode-eslint",
+    "ms-azuretools.vscode-azurestaticwebapps",
+    "ms-azuretools.vscode-azureappservice",
+    "humao.rest-client"
+  ]
+}

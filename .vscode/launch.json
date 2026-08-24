@@ -1,0 +1,35 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": ".NET Core Launch (API)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-api",
+      "program": "${workspaceFolder}/src/FinPulse.Api/bin/Debug/net10.0/FinPulse.Api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/FinPulse.Api",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "https://localhost:5001"
+      }
+    },
+    {
+      "name": "Chrome: Angular",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:4200",
+      "webRoot": "${workspaceFolder}/src/finpulse-ui"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack",
+      "configurations": [
+        ".NET Core Launch (API)",
+        "Chrome: Angular"
+      ]
+    }
+  ]
+}
