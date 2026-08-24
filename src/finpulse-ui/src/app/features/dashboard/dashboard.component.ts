@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -113,6 +114,7 @@ import { FinancialSummaryComponent } from './financial-summary.component';
 export class DashboardComponent implements OnInit {
   private dashboardService = inject(DashboardService);
   private recurringService = inject(RecurringService);
+  private router = inject(Router);
 
   summary = signal<DashboardSummary | null>(null);
   loading = signal(true);
@@ -129,6 +131,11 @@ export class DashboardComponent implements OnInit {
     this.recurringService.generate().subscribe();
     this.dashboardService.getSummary().subscribe({
       next: (data) => {
+        const setupDismissed = localStorage.getItem('finpulse_setup_dismissed');
+        if (!setupDismissed && data.numberOfDebts === 0 && data.totalMonthlyPayment === 0 && data.upcomingPayments.length === 0) {
+          this.router.navigate(['/setup']);
+          return;
+        }
         this.summary.set(data);
         this.buildChart(data);
         this.loading.set(false);
