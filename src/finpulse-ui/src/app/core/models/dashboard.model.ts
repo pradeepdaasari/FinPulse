@@ -97,6 +97,10 @@ export interface FinancialSummary {
   totalIncome: number;
   totalExpenses: number;
   netCashFlow: number;
+  savingsRate: number;
+  tradingGains: number;
+  tradingLosses: number;
+  tradingNetPnL: number;
   bankAccounts: FinancialSummaryAccount[];
   totalBankBalance: number;
   totalCreditCardDebt: number;

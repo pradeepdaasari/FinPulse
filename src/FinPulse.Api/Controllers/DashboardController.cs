@@ -199,11 +199,21 @@ public class DashboardController : ControllerBase
         var endDate = startDate.AddMonths(1);
 
         var transactions = await _db.DailyExpenses
+            .Include(e => e.Category)
             .Where(e => e.UserId == UserId && e.Date >= startDate && e.Date < endDate)
             .ToListAsync();
 
         var totalIncome = transactions.Where(t => t.TransactionType == TransactionType.Income).Sum(t => t.Amount);
         var totalExpenses = transactions.Where(t => t.TransactionType == TransactionType.Expense || t.TransactionType == null).Sum(t => t.Amount);
+
+        var tradingGains = transactions
+            .Where(t => t.TransactionType == TransactionType.Income && t.Category.Name == "Trading Gains")
+            .Sum(t => t.Amount);
+        var tradingLosses = transactions
+            .Where(t => t.TransactionType == TransactionType.Expense && t.Category.Name == "Trading Losses")
+            .Sum(t => t.Amount);
+
+        var savingsRate = totalIncome > 0 ? Math.Round((totalIncome - totalExpenses) / totalIncome * 100, 1) : 0;
 
         var bankAccounts = await _db.BankAccounts.Where(a => a.UserId == UserId).ToListAsync();
         var creditCards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
@@ -218,6 +228,10 @@ public class DashboardController : ControllerBase
             TotalIncome = totalIncome,
             TotalExpenses = totalExpenses,
             NetCashFlow = totalIncome - totalExpenses,
+            SavingsRate = savingsRate,
+            TradingGains = tradingGains,
+            TradingLosses = tradingLosses,
+            TradingNetPnL = tradingGains - tradingLosses,
             BankAccounts = bankAccounts.Select(a => new
             {
                 a.Id,
