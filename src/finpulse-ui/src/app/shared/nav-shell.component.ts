@@ -1,10 +1,11 @@
-import { Component, inject, signal, ViewChild } from '@angular/core';
+import { Component, computed, inject, signal, ViewChild } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { filter } from 'rxjs/operators';
 import { AuthService } from '../core/services/auth.service';
@@ -20,7 +21,8 @@ import { AuthService } from '../core/services/auth.service';
     MatToolbarModule,
     MatListModule,
     MatIconModule,
-    MatButtonModule
+    MatButtonModule,
+    MatTooltipModule
   ],
   template: `
     <mat-sidenav-container class="shell-container">
@@ -32,10 +34,10 @@ import { AuthService } from '../core/services/auth.service';
         fixedTopGap="0">
 
         <div class="sidenav-header">
-          <div class="brand">
+          <a class="brand" routerLink="/dashboard">
             <mat-icon class="brand-icon">account_balance_wallet</mat-icon>
             <span class="brand-name">FinPulse</span>
-          </div>
+          </a>
         </div>
 
         <mat-nav-list class="nav-list">
@@ -101,7 +103,11 @@ import { AuthService } from '../core/services/auth.service';
           }
           <span class="toolbar-title">{{ pageTitle() }}</span>
           <span class="toolbar-spacer"></span>
-          <button mat-icon-button (click)="logout()" aria-label="Logout">
+          <div class="user-info">
+            <mat-icon class="user-avatar">account_circle</mat-icon>
+            <span class="user-email">{{ userEmail() }}</span>
+          </div>
+          <button mat-icon-button (click)="logout()" aria-label="Logout" matTooltip="Logout">
             <mat-icon>logout</mat-icon>
           </button>
         </mat-toolbar>
@@ -131,6 +137,12 @@ import { AuthService } from '../core/services/auth.service';
       display: flex;
       align-items: center;
       gap: 12px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .brand:hover {
+      opacity: 0.85;
     }
 
     .brand-icon {
@@ -213,6 +225,31 @@ import { AuthService } from '../core/services/auth.service';
       flex: 1 1 auto;
     }
 
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-right: 8px;
+      padding: 4px 12px 4px 8px;
+      border-radius: 20px;
+      background: var(--color-bg, rgba(0,0,0,0.04));
+    }
+    .user-avatar {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+      color: var(--color-primary);
+    }
+    .user-email {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--color-text-secondary);
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .content-area {
       padding: var(--spacing-xl);
       max-width: 1400px;
@@ -227,6 +264,14 @@ import { AuthService } from '../core/services/auth.service';
       .toolbar-title {
         font-size: 1rem;
       }
+
+      .user-email {
+        display: none;
+      }
+      .user-info {
+        padding: 4px;
+        background: none;
+      }
     }
   `]
 })
@@ -239,6 +284,7 @@ export class NavShellComponent {
 
   isMobile = signal(false);
   pageTitle = signal('Dashboard');
+  userEmail = computed(() => this.authService.currentUser()?.email ?? '');
 
   private pageTitles: Record<string, string> = {
     '/dashboard': 'Dashboard',
