@@ -17,6 +17,9 @@ public class DailyExpense
     public string Description { get; set; } = string.Empty;
     [MaxLength(200)]
     public string? Merchant { get; set; }
+
+    public string? UserId { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

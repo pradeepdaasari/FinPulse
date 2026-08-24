@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -22,11 +23,13 @@ public class SimulatorController : ControllerBase
         _simulatorService = simulatorService;
     }
 
+    private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
     [HttpPost("what-if")]
     public async Task<ActionResult<WhatIfResultDto>> WhatIf(WhatIfRequestDto request)
     {
-        var loans = await _db.PersonalLoans.ToListAsync();
-        var cards = await _db.CreditCards.ToListAsync();
+        var loans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
+        var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
 
         var snapshots = new List<DebtSnapshotDto>();
 

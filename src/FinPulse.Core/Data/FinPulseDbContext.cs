@@ -31,6 +31,7 @@ public class FinPulseDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.CurrentBalance).HasPrecision(18, 2);
             entity.Property(e => e.MonthlyPayment).HasPrecision(18, 2);
             entity.Property(e => e.AprPercent).HasPrecision(5, 3);
+            entity.HasIndex(e => e.UserId);
         });
 
         // CreditCard decimal precision
@@ -40,6 +41,7 @@ public class FinPulseDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.MinimumPayment).HasPrecision(18, 2);
             entity.Property(e => e.AprPercent).HasPrecision(5, 3);
             entity.Property(e => e.PromoAprPercent).HasPrecision(5, 3);
+            entity.HasIndex(e => e.UserId);
         });
 
         // UserProfile decimal precision
@@ -47,12 +49,14 @@ public class FinPulseDbContext : IdentityDbContext<ApplicationUser>
         {
             entity.Property(e => e.MonthlyIncome).HasPrecision(18, 2);
             entity.Property(e => e.NetPayPerCheck).HasPrecision(18, 2);
+            entity.HasIndex(e => e.UserId).IsUnique();
         });
 
         // BudgetExpense decimal precision
         modelBuilder.Entity<BudgetExpense>(entity =>
         {
             entity.Property(e => e.Amount).HasPrecision(18, 2);
+            entity.HasIndex(e => e.UserId);
         });
 
         // DailyExpense
@@ -60,6 +64,7 @@ public class FinPulseDbContext : IdentityDbContext<ApplicationUser>
         {
             entity.Property(e => e.Amount).HasPrecision(18, 2);
             entity.HasIndex(e => e.Date);
+            entity.HasIndex(e => e.UserId);
         });
 
         // CustomCategory
@@ -76,12 +81,13 @@ public class FinPulseDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<PaymentHistory>(entity =>
         {
             entity.Property(e => e.AmountPaid).HasPrecision(18, 2);
+            entity.HasIndex(e => e.UserId);
         });
 
         // MonthlySnapshot
         modelBuilder.Entity<MonthlySnapshot>(entity =>
         {
-            entity.HasIndex(e => new { e.Year, e.Month }).IsUnique();
+            entity.HasIndex(e => new { e.Year, e.Month, e.UserId }).IsUnique();
             entity.Property(e => e.TotalDebt).HasPrecision(18, 2);
             entity.Property(e => e.TotalPaidThisMonth).HasPrecision(18, 2);
         });

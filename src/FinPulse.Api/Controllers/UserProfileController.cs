@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,10 +20,12 @@ public class UserProfileController : ControllerBase
         _db = db;
     }
 
+    private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
     [HttpGet]
     public async Task<ActionResult<UserProfile>> Get()
     {
-        var profile = await _db.UserProfiles.FirstOrDefaultAsync();
+        var profile = await _db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == UserId);
         if (profile is null) return NotFound();
         return Ok(profile);
     }
@@ -30,7 +33,7 @@ public class UserProfileController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<UserProfile>> CreateOrUpdate(UserProfile dto)
     {
-        var existing = await _db.UserProfiles.FirstOrDefaultAsync();
+        var existing = await _db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == UserId);
 
         if (existing is null)
         {
@@ -39,7 +42,8 @@ public class UserProfileController : ControllerBase
                 MonthlyIncome = ComputeMonthlyIncome(dto.NetPayPerCheck, dto.PayFrequency),
                 PayFrequency = dto.PayFrequency,
                 NetPayPerCheck = dto.NetPayPerCheck,
-                NextPayDate = dto.NextPayDate
+                NextPayDate = dto.NextPayDate,
+                UserId = UserId
             };
             _db.UserProfiles.Add(profile);
             await _db.SaveChangesAsync();

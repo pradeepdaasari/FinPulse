@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +20,8 @@ public class ExpenseController : ControllerBase
         _db = db;
     }
 
+    private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
     [HttpGet]
     public async Task<ActionResult<List<object>>> GetExpenses([FromQuery] int? year, [FromQuery] int? month)
     {
@@ -30,7 +33,7 @@ public class ExpenseController : ControllerBase
         var expenses = await _db.DailyExpenses
             .Include(e => e.Category)
             .ThenInclude(c => c.Parent)
-            .Where(e => e.Date >= startDate && e.Date < endDate)
+            .Where(e => e.UserId == UserId && e.Date >= startDate && e.Date < endDate)
             .OrderByDescending(e => e.Date)
             .ThenByDescending(e => e.CreatedAt)
             .Select(e => new
@@ -62,12 +65,12 @@ public class ExpenseController : ControllerBase
 
         var dailyExpenses = await _db.DailyExpenses
             .Include(e => e.Category)
-            .Where(e => e.Date >= startDate && e.Date < endDate)
+            .Where(e => e.UserId == UserId && e.Date >= startDate && e.Date < endDate)
             .ToListAsync();
 
         var budgets = await _db.BudgetExpenses
             .Include(e => e.Category)
-            .Where(e => !e.IsFixed)
+            .Where(e => e.UserId == UserId && !e.IsFixed)
             .ToListAsync();
 
         var summaries = new List<SpendingSummaryDto>();
@@ -122,7 +125,8 @@ public class ExpenseController : ControllerBase
             CategoryId = dto.CategoryId,
             Amount = dto.Amount,
             Description = dto.Description,
-            Merchant = dto.Merchant
+            Merchant = dto.Merchant,
+            UserId = UserId
         };
 
         _db.DailyExpenses.Add(expense);
@@ -150,7 +154,7 @@ public class ExpenseController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult> Update(int id, DailyExpenseCreateDto dto)
     {
-        var expense = await _db.DailyExpenses.FindAsync(id);
+        var expense = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == id && e.UserId == UserId);
         if (expense is null) return NotFound();
 
         expense.Date = dto.Date;
@@ -183,7 +187,7 @@ public class ExpenseController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<ActionResult> Delete(int id)
     {
-        var expense = await _db.DailyExpenses.FindAsync(id);
+        var expense = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == id && e.UserId == UserId);
         if (expense is null) return NotFound();
 
         _db.DailyExpenses.Remove(expense);

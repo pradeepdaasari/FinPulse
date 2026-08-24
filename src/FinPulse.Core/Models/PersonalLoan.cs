@@ -32,6 +32,8 @@ public class PersonalLoan
 
     public PaymentFrequency PaymentFrequency { get; set; } = PaymentFrequency.Monthly;
 
+    public string? UserId { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }

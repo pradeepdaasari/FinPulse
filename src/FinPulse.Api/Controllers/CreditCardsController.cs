@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -23,17 +24,19 @@ public class CreditCardsController : ControllerBase
         _calcService = calcService;
     }
 
+    private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
     [HttpGet]
     public async Task<ActionResult<List<CreditCard>>> GetAll()
     {
-        var cards = await _db.CreditCards.ToListAsync();
+        var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
         return Ok(cards);
     }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<CreditCard>> GetById(int id)
     {
-        var card = await _db.CreditCards.FindAsync(id);
+        var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
         if (card is null) return NotFound();
         return Ok(card);
     }
@@ -50,7 +53,8 @@ public class CreditCardsController : ControllerBase
             DueDay = dto.DueDay,
             IsAutopay = dto.IsAutopay,
             PromoAprPercent = dto.PromoAprPercent,
-            PromoEndDate = dto.PromoEndDate
+            PromoEndDate = dto.PromoEndDate,
+            UserId = UserId
         };
 
         _db.CreditCards.Add(card);
@@ -62,7 +66,7 @@ public class CreditCardsController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<CreditCard>> Update(int id, CreditCardCreateDto dto)
     {
-        var card = await _db.CreditCards.FindAsync(id);
+        var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
         if (card is null) return NotFound();
 
         card.CardName = dto.CardName;
@@ -82,7 +86,7 @@ public class CreditCardsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<ActionResult> Delete(int id)
     {
-        var card = await _db.CreditCards.FindAsync(id);
+        var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
         if (card is null) return NotFound();
 
         _db.CreditCards.Remove(card);
@@ -94,7 +98,7 @@ public class CreditCardsController : ControllerBase
     [HttpGet("{id}/payoff-timeline")]
     public async Task<ActionResult<List<PayoffEntryDto>>> GetPayoffTimeline(int id)
     {
-        var card = await _db.CreditCards.FindAsync(id);
+        var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
         if (card is null) return NotFound();
 
         var schedule = _calcService.GenerateCardPayoffSchedule(
@@ -110,7 +114,7 @@ public class CreditCardsController : ControllerBase
     [HttpPost("{id}/payments")]
     public async Task<ActionResult<PaymentHistory>> RecordPayment(int id, PaymentCreateDto dto)
     {
-        var card = await _db.CreditCards.FindAsync(id);
+        var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
         if (card is null) return NotFound();
 
         var payment = new PaymentHistory
@@ -119,7 +123,8 @@ public class CreditCardsController : ControllerBase
             DebtId = id,
             AmountPaid = dto.AmountPaid,
             PaymentDate = dto.PaymentDate,
-            Notes = dto.Notes
+            Notes = dto.Notes,
+            UserId = UserId
         };
 
         card.CurrentBalance = Math.Max(0, card.CurrentBalance - dto.AmountPaid);
@@ -138,11 +143,11 @@ public class CreditCardsController : ControllerBase
     [HttpGet("{id}/payments")]
     public async Task<ActionResult<List<PaymentHistory>>> GetPayments(int id)
     {
-        var card = await _db.CreditCards.FindAsync(id);
+        var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
         if (card is null) return NotFound();
 
         var payments = await _db.PaymentHistories
-            .Where(p => p.DebtType == DebtType.CreditCard && p.DebtId == id)
+            .Where(p => p.DebtType == DebtType.CreditCard && p.DebtId == id && p.UserId == UserId)
             .OrderByDescending(p => p.PaymentDate)
             .ToListAsync();
 

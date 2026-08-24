@@ -11,5 +11,6 @@ public class MonthlySnapshot
     public decimal TotalDebt { get; set; }
     public decimal TotalPaidThisMonth { get; set; }
     public string DebtBalancesJson { get; set; } = "{}";
+    public string? UserId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
