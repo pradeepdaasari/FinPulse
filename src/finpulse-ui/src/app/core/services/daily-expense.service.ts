@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { DailyExpense, DailyExpenseCreate, ExpenseFilter, MonthComparison, SpendingSummary } from '../models/daily-expense.model';
+import { DailyExpense, DailyExpenseCreate, ExpenseFilter, MonthComparison, SpendingSummary, TagSummary } from '../models/daily-expense.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -43,6 +43,10 @@ export class DailyExpenseService {
 
   getTags(): Observable<string[]> {
     return this.http.get<string[]>(`${this.baseUrl}/tags`);
+  }
+
+  getTagSummary(): Observable<TagSummary[]> {
+    return this.http.get<TagSummary[]>(`${this.baseUrl}/tag-summary`);
   }
 
   getComparison(year?: number, month?: number): Observable<MonthComparison> {

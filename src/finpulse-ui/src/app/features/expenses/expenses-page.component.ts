@@ -16,6 +16,7 @@ import { DailyExpense, DailyExpenseCreate, ExpenseFilter, SpendingSummary } from
 import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dialog.component';
 import { ExpenseFilterBarComponent } from './expense-filter-bar.component';
 import { MonthComparisonComponent } from './month-comparison.component';
+import { TagSummaryComponent } from './tag-summary.component';
 
 @Component({
   selector: 'app-expenses-page',
@@ -24,7 +25,7 @@ import { MonthComparisonComponent } from './month-comparison.component';
     CommonModule, MatTabsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatTableModule, MatProgressBarModule, MatProgressSpinnerModule, MatChipsModule,
     MatDialogModule, MatTooltipModule, CurrencyPipe, DatePipe,
-    ExpenseFilterBarComponent, MonthComparisonComponent
+    ExpenseFilterBarComponent, MonthComparisonComponent, TagSummaryComponent
   ],
   template: `
     <div class="expenses-header">
@@ -222,6 +223,13 @@ import { MonthComparisonComponent } from './month-comparison.component';
         <mat-tab label="Month Comparison">
           <div class="tab-content">
             <app-month-comparison [year]="currentYear" [month]="currentMonth"></app-month-comparison>
+          </div>
+        </mat-tab>
+
+        <!-- Tag Summary Tab -->
+        <mat-tab label="Trips & Tags">
+          <div class="tab-content">
+            <app-tag-summary></app-tag-summary>
           </div>
         </mat-tab>
       </mat-tab-group>

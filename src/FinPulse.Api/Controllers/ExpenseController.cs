@@ -250,6 +250,30 @@ public class ExpenseController : ControllerBase
         return Ok(tags);
     }
 
+    [HttpGet("tag-summary")]
+    public async Task<ActionResult> GetTagSummary()
+    {
+        var expenses = await _db.DailyExpenses
+            .Where(e => e.UserId == UserId && e.Tag != null && e.TransactionType == TransactionType.Expense)
+            .Select(e => new { e.Tag, e.Amount, e.Date })
+            .ToListAsync();
+
+        var summary = expenses
+            .GroupBy(e => e.Tag)
+            .Select(g => new
+            {
+                Tag = g.Key,
+                TotalAmount = g.Sum(e => e.Amount),
+                TransactionCount = g.Count(),
+                FirstDate = g.Min(e => e.Date),
+                LastDate = g.Max(e => e.Date)
+            })
+            .OrderByDescending(s => s.LastDate)
+            .ToList();
+
+        return Ok(summary);
+    }
+
     [HttpGet("comparison")]
     public async Task<ActionResult> GetComparison([FromQuery] int? year, [FromQuery] int? month)
     {
