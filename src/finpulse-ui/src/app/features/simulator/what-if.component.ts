@@ -25,7 +25,7 @@ interface DebtSlider {
   standalone: true,
   imports: [CommonModule, MatCardModule, MatIconModule, MatSliderModule, MatProgressSpinnerModule, MatTableModule, CurrencyPipe, DatePipe],
   template: `
-    <h2><mat-icon class="section-icon">science</mat-icon> What-If Simulator</h2>
+    <h2>What-If Simulator</h2>
     <p>Use the sliders below to see how extra payments affect your payoff timeline.</p>
 
     @if (loadingDebts()) {
@@ -106,10 +106,10 @@ interface DebtSlider {
     .sliders-container {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: var(--spacing-md);
+      gap: var(--spacing-xl);
       margin-bottom: var(--spacing-lg);
     }
-    .slider-card { padding: var(--spacing-sm); }
+    .slider-card { padding: var(--spacing-lg); }
     .slider-header {
       display: flex;
       justify-content: space-between;
@@ -132,7 +132,7 @@ interface DebtSlider {
       flex-wrap: wrap;
     }
     .result-stat { display: flex; flex-direction: column; gap: 2px; }
-    .label { font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 500; letter-spacing: 0.05em; }
+    .label { font-size: 0.75rem; color: var(--color-text-muted); font-weight: 500; letter-spacing: 0.05em; }
     .value { font-size: 1.25rem; font-weight: 700; }
     .highlight { color: var(--color-success); }
     .projection-table { width: 100%; }

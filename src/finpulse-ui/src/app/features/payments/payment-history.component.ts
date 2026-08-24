@@ -20,7 +20,7 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
   standalone: true,
   imports: [CommonModule, MatCardModule, MatTableModule, MatChipsModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
   template: `
-    <h2><mat-icon class="section-icon">receipt_long</mat-icon> Payment History</h2>
+    <h2>Payment History</h2>
 
     <div class="filter-row">
       <mat-chip-set>
@@ -176,7 +176,7 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
     .summary-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: var(--spacing-md);
+      gap: var(--spacing-xl);
       margin-bottom: var(--spacing-lg);
     }
     .summary-card {
@@ -191,7 +191,6 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
     .summary-label {
       font-size: 0.75rem;
       color: var(--color-text-muted);
-      text-transform: uppercase;
       font-weight: 500;
       letter-spacing: 0.05em;
     }
@@ -230,7 +229,6 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
       border-radius: 12px;
       font-size: 0.6875rem;
       font-weight: 600;
-      text-transform: uppercase;
     }
     .type-PersonalLoan {
       background: var(--gradient-icon-blue);
@@ -251,9 +249,9 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
       color: var(--color-text-muted);
     }
     .empty-state mat-icon {
-      font-size: 28px;
-      width: 28px;
-      height: 28px;
+      font-size: 56px;
+      width: 56px;
+      height: 56px;
     }
     @media (max-width: 768px) {
       .summary-row { grid-template-columns: 1fr 1fr; }

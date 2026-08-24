@@ -29,7 +29,7 @@ import { TagSummaryComponent } from './tag-summary.component';
   ],
   template: `
     <div class="expenses-header">
-      <h2><mat-icon class="section-icon">swap_horiz</mat-icon> Transactions</h2>
+      <h2>Transactions</h2>
       <div class="month-nav">
         <button mat-icon-button (click)="prevMonth()"><mat-icon>chevron_left</mat-icon></button>
         <span class="month-label">{{ monthLabel() }}</span>
@@ -245,19 +245,26 @@ import { TagSummaryComponent } from './tag-summary.component';
       margin-bottom: var(--spacing-md);
     }
     .expenses-header h2 { margin: 0; }
-    .month-nav { display: flex; align-items: center; gap: var(--spacing-xs); }
-    .month-label { font-size: 1.1rem; font-weight: 500; min-width: 140px; text-align: center; }
+    .month-nav {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      background: var(--color-surface-secondary);
+      border-radius: var(--radius-full);
+      padding: 4px;
+    }
+    .month-label { font-size: var(--text-base); font-weight: 600; min-width: 140px; text-align: center; }
     .tab-content { padding: var(--spacing-md) 0; }
 
     .totals-card { margin-bottom: var(--spacing-lg); }
     .totals-row { display: flex; justify-content: space-around; flex-wrap: wrap; gap: var(--spacing-md); }
     .total-item { text-align: center; }
     .total-label { display: block; font-size: 0.85rem; opacity: 0.7; }
-    .total-value { display: block; font-size: 1.5rem; font-weight: 700; margin-top: 4px; }
-    .total-value.budgeted { color: var(--md-sys-color-primary, #1976d2); }
-    .total-value.spent { color: var(--md-sys-color-secondary, #f57c00); }
-    .total-value.positive { color: #2e7d32; }
-    .total-value.negative { color: #c62828; }
+    .total-value { display: block; font-size: 1.75rem; font-weight: 700; margin-top: 4px; }
+    .total-value.budgeted { color: var(--color-primary); }
+    .total-value.spent { color: var(--color-warning); }
+    .total-value.positive { color: var(--color-success); }
+    .total-value.negative { color: var(--color-danger); }
 
     .summary-list { display: flex; flex-direction: column; gap: var(--spacing-sm); }
     .summary-item { cursor: pointer; transition: box-shadow 0.2s; }
@@ -267,8 +274,8 @@ import { TagSummaryComponent } from './tag-summary.component';
     .cat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); }
     .cat-amounts { font-size: 0.9rem; opacity: 0.8; }
     .summary-footer { display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.85rem; }
-    .remaining { color: #2e7d32; }
-    .remaining.over { color: #c62828; }
+    .remaining { color: var(--color-success); }
+    .remaining.over { color: var(--color-danger); }
     .percent { opacity: 0.6; }
 
     .log-header { display: flex; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-md); }
@@ -276,22 +283,22 @@ import { TagSummaryComponent } from './tag-summary.component';
     .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table { width: 100%; min-width: 700px; }
     .amount-cell { font-weight: 600; }
-    .income-amount { color: #2e7d32; }
-    .transfer-amount { color: #1565c0; }
-    .refund-amount { color: #2e7d32; font-style: italic; }
-    .card-payment-amount { color: #6a1b9a; }
+    .income-amount { color: var(--color-success); }
+    .transfer-amount { color: var(--color-primary); }
+    .refund-amount { color: var(--color-success); font-style: italic; }
+    .card-payment-amount { color: var(--color-accent); }
     .source-cell { display: flex; align-items: center; gap: 4px; font-size: 0.85rem; }
     .source-icon { font-size: 16px; width: 16px; height: 16px; opacity: 0.7; }
-    .transfer-source { color: #1565c0; }
-    .card-payment-source { color: #6a1b9a; }
+    .transfer-source { color: var(--color-primary); }
+    .card-payment-source { color: var(--color-accent); }
     .arrow-icon { font-size: 14px; width: 14px; height: 14px; }
     .tag-badge {
       display: inline-block;
-      background: #e3f2fd;
-      color: #1565c0;
+      background: rgba(0, 122, 255, 0.08);
+      color: var(--color-primary);
       font-size: 0.7rem;
-      padding: 1px 6px;
-      border-radius: 10px;
+      padding: 2px 10px;
+      border-radius: var(--radius-full);
       margin-left: 6px;
       font-weight: 500;
       vertical-align: middle;

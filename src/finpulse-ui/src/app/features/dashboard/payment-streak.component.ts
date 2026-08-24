@@ -40,8 +40,6 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
   `,
   styles: [`
     .streak-card {
-      background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-      border: 1px solid #fed7aa;
       margin-top: var(--spacing-md);
     }
     .streak-content {
@@ -53,7 +51,7 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
       width: 52px;
       height: 52px;
       border-radius: 14px;
-      background: rgba(234, 88, 12, 0.12);
+      background: rgba(234, 88, 12, 0.08);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -62,7 +60,7 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
       font-size: 28px;
       width: 28px;
       height: 28px;
-      color: #ea580c;
+      color: var(--color-warning);
     }
     .streak-info {
       display: flex;
@@ -71,12 +69,12 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
     .streak-count {
       font-size: 2rem;
       font-weight: 700;
-      color: #c2410c;
+      color: var(--color-text);
       line-height: 1;
     }
     .streak-label {
       font-size: 0.8125rem;
-      color: #9a3412;
+      color: var(--color-text-secondary);
       font-weight: 500;
     }
     .streak-details {
@@ -93,12 +91,11 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
     .detail-value {
       font-size: 1.25rem;
       font-weight: 700;
-      color: #c2410c;
+      color: var(--color-text);
     }
     .detail-label {
       font-size: 0.6875rem;
-      color: #9a3412;
-      text-transform: uppercase;
+      color: var(--color-text-secondary);
       letter-spacing: 0.03em;
       font-weight: 600;
     }
@@ -106,7 +103,7 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
       font-size: 24px;
       width: 24px;
       height: 24px;
-      color: #9a3412;
+      color: var(--color-text-secondary);
     }
     .status-icon.paid { color: var(--color-success); }
   `]

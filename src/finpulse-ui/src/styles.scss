@@ -12,77 +12,99 @@ html {
 }
 
 :root {
-  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'SF Mono', 'Fira Code', monospace;
+  // Typography
+  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace;
 
-  --color-primary: #1565c0;
-  --color-primary-light: #1976d2;
-  --color-primary-dark: #0d47a1;
-  --color-accent: #7c4dff;
+  // Type scale
+  --text-xs: 0.6875rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.0625rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.125rem;
 
-  --color-bg: #f5f7fa;
-  --color-surface: #ffffff;
-  --color-surface-hover: #f8f9fb;
-  --color-border: #e2e8f0;
+  --tracking-tight: -0.025em;
+  --tracking-normal: -0.01em;
 
-  --color-text: #1a202c;
-  --color-text-secondary: #64748b;
-  --color-text-muted: #94a3b8;
+  // Brand colors — Apple-inspired muted palette
+  --color-primary: #007AFF;
+  --color-primary-light: #409CFF;
+  --color-primary-dark: #0062CC;
+  --color-accent: #5856D6;
 
-  --color-success: #16a34a;
-  --color-success-bg: #f0fdf4;
-  --color-warning: #d97706;
-  --color-warning-bg: #fffbeb;
-  --color-danger: #dc2626;
-  --color-danger-bg: #fef2f2;
+  // Surfaces — warm layered grays
+  --color-bg: #F2F2F7;
+  --color-surface: #FFFFFF;
+  --color-surface-secondary: #F9F9FB;
+  --color-surface-hover: #F5F5FA;
+  --color-border: rgba(0, 0, 0, 0.06);
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  // Text hierarchy
+  --color-text: #1D1D1F;
+  --color-text-secondary: #6E6E73;
+  --color-text-muted: #AEAEB2;
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  // Semantic
+  --color-success: #34C759;
+  --color-success-bg: rgba(52, 199, 89, 0.08);
+  --color-warning: #FF9500;
+  --color-warning-bg: rgba(255, 149, 0, 0.08);
+  --color-danger: #FF3B30;
+  --color-danger-bg: rgba(255, 59, 48, 0.08);
 
+  // Shadows — multi-layer, diffused
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04);
+  --shadow-float: 0 24px 80px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.06);
+
+  // Radii — generous Apple-like rounding
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+  --radius-full: 9999px;
+
+  // Spacing — 8px grid
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 16px;
   --spacing-lg: 24px;
   --spacing-xl: 32px;
   --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
 
   // Gradients
-  --gradient-primary: linear-gradient(135deg, #1565c0 0%, #1976d2 50%, #1e88e5 100%);
-  --gradient-accent: linear-gradient(135deg, #7c4dff 0%, #651fff 100%);
-  --gradient-sidebar: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-  --gradient-login: linear-gradient(135deg, #1565c0 0%, #7c4dff 100%);
+  --gradient-primary: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+  --gradient-accent: linear-gradient(135deg, #5856D6 0%, #AF52DE 100%);
+  --gradient-sidebar: linear-gradient(180deg, #1C1C1E 0%, #2C2C2E 100%);
+  --gradient-login: linear-gradient(160deg, #1C1C1E 0%, #2C2C2E 40%, #3A3A3C 100%);
 
-  // Card icon gradient backgrounds
-  --gradient-icon-blue: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  --gradient-icon-purple: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
-  --gradient-icon-green: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  --gradient-icon-amber: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  // Icon tint backgrounds
+  --gradient-icon-blue: rgba(0, 122, 255, 0.08);
+  --gradient-icon-purple: rgba(88, 86, 214, 0.08);
+  --gradient-icon-green: rgba(52, 199, 89, 0.08);
+  --gradient-icon-amber: rgba(255, 149, 0, 0.08);
 
-  // Sidebar dark theme
-  --color-sidebar-bg: #0f172a;
-  --color-sidebar-text: #cbd5e1;
-  --color-sidebar-text-active: #ffffff;
-  --color-sidebar-hover: rgba(255, 255, 255, 0.06);
-  --color-sidebar-active: rgba(99, 102, 241, 0.15);
-  --color-sidebar-accent: #818cf8;
-  --color-sidebar-border: rgba(255, 255, 255, 0.06);
+  // Sidebar — frosted dark
+  --color-sidebar-bg: rgba(28, 28, 30, 0.95);
+  --color-sidebar-text: rgba(255, 255, 255, 0.55);
+  --color-sidebar-text-active: #FFFFFF;
+  --color-sidebar-hover: rgba(255, 255, 255, 0.05);
+  --color-sidebar-active: rgba(0, 122, 255, 0.18);
+  --color-sidebar-accent: #0A84FF;
+  --color-sidebar-border: rgba(255, 255, 255, 0.04);
 
-  // Transitions
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-
-  // Elevated shadow
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-
-  // Additional radius
-  --radius-xl: 20px;
+  // Transitions — smooth Apple curves
+  --transition-fast: 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  --transition-base: 300ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  --transition-slow: 400ms cubic-bezier(0.25, 0.1, 0.25, 1);
 }
+
+// ─── Reset ───────────────────────────────────────────────────────────────────
 
 * {
   box-sizing: border-box;
@@ -91,124 +113,251 @@ html {
 body {
   margin: 0;
   font-family: var(--font-primary);
+  font-size: var(--text-base);
   background-color: var(--color-bg);
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  line-height: 1.5;
+  line-height: 1.47;
+  font-weight: 400;
 }
+
+// ─── Typography ──────────────────────────────────────────────────────────────
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-primary);
-  font-weight: 600;
   color: var(--color-text);
   margin: 0 0 var(--spacing-md);
+  line-height: 1.2;
 }
 
-h2 {
-  font-size: 1.5rem;
-  letter-spacing: -0.02em;
-}
+h1 { font-size: var(--text-3xl); font-weight: 700; letter-spacing: var(--tracking-tight); }
+h2 { font-size: var(--text-2xl); font-weight: 600; letter-spacing: var(--tracking-tight); }
+h3 { font-size: var(--text-xl); font-weight: 600; letter-spacing: var(--tracking-tight); }
+h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking-normal); }
 
-h3 {
-  font-size: 1.25rem;
-  letter-spacing: -0.01em;
-}
+// ─── Material Card ───────────────────────────────────────────────────────────
 
-// Material card overrides for professional look
 .mat-mdc-card {
-  border-radius: var(--radius-md) !important;
+  border-radius: var(--radius-lg) !important;
   box-shadow: var(--shadow-sm) !important;
-  border: 1px solid var(--color-border);
+  border: none !important;
+  background: var(--color-surface) !important;
   transition: box-shadow var(--transition-base), transform var(--transition-base);
 
   &:hover {
     box-shadow: var(--shadow-md) !important;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
   }
 }
 
-// Material toolbar override
+// ─── Material Toolbar ────────────────────────────────────────────────────────
+
 .mat-toolbar {
   font-family: var(--font-primary) !important;
 }
 
-// Material table improvements
+// ─── Material Table ──────────────────────────────────────────────────────────
+
 .mat-mdc-table {
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   overflow: hidden;
+  background: transparent !important;
 }
 
 .mat-mdc-header-row {
-  background-color: var(--color-bg) !important;
+  background: transparent !important;
+  border-bottom: 1px solid var(--color-border) !important;
 }
 
 .mat-mdc-header-cell {
-  font-weight: 600 !important;
+  font-weight: 500 !important;
   color: var(--color-text-secondary) !important;
-  font-size: 0.75rem !important;
+  font-size: var(--text-xs) !important;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
+  padding: 14px 16px !important;
 }
 
 .mat-mdc-cell {
-  font-size: 0.875rem !important;
+  font-size: var(--text-base) !important;
+  color: var(--color-text) !important;
+  padding: 14px 16px !important;
 }
 
-.mat-mdc-row:hover {
-  background-color: var(--color-surface-hover) !important;
+.mat-mdc-row {
+  border-bottom: 1px solid var(--color-border) !important;
+  transition: background var(--transition-fast);
+
+  &:last-child {
+    border-bottom: none !important;
+  }
+
+  &:hover {
+    background: var(--color-surface-hover) !important;
+  }
 }
 
-// Scrollbar styling
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
+// ─── Material Buttons ────────────────────────────────────────────────────────
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
-}
-
-// Responsive table wrapper utility
-.table-responsive {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-// Global button improvements
 .mat-mdc-raised-button,
-.mat-mdc-flat-button {
+.mat-mdc-flat-button,
+.mat-mdc-unelevated-button {
   border-radius: var(--radius-sm) !important;
   font-weight: 500 !important;
-  letter-spacing: 0.02em;
+  letter-spacing: var(--tracking-normal) !important;
+  text-transform: none !important;
+  font-size: var(--text-sm) !important;
+  padding: 8px 20px !important;
+  min-height: 38px;
   transition: all var(--transition-fast) !important;
+  box-shadow: none !important;
+
+  &:hover {
+    opacity: 0.85;
+  }
 }
 
-// Section icon utility
-.section-icon {
-  vertical-align: middle;
-  margin-right: 8px;
-  color: var(--color-primary);
-  font-size: 28px;
-  width: 28px;
-  height: 28px;
+.mat-mdc-icon-button {
+  transition: background var(--transition-fast), transform var(--transition-fast) !important;
+  border-radius: var(--radius-sm) !important;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.04) !important;
+    transform: scale(1.05);
+  }
 }
 
-// Snackbar styles
+// ─── Material Form Fields ────────────────────────────────────────────────────
+
+.mat-mdc-form-field {
+  .mdc-text-field--outlined {
+    border-radius: var(--radius-sm) !important;
+  }
+
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__trailing,
+  .mdc-notched-outline__notch {
+    border-color: rgba(0, 0, 0, 0.08) !important;
+  }
+
+  &.mat-focused .mdc-notched-outline__leading,
+  &.mat-focused .mdc-notched-outline__trailing,
+  &.mat-focused .mdc-notched-outline__notch {
+    border-color: var(--color-primary) !important;
+    border-width: 1.5px !important;
+  }
+}
+
+// ─── Material Dialog ─────────────────────────────────────────────────────────
+
+.mat-mdc-dialog-container {
+  .mdc-dialog__surface {
+    border-radius: var(--radius-xl) !important;
+    box-shadow: var(--shadow-float) !important;
+    padding: var(--spacing-lg) !important;
+  }
+}
+
+.mat-mdc-dialog-title {
+  font-size: var(--text-xl) !important;
+  font-weight: 600 !important;
+  letter-spacing: var(--tracking-tight) !important;
+  padding: 0 0 var(--spacing-md) !important;
+}
+
+.mat-mdc-dialog-actions {
+  padding: var(--spacing-lg) 0 0 !important;
+  border-top: 1px solid var(--color-border);
+  margin-top: var(--spacing-md);
+}
+
+// ─── Material Tabs ───────────────────────────────────────────────────────────
+
+.mat-mdc-tab-group {
+  .mat-mdc-tab-header {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .mat-mdc-tab {
+    font-weight: 500 !important;
+    letter-spacing: var(--tracking-normal);
+    min-width: 100px;
+    opacity: 0.6;
+
+    &.mdc-tab--active {
+      opacity: 1;
+    }
+  }
+
+  .mdc-tab-indicator__content--underline {
+    border-radius: 2px;
+    height: 3px !important;
+  }
+}
+
+// ─── Material Chips ──────────────────────────────────────────────────────────
+
+.mat-mdc-chip {
+  border-radius: var(--radius-full) !important;
+  font-size: var(--text-xs) !important;
+  font-weight: 500 !important;
+  background: var(--color-surface-secondary) !important;
+  border: none !important;
+}
+
+// ─── Material Progress Bar ───────────────────────────────────────────────────
+
+.mat-mdc-progress-bar {
+  border-radius: var(--radius-full) !important;
+  height: 6px !important;
+
+  .mdc-linear-progress__buffer-bar {
+    background-color: var(--color-surface-secondary) !important;
+  }
+}
+
+// ─── Material Snackbar ───────────────────────────────────────────────────────
+
+.mat-mdc-snack-bar-container {
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
 .snack-success .mdc-snackbar__surface {
-  background-color: #2e7d32 !important;
+  background-color: var(--color-success) !important;
 }
 .snack-success .mdc-snackbar__label {
   color: #fff !important;
 }
 .snack-error .mdc-snackbar__surface {
-  background-color: #c62828 !important;
+  background-color: var(--color-danger) !important;
 }
 .snack-error .mdc-snackbar__label {
   color: #fff !important;
+}
+
+// ─── Scrollbar ───────────────────────────────────────────────────────────────
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+// ─── Utilities ───────────────────────────────────────────────────────────────
+
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.section-icon {
+  display: none;
 }

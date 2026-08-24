@@ -79,10 +79,12 @@ import { AuthService } from '../../core/services/auth.service';
       background: var(--gradient-login);
     }
     .login-card {
-      padding: 40px;
+      padding: 48px;
       text-align: center;
-      max-width: 420px;
+      max-width: 400px;
       width: 90%;
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-float);
     }
     .brand {
       margin-bottom: 24px;
@@ -95,11 +97,13 @@ import { AuthService } from '../../core/services/auth.service';
     }
     .brand h1 {
       margin: 12px 0 4px;
-      font-size: 28px;
-      font-weight: 600;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
     }
     .tagline {
-      color: rgba(0,0,0,0.54);
+      font-size: var(--text-sm);
+      color: var(--color-text-secondary);
       margin: 0;
     }
     .auth-form {
@@ -113,11 +117,13 @@ import { AuthService } from '../../core/services/auth.service';
     }
     .auth-form button[type="submit"] {
       margin-top: 8px;
-      padding: 10px;
+      height: 44px;
+      border-radius: var(--radius-sm);
+      width: 100%;
       font-size: 15px;
     }
     .error-msg {
-      color: #d32f2f;
+      color: var(--color-danger);
       font-size: 13px;
       margin: 0 0 8px;
     }

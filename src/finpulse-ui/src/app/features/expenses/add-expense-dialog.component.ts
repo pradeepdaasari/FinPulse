@@ -273,8 +273,8 @@ export interface ExpenseDialogData {
     .expense-form {
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      min-width: 320px;
+      gap: var(--spacing-md);
+      min-width: 400px;
     }
     .txn-toggle {
       margin-bottom: 12px;
@@ -288,12 +288,12 @@ export interface ExpenseDialogData {
     }
     .flex-1 { flex: 1; }
     .add-cat-btn { align-self: flex-start; }
-    .split-section { border-top: 1px solid rgba(0,0,0,0.12); padding-top: 12px; margin-top: 8px; }
+    .split-section { border-top: 1px solid var(--color-border); padding-top: 12px; margin-top: 8px; }
     .split-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .split-title { font-weight: 500; font-size: 0.9rem; }
     .split-total { font-size: 0.85rem; font-weight: 600; }
-    .split-valid { color: #2e7d32; }
-    .split-invalid { color: #c62828; }
+    .split-valid { color: var(--color-success); }
+    .split-invalid { color: var(--color-danger); }
     .split-row { display: flex; gap: 8px; align-items: center; }
     .split-cat { flex: 2; }
     .split-amt { flex: 1; }
