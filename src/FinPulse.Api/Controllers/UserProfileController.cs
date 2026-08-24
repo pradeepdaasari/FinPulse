@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FinPulse.Core.Data;
 using FinPulse.Core.Models;
+using FinPulse.Core.Models.Enums;
 
 namespace FinPulse.Api.Controllers;
 
@@ -35,16 +36,33 @@ public class UserProfileController : ControllerBase
         {
             var profile = new UserProfile
             {
-                MonthlyIncome = dto.MonthlyIncome
+                MonthlyIncome = ComputeMonthlyIncome(dto.NetPayPerCheck, dto.PayFrequency),
+                PayFrequency = dto.PayFrequency,
+                NetPayPerCheck = dto.NetPayPerCheck,
+                NextPayDate = dto.NextPayDate
             };
             _db.UserProfiles.Add(profile);
             await _db.SaveChangesAsync();
             return Ok(profile);
         }
 
-        existing.MonthlyIncome = dto.MonthlyIncome;
+        existing.PayFrequency = dto.PayFrequency;
+        existing.NetPayPerCheck = dto.NetPayPerCheck;
+        existing.NextPayDate = dto.NextPayDate;
+        existing.MonthlyIncome = ComputeMonthlyIncome(dto.NetPayPerCheck, dto.PayFrequency);
         await _db.SaveChangesAsync();
 
         return Ok(existing);
+    }
+
+    private static decimal ComputeMonthlyIncome(decimal netPayPerCheck, PaymentFrequency frequency)
+    {
+        return frequency switch
+        {
+            PaymentFrequency.Weekly => netPayPerCheck * 52 / 12,
+            PaymentFrequency.Biweekly => netPayPerCheck * 26 / 12,
+            PaymentFrequency.Monthly => netPayPerCheck,
+            _ => netPayPerCheck * 26 / 12
+        };
     }
 }

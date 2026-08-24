@@ -10,6 +10,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPayoffStrategyService, PayoffStrategyService>();
         services.AddScoped<IWhatIfSimulatorService, WhatIfSimulatorService>();
         services.AddScoped<IBudgetService, BudgetService>();
+        services.AddScoped<IBudgetPlanService, BudgetPlanService>();
         services.AddScoped<ISnapshotService, SnapshotService>();
         services.AddScoped<IStreakService, StreakService>();
 

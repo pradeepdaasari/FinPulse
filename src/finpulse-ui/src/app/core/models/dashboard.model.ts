@@ -21,12 +21,12 @@ export interface UpcomingPayment {
 }
 
 export interface AmortizationEntry {
-  period: number;
-  date: string;
-  payment: number;
-  principal: number;
-  interest: number;
-  balance: number;
+  periodNumber: number;
+  paymentDate: string;
+  paymentAmount: number;
+  principalPortion: number;
+  interestPortion: number;
+  remainingBalance: number;
 }
 
 export interface PayoffEntry {

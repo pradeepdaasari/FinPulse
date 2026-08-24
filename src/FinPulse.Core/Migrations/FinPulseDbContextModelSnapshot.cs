@@ -87,6 +87,51 @@ namespace FinPulse.Core.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("FinPulse.Core.Models.BudgetExpense", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("DueDay")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Frequency")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsAutopay")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsFixed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("BudgetExpenses");
+                });
+
             modelBuilder.Entity("FinPulse.Core.Models.CreditCard", b =>
                 {
                     b.Property<int>("Id")
@@ -137,6 +182,90 @@ namespace FinPulse.Core.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("CreditCards");
+                });
+
+            modelBuilder.Entity("FinPulse.Core.Models.CustomCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsFixed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("Name", "ParentId", "UserId")
+                        .IsUnique()
+                        .HasFilter("[ParentId] IS NOT NULL AND [UserId] IS NOT NULL");
+
+                    b.ToTable("CustomCategories");
+                });
+
+            modelBuilder.Entity("FinPulse.Core.Models.DailyExpense", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Merchant")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("Date");
+
+                    b.ToTable("DailyExpenses");
                 });
 
             modelBuilder.Entity("FinPulse.Core.Models.MonthlySnapshot", b =>
@@ -286,6 +415,16 @@ namespace FinPulse.Core.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal>("NetPayPerCheck")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("NextPayDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PayFrequency")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -427,6 +566,38 @@ namespace FinPulse.Core.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("FinPulse.Core.Models.BudgetExpense", b =>
+                {
+                    b.HasOne("FinPulse.Core.Models.CustomCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("FinPulse.Core.Models.CustomCategory", b =>
+                {
+                    b.HasOne("FinPulse.Core.Models.CustomCategory", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("FinPulse.Core.Models.DailyExpense", b =>
+                {
+                    b.HasOne("FinPulse.Core.Models.CustomCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
             modelBuilder.Entity("FinPulse.Core.Models.PaymentHistory", b =>
                 {
                     b.HasOne("FinPulse.Core.Models.CreditCard", null)
@@ -492,6 +663,11 @@ namespace FinPulse.Core.Migrations
             modelBuilder.Entity("FinPulse.Core.Models.CreditCard", b =>
                 {
                     b.Navigation("Payments");
+                });
+
+            modelBuilder.Entity("FinPulse.Core.Models.CustomCategory", b =>
+                {
+                    b.Navigation("Children");
                 });
 
             modelBuilder.Entity("FinPulse.Core.Models.PersonalLoan", b =>

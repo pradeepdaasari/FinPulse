@@ -12,4 +12,5 @@ public class DebtSnapshotDto
     public decimal MinimumPayment { get; set; }
     public decimal EffectiveApr { get; set; }
     public DateTime? PromoEndDate { get; set; }
+    public int DueDay { get; set; }
 }

@@ -49,7 +49,17 @@ export const routes: Routes = [
   },
   {
     path: 'budget',
-    loadComponent: () => import('./features/budget/budget-allocation.component').then(m => m.BudgetAllocationComponent),
+    loadComponent: () => import('./features/budget/budget-page.component').then(m => m.BudgetPageComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'expenses',
+    loadComponent: () => import('./features/expenses/expenses-page.component').then(m => m.ExpensesPageComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'categories',
+    loadComponent: () => import('./features/categories/category-page.component').then(m => m.CategoryPageComponent),
     canActivate: [authGuard]
   },
   {

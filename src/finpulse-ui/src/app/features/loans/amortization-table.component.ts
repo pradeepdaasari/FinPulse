@@ -13,32 +13,32 @@ import { AmortizationEntry } from '../../core/models/dashboard.model';
       <table mat-table [dataSource]="entries">
         <ng-container matColumnDef="period">
           <th mat-header-cell *matHeaderCellDef>Period</th>
-          <td mat-cell *matCellDef="let entry">{{ entry.period }}</td>
+          <td mat-cell *matCellDef="let entry">{{ entry.periodNumber }}</td>
         </ng-container>
 
         <ng-container matColumnDef="date">
           <th mat-header-cell *matHeaderCellDef>Date</th>
-          <td mat-cell *matCellDef="let entry">{{ entry.date | date:'mediumDate' }}</td>
+          <td mat-cell *matCellDef="let entry">{{ entry.paymentDate | date:'mediumDate' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="payment">
           <th mat-header-cell *matHeaderCellDef>Payment</th>
-          <td mat-cell *matCellDef="let entry">{{ entry.payment | currency }}</td>
+          <td mat-cell *matCellDef="let entry">{{ entry.paymentAmount | currency }}</td>
         </ng-container>
 
         <ng-container matColumnDef="principal">
           <th mat-header-cell *matHeaderCellDef>Principal</th>
-          <td mat-cell *matCellDef="let entry">{{ entry.principal | currency }}</td>
+          <td mat-cell *matCellDef="let entry">{{ entry.principalPortion | currency }}</td>
         </ng-container>
 
         <ng-container matColumnDef="interest">
           <th mat-header-cell *matHeaderCellDef>Interest</th>
-          <td mat-cell *matCellDef="let entry">{{ entry.interest | currency }}</td>
+          <td mat-cell *matCellDef="let entry">{{ entry.interestPortion | currency }}</td>
         </ng-container>
 
         <ng-container matColumnDef="balance">
           <th mat-header-cell *matHeaderCellDef>Balance</th>
-          <td mat-cell *matCellDef="let entry">{{ entry.balance | currency }}</td>
+          <td mat-cell *matCellDef="let entry">{{ entry.remainingBalance | currency }}</td>
         </ng-container>
 
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>

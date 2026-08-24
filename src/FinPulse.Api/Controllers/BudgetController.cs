@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FinPulse.Core.Data;
 using FinPulse.Core.DTOs;
+using FinPulse.Core.Models;
 using FinPulse.Core.Models.Enums;
 using FinPulse.Core.Services;
 
@@ -15,11 +16,13 @@ public class BudgetController : ControllerBase
 {
     private readonly FinPulseDbContext _db;
     private readonly IBudgetService _budgetService;
+    private readonly IBudgetPlanService _budgetPlanService;
 
-    public BudgetController(FinPulseDbContext db, IBudgetService budgetService)
+    public BudgetController(FinPulseDbContext db, IBudgetService budgetService, IBudgetPlanService budgetPlanService)
     {
         _db = db;
         _budgetService = budgetService;
+        _budgetPlanService = budgetPlanService;
     }
 
     [HttpGet("allocation")]
@@ -27,11 +30,147 @@ public class BudgetController : ControllerBase
     {
         var profile = await _db.UserProfiles.FirstOrDefaultAsync();
         if (profile is null)
-            return BadRequest("User profile with monthly income is required. Please create a profile first.");
+            return BadRequest("User profile with monthly income is required.");
 
+        var snapshots = await GetDebtSnapshots();
+        var allocation = _budgetService.GenerateAllocation(profile.MonthlyIncome, snapshots);
+        return Ok(allocation);
+    }
+
+    [HttpGet("plan")]
+    public async Task<ActionResult<BudgetPlanDto>> GetPlan([FromQuery] int? year, [FromQuery] int? month)
+    {
+        var profile = await _db.UserProfiles.FirstOrDefaultAsync();
+        if (profile is null)
+            return BadRequest("User profile is required.");
+
+        var targetYear = year ?? DateTime.UtcNow.Year;
+        var targetMonth = month ?? DateTime.UtcNow.Month;
+
+        var expenses = await _db.BudgetExpenses.Include(e => e.Category).ToListAsync();
+        var debts = await GetDebtSnapshots();
+        var plan = _budgetPlanService.GeneratePlan(profile, expenses, debts, targetYear, targetMonth);
+        return Ok(plan);
+    }
+
+    [HttpGet("expenses")]
+    public async Task<ActionResult<List<object>>> GetExpenses()
+    {
+        var expenses = await _db.BudgetExpenses
+            .Include(e => e.Category)
+            .ThenInclude(c => c.Parent)
+            .OrderByDescending(e => e.IsFixed)
+            .ThenBy(e => e.DueDay)
+            .ThenBy(e => e.Name)
+            .Select(e => new
+            {
+                e.Id,
+                e.Name,
+                e.CategoryId,
+                CategoryName = e.Category.Name,
+                ParentCategoryName = e.Category.Parent != null ? e.Category.Parent.Name : null,
+                e.Amount,
+                e.IsFixed,
+                e.DueDay,
+                e.Frequency,
+                e.IsAutopay,
+                e.CreatedAt,
+                e.UpdatedAt
+            })
+            .ToListAsync();
+        return Ok(expenses);
+    }
+
+    [HttpPost("expenses")]
+    public async Task<ActionResult> CreateExpense(BudgetExpenseCreateDto dto)
+    {
+        var expense = new BudgetExpense
+        {
+            Name = dto.Name,
+            CategoryId = dto.CategoryId,
+            Amount = dto.Amount,
+            IsFixed = dto.IsFixed,
+            DueDay = dto.DueDay,
+            Frequency = dto.Frequency,
+            IsAutopay = dto.IsAutopay
+        };
+
+        _db.BudgetExpenses.Add(expense);
+        await _db.SaveChangesAsync();
+
+        var created = await _db.BudgetExpenses
+            .Include(e => e.Category).ThenInclude(c => c.Parent)
+            .FirstAsync(e => e.Id == expense.Id);
+
+        return Ok(new
+        {
+            created.Id,
+            created.Name,
+            created.CategoryId,
+            CategoryName = created.Category.Name,
+            ParentCategoryName = created.Category.Parent?.Name,
+            created.Amount,
+            created.IsFixed,
+            created.DueDay,
+            created.Frequency,
+            created.IsAutopay,
+            created.CreatedAt,
+            created.UpdatedAt
+        });
+    }
+
+    [HttpPut("expenses/{id}")]
+    public async Task<ActionResult> UpdateExpense(int id, BudgetExpenseCreateDto dto)
+    {
+        var expense = await _db.BudgetExpenses.FindAsync(id);
+        if (expense is null) return NotFound();
+
+        expense.Name = dto.Name;
+        expense.CategoryId = dto.CategoryId;
+        expense.Amount = dto.Amount;
+        expense.IsFixed = dto.IsFixed;
+        expense.DueDay = dto.DueDay;
+        expense.Frequency = dto.Frequency;
+        expense.IsAutopay = dto.IsAutopay;
+
+        await _db.SaveChangesAsync();
+
+        var updated = await _db.BudgetExpenses
+            .Include(e => e.Category).ThenInclude(c => c.Parent)
+            .FirstAsync(e => e.Id == expense.Id);
+
+        return Ok(new
+        {
+            updated.Id,
+            updated.Name,
+            updated.CategoryId,
+            CategoryName = updated.Category.Name,
+            ParentCategoryName = updated.Category.Parent?.Name,
+            updated.Amount,
+            updated.IsFixed,
+            updated.DueDay,
+            updated.Frequency,
+            updated.IsAutopay,
+            updated.CreatedAt,
+            updated.UpdatedAt
+        });
+    }
+
+    [HttpDelete("expenses/{id}")]
+    public async Task<ActionResult> DeleteExpense(int id)
+    {
+        var expense = await _db.BudgetExpenses.FindAsync(id);
+        if (expense is null) return NotFound();
+
+        _db.BudgetExpenses.Remove(expense);
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    private async Task<List<DebtSnapshotDto>> GetDebtSnapshots()
+    {
         var loans = await _db.PersonalLoans.ToListAsync();
         var cards = await _db.CreditCards.ToListAsync();
-
         var snapshots = new List<DebtSnapshotDto>();
 
         foreach (var loan in loans)
@@ -45,7 +184,8 @@ public class BudgetController : ControllerBase
                 AprPercent = loan.AprPercent,
                 MinimumPayment = loan.MonthlyPayment,
                 EffectiveApr = loan.AprPercent,
-                PromoEndDate = null
+                PromoEndDate = null,
+                DueDay = loan.DueDay
             });
         }
 
@@ -62,12 +202,11 @@ public class BudgetController : ControllerBase
                 EffectiveApr = card.PromoEndDate.HasValue && card.PromoEndDate > DateTime.UtcNow
                     ? card.PromoAprPercent ?? card.AprPercent
                     : card.AprPercent,
-                PromoEndDate = card.PromoEndDate
+                PromoEndDate = card.PromoEndDate,
+                DueDay = card.DueDay
             });
         }
 
-        var allocation = _budgetService.GenerateAllocation(profile.MonthlyIncome, snapshots);
-
-        return Ok(allocation);
+        return snapshots;
     }
 }

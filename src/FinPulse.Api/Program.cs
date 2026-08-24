@@ -87,10 +87,7 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
-    if (app.Environment.IsDevelopment())
-    {
-        SeedData.Initialize(db);
-    }
+    SeedData.Initialize(db);
 }
 
 // Configure the HTTP request pipeline.

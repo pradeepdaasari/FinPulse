@@ -2,9 +2,14 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { PayFrequency } from '../models/budget.model';
 
 export interface UserProfile {
+  id?: number;
   monthlyIncome: number;
+  payFrequency: PayFrequency;
+  netPayPerCheck: number;
+  nextPayDate: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -16,16 +21,7 @@ export class UserProfileService {
     return this.http.get<UserProfile>(this.baseUrl);
   }
 
-  saveProfile(income: number): Observable<UserProfile> {
-    return this.http.post<UserProfile>(this.baseUrl, { monthlyIncome: income });
-  }
-
-  getPaycheckDay(): number | null {
-    const val = localStorage.getItem('paycheckDay');
-    return val ? parseInt(val, 10) : null;
-  }
-
-  setPaycheckDay(day: number): void {
-    localStorage.setItem('paycheckDay', day.toString());
+  saveProfile(profile: Partial<UserProfile>): Observable<UserProfile> {
+    return this.http.post<UserProfile>(this.baseUrl, profile);
   }
 }
