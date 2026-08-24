@@ -19,6 +19,8 @@ public class DailyExpenseCreateDto
     public FundingSourceType? FundingSourceType { get; set; }
     public int? FundingSourceId { get; set; }
     public int? ToFundingSourceId { get; set; }
+    [MaxLength(100)]
+    public string? Tag { get; set; }
 }
 
 public class SpendingSummaryDto

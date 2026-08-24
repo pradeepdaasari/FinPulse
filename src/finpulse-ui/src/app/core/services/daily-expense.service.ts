@@ -41,6 +41,10 @@ export class DailyExpenseService {
     return this.http.post<{ splitGroupId: string; count: number }>(`${this.baseUrl}/split`, items);
   }
 
+  getTags(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.baseUrl}/tags`);
+  }
+
   getComparison(year?: number, month?: number): Observable<MonthComparison> {
     const params: Record<string, string> = {};
     if (year) params['year'] = year.toString();

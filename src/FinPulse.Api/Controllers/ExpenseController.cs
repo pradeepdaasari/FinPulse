@@ -30,7 +30,8 @@ public class ExpenseController : ControllerBase
         [FromQuery] string? search, [FromQuery] int? categoryId,
         [FromQuery] int? transactionType, [FromQuery] int? fundingSourceId,
         [FromQuery] DateTime? dateFrom, [FromQuery] DateTime? dateTo,
-        [FromQuery] decimal? minAmount, [FromQuery] decimal? maxAmount)
+        [FromQuery] decimal? minAmount, [FromQuery] decimal? maxAmount,
+        [FromQuery] string? tag)
     {
         var query = _db.DailyExpenses
             .Include(e => e.Category)
@@ -67,6 +68,9 @@ public class ExpenseController : ControllerBase
 
         if (maxAmount.HasValue)
             query = query.Where(e => e.Amount <= maxAmount.Value);
+
+        if (!string.IsNullOrWhiteSpace(tag))
+            query = query.Where(e => e.Tag == tag);
 
         var expenses = await query
             .OrderByDescending(e => e.Date)
@@ -109,6 +113,7 @@ public class ExpenseController : ControllerBase
                     : bankNames.GetValueOrDefault(e.ToFundingSourceId.Value))
                 : null,
             e.SplitGroupId,
+            e.Tag,
             e.CreatedAt,
             e.UpdatedAt
         });
@@ -207,7 +212,7 @@ public class ExpenseController : ControllerBase
         var cardNames = await _db.CreditCards.Where(c => c.UserId == UserId).ToDictionaryAsync(c => c.Id, c => c.CardName);
 
         var sb = new StringBuilder();
-        sb.AppendLine("Date,Type,Description,Merchant,Category,Amount,Source");
+        sb.AppendLine("Date,Type,Description,Merchant,Category,Amount,Source,Tag");
         foreach (var e in expenses)
         {
             var type = e.TransactionType?.ToString() ?? "Expense";
@@ -219,7 +224,7 @@ public class ExpenseController : ControllerBase
                 source = bankNames.GetValueOrDefault(e.FundingSourceId.Value) ?? "";
             else if (e.FundingSourceType == FundingSourceType.CreditCard && e.FundingSourceId.HasValue)
                 source = cardNames.GetValueOrDefault(e.FundingSourceId.Value) ?? "";
-            sb.AppendLine($"{e.Date:yyyy-MM-dd},{type},{desc},{merchant},{category},{e.Amount},{EscapeCsv(source)}");
+            sb.AppendLine($"{e.Date:yyyy-MM-dd},{type},{desc},{merchant},{category},{e.Amount},{EscapeCsv(source)},{EscapeCsv(e.Tag ?? "")}");
         }
 
         var bytes = Encoding.UTF8.GetBytes(sb.ToString());
@@ -231,6 +236,18 @@ public class ExpenseController : ControllerBase
         if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
             return $"\"{value.Replace("\"", "\"\"")}\"";
         return value;
+    }
+
+    [HttpGet("tags")]
+    public async Task<ActionResult<List<string>>> GetTags()
+    {
+        var tags = await _db.DailyExpenses
+            .Where(e => e.UserId == UserId && e.Tag != null)
+            .Select(e => e.Tag!)
+            .Distinct()
+            .OrderBy(t => t)
+            .ToListAsync();
+        return Ok(tags);
     }
 
     [HttpGet("comparison")]
@@ -342,6 +359,7 @@ public class ExpenseController : ControllerBase
             FundingSourceType = dto.FundingSourceType,
             FundingSourceId = dto.FundingSourceId,
             ToFundingSourceId = dto.ToFundingSourceId,
+            Tag = dto.Tag,
             UserId = UserId
         };
 
@@ -451,6 +469,7 @@ public class ExpenseController : ControllerBase
         expense.FundingSourceType = dto.FundingSourceType;
         expense.FundingSourceId = dto.FundingSourceId;
         expense.ToFundingSourceId = dto.ToFundingSourceId;
+        expense.Tag = dto.Tag;
 
         // Apply new balance adjustment
         if (dto.TransactionType == TransactionType.Transfer && dto.FundingSourceId.HasValue && dto.ToFundingSourceId.HasValue)

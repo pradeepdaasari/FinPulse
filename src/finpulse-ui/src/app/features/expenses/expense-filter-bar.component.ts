@@ -10,7 +10,9 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { CategoryService } from '../../core/services/category.service';
+import { DailyExpenseService } from '../../core/services/daily-expense.service';
 import { Category } from '../../core/models/category.model';
 import { ExpenseFilter } from '../../core/models/daily-expense.model';
 
@@ -20,7 +22,8 @@ import { ExpenseFilter } from '../../core/models/daily-expense.model';
   imports: [
     CommonModule, FormsModule, MatFormFieldModule, MatInputModule,
     MatSelectModule, MatIconModule, MatButtonModule, MatChipsModule,
-    MatDatepickerModule, MatNativeDateModule, MatExpansionModule
+    MatDatepickerModule, MatNativeDateModule, MatExpansionModule,
+    MatAutocompleteModule
   ],
   template: `
     <mat-expansion-panel class="filter-panel" [expanded]="false">
@@ -95,6 +98,18 @@ import { ExpenseFilter } from '../../core/models/daily-expense.model';
           <input matInput type="number" [(ngModel)]="maxAmount" min="0">
           <span matTextPrefix>$&nbsp;</span>
         </mat-form-field>
+
+        <mat-form-field class="filter-field">
+          <mat-label>Tag</mat-label>
+          <input matInput [(ngModel)]="tag" [matAutocomplete]="tagAuto"
+                 placeholder="e.g. Hawaii 2026" (input)="onTagInput()">
+          <mat-icon matPrefix>label</mat-icon>
+          <mat-autocomplete #tagAuto="matAutocomplete">
+            @for (t of filteredTags(); track t) {
+              <mat-option [value]="t">{{ t }}</mat-option>
+            }
+          </mat-autocomplete>
+        </mat-form-field>
       </div>
 
       <div class="filter-actions">
@@ -133,10 +148,13 @@ import { ExpenseFilter } from '../../core/models/daily-expense.model';
 })
 export class ExpenseFilterBarComponent implements OnInit {
   private categoryService = inject(CategoryService);
+  private expenseService = inject(DailyExpenseService);
 
   filterChange = output<Partial<ExpenseFilter>>();
 
   categories = signal<Category[]>([]);
+  allTags = signal<string[]>([]);
+  filteredTags = signal<string[]>([]);
   search = '';
   categoryId: number | null = null;
   transactionType: number | null = null;
@@ -144,14 +162,24 @@ export class ExpenseFilterBarComponent implements OnInit {
   dateTo: Date | null = null;
   minAmount: number | null = null;
   maxAmount: number | null = null;
+  tag = '';
 
   ngOnInit(): void {
     this.categoryService.getAll('Expense').subscribe(cats => this.categories.set(cats));
+    this.expenseService.getTags().subscribe(tags => {
+      this.allTags.set(tags);
+      this.filteredTags.set(tags);
+    });
+  }
+
+  onTagInput(): void {
+    const q = this.tag.toLowerCase();
+    this.filteredTags.set(this.allTags().filter(t => t.toLowerCase().includes(q)));
   }
 
   hasActiveFilters(): boolean {
     return !!(this.search || this.categoryId || this.transactionType !== null ||
-              this.dateFrom || this.dateTo || this.minAmount || this.maxAmount);
+              this.dateFrom || this.dateTo || this.minAmount || this.maxAmount || this.tag);
   }
 
   applyFilters(): void {
@@ -163,6 +191,7 @@ export class ExpenseFilterBarComponent implements OnInit {
     if (this.dateTo) filter.dateTo = this.dateTo.toISOString().split('T')[0];
     if (this.minAmount) filter.minAmount = this.minAmount;
     if (this.maxAmount) filter.maxAmount = this.maxAmount;
+    if (this.tag) filter.tag = this.tag;
     this.filterChange.emit(filter);
   }
 
@@ -174,6 +203,8 @@ export class ExpenseFilterBarComponent implements OnInit {
     this.dateTo = null;
     this.minAmount = null;
     this.maxAmount = null;
+    this.tag = '';
+    this.filteredTags.set(this.allTags());
     this.filterChange.emit({});
   }
 }

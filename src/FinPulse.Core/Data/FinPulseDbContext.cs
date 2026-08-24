@@ -70,6 +70,7 @@ public class FinPulseDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => new { e.FundingSourceType, e.FundingSourceId });
             entity.HasIndex(e => e.SplitGroupId).HasFilter("[SplitGroupId] IS NOT NULL");
+            entity.HasIndex(e => new { e.UserId, e.Tag }).HasFilter("[Tag] IS NOT NULL");
         });
 
         // BankAccount

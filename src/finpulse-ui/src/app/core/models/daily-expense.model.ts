@@ -18,6 +18,7 @@ export interface DailyExpense {
   toFundingSourceId: number | null;
   toFundingSourceName: string | null;
   splitGroupId: string | null;
+  tag: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -32,6 +33,7 @@ export interface DailyExpenseCreate {
   fundingSourceType: FundingSourceType | null;
   fundingSourceId: number | null;
   toFundingSourceId: number | null;
+  tag?: string | null;
 }
 
 export interface SpendingSummary {
@@ -55,6 +57,7 @@ export interface ExpenseFilter {
   dateTo?: string;
   minAmount?: number;
   maxAmount?: number;
+  tag?: string;
 }
 
 export interface CategoryComparison {
