@@ -9,6 +9,15 @@ export class PaymentService {
   private http = inject(HttpClient);
   private baseUrl = `${environment.apiUrl}/payments`;
 
+  recordPayment(debtType: 'PersonalLoan' | 'CreditCard', debtId: number, amount: number, notes?: string): Observable<any> {
+    const endpoint = debtType === 'PersonalLoan' ? 'loans' : 'cards';
+    return this.http.post(`${environment.apiUrl}/${endpoint}/${debtId}/payments`, {
+      amountPaid: amount,
+      paymentDate: new Date().toISOString(),
+      notes: notes || null
+    });
+  }
+
   getAll(type?: string, debtId?: number): Observable<PaymentListResponse> {
     let params = new HttpParams();
     if (type) params = params.set('type', type);

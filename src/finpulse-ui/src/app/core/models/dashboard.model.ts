@@ -14,7 +14,9 @@ export interface DebtBreakdownItem {
 }
 
 export interface UpcomingPayment {
+  debtId: number;
   debtName: string;
+  debtType: 'PersonalLoan' | 'CreditCard';
   amount: number;
   dueDate: string;
   urgencyLevel: 'Low' | 'Medium' | 'High';
