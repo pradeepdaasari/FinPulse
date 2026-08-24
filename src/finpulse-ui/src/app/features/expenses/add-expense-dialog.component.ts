@@ -40,6 +40,9 @@ export interface ExpenseDialogData {
           <mat-button-toggle value="Income">
             <mat-icon>trending_up</mat-icon> Income
           </mat-button-toggle>
+          <mat-button-toggle value="Transfer">
+            <mat-icon>swap_horiz</mat-icon> Transfer
+          </mat-button-toggle>
         </mat-button-toggle-group>
 
         <mat-form-field>
@@ -49,76 +52,106 @@ export interface ExpenseDialogData {
           <mat-datepicker #picker></mat-datepicker>
         </mat-form-field>
 
-        <mat-form-field>
-          <mat-label>Category</mat-label>
-          <mat-select formControlName="categoryId">
-            @for (parent of categories(); track parent.id) {
-              <mat-optgroup [label]="parent.name">
-                @for (child of parent.children; track child.id) {
-                  <mat-option [value]="child.id">{{ child.name }}</mat-option>
-                }
-                @if (!parent.children || parent.children.length === 0) {
-                  <mat-option [value]="parent.id">{{ parent.name }}</mat-option>
-                }
-              </mat-optgroup>
-            }
-          </mat-select>
-        </mat-form-field>
+        @if (form.value.transactionType !== 'Transfer') {
+          <mat-form-field>
+            <mat-label>Category</mat-label>
+            <mat-select formControlName="categoryId">
+              @for (parent of categories(); track parent.id) {
+                <mat-optgroup [label]="parent.name">
+                  @for (child of parent.children; track child.id) {
+                    <mat-option [value]="child.id">{{ child.name }}</mat-option>
+                  }
+                  @if (!parent.children || parent.children.length === 0) {
+                    <mat-option [value]="parent.id">{{ parent.name }}</mat-option>
+                  }
+                </mat-optgroup>
+              }
+            </mat-select>
+          </mat-form-field>
 
-        @if (showNewCategory()) {
-          <div class="new-category-row">
-            <mat-form-field class="flex-1">
-              <mat-label>New Category Name</mat-label>
-              <input matInput formControlName="newCategoryName">
-            </mat-form-field>
-            <mat-form-field>
-              <mat-label>Under</mat-label>
-              <mat-select formControlName="newCategoryParent">
-                @for (parent of categories(); track parent.id) {
-                  <mat-option [value]="parent.id">{{ parent.name }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-            <button mat-icon-button color="primary" (click)="createCategory()" type="button">
-              <mat-icon>check</mat-icon>
+          @if (showNewCategory()) {
+            <div class="new-category-row">
+              <mat-form-field class="flex-1">
+                <mat-label>New Category Name</mat-label>
+                <input matInput formControlName="newCategoryName">
+              </mat-form-field>
+              <mat-form-field>
+                <mat-label>Under</mat-label>
+                <mat-select formControlName="newCategoryParent">
+                  @for (parent of categories(); track parent.id) {
+                    <mat-option [value]="parent.id">{{ parent.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <button mat-icon-button color="primary" (click)="createCategory()" type="button">
+                <mat-icon>check</mat-icon>
+              </button>
+              <button mat-icon-button (click)="showNewCategory.set(false)" type="button">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          } @else {
+            <button mat-button type="button" (click)="showNewCategory.set(true)" class="add-cat-btn">
+              <mat-icon>add</mat-icon> New Category
             </button>
-            <button mat-icon-button (click)="showNewCategory.set(false)" type="button">
-              <mat-icon>close</mat-icon>
-            </button>
-          </div>
-        } @else {
-          <button mat-button type="button" (click)="showNewCategory.set(true)" class="add-cat-btn">
-            <mat-icon>add</mat-icon> New Category
-          </button>
+          }
         }
 
         <mat-form-field>
-          <mat-label>Amount</mat-label>
+          <mat-label>{{ form.value.transactionType === 'Transfer' ? 'Transfer Amount' : 'Amount' }}</mat-label>
           <input matInput type="number" formControlName="amount" min="0.01" step="0.01">
           <span matTextPrefix>$&nbsp;</span>
         </mat-form-field>
 
-        <mat-form-field>
-          <mat-label>{{ form.value.transactionType === 'Income' ? 'Received into' : 'Paid with' }}</mat-label>
-          <mat-select formControlName="fundingSourceKey">
-            <mat-option [value]="null">-- None --</mat-option>
-            @for (source of filteredSources(); track source.type + source.id) {
-              <mat-option [value]="source.type + ':' + source.id">
-                <mat-icon>{{ source.type === 'BankAccount' ? 'account_balance' : 'credit_card' }}</mat-icon>
-                {{ source.name }} ({{ source.currentBalance | currency }})
-              </mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+        @if (form.value.transactionType === 'Transfer') {
+          <mat-form-field>
+            <mat-label>From Account</mat-label>
+            <mat-select formControlName="fundingSourceKey">
+              @for (source of bankAccountSources(); track source.id) {
+                <mat-option [value]="'BankAccount:' + source.id">
+                  <mat-icon>account_balance</mat-icon>
+                  {{ source.name }} ({{ source.currentBalance | currency }})
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
 
-        <mat-form-field>
-          <mat-label>Merchant (optional)</mat-label>
-          <input matInput formControlName="merchant" placeholder="e.g. Walmart, Shell, Chipotle">
-        </mat-form-field>
+          <mat-form-field>
+            <mat-label>To Account</mat-label>
+            <mat-select formControlName="toFundingSourceKey">
+              @for (source of toAccountSources(); track source.id) {
+                <mat-option [value]="'BankAccount:' + source.id">
+                  <mat-icon>account_balance</mat-icon>
+                  {{ source.name }} ({{ source.currentBalance | currency }})
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        } @else {
+          <mat-form-field>
+            <mat-label>{{ form.value.transactionType === 'Income' ? 'Received into' : 'Paid with' }}</mat-label>
+            <mat-select formControlName="fundingSourceKey">
+              <mat-option [value]="null">-- None --</mat-option>
+              @for (source of filteredSources(); track source.type + source.id) {
+                <mat-option [value]="source.type + ':' + source.id">
+                  <mat-icon>{{ source.type === 'BankAccount' ? 'account_balance' : 'credit_card' }}</mat-icon>
+                  {{ source.name }} ({{ source.currentBalance | currency }})
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+
+        @if (form.value.transactionType !== 'Transfer') {
+          <mat-form-field>
+            <mat-label>Merchant (optional)</mat-label>
+            <input matInput formControlName="merchant" placeholder="e.g. Walmart, Shell, Chipotle">
+          </mat-form-field>
+        }
 
         <mat-form-field>
           <mat-label>Description</mat-label>
-          <input matInput formControlName="description" placeholder="What was this for?">
+          <input matInput formControlName="description" placeholder="{{ form.value.transactionType === 'Transfer' ? 'e.g. Fund brokerage account' : 'What was this for?' }}">
         </mat-form-field>
       </form>
     </mat-dialog-content>
@@ -160,16 +193,19 @@ export class AddExpenseDialogComponent implements OnInit {
   categories = signal<Category[]>([]);
   allSources = signal<FundingSource[]>([]);
   filteredSources = signal<FundingSource[]>([]);
+  bankAccountSources = signal<FundingSource[]>([]);
+  toAccountSources = signal<FundingSource[]>([]);
   showNewCategory = signal(false);
 
   form = this.fb.group({
     transactionType: [(this.data?.expense?.transactionType ?? 'Expense') as TransactionType, Validators.required],
     date: [this.data?.expense ? new Date(this.data.expense.date) : new Date(), Validators.required],
-    categoryId: [this.data?.expense?.categoryId ?? this.data?.prefilledCategoryId ?? null as number | null, Validators.required],
+    categoryId: [this.data?.expense?.categoryId ?? this.data?.prefilledCategoryId ?? null as number | null],
     amount: [this.data?.expense?.amount ?? null as number | null, [Validators.required, Validators.min(0.01)]],
     merchant: [this.data?.expense?.merchant ?? ''],
     description: [this.data?.expense?.description ?? '', [Validators.required, Validators.maxLength(500)]],
     fundingSourceKey: [this.buildSourceKey(this.data?.expense) as string | null],
+    toFundingSourceKey: [this.buildToSourceKey(this.data?.expense) as string | null],
     newCategoryName: [''],
     newCategoryParent: [null as number | null]
   });
@@ -185,6 +221,10 @@ export class AddExpenseDialogComponent implements OnInit {
       this.loadCategories();
       this.filterSources();
     });
+
+    this.form.get('fundingSourceKey')!.valueChanges.subscribe(() => {
+      this.updateToAccounts();
+    });
   }
 
   private loadCategories(): void {
@@ -196,16 +236,35 @@ export class AddExpenseDialogComponent implements OnInit {
 
   private filterSources(): void {
     const txnType = this.form.value.transactionType;
+    const banks = this.allSources().filter(s => s.type === 'BankAccount');
+    this.bankAccountSources.set(banks);
+    this.updateToAccounts();
+
     if (txnType === 'Income') {
-      this.filteredSources.set(this.allSources().filter(s => s.type === 'BankAccount'));
+      this.filteredSources.set(banks);
     } else {
       this.filteredSources.set(this.allSources());
     }
   }
 
+  private updateToAccounts(): void {
+    const fromKey = this.form.value.fundingSourceKey;
+    let fromId: number | null = null;
+    if (fromKey) {
+      const parts = fromKey.split(':');
+      fromId = parseInt(parts[1], 10);
+    }
+    this.toAccountSources.set(this.bankAccountSources().filter(s => s.id !== fromId));
+  }
+
   private buildSourceKey(expense: DailyExpense | null | undefined): string | null {
     if (!expense?.fundingSourceType || !expense?.fundingSourceId) return null;
     return `${expense.fundingSourceType}:${expense.fundingSourceId}`;
+  }
+
+  private buildToSourceKey(expense: DailyExpense | null | undefined): string | null {
+    if (!expense?.toFundingSourceId) return null;
+    return `BankAccount:${expense.toFundingSourceId}`;
   }
 
   createCategory(): void {
@@ -223,26 +282,38 @@ export class AddExpenseDialogComponent implements OnInit {
   }
 
   save(): void {
-    if (this.form.invalid) return;
     const val = this.form.value;
+    const isTransfer = val.transactionType === 'Transfer';
+
+    if (!isTransfer && !val.categoryId) return;
+    if (!val.amount || !val.description) return;
 
     let fundingSourceType: FundingSourceType | null = null;
     let fundingSourceId: number | null = null;
+    let toFundingSourceId: number | null = null;
+
     if (val.fundingSourceKey) {
       const [type, id] = val.fundingSourceKey.split(':');
       fundingSourceType = type as FundingSourceType;
       fundingSourceId = parseInt(id, 10);
     }
 
+    if (isTransfer && val.toFundingSourceKey) {
+      const [, id] = val.toFundingSourceKey.split(':');
+      toFundingSourceId = parseInt(id, 10);
+      fundingSourceType = 'BankAccount';
+    }
+
     const expense: DailyExpenseCreate = {
       date: (val.date as Date).toISOString(),
-      categoryId: val.categoryId!,
+      categoryId: val.categoryId ?? 1,
       amount: val.amount!,
-      merchant: val.merchant || null,
+      merchant: isTransfer ? null : (val.merchant || null),
       description: val.description!,
       transactionType: val.transactionType as TransactionType,
       fundingSourceType,
-      fundingSourceId
+      fundingSourceId,
+      toFundingSourceId
     };
     this.dialogRef.close(expense);
   }

@@ -1,4 +1,4 @@
-export type TransactionType = 'Expense' | 'Income';
+export type TransactionType = 'Expense' | 'Income' | 'Transfer';
 export type FundingSourceType = 'BankAccount' | 'CreditCard';
 
 export interface DailyExpense {
@@ -15,6 +15,8 @@ export interface DailyExpense {
   fundingSourceType: FundingSourceType | null;
   fundingSourceId: number | null;
   fundingSourceName: string | null;
+  toFundingSourceId: number | null;
+  toFundingSourceName: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -28,6 +30,7 @@ export interface DailyExpenseCreate {
   transactionType: TransactionType;
   fundingSourceType: FundingSourceType | null;
   fundingSourceId: number | null;
+  toFundingSourceId: number | null;
 }
 
 export interface SpendingSummary {

@@ -1,4 +1,4 @@
-export type BankAccountType = 'Checking' | 'Savings';
+export type BankAccountType = 'Checking' | 'Savings' | 'Brokerage';
 
 export interface BankAccount {
   id: number;
