@@ -39,7 +39,11 @@ public class ExpenseController : ControllerBase
             .ThenByDescending(e => e.CreatedAt)
             .ToListAsync();
 
-        var bankAccountIds = expenses.Where(e => e.FundingSourceType == FundingSourceType.BankAccount && e.FundingSourceId.HasValue).Select(e => e.FundingSourceId!.Value).Distinct();
+        var bankAccountIds = expenses
+            .Where(e => e.FundingSourceType == FundingSourceType.BankAccount && e.FundingSourceId.HasValue)
+            .Select(e => e.FundingSourceId!.Value)
+            .Union(expenses.Where(e => e.ToFundingSourceId.HasValue).Select(e => e.ToFundingSourceId!.Value))
+            .Distinct();
         var creditCardIds = expenses.Where(e => e.FundingSourceType == FundingSourceType.CreditCard && e.FundingSourceId.HasValue).Select(e => e.FundingSourceId!.Value).Distinct();
 
         var bankNames = await _db.BankAccounts.Where(a => bankAccountIds.Contains(a.Id)).ToDictionaryAsync(a => a.Id, a => a.AccountName);
@@ -60,6 +64,8 @@ public class ExpenseController : ControllerBase
             FundingSourceType = e.FundingSourceType?.ToString(),
             e.FundingSourceId,
             FundingSourceName = ResolveFundingSourceName(e, bankNames, cardNames),
+            e.ToFundingSourceId,
+            ToFundingSourceName = e.ToFundingSourceId.HasValue ? bankNames.GetValueOrDefault(e.ToFundingSourceId.Value) : null,
             e.CreatedAt,
             e.UpdatedAt
         });
@@ -88,7 +94,7 @@ public class ExpenseController : ControllerBase
 
         var dailyExpenses = await _db.DailyExpenses
             .Include(e => e.Category)
-            .Where(e => e.UserId == UserId && e.Date >= startDate && e.Date < endDate && e.TransactionType != TransactionType.Income)
+            .Where(e => e.UserId == UserId && e.Date >= startDate && e.Date < endDate && e.TransactionType != TransactionType.Income && e.TransactionType != TransactionType.Transfer)
             .ToListAsync();
 
         var budgets = await _db.BudgetExpenses
@@ -151,6 +157,16 @@ public class ExpenseController : ControllerBase
         if (dto.TransactionType == TransactionType.Income && dto.FundingSourceType == FundingSourceType.CreditCard)
             return BadRequest(new { message = "Income cannot be received into a credit card." });
 
+        if (dto.TransactionType == TransactionType.Transfer)
+        {
+            if (dto.FundingSourceId == null || dto.ToFundingSourceId == null)
+                return BadRequest(new { message = "Transfer requires both source and destination accounts." });
+            if (dto.FundingSourceType != FundingSourceType.BankAccount)
+                return BadRequest(new { message = "Transfers are only between bank accounts." });
+            var destValid = await _db.BankAccounts.AnyAsync(a => a.Id == dto.ToFundingSourceId && a.UserId == UserId);
+            if (!destValid) return BadRequest(new { message = "Invalid destination account." });
+        }
+
         var expense = new DailyExpense
         {
             Date = dto.Date,
@@ -161,11 +177,17 @@ public class ExpenseController : ControllerBase
             TransactionType = dto.TransactionType,
             FundingSourceType = dto.FundingSourceType,
             FundingSourceId = dto.FundingSourceId,
+            ToFundingSourceId = dto.ToFundingSourceId,
             UserId = UserId
         };
 
         _db.DailyExpenses.Add(expense);
-        await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
+
+        if (dto.TransactionType == TransactionType.Transfer)
+            await AdjustTransfer(dto.FundingSourceId!.Value, dto.ToFundingSourceId!.Value, dto.Amount);
+        else
+            await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
+
         await _db.SaveChangesAsync();
 
         var created = await _db.DailyExpenses
@@ -185,6 +207,7 @@ public class ExpenseController : ControllerBase
             TransactionType = created.TransactionType?.ToString(),
             FundingSourceType = created.FundingSourceType?.ToString(),
             created.FundingSourceId,
+            created.ToFundingSourceId,
             created.CreatedAt,
             created.UpdatedAt
         });
@@ -206,7 +229,10 @@ public class ExpenseController : ControllerBase
             return BadRequest(new { message = "Income cannot be received into a credit card." });
 
         // Reverse old balance adjustment
-        await ReverseBalance(expense.TransactionType, expense.FundingSourceType, expense.FundingSourceId, expense.Amount);
+        if (expense.TransactionType == TransactionType.Transfer && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
+            await ReverseTransfer(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
+        else
+            await ReverseBalance(expense.TransactionType, expense.FundingSourceType, expense.FundingSourceId, expense.Amount);
 
         expense.Date = dto.Date;
         expense.CategoryId = dto.CategoryId;
@@ -216,9 +242,14 @@ public class ExpenseController : ControllerBase
         expense.TransactionType = dto.TransactionType;
         expense.FundingSourceType = dto.FundingSourceType;
         expense.FundingSourceId = dto.FundingSourceId;
+        expense.ToFundingSourceId = dto.ToFundingSourceId;
 
         // Apply new balance adjustment
-        await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
+        if (dto.TransactionType == TransactionType.Transfer && dto.FundingSourceId.HasValue && dto.ToFundingSourceId.HasValue)
+            await AdjustTransfer(dto.FundingSourceId.Value, dto.ToFundingSourceId.Value, dto.Amount);
+        else
+            await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
+
         await _db.SaveChangesAsync();
 
         var updated = await _db.DailyExpenses
@@ -238,6 +269,7 @@ public class ExpenseController : ControllerBase
             TransactionType = updated.TransactionType?.ToString(),
             FundingSourceType = updated.FundingSourceType?.ToString(),
             updated.FundingSourceId,
+            updated.ToFundingSourceId,
             updated.CreatedAt,
             updated.UpdatedAt
         });
@@ -249,7 +281,11 @@ public class ExpenseController : ControllerBase
         var expense = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == id && e.UserId == UserId);
         if (expense is null) return NotFound();
 
-        await ReverseBalance(expense.TransactionType, expense.FundingSourceType, expense.FundingSourceId, expense.Amount);
+        if (expense.TransactionType == TransactionType.Transfer && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
+            await ReverseTransfer(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
+        else
+            await ReverseBalance(expense.TransactionType, expense.FundingSourceType, expense.FundingSourceId, expense.Amount);
+
         _db.DailyExpenses.Remove(expense);
         await _db.SaveChangesAsync();
         return NoContent();
@@ -299,5 +335,21 @@ public class ExpenseController : ControllerBase
             if (card != null)
                 card.CurrentBalance -= amount;
         }
+    }
+
+    private async Task AdjustTransfer(int fromAccountId, int toAccountId, decimal amount)
+    {
+        var source = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == fromAccountId && a.UserId == UserId);
+        var dest = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == toAccountId && a.UserId == UserId);
+        if (source != null) source.CurrentBalance -= amount;
+        if (dest != null) dest.CurrentBalance += amount;
+    }
+
+    private async Task ReverseTransfer(int fromAccountId, int toAccountId, decimal amount)
+    {
+        var source = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == fromAccountId && a.UserId == UserId);
+        var dest = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == toAccountId && a.UserId == UserId);
+        if (source != null) source.CurrentBalance += amount;
+        if (dest != null) dest.CurrentBalance -= amount;
     }
 }

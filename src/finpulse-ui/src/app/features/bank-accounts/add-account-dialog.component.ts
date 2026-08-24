@@ -38,6 +38,7 @@ import { BankAccount } from '../../core/models/bank-account.model';
             <mat-select formControlName="accountType">
               <mat-option value="Checking">Checking</mat-option>
               <mat-option value="Savings">Savings</mat-option>
+              <mat-option value="Brokerage">Brokerage</mat-option>
             </mat-select>
           </mat-form-field>
 

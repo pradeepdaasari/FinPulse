@@ -14,6 +14,7 @@ import { DebtTrendChartComponent } from './debt-trend-chart.component';
 import { PaymentStreakComponent } from './payment-streak.component';
 import { DebtCountdownComponent } from './debt-countdown.component';
 import { BudgetHealthComponent } from './budget-health.component';
+import { FinancialSummaryComponent } from './financial-summary.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -30,7 +31,8 @@ import { BudgetHealthComponent } from './budget-health.component';
     DebtTrendChartComponent,
     PaymentStreakComponent,
     DebtCountdownComponent,
-    BudgetHealthComponent
+    BudgetHealthComponent,
+    FinancialSummaryComponent
   ],
   template: `
     @if (loading()) {
@@ -39,6 +41,7 @@ import { BudgetHealthComponent } from './budget-health.component';
       </div>
     } @else if (summary()) {
       <h2><mat-icon class="section-icon">space_dashboard</mat-icon> Dashboard</h2>
+      <app-financial-summary></app-financial-summary>
       <app-summary-cards [summary]="summary()!"></app-summary-cards>
       <app-payment-streak></app-payment-streak>
       <app-budget-health></app-budget-health>

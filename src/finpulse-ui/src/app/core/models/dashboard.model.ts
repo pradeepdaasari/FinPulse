@@ -85,3 +85,21 @@ export interface DebtFreeCountdown {
   overallRemainingMonths: number;
   projections: DebtPayoffProjection[];
 }
+
+export interface FinancialSummaryAccount {
+  id: number;
+  name: string;
+  type: string;
+  balance: number;
+}
+
+export interface FinancialSummary {
+  totalIncome: number;
+  totalExpenses: number;
+  netCashFlow: number;
+  bankAccounts: FinancialSummaryAccount[];
+  totalBankBalance: number;
+  totalCreditCardDebt: number;
+  totalLoanDebt: number;
+  netWorth: number;
+}

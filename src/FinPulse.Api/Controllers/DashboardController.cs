@@ -190,6 +190,48 @@ public class DashboardController : ControllerBase
         });
     }
 
+    [HttpGet("financial-summary")]
+    public async Task<ActionResult> GetFinancialSummary([FromQuery] int? year, [FromQuery] int? month)
+    {
+        var targetYear = year ?? DateTime.UtcNow.Year;
+        var targetMonth = month ?? DateTime.UtcNow.Month;
+        var startDate = new DateTime(targetYear, targetMonth, 1);
+        var endDate = startDate.AddMonths(1);
+
+        var transactions = await _db.DailyExpenses
+            .Where(e => e.UserId == UserId && e.Date >= startDate && e.Date < endDate)
+            .ToListAsync();
+
+        var totalIncome = transactions.Where(t => t.TransactionType == TransactionType.Income).Sum(t => t.Amount);
+        var totalExpenses = transactions.Where(t => t.TransactionType == TransactionType.Expense || t.TransactionType == null).Sum(t => t.Amount);
+
+        var bankAccounts = await _db.BankAccounts.Where(a => a.UserId == UserId).ToListAsync();
+        var creditCards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
+        var loans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
+
+        var totalBankBalance = bankAccounts.Sum(a => a.CurrentBalance);
+        var totalCreditCardDebt = creditCards.Sum(c => c.CurrentBalance);
+        var totalLoanDebt = loans.Sum(l => l.CurrentBalance);
+
+        return Ok(new
+        {
+            TotalIncome = totalIncome,
+            TotalExpenses = totalExpenses,
+            NetCashFlow = totalIncome - totalExpenses,
+            BankAccounts = bankAccounts.Select(a => new
+            {
+                a.Id,
+                Name = a.AccountName,
+                Type = a.AccountType.ToString(),
+                Balance = a.CurrentBalance
+            }),
+            TotalBankBalance = totalBankBalance,
+            TotalCreditCardDebt = totalCreditCardDebt,
+            TotalLoanDebt = totalLoanDebt,
+            NetWorth = totalBankBalance - totalCreditCardDebt - totalLoanDebt
+        });
+    }
+
     private static DateTime GetNextDueDate(int dueDay, DateTime today)
     {
         var thisMonth = new DateTime(today.Year, today.Month, Math.Min(dueDay, DateTime.DaysInMonth(today.Year, today.Month)));

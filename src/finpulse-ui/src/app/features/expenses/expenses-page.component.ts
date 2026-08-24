@@ -141,7 +141,12 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dial
                       <ng-container matColumnDef="source">
                         <th mat-header-cell *matHeaderCellDef>Source</th>
                         <td mat-cell *matCellDef="let e">
-                          @if (e.fundingSourceName) {
+                          @if (e.transactionType === 'Transfer' && e.fundingSourceName && e.toFundingSourceName) {
+                            <span class="source-cell transfer-source">
+                              <mat-icon class="source-icon">account_balance</mat-icon>
+                              {{ e.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon> {{ e.toFundingSourceName }}
+                            </span>
+                          } @else if (e.fundingSourceName) {
                             <span class="source-cell">
                               <mat-icon class="source-icon">{{ e.fundingSourceType === 'BankAccount' ? 'account_balance' : 'credit_card' }}</mat-icon>
                               {{ e.fundingSourceName }}
@@ -153,8 +158,12 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dial
                       </ng-container>
                       <ng-container matColumnDef="amount">
                         <th mat-header-cell *matHeaderCellDef>Amount</th>
-                        <td mat-cell *matCellDef="let e" [class.amount-cell]="true" [class.income-amount]="e.transactionType === 'Income'">
-                          {{ e.transactionType === 'Income' ? '+' : '' }}{{ e.amount | currency }}
+                        <td mat-cell *matCellDef="let e" [class.amount-cell]="true"
+                            [class.income-amount]="e.transactionType === 'Income'"
+                            [class.transfer-amount]="e.transactionType === 'Transfer'">
+                          @if (e.transactionType === 'Income') { +{{ e.amount | currency }} }
+                          @else if (e.transactionType === 'Transfer') { ↔ {{ e.amount | currency }} }
+                          @else { {{ e.amount | currency }} }
                         </td>
                       </ng-container>
                       <ng-container matColumnDef="actions">
@@ -228,8 +237,11 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dial
     table { width: 100%; min-width: 700px; }
     .amount-cell { font-weight: 600; }
     .income-amount { color: #2e7d32; }
+    .transfer-amount { color: #1565c0; }
     .source-cell { display: flex; align-items: center; gap: 4px; font-size: 0.85rem; }
     .source-icon { font-size: 16px; width: 16px; height: 16px; opacity: 0.7; }
+    .transfer-source { color: #1565c0; }
+    .arrow-icon { font-size: 14px; width: 14px; height: 14px; }
 
     @media (max-width: 768px) {
       .totals-row { flex-direction: column; align-items: center; }

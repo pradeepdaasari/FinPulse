@@ -22,6 +22,7 @@ public class DailyExpense
     public TransactionType? TransactionType { get; set; }
     public FundingSourceType? FundingSourceType { get; set; }
     public int? FundingSourceId { get; set; }
+    public int? ToFundingSourceId { get; set; }
 
     public string? UserId { get; set; }
 
