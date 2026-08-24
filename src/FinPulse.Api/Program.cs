@@ -16,7 +16,9 @@ if (builder.Environment.IsDevelopment())
 else
 {
     builder.Services.AddDbContext<FinPulseDbContext>(options =>
-        options.UseSqlServer(connectionString));
+        options.UseSqlServer(connectionString, sqlOptions =>
+            sqlOptions.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(30), errorNumbersToAdd: null))
+        .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 }
 
 // Add ASP.NET Core Identity
@@ -73,14 +75,21 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Ensure database exists
+// Apply database schema
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<FinPulseDbContext>();
-    db.Database.EnsureCreated();
 
     if (app.Environment.IsDevelopment())
+    {
+        db.Database.EnsureCreated();
         SeedData.Initialize(db);
+    }
+    else
+    {
+        db.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
+        db.Database.Migrate();
+    }
 }
 
 // Configure the HTTP request pipeline.
