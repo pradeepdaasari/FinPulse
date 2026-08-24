@@ -1,0 +1,70 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build-api",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/src/FinPulse.Api/FinPulse.Api.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary;ForceNoAlign"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "watch-api",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "watch",
+        "run",
+        "--project",
+        "${workspaceFolder}/src/FinPulse.Api/FinPulse.Api.csproj"
+      ],
+      "isBackground": true,
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "serve-ui",
+      "type": "shell",
+      "command": "ng serve --proxy-config proxy.conf.json",
+      "options": {
+        "cwd": "${workspaceFolder}/src/finpulse-ui"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "ng",
+        "pattern": {
+          "regexp": "^(ERROR)\\s+(.+)$",
+          "severity": 1,
+          "message": 2
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*Compiling.*",
+          "endsPattern": ".*Compiled successfully.*"
+        }
+      }
+    },
+    {
+      "label": "build",
+      "dependsOn": [
+        "build-api",
+        "build-ui"
+      ],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
+      "label": "build-ui",
+      "type": "shell",
+      "command": "ng build",
+      "options": {
+        "cwd": "${workspaceFolder}/src/finpulse-ui"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
