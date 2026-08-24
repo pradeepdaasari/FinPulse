@@ -7,21 +7,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
-import { forkJoin } from 'rxjs';
 import { PaymentService } from '../../core/services/payment.service';
-import { LoanService } from '../../core/services/loan.service';
-import { CreditCardService } from '../../core/services/credit-card.service';
+
+import { DebtService } from '../../core/services/debt.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { PaymentHistory, PaymentSummary } from '../../core/models/payment-history.model';
-import { PersonalLoan } from '../../core/models/personal-loan.model';
-import { CreditCard } from '../../core/models/credit-card.model';
+import { DebtItem } from '../../core/models/debt-item.model';
 import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.component';
-
-interface DebtFilterItem {
-  id: number;
-  name: string;
-  type: 'PersonalLoan' | 'CreditCard';
-}
 
 @Component({
   selector: 'app-payment-history',
@@ -48,7 +40,7 @@ interface DebtFilterItem {
       <div class="debt-filter-row">
         <span class="debt-filter-label">Filter by:</span>
         <mat-chip-set>
-          @for (debt of visibleDebts(); track debt.id) {
+          @for (debt of visibleDebts(); track debt.key) {
             <mat-chip [highlighted]="isDebtSelected(debt)" (click)="toggleDebt(debt)">
               <mat-icon matChipAvatar>{{ debt.type === 'PersonalLoan' ? 'account_balance' : 'credit_card' }}</mat-icon>
               {{ debt.name }}
@@ -123,7 +115,7 @@ interface DebtFilterItem {
                 <th mat-header-cell *matHeaderCellDef>Type</th>
                 <td mat-cell *matCellDef="let p">
                   <span class="type-badge" [class]="'type-' + p.debtType">
-                    {{ p.debtType === 'PersonalLoan' ? getLoanType(p.debtId) : 'Credit Card' }}
+                    {{ p.debtType === 'PersonalLoan' ? getLoanType(p) : 'Credit Card' }}
                   </span>
                 </td>
               </ng-container>
@@ -270,18 +262,16 @@ interface DebtFilterItem {
 })
 export class PaymentHistoryComponent implements OnInit {
   private paymentService = inject(PaymentService);
-  private loanService = inject(LoanService);
-  private cardService = inject(CreditCardService);
+  private debtService = inject(DebtService);
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
-  private loanMap = new Map<number, PersonalLoan>();
-  private cardMap = new Map<number, CreditCard>();
+  private debtMap = new Map<string, DebtItem>();
 
   allPayments = signal<PaymentHistory[]>([]);
   loading = signal(true);
   activeFilter = signal<string>('all');
   selectedDebtKeys = signal<Set<string>>(new Set());
-  debtItems = signal<DebtFilterItem[]>([]);
+  debtItems = signal<DebtItem[]>([]);
   columns = ['paymentDate', 'debtName', 'debtType', 'amountPaid', 'notes', 'actions'];
 
   visibleDebts = computed(() => {
@@ -319,34 +309,21 @@ export class PaymentHistoryComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    forkJoin({
-      loans: this.loanService.getAll(),
-      cards: this.cardService.getAll()
-    }).subscribe(({ loans, cards }) => {
-      const items: DebtFilterItem[] = [];
-      loans.forEach(l => {
-        this.loanMap.set(Number(l.id), l);
-        items.push({ id: Number(l.id), name: l.lenderName, type: 'PersonalLoan' });
-      });
-      cards.forEach(c => {
-        this.cardMap.set(Number(c.id), c);
-        items.push({ id: Number(c.id), name: c.cardName, type: 'CreditCard' });
-      });
-      this.debtItems.set(items);
+    this.debtService.getAll().subscribe(debts => {
+      debts.forEach(d => this.debtMap.set(d.key, d));
+      this.debtItems.set(debts);
     });
     this.loadPayments();
   }
 
   getDebtName(payment: PaymentHistory): string {
-    if (payment.debtType === 'PersonalLoan') {
-      return this.loanMap.get(payment.debtId)?.lenderName ?? 'Loan';
-    }
-    return this.cardMap.get(payment.debtId)?.cardName ?? 'Card';
+    const debt = this.debtMap.get(`${payment.debtType}:${payment.debtId}`);
+    return debt?.name ?? (payment.debtType === 'PersonalLoan' ? 'Loan' : 'Card');
   }
 
-  getLoanType(debtId: number): string {
-    const loan = this.loanMap.get(debtId);
-    return loan?.loanType ? `${loan.loanType} Loan` : 'Loan';
+  getLoanType(payment: PaymentHistory): string {
+    const debt = this.debtMap.get(`${payment.debtType}:${payment.debtId}`);
+    return debt?.subType ? `${debt.subType} Loan` : 'Loan';
   }
 
   filterByType(filter: string): void {
@@ -354,19 +331,18 @@ export class PaymentHistoryComponent implements OnInit {
     this.selectedDebtKeys.set(new Set());
   }
 
-  toggleDebt(debt: DebtFilterItem): void {
-    const key = `${debt.type}:${debt.id}`;
+  toggleDebt(debt: DebtItem): void {
     const current = new Set(this.selectedDebtKeys());
-    if (current.has(key)) {
-      current.delete(key);
+    if (current.has(debt.key)) {
+      current.delete(debt.key);
     } else {
-      current.add(key);
+      current.add(debt.key);
     }
     this.selectedDebtKeys.set(current);
   }
 
-  isDebtSelected(debt: DebtFilterItem): boolean {
-    return this.selectedDebtKeys().has(`${debt.type}:${debt.id}`);
+  isDebtSelected(debt: DebtItem): boolean {
+    return this.selectedDebtKeys().has(debt.key);
   }
 
   clearDebtFilter(): void {
