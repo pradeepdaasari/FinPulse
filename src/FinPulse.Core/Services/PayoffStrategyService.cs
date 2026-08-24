@@ -16,18 +16,20 @@ public class PayoffStrategyService : IPayoffStrategyService
         {
             Avalanche = avalanche,
             Snowball = snowball,
-            InterestSavedByAvalanche = snowball.TotalInterestPaid - avalanche.TotalInterestPaid,
-            MonthsSavedByAvalanche = snowball.MonthsToPayoff - avalanche.MonthsToPayoff
+            InterestSaved = snowball.TotalInterest - avalanche.TotalInterest,
+            TimeDifference = snowball.MonthsToPayoff - avalanche.MonthsToPayoff
         };
     }
 
     private PayoffStrategyDto RunStrategy(List<DebtSnapshotDto> debts, decimal totalMonthlyBudget, string strategyName)
     {
         // Create working copies of debt state
-        var workingDebts = debts.Select(d => new WorkingDebt
+        var workingDebts = debts.Select((d, idx) => new WorkingDebt
         {
+            Index = idx,
             Id = d.Id,
             Name = d.Name,
+            OriginalBalance = d.Balance,
             Balance = d.Balance,
             AprPercent = d.AprPercent,
             MinimumPayment = d.MinimumPayment,
@@ -125,15 +127,17 @@ public class PayoffStrategyService : IPayoffStrategyService
             payoffOrder.Add(new DebtPayoffOrderDto
             {
                 DebtName = debt.Name,
+                Balance = debt.OriginalBalance,
+                AprPercent = debt.AprPercent,
                 PayoffMonth = debt.PayoffMonth,
-                InterestPaid = debt.TotalInterestPaid
+                TotalInterestPaid = debt.TotalInterestPaid
             });
         }
 
         return new PayoffStrategyDto
         {
-            StrategyName = strategyName,
-            TotalInterestPaid = totalInterest,
+            Name = strategyName,
+            TotalInterest = totalInterest,
             MonthsToPayoff = monthsToPayoff,
             DebtPayoffOrder = payoffOrder
         };
@@ -141,8 +145,10 @@ public class PayoffStrategyService : IPayoffStrategyService
 
     private class WorkingDebt
     {
+        public int Index { get; set; }
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public decimal OriginalBalance { get; set; }
         public decimal Balance { get; set; }
         public decimal AprPercent { get; set; }
         public decimal MinimumPayment { get; set; }
