@@ -41,7 +41,6 @@ import { FinancialSummaryComponent } from './financial-summary.component';
         <mat-spinner></mat-spinner>
       </div>
     } @else if (summary()) {
-      <h2><mat-icon class="section-icon">space_dashboard</mat-icon> Dashboard</h2>
       <app-financial-summary></app-financial-summary>
       <app-summary-cards [summary]="summary()!"></app-summary-cards>
       <app-payment-streak></app-payment-streak>
@@ -83,11 +82,6 @@ import { FinancialSummaryComponent } from './financial-summary.component';
       align-items: center;
       padding: 80px;
     }
-    h2 {
-      margin-bottom: var(--spacing-lg);
-      display: flex;
-      align-items: center;
-    }
     .card-title-icon {
       font-size: 20px;
       width: 20px;
@@ -99,7 +93,7 @@ import { FinancialSummaryComponent } from './financial-summary.component';
     .dashboard-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: var(--spacing-lg);
+      gap: var(--spacing-xl);
       margin-top: var(--spacing-lg);
     }
     .chart-card canvas {

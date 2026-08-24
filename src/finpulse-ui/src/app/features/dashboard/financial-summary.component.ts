@@ -137,12 +137,12 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
       text-align: center;
     }
     .flow-icon { font-size: 28px; width: 28px; height: 28px; margin-bottom: 4px; }
-    .income-icon { color: #2e7d32; }
-    .expense-icon { color: #c62828; }
+    .income-icon { color: var(--color-success); }
+    .expense-icon { color: var(--color-danger); }
     .flow-label { font-size: 0.85rem; opacity: 0.7; }
-    .flow-value { font-size: 1.4rem; font-weight: 700; margin-top: 4px; }
-    .income-value { color: #2e7d32; }
-    .expense-value { color: #c62828; }
+    .flow-value { font-size: 1.75rem; font-weight: 700; margin-top: 4px; }
+    .income-value { color: var(--color-success); }
+    .expense-value { color: var(--color-danger); }
 
     /* Trading P&L */
     .trading-card { margin-bottom: var(--spacing-md); }
@@ -173,8 +173,8 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
     .nw-label { display: block; font-size: 0.85rem; opacity: 0.7; }
     .nw-value { display: block; font-size: 1.5rem; font-weight: 700; margin-top: 4px; }
     .nw-total { border-left: 2px solid var(--color-primary, #1976d2); padding-left: var(--spacing-lg); }
-    .positive { color: #2e7d32; }
-    .negative { color: #c62828; }
+    .positive { color: var(--color-success); }
+    .negative { color: var(--color-danger); }
 
     /* Account Balances */
     .accounts-card { margin-bottom: var(--spacing-md); }

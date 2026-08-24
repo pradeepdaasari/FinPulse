@@ -77,12 +77,12 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
       display: flex;
       align-items: center;
       gap: var(--spacing-md);
-      padding: var(--spacing-md);
+      padding: 24px;
     }
     .stat-icon {
       width: 48px;
       height: 48px;
-      border-radius: 12px;
+      border-radius: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -120,12 +120,11 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
     .stat-label {
       font-size: 0.75rem;
       color: var(--color-text-muted);
-      text-transform: uppercase;
       font-weight: 500;
       letter-spacing: 0.05em;
     }
     .stat-value {
-      font-size: 1.375rem;
+      font-size: 1.5rem;
       font-weight: 700;
       color: var(--color-text);
       letter-spacing: -0.02em;

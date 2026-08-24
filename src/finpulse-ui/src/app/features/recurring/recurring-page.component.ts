@@ -18,7 +18,7 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
   imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
   template: `
     <div class="header-row">
-      <h2><mat-icon class="section-icon">repeat</mat-icon> Recurring Transactions</h2>
+      <h2>Recurring Transactions</h2>
       <button mat-raised-button color="primary" (click)="openAdd()">
         <mat-icon>add</mat-icon> Add Recurring
       </button>
@@ -107,12 +107,12 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
     .cat-icon { font-size: 1.2rem; }
     .desc-text { font-weight: 500; }
     .merchant-text { font-size: 0.8rem; color: var(--color-text-secondary); }
-    .active-chip { background-color: #e8f5e9 !important; color: #2e7d32 !important; }
-    .inactive-chip { background-color: #fff3e0 !important; color: #e65100 !important; }
+    .active-chip { background-color: color-mix(in srgb, var(--color-success) 12%, transparent) !important; color: var(--color-success) !important; }
+    .inactive-chip { background-color: color-mix(in srgb, var(--color-warning) 12%, transparent) !important; color: var(--color-warning) !important; }
     .empty-state {
       text-align: center; padding: var(--spacing-xl) !important;
     }
-    .empty-state mat-icon { font-size: 48px; height: 48px; width: 48px; opacity: 0.4; }
+    .empty-state mat-icon { font-size: 56px; height: 56px; width: 56px; color: var(--color-text-muted); }
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
     }

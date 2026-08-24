@@ -17,7 +17,7 @@ import { GoalDialogComponent } from './goal-dialog.component';
   imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatProgressBarModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
   template: `
     <div class="header-row">
-      <h2><mat-icon class="section-icon">flag</mat-icon> Savings Goals</h2>
+      <h2>Savings Goals</h2>
       <button mat-raised-button color="primary" (click)="openAdd()">
         <mat-icon>add</mat-icon> Add Goal
       </button>
@@ -82,9 +82,9 @@ import { GoalDialogComponent } from './goal-dialog.component';
     .header-row h2 { margin: 0; }
     .goals-grid {
       display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: var(--spacing-md);
+      gap: var(--spacing-xl);
     }
-    .goal-card { padding: var(--spacing-md) !important; }
+    .goal-card { padding: var(--spacing-xl) !important; }
     .goal-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
     .goal-icon { font-size: 2rem; line-height: 1; }
     .goal-title { flex: 1; }
@@ -98,7 +98,7 @@ import { GoalDialogComponent } from './goal-dialog.component';
     .goal-footer .percent { font-weight: 600; font-size: 0.9rem; }
     .goal-footer .target-date { font-size: 0.8rem; color: var(--color-text-secondary); }
     .empty-state { text-align: center; padding: var(--spacing-xl) !important; }
-    .empty-state mat-icon { font-size: 48px; height: 48px; width: 48px; opacity: 0.4; }
+    .empty-state mat-icon { font-size: 56px; height: 56px; width: 56px; color: var(--color-text-muted); }
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
       .goals-grid { grid-template-columns: 1fr; }

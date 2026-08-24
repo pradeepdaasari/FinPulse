@@ -25,7 +25,7 @@ import { RouterLink } from '@angular/router';
   ],
   template: `
     <div class="budget-header">
-      <h2><mat-icon class="section-icon">account_balance_wallet</mat-icon> Budget Planner</h2>
+      <h2>Budget Planner</h2>
       <div class="month-nav">
         <button mat-icon-button (click)="prevMonth()"><mat-icon>chevron_left</mat-icon></button>
         <span class="month-label">{{ monthLabel() }}</span>
@@ -257,17 +257,17 @@ import { RouterLink } from '@angular/router';
     .stat-cards {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: var(--spacing-md);
+      gap: var(--spacing-lg);
       margin-bottom: var(--spacing-lg);
     }
     .stat-card .stat-value { font-size: 1.5rem; font-weight: 700; }
     .stat-card .stat-label { font-size: 0.85rem; opacity: 0.7; margin-top: 4px; }
-    .stat-card.income .stat-value { color: var(--md-sys-color-primary, #1976d2); }
-    .stat-card.fixed .stat-value { color: var(--md-sys-color-tertiary, #7b1fa2); }
-    .stat-card.variable .stat-value { color: var(--md-sys-color-secondary, #f57c00); }
-    .stat-card.debt .stat-value { color: #c62828; }
-    .stat-card.surplus .stat-value { color: #2e7d32; }
-    .stat-card.deficit .stat-value { color: #c62828; }
+    .stat-card.income .stat-value { color: var(--color-primary); }
+    .stat-card.fixed .stat-value { color: var(--color-accent); }
+    .stat-card.variable .stat-value { color: var(--color-warning); }
+    .stat-card.debt .stat-value { color: var(--color-danger); }
+    .stat-card.surplus .stat-value { color: var(--color-success); }
+    .stat-card.deficit .stat-value { color: var(--color-danger); }
 
     .category-card { margin-top: var(--spacing-md); }
     .category-table { width: 100%; }
@@ -276,11 +276,11 @@ import { RouterLink } from '@angular/router';
     .paycheck-card mat-card-title { display: flex; align-items: center; gap: 8px; }
     .paycheck-progress { margin: var(--spacing-md) 0; }
     .progress-labels { display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.85rem; }
-    .leftover { font-weight: 600; color: #2e7d32; }
-    .leftover.negative { color: #c62828; }
+    .leftover { font-weight: 600; color: var(--color-success); }
+    .leftover.negative { color: var(--color-danger); }
     .expense-table { width: 100%; }
     .autopay-icon, .debt-icon { font-size: 16px; height: 16px; width: 16px; vertical-align: middle; margin-left: 4px; opacity: 0.6; }
-    .debt-icon { color: var(--md-sys-color-tertiary, #7b1fa2); }
+    .debt-icon { color: var(--color-accent); }
     .no-expenses { opacity: 0.6; font-style: italic; }
 
     .manage-header { margin-bottom: var(--spacing-md); }

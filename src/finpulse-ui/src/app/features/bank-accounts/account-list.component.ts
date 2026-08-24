@@ -18,7 +18,7 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
   imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatProgressSpinnerModule, CurrencyPipe],
   template: `
     <div class="header-row">
-      <h2><mat-icon class="section-icon">account_balance</mat-icon> Bank Accounts</h2>
+      <h2>Bank Accounts</h2>
       <button mat-raised-button color="primary" (click)="openAddAccount()">
         <mat-icon>add</mat-icon> Add Account
       </button>
@@ -92,7 +92,7 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
     .empty-state {
       text-align: center; padding: var(--spacing-xl) !important;
     }
-    .empty-state mat-icon { font-size: 48px; height: 48px; width: 48px; opacity: 0.4; }
+    .empty-state mat-icon { font-size: 56px; height: 56px; width: 56px; color: var(--color-text-muted); }
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
     }

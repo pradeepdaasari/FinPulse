@@ -61,30 +61,18 @@ import { AuthService } from '../core/services/auth.service';
             <mat-icon matListItemIcon>savings</mat-icon>
             <span matListItemTitle>Bank Accounts</span>
           </a>
-          <a mat-list-item routerLink="/strategies" routerLinkActive="active-link"
-             (click)="onNavClick()">
-            <mat-icon matListItemIcon>trending_down</mat-icon>
-            <span matListItemTitle>Payoff Strategies</span>
-          </a>
-          <a mat-list-item routerLink="/simulator" routerLinkActive="active-link"
-             (click)="onNavClick()">
-            <mat-icon matListItemIcon>science</mat-icon>
-            <span matListItemTitle>What-If Simulator</span>
-          </a>
-          <a mat-list-item routerLink="/budget" routerLinkActive="active-link"
-             (click)="onNavClick()">
-            <mat-icon matListItemIcon>pie_chart</mat-icon>
-            <span matListItemTitle>Budget</span>
-          </a>
+
+          <div class="nav-divider"></div>
+
           <a mat-list-item routerLink="/expenses" routerLinkActive="active-link"
              (click)="onNavClick()">
             <mat-icon matListItemIcon>swap_horiz</mat-icon>
             <span matListItemTitle>Transactions</span>
           </a>
-          <a mat-list-item routerLink="/categories" routerLinkActive="active-link"
+          <a mat-list-item routerLink="/budget" routerLinkActive="active-link"
              (click)="onNavClick()">
-            <mat-icon matListItemIcon>category</mat-icon>
-            <span matListItemTitle>Categories</span>
+            <mat-icon matListItemIcon>pie_chart</mat-icon>
+            <span matListItemTitle>Budget</span>
           </a>
           <a mat-list-item routerLink="/recurring" routerLinkActive="active-link"
              (click)="onNavClick()">
@@ -95,6 +83,24 @@ import { AuthService } from '../core/services/auth.service';
              (click)="onNavClick()">
             <mat-icon matListItemIcon>flag</mat-icon>
             <span matListItemTitle>Goals</span>
+          </a>
+          <a mat-list-item routerLink="/categories" routerLinkActive="active-link"
+             (click)="onNavClick()">
+            <mat-icon matListItemIcon>category</mat-icon>
+            <span matListItemTitle>Categories</span>
+          </a>
+
+          <div class="nav-divider"></div>
+
+          <a mat-list-item routerLink="/strategies" routerLinkActive="active-link"
+             (click)="onNavClick()">
+            <mat-icon matListItemIcon>trending_down</mat-icon>
+            <span matListItemTitle>Payoff Strategies</span>
+          </a>
+          <a mat-list-item routerLink="/simulator" routerLinkActive="active-link"
+             (click)="onNavClick()">
+            <mat-icon matListItemIcon>science</mat-icon>
+            <span matListItemTitle>What-If Simulator</span>
           </a>
           <a mat-list-item routerLink="/payments" routerLinkActive="active-link"
              (click)="onNavClick()">
@@ -138,58 +144,67 @@ import { AuthService } from '../core/services/auth.service';
     }
 
     .sidenav {
-      width: 260px;
+      width: 240px;
       background: var(--gradient-sidebar);
+      backdrop-filter: blur(20px) saturate(180%);
       border-right: none;
     }
 
     .sidenav-header {
-      padding: 24px 20px 16px;
-      border-bottom: 1px solid var(--color-sidebar-border);
+      padding: 20px 16px 12px;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       text-decoration: none;
       cursor: pointer;
-      transition: opacity 0.2s;
+      transition: opacity var(--transition-fast);
     }
-    .brand:hover {
-      opacity: 0.85;
-    }
+    .brand:hover { opacity: 0.8; }
 
     .brand-icon {
       color: var(--color-sidebar-accent);
-      font-size: 28px;
-      width: 28px;
-      height: 28px;
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
     }
 
     .brand-name {
       font-family: var(--font-primary);
-      font-size: 1.25rem;
+      font-size: 1.125rem;
       font-weight: 700;
       color: var(--color-sidebar-text-active);
-      letter-spacing: -0.02em;
+      letter-spacing: -0.03em;
+    }
+
+    .nav-divider {
+      height: 1px;
+      background: var(--color-sidebar-border);
+      margin: 8px 16px;
     }
 
     .nav-list {
-      padding: 12px 8px;
+      padding: 8px 10px;
     }
 
     .nav-list a {
-      border-radius: 8px !important;
-      margin-bottom: 2px;
+      border-radius: var(--radius-sm) !important;
+      margin-bottom: 1px;
       font-family: var(--font-primary);
+      font-size: var(--text-sm);
       font-weight: 500;
       color: var(--color-sidebar-text) !important;
       transition: all var(--transition-fast);
+      height: 36px !important;
     }
 
     .nav-list a mat-icon {
       color: var(--color-sidebar-text) !important;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
     }
 
     .nav-list a span {
@@ -198,7 +213,6 @@ import { AuthService } from '../core/services/auth.service';
 
     .nav-list a:hover {
       background-color: var(--color-sidebar-hover) !important;
-      color: var(--color-sidebar-text-active) !important;
     }
 
     .nav-list a:hover mat-icon,
@@ -208,9 +222,6 @@ import { AuthService } from '../core/services/auth.service';
 
     .nav-list a.active-link {
       background-color: var(--color-sidebar-active) !important;
-      color: var(--color-sidebar-text-active) !important;
-      border-left: 3px solid var(--color-sidebar-accent);
-      padding-left: 13px;
     }
 
     .nav-list a.active-link mat-icon {
@@ -222,18 +233,20 @@ import { AuthService } from '../core/services/auth.service';
     }
 
     .app-toolbar {
-      background: var(--color-surface) !important;
+      background: rgba(255, 255, 255, 0.72) !important;
+      backdrop-filter: blur(20px) saturate(180%);
       color: var(--color-text) !important;
-      border-bottom: 1px solid var(--color-border);
-      box-shadow: var(--shadow-sm);
-      height: 64px;
+      border-bottom: none;
+      box-shadow: none;
+      height: 56px;
     }
 
     .toolbar-title {
       font-family: var(--font-primary);
-      font-size: 1.125rem;
+      font-size: var(--text-lg);
       font-weight: 600;
       margin-left: 8px;
+      letter-spacing: var(--tracking-tight);
     }
 
     .toolbar-spacer {
@@ -246,40 +259,38 @@ import { AuthService } from '../core/services/auth.service';
       gap: 6px;
       margin-right: 8px;
       padding: 4px 12px 4px 8px;
-      border-radius: 20px;
-      background: var(--color-bg, rgba(0,0,0,0.04));
+      border-radius: var(--radius-full);
+      background: var(--color-surface-secondary);
     }
     .user-avatar {
-      font-size: 24px;
-      width: 24px;
-      height: 24px;
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
       color: var(--color-primary);
     }
     .user-email {
-      font-size: 0.8125rem;
+      font-size: var(--text-xs);
       font-weight: 500;
       color: var(--color-text-secondary);
-      max-width: 180px;
+      max-width: 160px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
     .content-area {
-      padding: var(--spacing-xl);
+      padding: 40px;
       max-width: 1400px;
-      min-height: calc(100vh - 64px);
+      min-height: calc(100vh - 56px);
     }
 
     @media (max-width: 768px) {
       .content-area {
         padding: var(--spacing-md);
       }
-
       .toolbar-title {
-        font-size: 1rem;
+        font-size: var(--text-base);
       }
-
       .user-email {
         display: none;
       }

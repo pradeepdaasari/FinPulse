@@ -80,17 +80,17 @@ import { SpendingSummary } from '../../core/models/daily-expense.model';
     .overall-label { font-weight: 500; }
     .overall-amounts { font-size: 0.9rem; opacity: 0.8; }
     .overall-footer { display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.85rem; }
-    .overall-footer .over { color: #c62828; font-weight: 600; }
+    .overall-footer .over { color: var(--color-danger); font-weight: 600; }
     .percent { opacity: 0.6; }
 
     .alerts-section { margin-top: var(--spacing-md); padding-top: var(--spacing-sm); border-top: 1px solid var(--color-border, #e0e0e0); }
     .alerts-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.6; display: block; margin-bottom: 8px; }
     .alert-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
-    .alert-row .alert-icon { font-size: 18px; width: 18px; height: 18px; color: #f57c00; }
-    .alert-row.over .alert-icon { color: #c62828; }
+    .alert-row .alert-icon { font-size: 18px; width: 18px; height: 18px; color: var(--color-warning); }
+    .alert-row.over .alert-icon { color: var(--color-danger); }
     .alert-row .alert-name { flex: 1; font-size: 0.9rem; }
     .alert-row .alert-detail { font-weight: 600; font-size: 0.9rem; }
-    .alert-row.over .alert-detail { color: #c62828; }
+    .alert-row.over .alert-detail { color: var(--color-danger); }
 
     .next-pay { display: flex; align-items: center; gap: 8px; margin-top: var(--spacing-md); padding-top: var(--spacing-sm); border-top: 1px solid var(--color-border, #e0e0e0); font-size: 0.9rem; }
     .next-pay mat-icon { color: var(--color-primary); font-size: 18px; width: 18px; height: 18px; }

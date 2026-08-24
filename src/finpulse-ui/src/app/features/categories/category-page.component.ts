@@ -42,7 +42,7 @@ const ICON_OPTIONS = [
   ],
   template: `
     <div class="page-header">
-      <h2><mat-icon class="section-icon">category</mat-icon> Categories</h2>
+      <h2>Categories</h2>
       <button mat-raised-button color="primary" (click)="showAddParent.set(true)" [disabled]="showAddParent()">
         <mat-icon>add</mat-icon> Add Category
       </button>
@@ -243,7 +243,6 @@ const ICON_OPTIONS = [
       margin-bottom: var(--spacing-lg); flex-wrap: wrap; gap: var(--spacing-sm);
     }
     .page-header h2 { margin: 0; display: flex; align-items: center; }
-    .section-icon { margin-right: 8px; }
 
     .add-form-card { margin-bottom: var(--spacing-md); }
     .inline-form { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -267,8 +266,8 @@ const ICON_OPTIONS = [
     .parent-badge {
       width: 36px;
       height: 36px;
-      background: linear-gradient(135deg, rgba(21, 101, 192, 0.12), rgba(21, 101, 192, 0.06));
-      border: 1px solid rgba(21, 101, 192, 0.15);
+      background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 12%, transparent), color-mix(in srgb, var(--color-primary) 6%, transparent));
+      border: 1px solid var(--color-border);
     }
     .parent-badge mat-icon {
       font-size: 20px;
@@ -279,8 +278,8 @@ const ICON_OPTIONS = [
     .child-badge {
       width: 30px;
       height: 30px;
-      background: linear-gradient(135deg, rgba(0,0,0,0.06), rgba(0,0,0,0.03));
-      border: 1px solid rgba(0,0,0,0.08);
+      background: linear-gradient(135deg, color-mix(in srgb, var(--color-text-muted) 10%, transparent), color-mix(in srgb, var(--color-text-muted) 5%, transparent));
+      border: 1px solid var(--color-border);
     }
     .child-badge mat-icon {
       font-size: 16px;
