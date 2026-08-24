@@ -34,6 +34,12 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
               </div>
             </div>
           </div>
+          @if (streak()?.currentStreak && streak()!.currentStreak >= 6) {
+            <div class="streak-milestone">
+              <mat-icon>local_fire_department</mat-icon>
+              {{ streak()!.currentStreak >= 12 ? 'Incredible! 1 year+' : 'Amazing! 6+ months' }}
+            </div>
+          }
         </mat-card-content>
       </mat-card>
     }
@@ -106,6 +112,23 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
       color: var(--color-text-secondary);
     }
     .status-icon.paid { color: var(--color-success); }
+    .streak-milestone {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: var(--radius-full);
+      background: var(--color-warning-bg);
+      color: var(--color-warning);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      margin-top: 8px;
+    }
+    .streak-milestone mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
   `]
 })
 export class PaymentStreakComponent implements OnInit {

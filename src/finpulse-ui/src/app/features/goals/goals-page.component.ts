@@ -69,6 +69,12 @@ import { GoalDialogComponent } from './goal-dialog.component';
                 <span class="target-date">Target: {{ goal.targetDate | date:'mediumDate' }}</span>
               }
             </div>
+
+            @if (getProgress(goal) >= 100) {
+              <div class="goal-complete-badge">
+                <mat-icon>celebration</mat-icon> Goal Achieved!
+              </div>
+            }
           </mat-card>
         }
       </div>
@@ -99,6 +105,23 @@ import { GoalDialogComponent } from './goal-dialog.component';
     .goal-footer .target-date { font-size: 0.8rem; color: var(--color-text-secondary); }
     .empty-state { text-align: center; padding: var(--spacing-xl) !important; }
     .empty-state mat-icon { font-size: 56px; height: 56px; width: 56px; color: var(--color-text-muted); }
+    .goal-complete-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: var(--radius-full);
+      background: var(--color-success-bg);
+      color: var(--color-success);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      margin-top: 8px;
+    }
+    .goal-complete-badge mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
       .goals-grid { grid-template-columns: 1fr; }

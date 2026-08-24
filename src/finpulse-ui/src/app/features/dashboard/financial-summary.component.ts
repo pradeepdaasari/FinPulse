@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -40,6 +40,14 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
               </span>
             </mat-card-content>
           </mat-card>
+        </div>
+
+        <!-- Spending Pace -->
+        <div class="pace-indicator">
+          <mat-icon class="pace-icon" [class.on-track]="paceStatus() === 'on-track'" [class.ahead]="paceStatus() === 'ahead'" [class.over]="paceStatus() === 'over'">
+            {{ paceStatus() === 'on-track' ? 'check_circle' : paceStatus() === 'ahead' ? 'savings' : 'warning' }}
+          </mat-icon>
+          <span class="pace-text">{{ paceMessage() }}</span>
         </div>
 
         <!-- Row 2: Trading P&L (always visible) -->
@@ -144,6 +152,22 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
     .income-value { color: var(--color-success); }
     .expense-value { color: var(--color-danger); }
 
+    /* Spending Pace */
+    .pace-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      background: var(--color-surface-secondary);
+      margin-bottom: var(--spacing-md);
+    }
+    .pace-icon { font-size: 20px; width: 20px; height: 20px; }
+    .pace-icon.on-track { color: var(--color-primary); }
+    .pace-icon.ahead { color: var(--color-success); }
+    .pace-icon.over { color: var(--color-danger); }
+    .pace-text { font-size: var(--text-sm); color: var(--color-text-secondary); }
+
     /* Trading P&L */
     .trading-card { margin-bottom: var(--spacing-md); }
     .trading-row {
@@ -215,6 +239,37 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
 export class FinancialSummaryComponent implements OnInit {
   private dashboardService = inject(DashboardService);
   data = signal<FinancialSummary | null>(null);
+
+  paceStatus = computed(() => {
+    const d = this.data();
+    if (!d) return 'on-track';
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const dayOfMonth = now.getDate();
+    const paceRatio = dayOfMonth / daysInMonth;
+    const spendRatio = d.totalIncome > 0 ? d.totalExpenses / d.totalIncome : 0;
+    if (spendRatio <= paceRatio * 0.85) return 'ahead';
+    if (spendRatio <= paceRatio * 1.1) return 'on-track';
+    return 'over';
+  });
+
+  paceMessage = computed(() => {
+    const d = this.data();
+    if (!d) return '';
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const daysLeft = daysInMonth - now.getDate();
+    const spent = d.totalExpenses;
+    const income = d.totalIncome;
+    const pct = income > 0 ? Math.round((spent / income) * 100) : 0;
+    if (this.paceStatus() === 'ahead') {
+      return `You've spent ${pct}% of income with ${daysLeft} days left — under budget!`;
+    } else if (this.paceStatus() === 'on-track') {
+      return `You've spent ${pct}% of income with ${daysLeft} days left — on track.`;
+    } else {
+      return `You've spent ${pct}% of income with ${daysLeft} days left — spending ahead of pace.`;
+    }
+  });
 
   ngOnInit(): void {
     this.dashboardService.getFinancialSummary().subscribe({

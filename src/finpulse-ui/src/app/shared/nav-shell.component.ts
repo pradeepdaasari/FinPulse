@@ -6,6 +6,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog } from '@angular/material/dialog';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { filter } from 'rxjs/operators';
 import { AuthService } from '../core/services/auth.service';
@@ -136,6 +137,10 @@ import { AuthService } from '../core/services/auth.service';
           <router-outlet></router-outlet>
         </div>
       </mat-sidenav-content>
+
+      <button mat-fab class="global-fab" (click)="openQuickExpense()" aria-label="Log expense">
+        <mat-icon>add</mat-icon>
+      </button>
     </mat-sidenav-container>
   `,
   styles: [`
@@ -299,6 +304,26 @@ import { AuthService } from '../core/services/auth.service';
         background: none;
       }
     }
+
+    .global-fab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 100;
+      background: var(--color-primary) !important;
+      color: #fff !important;
+      box-shadow: var(--shadow-lg) !important;
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    .global-fab:hover {
+      transform: scale(1.08);
+      box-shadow: var(--shadow-xl) !important;
+    }
+    @media (max-width: 768px) {
+      .global-fab {
+        bottom: 80px;
+      }
+    }
   `]
 })
 export class NavShellComponent {
@@ -307,6 +332,7 @@ export class NavShellComponent {
   private breakpointObserver = inject(BreakpointObserver);
   private router = inject(Router);
   private authService = inject(AuthService);
+  private dialog = inject(MatDialog);
 
   isMobile = signal(false);
   pageTitle = signal('Dashboard');
@@ -349,5 +375,14 @@ export class NavShellComponent {
 
   logout(): void {
     this.authService.logout();
+  }
+
+  openQuickExpense(): void {
+    import('../features/expenses/add-expense-dialog.component').then(m => {
+      this.dialog.open(m.AddExpenseDialogComponent, {
+        width: '480px',
+        data: { expense: null }
+      });
+    });
   }
 }
