@@ -1,108 +1,150 @@
 import { Component, inject, input, OnChanges, signal } from '@angular/core';
-import { CommonModule, CurrencyPipe, PercentPipe } from '@angular/common';
+import { CommonModule, CurrencyPipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
 import { DailyExpenseService } from '../../core/services/daily-expense.service';
-import { MonthComparison, CategoryComparison } from '../../core/models/daily-expense.model';
+import { MultiMonthComparison, MultiMonthTotal, MultiMonthCategory } from '../../core/models/daily-expense.model';
 
 @Component({
   selector: 'app-month-comparison',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule, CurrencyPipe, PercentPipe],
+  imports: [
+    CommonModule, FormsModule, MatCardModule, MatIconModule,
+    MatProgressSpinnerModule, MatFormFieldModule, MatInputModule, MatButtonModule, CurrencyPipe
+  ],
   template: `
+    <div class="controls">
+      <mat-form-field class="months-input">
+        <mat-label>Months to compare</mat-label>
+        <input matInput type="number" [(ngModel)]="monthCount" min="1" max="12"
+               (keyup.enter)="loadData()">
+        <mat-hint>1–12 months ending at current view</mat-hint>
+      </mat-form-field>
+      <button mat-raised-button color="primary" (click)="loadData()">
+        <mat-icon>compare_arrows</mat-icon> Compare
+      </button>
+    </div>
+
     @if (loading()) {
       <mat-spinner diameter="40"></mat-spinner>
     } @else if (data()) {
       <div class="comparison-container">
-        <mat-card class="totals-compare">
+        <!-- Monthly Totals Row -->
+        <mat-card class="totals-card">
           <mat-card-content>
-            <div class="totals-row">
-              <div class="total-col">
-                <span class="total-label">This Month</span>
-                <span class="total-value">{{ data()!.currentTotal | currency }}</span>
-              </div>
-              <div class="total-col">
-                <span class="total-label">Last Month</span>
-                <span class="total-value muted">{{ data()!.previousTotal | currency }}</span>
-              </div>
-              <div class="total-col">
-                <span class="total-label">Change</span>
-                <span class="total-value" [class.positive]="totalDiff() < 0" [class.negative]="totalDiff() > 0">
-                  {{ totalDiff() >= 0 ? '+' : '' }}{{ totalDiff() | currency }}
-                </span>
+            <div class="totals-scroll">
+              <div class="totals-row">
+                @for (m of data()!.months; track m.label) {
+                  <div class="month-col">
+                    <span class="month-label">{{ m.label }}</span>
+                    <span class="month-total">{{ m.total | currency }}</span>
+                  </div>
+                }
               </div>
             </div>
+            @if (data()!.months.length > 1) {
+              <div class="trend-summary">
+                <span class="trend-label">Avg/month:</span>
+                <span class="trend-value">{{ avgMonthly() | currency }}</span>
+                <span class="trend-label" style="margin-left: 16px;">Total:</span>
+                <span class="trend-value">{{ grandTotal() | currency }}</span>
+              </div>
+            }
           </mat-card-content>
         </mat-card>
 
+        <!-- Category Breakdown Table -->
         @if (data()!.categories.length > 0) {
-          <div class="category-list">
-            @for (cat of data()!.categories; track cat.categoryId) {
-              <mat-card class="cat-card">
-                <mat-card-content>
-                  <div class="cat-header">
-                    <span class="cat-name">
-                      @if (cat.categoryIcon) {
-                        <mat-icon class="cat-icon">{{ cat.categoryIcon }}</mat-icon>
+          <mat-card>
+            <mat-card-content>
+              <div class="table-scroll">
+                <table class="compare-table">
+                  <thead>
+                    <tr>
+                      <th class="cat-col">Category</th>
+                      @for (m of data()!.months; track m.label) {
+                        <th class="amt-col">{{ m.label }}</th>
                       }
-                      {{ cat.categoryName }}
-                    </span>
-                    <span class="cat-change" [class.positive]="cat.difference < 0" [class.negative]="cat.difference > 0">
-                      {{ cat.difference >= 0 ? '+' : '' }}{{ cat.difference | currency }}
-                      <span class="pct">({{ cat.percentChange >= 0 ? '+' : '' }}{{ cat.percentChange }}%)</span>
-                    </span>
-                  </div>
-                  <div class="cat-bars">
-                    <div class="bar-row">
-                      <span class="bar-label">This</span>
-                      <mat-progress-bar mode="determinate" [value]="getBarWidth(cat.currentMonthAmount)" color="primary"></mat-progress-bar>
-                      <span class="bar-value">{{ cat.currentMonthAmount | currency }}</span>
-                    </div>
-                    <div class="bar-row">
-                      <span class="bar-label">Last</span>
-                      <mat-progress-bar mode="determinate" [value]="getBarWidth(cat.previousMonthAmount)" color="accent"></mat-progress-bar>
-                      <span class="bar-value muted">{{ cat.previousMonthAmount | currency }}</span>
-                    </div>
-                  </div>
-                </mat-card-content>
-              </mat-card>
-            }
-          </div>
+                      <th class="amt-col total-col">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (cat of data()!.categories; track cat.categoryId) {
+                      <tr>
+                        <td class="cat-col">
+                          @if (cat.categoryIcon) {
+                            <mat-icon class="cat-icon">{{ cat.categoryIcon }}</mat-icon>
+                          }
+                          {{ cat.categoryName }}
+                        </td>
+                        @for (amt of cat.monthlyAmounts; track amt.month) {
+                          <td class="amt-col" [class.zero]="amt.amount === 0">
+                            {{ amt.amount === 0 ? '—' : (amt.amount | currency) }}
+                          </td>
+                        }
+                        <td class="amt-col total-col">{{ cat.total | currency }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr class="totals-footer">
+                      <td class="cat-col"><strong>Total</strong></td>
+                      @for (m of data()!.months; track m.label) {
+                        <td class="amt-col"><strong>{{ m.total | currency }}</strong></td>
+                      }
+                      <td class="amt-col total-col"><strong>{{ grandTotal() | currency }}</strong></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </mat-card-content>
+          </mat-card>
         } @else {
           <mat-card>
-            <mat-card-content><p>No expense data for comparison.</p></mat-card-content>
+            <mat-card-content><p>No expense data for the selected period.</p></mat-card-content>
           </mat-card>
         }
       </div>
     }
   `,
   styles: [`
+    .controls { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+    .months-input { width: 160px; }
     .comparison-container { display: flex; flex-direction: column; gap: 12px; }
-    .totals-compare { margin-bottom: 8px; }
-    .totals-row { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 16px; }
-    .total-col { text-align: center; }
-    .total-label { display: block; font-size: 0.85rem; opacity: 0.7; }
-    .total-value { display: block; font-size: 1.4rem; font-weight: 700; margin-top: 4px; }
-    .total-value.muted { opacity: 0.6; }
-    .positive { color: #2e7d32; }
-    .negative { color: #c62828; }
 
-    .category-list { display: flex; flex-direction: column; gap: 8px; }
-    .cat-card { transition: box-shadow 0.2s; }
-    .cat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .cat-name { font-weight: 500; display: flex; align-items: center; gap: 6px; }
-    .cat-icon { font-size: 18px; width: 18px; height: 18px; }
-    .cat-change { font-weight: 600; font-size: 0.9rem; }
-    .pct { font-size: 0.8rem; opacity: 0.7; }
+    .totals-card { margin-bottom: 4px; }
+    .totals-scroll { overflow-x: auto; }
+    .totals-row { display: flex; gap: 12px; min-width: max-content; padding: 4px 0; }
+    .month-col { text-align: center; min-width: 90px; flex: 1; }
+    .month-label { display: block; font-size: 0.8rem; opacity: 0.7; }
+    .month-total { display: block; font-size: 1.2rem; font-weight: 700; margin-top: 2px; }
 
-    .cat-bars { display: flex; flex-direction: column; gap: 4px; }
-    .bar-row { display: flex; align-items: center; gap: 8px; }
-    .bar-label { font-size: 0.75rem; opacity: 0.6; min-width: 30px; }
-    .bar-row mat-progress-bar { flex: 1; }
-    .bar-value { font-size: 0.85rem; min-width: 70px; text-align: right; }
-    .bar-value.muted { opacity: 0.6; }
+    .trend-summary {
+      display: flex; align-items: center; justify-content: center;
+      margin-top: 12px; padding-top: 10px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+      font-size: 0.9rem;
+    }
+    .trend-label { opacity: 0.6; margin-right: 4px; }
+    .trend-value { font-weight: 600; }
+
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .compare-table { width: 100%; border-collapse: collapse; min-width: 400px; }
+    .compare-table th, .compare-table td { padding: 8px 12px; text-align: right; white-space: nowrap; }
+    .compare-table th { font-size: 0.8rem; opacity: 0.7; border-bottom: 2px solid rgba(0,0,0,0.1); }
+    .compare-table td { border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 0.9rem; }
+    .cat-col { text-align: left !important; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+    th.cat-col { display: table-cell; }
+    .cat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .amt-col { min-width: 90px; }
+    .total-col { font-weight: 600; background: rgba(0,0,0,0.02); }
+    .zero { opacity: 0.3; }
+    .totals-footer td { border-top: 2px solid rgba(0,0,0,0.1); }
   `]
 })
 export class MonthComparisonComponent implements OnChanges {
@@ -111,32 +153,29 @@ export class MonthComparisonComponent implements OnChanges {
   year = input<number>();
   month = input<number>();
 
-  data = signal<MonthComparison | null>(null);
+  monthCount = 1;
+  data = signal<MultiMonthComparison | null>(null);
   loading = signal(false);
-  totalDiff = signal(0);
-  private maxAmount = 1;
+  avgMonthly = signal(0);
+  grandTotal = signal(0);
 
   ngOnChanges(): void {
-    this.loadComparison();
+    this.loadData();
   }
 
-  private loadComparison(): void {
+  loadData(): void {
+    const count = Math.max(1, Math.min(12, this.monthCount || 1));
+    this.monthCount = count;
     this.loading.set(true);
-    this.expenseService.getComparison(this.year(), this.month()).subscribe({
-      next: (comparison) => {
-        this.data.set(comparison);
-        this.totalDiff.set(comparison.currentTotal - comparison.previousTotal);
-        this.maxAmount = Math.max(
-          ...comparison.categories.map(c => Math.max(c.currentMonthAmount, c.previousMonthAmount)),
-          1
-        );
+    this.expenseService.getMultiComparison(this.year(), this.month(), count).subscribe({
+      next: (result) => {
+        this.data.set(result);
+        const total = result.months.reduce((s, m) => s + m.total, 0);
+        this.grandTotal.set(total);
+        this.avgMonthly.set(result.months.length > 0 ? total / result.months.length : 0);
         this.loading.set(false);
       },
       error: () => this.loading.set(false)
     });
-  }
-
-  getBarWidth(amount: number): number {
-    return Math.min(100, (amount / this.maxAmount) * 100);
   }
 }

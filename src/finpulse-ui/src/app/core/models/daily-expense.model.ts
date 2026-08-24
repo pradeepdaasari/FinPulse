@@ -90,3 +90,23 @@ export interface MonthComparison {
   previousTotal: number;
   categories: CategoryComparison[];
 }
+
+export interface MultiMonthTotal {
+  year: number;
+  month: number;
+  label: string;
+  total: number;
+}
+
+export interface MultiMonthCategory {
+  categoryId: number;
+  categoryName: string;
+  categoryIcon: string | null;
+  monthlyAmounts: { year: number; month: number; amount: number }[];
+  total: number;
+}
+
+export interface MultiMonthComparison {
+  months: MultiMonthTotal[];
+  categories: MultiMonthCategory[];
+}
