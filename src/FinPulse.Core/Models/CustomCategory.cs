@@ -20,6 +20,9 @@ public class CustomCategory
 
     public CategoryType Type { get; set; } = CategoryType.Expense;
 
+    [MaxLength(50)]
+    public string? Icon { get; set; }
+
     public string? UserId { get; set; }
 
     public int? ParentId { get; set; }

@@ -67,7 +67,12 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dial
                   <mat-card class="summary-item" (click)="addExpenseForCategory(item.categoryId)">
                     <mat-card-content>
                       <div class="summary-header">
-                        <span class="cat-name">{{ item.categoryName }}</span>
+                        <span class="cat-name">
+                          @if (item.categoryIcon) {
+                            <mat-icon class="cat-icon">{{ item.categoryIcon }}</mat-icon>
+                          }
+                          {{ item.categoryName }}
+                        </span>
                         <span class="cat-amounts">{{ item.spent | currency }} / {{ item.budgeted | currency }}</span>
                       </div>
                       <mat-progress-bar
@@ -125,7 +130,12 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dial
                       <ng-container matColumnDef="category">
                         <th mat-header-cell *matHeaderCellDef>Category</th>
                         <td mat-cell *matCellDef="let e">
-                          <mat-chip>{{ e.categoryName }}</mat-chip>
+                          <mat-chip>
+                            @if (e.categoryIcon) {
+                              <mat-icon matChipAvatar>{{ e.categoryIcon }}</mat-icon>
+                            }
+                            {{ e.categoryName }}
+                          </mat-chip>
                         </td>
                       </ng-container>
                       <ng-container matColumnDef="amount">
@@ -188,8 +198,9 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dial
     .summary-list { display: flex; flex-direction: column; gap: var(--spacing-sm); }
     .summary-item { cursor: pointer; transition: box-shadow 0.2s; }
     .summary-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    .summary-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
-    .cat-name { font-weight: 500; }
+    .summary-header { display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center; }
+    .cat-name { font-weight: 500; display: flex; align-items: center; gap: 8px; }
+    .cat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); }
     .cat-amounts { font-size: 0.9rem; opacity: 0.8; }
     .summary-footer { display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.85rem; }
     .remaining { color: #2e7d32; }

@@ -13,20 +13,20 @@ public static class SeedData
         // ═══════════════════════════════════════════════════
         // EXPENSE CATEGORIES
         // ═══════════════════════════════════════════════════
-        var housing = new CustomCategory { Name = "Housing", IsFixed = true };
-        var transportation = new CustomCategory { Name = "Transportation", IsFixed = false };
-        var insurance = new CustomCategory { Name = "Insurance", IsFixed = true };
-        var utilities = new CustomCategory { Name = "Utilities", IsFixed = true };
-        var subscriptions = new CustomCategory { Name = "Subscriptions", IsFixed = true };
-        var food = new CustomCategory { Name = "Food & Dining", IsFixed = false };
-        var lifestyle = new CustomCategory { Name = "Lifestyle", IsFixed = false };
-        var personal = new CustomCategory { Name = "Personal & Health", IsFixed = false };
-        var savings = new CustomCategory { Name = "Savings & Investments", IsFixed = false };
+        var housing = new CustomCategory { Name = "Housing", IsFixed = true, Icon = "home" };
+        var transportation = new CustomCategory { Name = "Transportation", IsFixed = false, Icon = "directions_car" };
+        var insurance = new CustomCategory { Name = "Insurance", IsFixed = true, Icon = "shield" };
+        var utilities = new CustomCategory { Name = "Utilities", IsFixed = true, Icon = "bolt" };
+        var subscriptions = new CustomCategory { Name = "Subscriptions", IsFixed = true, Icon = "subscriptions" };
+        var food = new CustomCategory { Name = "Food & Dining", IsFixed = false, Icon = "restaurant" };
+        var lifestyle = new CustomCategory { Name = "Lifestyle", IsFixed = false, Icon = "celebration" };
+        var personal = new CustomCategory { Name = "Personal & Health", IsFixed = false, Icon = "favorite" };
+        var savings = new CustomCategory { Name = "Savings & Investments", IsFixed = false, Icon = "savings" };
 
         // INCOME CATEGORIES
-        var employment = new CustomCategory { Name = "Employment", IsFixed = true, Type = CategoryType.Income };
-        var sideIncome = new CustomCategory { Name = "Side Income", IsFixed = false, Type = CategoryType.Income };
-        var passiveIncome = new CustomCategory { Name = "Passive Income", IsFixed = false, Type = CategoryType.Income };
+        var employment = new CustomCategory { Name = "Employment", IsFixed = true, Type = CategoryType.Income, Icon = "work" };
+        var sideIncome = new CustomCategory { Name = "Side Income", IsFixed = false, Type = CategoryType.Income, Icon = "monetization_on" };
+        var passiveIncome = new CustomCategory { Name = "Passive Income", IsFixed = false, Type = CategoryType.Income, Icon = "account_balance" };
 
         context.CustomCategories.AddRange(
             housing, transportation, insurance, utilities, subscriptions,
@@ -36,65 +36,65 @@ public static class SeedData
         // ═══════════════════════════════════════════════════
         // EXPENSE SUB-CATEGORIES
         // ═══════════════════════════════════════════════════
-        var rent = new CustomCategory { Name = "Rent", IsFixed = true, ParentId = housing.Id };
-        var mortgage = new CustomCategory { Name = "Mortgage", IsFixed = true, ParentId = housing.Id };
-        var rentersInsurance = new CustomCategory { Name = "Renter's Insurance", IsFixed = true, ParentId = housing.Id };
+        var rent = new CustomCategory { Name = "Rent", IsFixed = true, ParentId = housing.Id, Icon = "apartment" };
+        var mortgage = new CustomCategory { Name = "Mortgage", IsFixed = true, ParentId = housing.Id, Icon = "house" };
+        var rentersInsurance = new CustomCategory { Name = "Renter's Insurance", IsFixed = true, ParentId = housing.Id, Icon = "policy" };
 
-        var carPayment = new CustomCategory { Name = "Car Payment", IsFixed = true, ParentId = transportation.Id };
-        var gas = new CustomCategory { Name = "Gas & Fuel", IsFixed = false, ParentId = transportation.Id };
-        var parking = new CustomCategory { Name = "Parking & Tolls", IsFixed = false, ParentId = transportation.Id };
-        var maintenance = new CustomCategory { Name = "Car Maintenance", IsFixed = false, ParentId = transportation.Id };
-        var rideshare = new CustomCategory { Name = "Uber / Lyft", IsFixed = false, ParentId = transportation.Id };
+        var carPayment = new CustomCategory { Name = "Car Payment", IsFixed = true, ParentId = transportation.Id, Icon = "car_rental" };
+        var gas = new CustomCategory { Name = "Gas & Fuel", IsFixed = false, ParentId = transportation.Id, Icon = "local_gas_station" };
+        var parking = new CustomCategory { Name = "Parking & Tolls", IsFixed = false, ParentId = transportation.Id, Icon = "local_parking" };
+        var maintenance = new CustomCategory { Name = "Car Maintenance", IsFixed = false, ParentId = transportation.Id, Icon = "build" };
+        var rideshare = new CustomCategory { Name = "Uber / Lyft", IsFixed = false, ParentId = transportation.Id, Icon = "hail" };
 
-        var autoInsurance = new CustomCategory { Name = "Auto Insurance", IsFixed = true, ParentId = insurance.Id };
-        var healthInsurance = new CustomCategory { Name = "Health Insurance", IsFixed = true, ParentId = insurance.Id };
-        var lifeInsurance = new CustomCategory { Name = "Life Insurance", IsFixed = true, ParentId = insurance.Id };
+        var autoInsurance = new CustomCategory { Name = "Auto Insurance", IsFixed = true, ParentId = insurance.Id, Icon = "car_crash" };
+        var healthInsurance = new CustomCategory { Name = "Health Insurance", IsFixed = true, ParentId = insurance.Id, Icon = "health_and_safety" };
+        var lifeInsurance = new CustomCategory { Name = "Life Insurance", IsFixed = true, ParentId = insurance.Id, Icon = "security" };
 
-        var electric = new CustomCategory { Name = "Electric", IsFixed = true, ParentId = utilities.Id };
-        var water = new CustomCategory { Name = "Water & Sewer", IsFixed = true, ParentId = utilities.Id };
-        var naturalGas = new CustomCategory { Name = "Natural Gas", IsFixed = true, ParentId = utilities.Id };
-        var phone = new CustomCategory { Name = "Phone", IsFixed = true, ParentId = utilities.Id };
-        var internet = new CustomCategory { Name = "Internet", IsFixed = true, ParentId = utilities.Id };
+        var electric = new CustomCategory { Name = "Electric", IsFixed = true, ParentId = utilities.Id, Icon = "electrical_services" };
+        var water = new CustomCategory { Name = "Water & Sewer", IsFixed = true, ParentId = utilities.Id, Icon = "water_drop" };
+        var naturalGas = new CustomCategory { Name = "Natural Gas", IsFixed = true, ParentId = utilities.Id, Icon = "gas_meter" };
+        var phone = new CustomCategory { Name = "Phone", IsFixed = true, ParentId = utilities.Id, Icon = "phone_android" };
+        var internet = new CustomCategory { Name = "Internet", IsFixed = true, ParentId = utilities.Id, Icon = "wifi" };
 
-        var streaming = new CustomCategory { Name = "Streaming (Netflix, Hulu)", IsFixed = true, ParentId = subscriptions.Id };
-        var music = new CustomCategory { Name = "Music (Spotify)", IsFixed = true, ParentId = subscriptions.Id };
-        var cloud = new CustomCategory { Name = "Cloud Storage (iCloud)", IsFixed = true, ParentId = subscriptions.Id };
-        var gym = new CustomCategory { Name = "Gym Membership", IsFixed = true, ParentId = subscriptions.Id };
-        var software = new CustomCategory { Name = "Software & Apps", IsFixed = true, ParentId = subscriptions.Id };
+        var streaming = new CustomCategory { Name = "Streaming (Netflix, Hulu)", IsFixed = true, ParentId = subscriptions.Id, Icon = "live_tv" };
+        var music = new CustomCategory { Name = "Music (Spotify)", IsFixed = true, ParentId = subscriptions.Id, Icon = "headphones" };
+        var cloud = new CustomCategory { Name = "Cloud Storage (iCloud)", IsFixed = true, ParentId = subscriptions.Id, Icon = "cloud" };
+        var gym = new CustomCategory { Name = "Gym Membership", IsFixed = true, ParentId = subscriptions.Id, Icon = "fitness_center" };
+        var software = new CustomCategory { Name = "Software & Apps", IsFixed = true, ParentId = subscriptions.Id, Icon = "apps" };
 
-        var groceries = new CustomCategory { Name = "Groceries", IsFixed = false, ParentId = food.Id };
-        var dining = new CustomCategory { Name = "Restaurants", IsFixed = false, ParentId = food.Id };
-        var coffee = new CustomCategory { Name = "Coffee Shops", IsFixed = false, ParentId = food.Id };
-        var fastFood = new CustomCategory { Name = "Fast Food & Delivery", IsFixed = false, ParentId = food.Id };
+        var groceries = new CustomCategory { Name = "Groceries", IsFixed = false, ParentId = food.Id, Icon = "shopping_cart" };
+        var dining = new CustomCategory { Name = "Restaurants", IsFixed = false, ParentId = food.Id, Icon = "dinner_dining" };
+        var coffee = new CustomCategory { Name = "Coffee Shops", IsFixed = false, ParentId = food.Id, Icon = "coffee" };
+        var fastFood = new CustomCategory { Name = "Fast Food & Delivery", IsFixed = false, ParentId = food.Id, Icon = "delivery_dining" };
 
-        var entertainment = new CustomCategory { Name = "Entertainment", IsFixed = false, ParentId = lifestyle.Id };
-        var shopping = new CustomCategory { Name = "Shopping", IsFixed = false, ParentId = lifestyle.Id };
-        var travel = new CustomCategory { Name = "Travel & Vacation", IsFixed = false, ParentId = lifestyle.Id };
-        var hobbies = new CustomCategory { Name = "Hobbies", IsFixed = false, ParentId = lifestyle.Id };
-        var gifts = new CustomCategory { Name = "Gifts & Donations", IsFixed = false, ParentId = lifestyle.Id };
+        var entertainment = new CustomCategory { Name = "Entertainment", IsFixed = false, ParentId = lifestyle.Id, Icon = "movie" };
+        var shopping = new CustomCategory { Name = "Shopping", IsFixed = false, ParentId = lifestyle.Id, Icon = "shopping_bag" };
+        var travel = new CustomCategory { Name = "Travel & Vacation", IsFixed = false, ParentId = lifestyle.Id, Icon = "flight" };
+        var hobbies = new CustomCategory { Name = "Hobbies", IsFixed = false, ParentId = lifestyle.Id, Icon = "palette" };
+        var gifts = new CustomCategory { Name = "Gifts & Donations", IsFixed = false, ParentId = lifestyle.Id, Icon = "redeem" };
 
-        var healthcare = new CustomCategory { Name = "Medical & Dental", IsFixed = false, ParentId = personal.Id };
-        var personalCare = new CustomCategory { Name = "Personal Care", IsFixed = false, ParentId = personal.Id };
-        var clothing = new CustomCategory { Name = "Clothing", IsFixed = false, ParentId = personal.Id };
-        var education = new CustomCategory { Name = "Education & Books", IsFixed = false, ParentId = personal.Id };
-        var pets = new CustomCategory { Name = "Pet Care", IsFixed = false, ParentId = personal.Id };
+        var healthcare = new CustomCategory { Name = "Medical & Dental", IsFixed = false, ParentId = personal.Id, Icon = "local_hospital" };
+        var personalCare = new CustomCategory { Name = "Personal Care", IsFixed = false, ParentId = personal.Id, Icon = "spa" };
+        var clothing = new CustomCategory { Name = "Clothing", IsFixed = false, ParentId = personal.Id, Icon = "checkroom" };
+        var education = new CustomCategory { Name = "Education & Books", IsFixed = false, ParentId = personal.Id, Icon = "school" };
+        var pets = new CustomCategory { Name = "Pet Care", IsFixed = false, ParentId = personal.Id, Icon = "pets" };
 
-        var emergencyFund = new CustomCategory { Name = "Emergency Fund", IsFixed = false, ParentId = savings.Id };
-        var retirement = new CustomCategory { Name = "Retirement (401k/IRA)", IsFixed = true, ParentId = savings.Id };
-        var investing = new CustomCategory { Name = "Brokerage", IsFixed = false, ParentId = savings.Id };
+        var emergencyFund = new CustomCategory { Name = "Emergency Fund", IsFixed = false, ParentId = savings.Id, Icon = "emergency" };
+        var retirement = new CustomCategory { Name = "Retirement (401k/IRA)", IsFixed = true, ParentId = savings.Id, Icon = "elderly" };
+        var investing = new CustomCategory { Name = "Brokerage", IsFixed = false, ParentId = savings.Id, Icon = "trending_up" };
 
         // INCOME SUB-CATEGORIES
-        var salary = new CustomCategory { Name = "Salary", IsFixed = true, Type = CategoryType.Income, ParentId = employment.Id };
-        var bonus = new CustomCategory { Name = "Bonus", IsFixed = false, Type = CategoryType.Income, ParentId = employment.Id };
-        var overtime = new CustomCategory { Name = "Overtime", IsFixed = false, Type = CategoryType.Income, ParentId = employment.Id };
+        var salary = new CustomCategory { Name = "Salary", IsFixed = true, Type = CategoryType.Income, ParentId = employment.Id, Icon = "payments" };
+        var bonus = new CustomCategory { Name = "Bonus", IsFixed = false, Type = CategoryType.Income, ParentId = employment.Id, Icon = "card_giftcard" };
+        var overtime = new CustomCategory { Name = "Overtime", IsFixed = false, Type = CategoryType.Income, ParentId = employment.Id, Icon = "schedule" };
 
-        var freelance = new CustomCategory { Name = "Freelance / Consulting", IsFixed = false, Type = CategoryType.Income, ParentId = sideIncome.Id };
-        var sideGig = new CustomCategory { Name = "Side Gig", IsFixed = false, Type = CategoryType.Income, ParentId = sideIncome.Id };
-        var reselling = new CustomCategory { Name = "Reselling / Marketplace", IsFixed = false, Type = CategoryType.Income, ParentId = sideIncome.Id };
+        var freelance = new CustomCategory { Name = "Freelance / Consulting", IsFixed = false, Type = CategoryType.Income, ParentId = sideIncome.Id, Icon = "laptop" };
+        var sideGig = new CustomCategory { Name = "Side Gig", IsFixed = false, Type = CategoryType.Income, ParentId = sideIncome.Id, Icon = "handyman" };
+        var reselling = new CustomCategory { Name = "Reselling / Marketplace", IsFixed = false, Type = CategoryType.Income, ParentId = sideIncome.Id, Icon = "storefront" };
 
-        var rentalIncome = new CustomCategory { Name = "Rental Income", IsFixed = true, Type = CategoryType.Income, ParentId = passiveIncome.Id };
-        var dividends = new CustomCategory { Name = "Dividends", IsFixed = false, Type = CategoryType.Income, ParentId = passiveIncome.Id };
-        var interest = new CustomCategory { Name = "Interest (HYSA)", IsFixed = false, Type = CategoryType.Income, ParentId = passiveIncome.Id };
+        var rentalIncome = new CustomCategory { Name = "Rental Income", IsFixed = true, Type = CategoryType.Income, ParentId = passiveIncome.Id, Icon = "real_estate_agent" };
+        var dividends = new CustomCategory { Name = "Dividends", IsFixed = false, Type = CategoryType.Income, ParentId = passiveIncome.Id, Icon = "pie_chart" };
+        var interest = new CustomCategory { Name = "Interest (HYSA)", IsFixed = false, Type = CategoryType.Income, ParentId = passiveIncome.Id, Icon = "percent" };
 
         context.CustomCategories.AddRange(
             rent, mortgage, rentersInsurance,

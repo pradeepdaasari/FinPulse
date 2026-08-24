@@ -13,8 +13,23 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatMenuModule } from '@angular/material/menu';
 import { CategoryService } from '../../core/services/category.service';
 import { Category, CategoryCreate, CategoryType } from '../../core/models/category.model';
+
+const ICON_OPTIONS = [
+  'home', 'apartment', 'house', 'directions_car', 'local_gas_station', 'local_parking',
+  'build', 'hail', 'car_rental', 'car_crash', 'shield', 'health_and_safety', 'security',
+  'bolt', 'electrical_services', 'water_drop', 'gas_meter', 'phone_android', 'wifi',
+  'subscriptions', 'live_tv', 'headphones', 'cloud', 'fitness_center', 'apps',
+  'restaurant', 'dinner_dining', 'coffee', 'delivery_dining', 'shopping_cart',
+  'celebration', 'movie', 'shopping_bag', 'flight', 'palette', 'redeem',
+  'favorite', 'local_hospital', 'spa', 'checkroom', 'school', 'pets',
+  'savings', 'emergency', 'elderly', 'trending_up', 'percent', 'pie_chart',
+  'work', 'payments', 'card_giftcard', 'schedule', 'monetization_on',
+  'laptop', 'handyman', 'storefront', 'account_balance', 'real_estate_agent',
+  'category', 'label', 'receipt', 'attach_money', 'toll', 'local_offer'
+];
 
 @Component({
   selector: 'app-category-page',
@@ -22,7 +37,8 @@ import { Category, CategoryCreate, CategoryType } from '../../core/models/catego
   imports: [
     CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule,
     MatExpansionModule, MatFormFieldModule, MatInputModule, MatSlideToggleModule,
-    MatSnackBarModule, MatTooltipModule, MatChipsModule, MatTabsModule, MatButtonToggleModule
+    MatSnackBarModule, MatTooltipModule, MatChipsModule, MatTabsModule, MatButtonToggleModule,
+    MatMenuModule
   ],
   template: `
     <div class="page-header">
@@ -36,6 +52,18 @@ import { Category, CategoryCreate, CategoryType } from '../../core/models/catego
       <mat-card class="add-form-card">
         <mat-card-content>
           <div class="inline-form">
+            <button mat-icon-button [matMenuTriggerFor]="newParentIconMenu" class="icon-picker-btn" matTooltip="Pick icon">
+              <mat-icon>{{ newParentIcon || 'category' }}</mat-icon>
+            </button>
+            <mat-menu #newParentIconMenu="matMenu" class="icon-menu">
+              <div class="icon-grid" (click)="$event.stopPropagation()">
+                @for (icon of iconOptions; track icon) {
+                  <button mat-icon-button (click)="newParentIcon = icon" [class.selected]="newParentIcon === icon">
+                    <mat-icon>{{ icon }}</mat-icon>
+                  </button>
+                }
+              </div>
+            </mat-menu>
             <mat-form-field appearance="outline">
               <mat-label>Category Name</mat-label>
               <input matInput [(ngModel)]="newParentName" (keyup.enter)="saveParent()">
@@ -76,10 +104,13 @@ import { Category, CategoryCreate, CategoryType } from '../../core/models/catego
             <mat-expansion-panel>
               <mat-expansion-panel-header>
                 <mat-panel-title>
+                  <span class="cat-icon-badge parent-badge">
+                    <mat-icon>{{ parent.icon || 'category' }}</mat-icon>
+                  </span>
                   @if (editingId() === parent.id) {
                     <input class="inline-edit" [(ngModel)]="editName" (keyup.enter)="saveEdit(parent)" (click)="$event.stopPropagation()">
                   } @else {
-                    {{ parent.name }}
+                    <span class="cat-label">{{ parent.name }}</span>
                   }
                 </mat-panel-title>
                 <mat-panel-description>
@@ -90,6 +121,18 @@ import { Category, CategoryCreate, CategoryType } from '../../core/models/catego
 
               <div class="panel-actions">
                 @if (editingId() === parent.id) {
+                  <button mat-icon-button [matMenuTriggerFor]="editIconMenu" class="icon-picker-btn" matTooltip="Change icon">
+                    <mat-icon>{{ editIcon || 'category' }}</mat-icon>
+                  </button>
+                  <mat-menu #editIconMenu="matMenu" class="icon-menu">
+                    <div class="icon-grid" (click)="$event.stopPropagation()">
+                      @for (icon of iconOptions; track icon) {
+                        <button mat-icon-button (click)="editIcon = icon" [class.selected]="editIcon === icon">
+                          <mat-icon>{{ icon }}</mat-icon>
+                        </button>
+                      }
+                    </div>
+                  </mat-menu>
                   <mat-slide-toggle [(ngModel)]="editFixed" class="edit-toggle">Fixed</mat-slide-toggle>
                   <button mat-icon-button color="primary" (click)="saveEdit(parent)" matTooltip="Save">
                     <mat-icon>check</mat-icon>
@@ -112,6 +155,18 @@ import { Category, CategoryCreate, CategoryType } from '../../core/models/catego
 
               @if (addingChildParentId() === parent.id) {
                 <div class="inline-form child-form">
+                  <button mat-icon-button [matMenuTriggerFor]="newChildIconMenu" class="icon-picker-btn" matTooltip="Pick icon">
+                    <mat-icon>{{ newChildIcon || 'label' }}</mat-icon>
+                  </button>
+                  <mat-menu #newChildIconMenu="matMenu" class="icon-menu">
+                    <div class="icon-grid" (click)="$event.stopPropagation()">
+                      @for (icon of iconOptions; track icon) {
+                        <button mat-icon-button (click)="newChildIcon = icon" [class.selected]="newChildIcon === icon">
+                          <mat-icon>{{ icon }}</mat-icon>
+                        </button>
+                      }
+                    </div>
+                  </mat-menu>
                   <mat-form-field appearance="outline">
                     <mat-label>Subcategory Name</mat-label>
                     <input matInput [(ngModel)]="newChildName" (keyup.enter)="saveChild(parent)">
@@ -130,7 +185,22 @@ import { Category, CategoryCreate, CategoryType } from '../../core/models/catego
                 <div class="children-list">
                   @for (child of parent.children; track child.id) {
                     <div class="child-row">
+                      <span class="cat-icon-badge child-badge">
+                        <mat-icon>{{ child.icon || 'label' }}</mat-icon>
+                      </span>
                       @if (editingId() === child.id) {
+                        <button mat-icon-button [matMenuTriggerFor]="editChildIconMenu" class="icon-picker-btn" matTooltip="Change icon">
+                          <mat-icon>{{ editIcon || 'label' }}</mat-icon>
+                        </button>
+                        <mat-menu #editChildIconMenu="matMenu" class="icon-menu">
+                          <div class="icon-grid" (click)="$event.stopPropagation()">
+                            @for (icon of iconOptions; track icon) {
+                              <button mat-icon-button (click)="editIcon = icon" [class.selected]="editIcon === icon">
+                                <mat-icon>{{ icon }}</mat-icon>
+                              </button>
+                            }
+                          </div>
+                        </mat-menu>
                         <input class="inline-edit" [(ngModel)]="editName" (keyup.enter)="saveEdit(child)">
                         <mat-slide-toggle [(ngModel)]="editFixed" class="edit-toggle">Fixed</mat-slide-toggle>
                         <button mat-icon-button color="primary" (click)="saveEdit(child)" matTooltip="Save">
@@ -186,14 +256,66 @@ import { Category, CategoryCreate, CategoryType } from '../../core/models/catego
     .panel-actions { display: flex; align-items: center; gap: 8px; margin-bottom: var(--spacing-sm); }
     .edit-toggle { margin-right: 8px; }
 
+    .cat-icon-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+    .parent-badge {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, rgba(21, 101, 192, 0.12), rgba(21, 101, 192, 0.06));
+      border: 1px solid rgba(21, 101, 192, 0.15);
+    }
+    .parent-badge mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: var(--color-primary);
+    }
+    .child-badge {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, rgba(0,0,0,0.06), rgba(0,0,0,0.03));
+      border: 1px solid rgba(0,0,0,0.08);
+    }
+    .child-badge mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: var(--color-text-secondary);
+    }
+    .cat-label { font-weight: 600; }
+
+    .icon-picker-btn {
+      border: 1px dashed var(--color-border, #ccc);
+      border-radius: 8px;
+    }
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 2px;
+      padding: 8px;
+      max-width: 360px;
+    }
+    .icon-grid button { width: 40px; height: 40px; }
+    .icon-grid button.selected {
+      background: var(--color-primary);
+      color: white;
+      border-radius: 8px;
+    }
+
     .children-list { padding: var(--spacing-sm) 0; }
     .child-row {
       display: flex; align-items: center; gap: 8px;
-      padding: 8px 16px; border-radius: 8px;
+      padding: 10px 16px; border-radius: 10px;
       transition: background 0.15s;
     }
     .child-row:hover { background: var(--color-hover, rgba(0,0,0,0.04)); }
-    .child-name { flex: 1; font-size: 0.95rem; }
+    .child-name { flex: 1; font-size: 0.95rem; font-weight: 500; }
     .child-chip { font-size: 0.75rem; }
     .child-count { margin-left: auto; font-size: 0.85rem; opacity: 0.6; }
 
@@ -222,14 +344,19 @@ export class CategoryPageComponent implements OnInit {
   newParentName = '';
   newParentFixed = false;
   newParentType: CategoryType = 'Expense';
+  newParentIcon = 'category';
 
   addingChildParentId = signal<number | null>(null);
   newChildName = '';
   newChildFixed = false;
+  newChildIcon = 'label';
 
   editingId = signal<number | null>(null);
   editName = '';
   editFixed = false;
+  editIcon = '';
+
+  iconOptions = ICON_OPTIONS;
 
   ngOnInit(): void {
     this.loadCategories();
@@ -246,7 +373,7 @@ export class CategoryPageComponent implements OnInit {
 
   saveParent(): void {
     if (!this.newParentName.trim()) return;
-    const dto: CategoryCreate = { name: this.newParentName.trim(), isFixed: this.newParentFixed, type: this.newParentType, parentId: null };
+    const dto: CategoryCreate = { name: this.newParentName.trim(), isFixed: this.newParentFixed, type: this.newParentType, icon: this.newParentIcon, parentId: null };
     this.categoryService.create(dto).subscribe({
       next: () => { this.cancelAddParent(); this.loadCategories(); },
       error: (err) => this.showError(err)
@@ -257,17 +384,19 @@ export class CategoryPageComponent implements OnInit {
     this.showAddParent.set(false);
     this.newParentName = '';
     this.newParentFixed = false;
+    this.newParentIcon = 'category';
   }
 
   startAddChild(parentId: number): void {
     this.addingChildParentId.set(parentId);
     this.newChildName = '';
     this.newChildFixed = false;
+    this.newChildIcon = 'label';
   }
 
   saveChild(parent: Category): void {
     if (!this.newChildName.trim()) return;
-    const dto: CategoryCreate = { name: this.newChildName.trim(), isFixed: this.newChildFixed, type: parent.type, parentId: parent.id };
+    const dto: CategoryCreate = { name: this.newChildName.trim(), isFixed: this.newChildFixed, type: parent.type, icon: this.newChildIcon, parentId: parent.id };
     this.categoryService.create(dto).subscribe({
       next: () => { this.cancelAddChild(); this.loadCategories(); },
       error: (err) => this.showError(err)
@@ -278,17 +407,19 @@ export class CategoryPageComponent implements OnInit {
     this.addingChildParentId.set(null);
     this.newChildName = '';
     this.newChildFixed = false;
+    this.newChildIcon = 'label';
   }
 
   startEdit(cat: Category): void {
     this.editingId.set(cat.id);
     this.editName = cat.name;
     this.editFixed = cat.isFixed;
+    this.editIcon = cat.icon || 'category';
   }
 
   saveEdit(cat: Category): void {
     if (!this.editName.trim()) return;
-    const dto: CategoryCreate = { name: this.editName.trim(), isFixed: this.editFixed, type: cat.type, parentId: cat.parentId };
+    const dto: CategoryCreate = { name: this.editName.trim(), isFixed: this.editFixed, type: cat.type, icon: this.editIcon, parentId: cat.parentId };
     this.categoryService.update(cat.id, dto).subscribe({
       next: () => { this.cancelEdit(); this.loadCategories(); },
       error: (err) => this.showError(err)
@@ -299,6 +430,7 @@ export class CategoryPageComponent implements OnInit {
     this.editingId.set(null);
     this.editName = '';
     this.editFixed = false;
+    this.editIcon = '';
   }
 
   deleteCategory(cat: Category): void {

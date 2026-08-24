@@ -19,6 +19,7 @@ public class SpendingSummaryDto
 {
     public int CategoryId { get; set; }
     public string CategoryName { get; set; } = string.Empty;
+    public string? CategoryIcon { get; set; }
     public decimal Budgeted { get; set; }
     public decimal Spent { get; set; }
     public decimal Remaining { get; set; }

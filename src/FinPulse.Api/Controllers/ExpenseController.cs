@@ -39,6 +39,7 @@ public class ExpenseController : ControllerBase
                 e.Date,
                 e.CategoryId,
                 CategoryName = e.Category.Name,
+                CategoryIcon = e.Category.Icon,
                 ParentCategoryName = e.Category.Parent != null ? e.Category.Parent.Name : null,
                 e.Amount,
                 e.Description,
@@ -81,6 +82,7 @@ public class ExpenseController : ControllerBase
             {
                 CategoryId = budget.CategoryId,
                 CategoryName = budget.Category?.Name ?? budget.Name,
+                CategoryIcon = budget.Category?.Icon,
                 Budgeted = budget.Amount,
                 Spent = categorySpent,
                 Remaining = budget.Amount - categorySpent,
@@ -100,6 +102,7 @@ public class ExpenseController : ControllerBase
             {
                 CategoryId = group.Key,
                 CategoryName = group.First().Category?.Name ?? "Unknown",
+                CategoryIcon = group.First().Category?.Icon,
                 Budgeted = 0,
                 Spent = group.Sum(e => e.Amount),
                 Remaining = -group.Sum(e => e.Amount),

@@ -31,6 +31,7 @@ public class CategoryController : ControllerBase
                 c.Id,
                 c.Name,
                 c.IsFixed,
+                c.Icon,
                 Type = c.Type.ToString(),
                 ParentId = (int?)null,
                 Children = c.Children.OrderBy(ch => ch.Name).Select(ch => new
@@ -38,6 +39,7 @@ public class CategoryController : ControllerBase
                     ch.Id,
                     ch.Name,
                     ch.IsFixed,
+                    ch.Icon,
                     Type = ch.Type.ToString(),
                     ch.ParentId
                 }).ToList()
@@ -60,6 +62,7 @@ public class CategoryController : ControllerBase
                 c.Id,
                 c.Name,
                 c.IsFixed,
+                c.Icon,
                 Type = c.Type.ToString(),
                 c.ParentId,
                 ParentName = c.Parent != null ? c.Parent.Name : null
@@ -84,13 +87,14 @@ public class CategoryController : ControllerBase
             Name = dto.Name.Trim(),
             IsFixed = dto.IsFixed,
             Type = dto.Type,
+            Icon = dto.Icon,
             UserId = UserId,
             ParentId = dto.ParentId
         };
 
         _db.CustomCategories.Add(category);
         await _db.SaveChangesAsync();
-        return Ok(new { category.Id, category.Name, category.IsFixed, Type = category.Type.ToString(), category.ParentId });
+        return Ok(new { category.Id, category.Name, category.IsFixed, category.Icon, Type = category.Type.ToString(), category.ParentId });
     }
 
     [HttpPut("{id}")]
@@ -110,9 +114,10 @@ public class CategoryController : ControllerBase
         category.Name = dto.Name.Trim();
         category.IsFixed = dto.IsFixed;
         category.Type = dto.Type;
+        category.Icon = dto.Icon;
         category.ParentId = dto.ParentId;
         await _db.SaveChangesAsync();
-        return Ok(new { category.Id, category.Name, category.IsFixed, Type = category.Type.ToString(), category.ParentId });
+        return Ok(new { category.Id, category.Name, category.IsFixed, category.Icon, Type = category.Type.ToString(), category.ParentId });
     }
 
     [HttpDelete("{id}")]
@@ -141,5 +146,6 @@ public class CategoryCreateDto
     public string Name { get; set; } = string.Empty;
     public bool IsFixed { get; set; }
     public CategoryType Type { get; set; } = CategoryType.Expense;
+    public string? Icon { get; set; }
     public int? ParentId { get; set; }
 }
