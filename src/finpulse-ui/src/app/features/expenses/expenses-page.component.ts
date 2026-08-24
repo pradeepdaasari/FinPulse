@@ -25,7 +25,7 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dial
   ],
   template: `
     <div class="expenses-header">
-      <h2><mat-icon class="section-icon">receipt_long</mat-icon> Daily Expenses</h2>
+      <h2><mat-icon class="section-icon">swap_horiz</mat-icon> Transactions</h2>
       <div class="month-nav">
         <button mat-icon-button (click)="prevMonth()"><mat-icon>chevron_left</mat-icon></button>
         <span class="month-label">{{ monthLabel() }}</span>
