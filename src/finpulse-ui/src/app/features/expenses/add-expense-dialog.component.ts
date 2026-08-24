@@ -199,19 +199,18 @@ export interface ExpenseDialogData {
           </mat-autocomplete>
         </mat-form-field>
 
-        @if (form.value.tag) {
-          <mat-form-field>
-            <mat-label>Tag Type</mat-label>
-            <mat-select formControlName="tagType">
-              <mat-option value="Trip">Trip / Vacation</mat-option>
-              <mat-option value="Project">Project</mat-option>
-              <mat-option value="Event">Event</mat-option>
-              <mat-option value="Business">Business</mat-option>
-              <mat-option value="Other">Other</mat-option>
-            </mat-select>
-            <mat-icon matPrefix>category</mat-icon>
-          </mat-form-field>
-        }
+        <mat-form-field>
+          <mat-label>Tag Type (optional)</mat-label>
+          <mat-select formControlName="tagType">
+            <mat-option [value]="''">-- None --</mat-option>
+            <mat-option value="Trip">Trip / Vacation</mat-option>
+            <mat-option value="Project">Project</mat-option>
+            <mat-option value="Event">Event</mat-option>
+            <mat-option value="Business">Business</mat-option>
+            <mat-option value="Other">Other</mat-option>
+          </mat-select>
+          <mat-icon matPrefix>category</mat-icon>
+        </mat-form-field>
       </form>
     </mat-dialog-content>
     @if (splitMode()) {
