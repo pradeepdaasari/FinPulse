@@ -198,6 +198,20 @@ export interface ExpenseDialogData {
             }
           </mat-autocomplete>
         </mat-form-field>
+
+        @if (form.value.tag) {
+          <mat-form-field>
+            <mat-label>Tag Type</mat-label>
+            <mat-select formControlName="tagType">
+              <mat-option value="Trip">Trip / Vacation</mat-option>
+              <mat-option value="Project">Project</mat-option>
+              <mat-option value="Event">Event</mat-option>
+              <mat-option value="Business">Business</mat-option>
+              <mat-option value="Other">Other</mat-option>
+            </mat-select>
+            <mat-icon matPrefix>category</mat-icon>
+          </mat-form-field>
+        }
       </form>
     </mat-dialog-content>
     @if (splitMode()) {
@@ -353,6 +367,7 @@ export class AddExpenseDialogComponent implements OnInit {
     fundingSourceKey: [this.buildSourceKey(this.source as DailyExpense | null) as string | null],
     toFundingSourceKey: [this.buildToSourceKey(this.source as DailyExpense | null) as string | null],
     tag: [this.source?.tag ?? ''],
+    tagType: [this.source?.tagType ?? ''],
     newCategoryName: [''],
     newCategoryParent: [null as number | null]
   });
@@ -479,7 +494,8 @@ export class AddExpenseDialogComponent implements OnInit {
           fundingSourceType,
           fundingSourceId,
           toFundingSourceId: null,
-          tag: val.tag || null
+          tag: val.tag || null,
+          tagType: val.tag ? (val.tagType || null) : null
         };
       });
       this.dialogRef.close({ splits });
@@ -496,7 +512,8 @@ export class AddExpenseDialogComponent implements OnInit {
       fundingSourceType,
       fundingSourceId,
       toFundingSourceId,
-      tag: val.tag || null
+      tag: val.tag || null,
+      tagType: val.tag ? (val.tagType || null) : null
     };
     this.dialogRef.close(expense);
   }

@@ -45,8 +45,10 @@ export class DailyExpenseService {
     return this.http.get<string[]>(`${this.baseUrl}/tags`);
   }
 
-  getTagSummary(): Observable<TagSummary[]> {
-    return this.http.get<TagSummary[]>(`${this.baseUrl}/tag-summary`);
+  getTagSummary(tagType?: string): Observable<TagSummary[]> {
+    const params: Record<string, string> = {};
+    if (tagType) params['tagType'] = tagType;
+    return this.http.get<TagSummary[]>(`${this.baseUrl}/tag-summary`, { params });
   }
 
   getComparison(year?: number, month?: number): Observable<MonthComparison> {

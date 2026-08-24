@@ -26,6 +26,8 @@ public class DailyExpense
     public Guid? SplitGroupId { get; set; }
     [MaxLength(100)]
     public string? Tag { get; set; }
+    [MaxLength(50)]
+    public string? TagType { get; set; }
 
     public string? UserId { get; set; }
 
