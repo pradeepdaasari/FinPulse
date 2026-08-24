@@ -55,7 +55,7 @@ interface DebtFilterItem {
             </mat-chip>
           }
         </mat-chip-set>
-        @if (selectedDebtIds().size > 0) {
+        @if (selectedDebtKeys().size > 0) {
           <button mat-button class="clear-btn" (click)="clearDebtFilter()">
             <mat-icon>close</mat-icon> Clear
           </button>
@@ -280,7 +280,7 @@ export class PaymentHistoryComponent implements OnInit {
   allPayments = signal<PaymentHistory[]>([]);
   loading = signal(true);
   activeFilter = signal<string>('all');
-  selectedDebtIds = signal<Set<number>>(new Set());
+  selectedDebtKeys = signal<Set<string>>(new Set());
   debtItems = signal<DebtFilterItem[]>([]);
   columns = ['paymentDate', 'debtName', 'debtType', 'amountPaid', 'notes', 'actions'];
 
@@ -293,14 +293,14 @@ export class PaymentHistoryComponent implements OnInit {
   filteredPayments = computed(() => {
     let payments = this.allPayments();
     const filter = this.activeFilter();
-    const selected = this.selectedDebtIds();
+    const selected = this.selectedDebtKeys();
 
     if (filter !== 'all') {
       payments = payments.filter(p => p.debtType === filter);
     }
 
     if (selected.size > 0) {
-      payments = payments.filter(p => selected.has(p.debtId));
+      payments = payments.filter(p => selected.has(`${p.debtType}:${p.debtId}`));
     }
 
     return payments;
@@ -351,25 +351,26 @@ export class PaymentHistoryComponent implements OnInit {
 
   filterByType(filter: string): void {
     this.activeFilter.set(filter);
-    this.selectedDebtIds.set(new Set());
+    this.selectedDebtKeys.set(new Set());
   }
 
   toggleDebt(debt: DebtFilterItem): void {
-    const current = new Set(this.selectedDebtIds());
-    if (current.has(debt.id)) {
-      current.delete(debt.id);
+    const key = `${debt.type}:${debt.id}`;
+    const current = new Set(this.selectedDebtKeys());
+    if (current.has(key)) {
+      current.delete(key);
     } else {
-      current.add(debt.id);
+      current.add(key);
     }
-    this.selectedDebtIds.set(current);
+    this.selectedDebtKeys.set(current);
   }
 
   isDebtSelected(debt: DebtFilterItem): boolean {
-    return this.selectedDebtIds().has(debt.id);
+    return this.selectedDebtKeys().has(`${debt.type}:${debt.id}`);
   }
 
   clearDebtFilter(): void {
-    this.selectedDebtIds.set(new Set());
+    this.selectedDebtKeys.set(new Set());
   }
 
   editPayment(payment: PaymentHistory): void {
