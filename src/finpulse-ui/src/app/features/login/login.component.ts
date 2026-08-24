@@ -76,7 +76,7 @@ import { AuthService } from '../../core/services/auth.service';
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: var(--gradient-login);
     }
     .login-card {
       padding: 40px;
@@ -91,7 +91,7 @@ import { AuthService } from '../../core/services/auth.service';
       font-size: 48px;
       width: 48px;
       height: 48px;
-      color: #667eea;
+      color: var(--color-primary);
     }
     .brand h1 {
       margin: 12px 0 4px;

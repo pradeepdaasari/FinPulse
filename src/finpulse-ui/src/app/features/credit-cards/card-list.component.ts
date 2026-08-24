@@ -21,7 +21,7 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
   imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatProgressSpinnerModule, CurrencyPipe],
   template: `
     <div class="header-row">
-      <h2>My Credit Cards</h2>
+      <h2><mat-icon class="section-icon">credit_card</mat-icon> My Credit Cards</h2>
       <button mat-raised-button color="primary" (click)="openAddCard()">
         <mat-icon>add</mat-icon> Add Card
       </button>
@@ -67,7 +67,7 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
             <th mat-header-cell *matHeaderCellDef>Actions</th>
             <td mat-cell *matCellDef="let card">
               <button mat-icon-button (click)="recordPayment(card)" aria-label="Record Payment">
-                <mat-icon>payments</mat-icon>
+                <mat-icon>price_check</mat-icon>
               </button>
               <button mat-icon-button (click)="updateBalance(card)" aria-label="Update Balance">
                 <mat-icon>edit</mat-icon>

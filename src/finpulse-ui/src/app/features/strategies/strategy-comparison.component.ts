@@ -12,7 +12,7 @@ import { StrategyComparison } from '../../core/models/strategy.model';
   standalone: true,
   imports: [CommonModule, MatCardModule, MatListModule, MatIconModule, MatProgressSpinnerModule, CurrencyPipe],
   template: `
-    <h2>Payoff Strategy Comparison</h2>
+    <h2><mat-icon class="section-icon">trending_down</mat-icon> Payoff Strategy Comparison</h2>
 
     @if (loading()) {
       <mat-spinner></mat-spinner>
@@ -93,7 +93,7 @@ import { StrategyComparison } from '../../core/models/strategy.model';
       margin-bottom: var(--spacing-lg);
       font-size: 1rem;
       font-weight: 500;
-      border: 1px solid #bbf7d0;
+      border: 1px solid rgba(22, 163, 74, 0.25);
     }
     .savings-highlight mat-icon {
       color: var(--color-success);

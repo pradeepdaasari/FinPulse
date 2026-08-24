@@ -50,6 +50,38 @@ html {
   --spacing-lg: 24px;
   --spacing-xl: 32px;
   --spacing-2xl: 48px;
+
+  // Gradients
+  --gradient-primary: linear-gradient(135deg, #1565c0 0%, #1976d2 50%, #1e88e5 100%);
+  --gradient-accent: linear-gradient(135deg, #7c4dff 0%, #651fff 100%);
+  --gradient-sidebar: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  --gradient-login: linear-gradient(135deg, #1565c0 0%, #7c4dff 100%);
+
+  // Card icon gradient backgrounds
+  --gradient-icon-blue: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  --gradient-icon-purple: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+  --gradient-icon-green: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  --gradient-icon-amber: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+
+  // Sidebar dark theme
+  --color-sidebar-bg: #0f172a;
+  --color-sidebar-text: #cbd5e1;
+  --color-sidebar-text-active: #ffffff;
+  --color-sidebar-hover: rgba(255, 255, 255, 0.06);
+  --color-sidebar-active: rgba(99, 102, 241, 0.15);
+  --color-sidebar-accent: #818cf8;
+  --color-sidebar-border: rgba(255, 255, 255, 0.06);
+
+  // Transitions
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  // Elevated shadow
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+
+  // Additional radius
+  --radius-xl: 20px;
 }
 
 * {
@@ -88,10 +120,11 @@ h3 {
   border-radius: var(--radius-md) !important;
   box-shadow: var(--shadow-sm) !important;
   border: 1px solid var(--color-border);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  transition: box-shadow var(--transition-base), transform var(--transition-base);
 
   &:hover {
     box-shadow: var(--shadow-md) !important;
+    transform: translateY(-1px);
   }
 }
 
@@ -104,6 +137,10 @@ h3 {
 .mat-mdc-table {
   border-radius: var(--radius-sm);
   overflow: hidden;
+}
+
+.mat-mdc-header-row {
+  background-color: var(--color-bg) !important;
 }
 
 .mat-mdc-header-cell {
@@ -149,6 +186,17 @@ h3 {
   border-radius: var(--radius-sm) !important;
   font-weight: 500 !important;
   letter-spacing: 0.02em;
+  transition: all var(--transition-fast) !important;
+}
+
+// Section icon utility
+.section-icon {
+  vertical-align: middle;
+  margin-right: 8px;
+  color: var(--color-primary);
+  font-size: 28px;
+  width: 28px;
+  height: 28px;
 }
 
 // Snackbar styles

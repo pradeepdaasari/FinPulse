@@ -10,7 +10,7 @@ import { UpcomingPayment } from '../../core/models/dashboard.model';
   standalone: true,
   imports: [CommonModule, MatListModule, MatChipsModule, MatIconModule, CurrencyPipe, DatePipe],
   template: `
-    <h3>Upcoming Payments</h3>
+    <h3><mat-icon class="section-title-icon">schedule</mat-icon> Upcoming Payments</h3>
     <mat-list>
       @for (payment of payments; track payment.debtName) {
         <mat-list-item>
@@ -31,6 +31,15 @@ import { UpcomingPayment } from '../../core/models/dashboard.model';
   styles: [`
     h3 {
       margin: var(--spacing-md) 0;
+      display: flex;
+      align-items: center;
+    }
+    .section-title-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      margin-right: 8px;
+      color: var(--color-primary);
     }
     .urgency-badge {
       padding: 4px 10px;

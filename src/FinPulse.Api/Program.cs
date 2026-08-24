@@ -6,20 +6,12 @@ using FinPulse.Core.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add EF Core — SQL Server in production, SQLite in development
+// Add EF Core — SQL Server for all environments
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-if (builder.Environment.IsDevelopment())
-{
-    builder.Services.AddDbContext<FinPulseDbContext>(options =>
-        options.UseSqlite(connectionString));
-}
-else
-{
-    builder.Services.AddDbContext<FinPulseDbContext>(options =>
-        options.UseSqlServer(connectionString, sqlOptions =>
-            sqlOptions.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(30), errorNumbersToAdd: null))
-        .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
-}
+builder.Services.AddDbContext<FinPulseDbContext>(options =>
+    options.UseSqlServer(connectionString, sqlOptions =>
+        sqlOptions.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(30), errorNumbersToAdd: null))
+    .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
 // Add ASP.NET Core Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -79,16 +71,25 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<FinPulseDbContext>();
+    db.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
+
+    for (int attempt = 1; attempt <= 10; attempt++)
+    {
+        try
+        {
+            db.Database.Migrate();
+            break;
+        }
+        catch (Exception ex) when (attempt < 10)
+        {
+            Console.WriteLine($"Database connection attempt {attempt} failed: {ex.Message}. Retrying in 10s...");
+            Thread.Sleep(TimeSpan.FromSeconds(10));
+        }
+    }
 
     if (app.Environment.IsDevelopment())
     {
-        db.Database.EnsureCreated();
         SeedData.Initialize(db);
-    }
-    else
-    {
-        db.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
-        db.Database.Migrate();
     }
 }
 

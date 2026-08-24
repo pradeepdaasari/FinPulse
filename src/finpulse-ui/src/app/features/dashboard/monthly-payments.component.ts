@@ -41,7 +41,7 @@ interface MonthlyPayment {
       <mat-card-header>
         <mat-card-title>
           <div class="card-title-row">
-            <span>This Month's Payments</span>
+            <span class="card-title-text"><mat-icon class="card-title-icon">calendar_month</mat-icon> This Month's Payments</span>
             <span class="payment-count">{{ payments().length }} pending</span>
           </div>
         </mat-card-title>
@@ -160,7 +160,7 @@ interface MonthlyPayment {
                         <mat-icon class="min-paid-check" matTooltip="Minimum paid">check_circle_outline</mat-icon>
                       }
                       <button mat-icon-button color="primary" (click)="recordPayment(p)" aria-label="Record Payment">
-                        <mat-icon>payments</mat-icon>
+                        <mat-icon>price_check</mat-icon>
                       </button>
                     </div>
                   }
@@ -181,13 +181,24 @@ interface MonthlyPayment {
   `,
   styles: [`
     .payments-table-card {
-      margin-top: var(--spacing-lg);
+      margin-top: var(--spacing-md);
     }
     .card-title-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
       width: 100%;
+    }
+    .card-title-text {
+      display: flex;
+      align-items: center;
+    }
+    .card-title-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      margin-right: 8px;
+      color: var(--color-primary);
     }
     .payment-count {
       font-size: 0.875rem;
@@ -256,8 +267,8 @@ interface MonthlyPayment {
       color: var(--color-success);
     }
     .status-paid {
-      background-color: #dcfce7;
-      color: #166534;
+      background-color: var(--color-success-bg);
+      color: var(--color-success);
     }
     .paid-cell { font-size: 0.875rem; }
     .paid-progress { font-weight: 600; color: var(--color-success); }
@@ -295,8 +306,8 @@ interface MonthlyPayment {
       gap: 10px;
       padding: var(--spacing-sm) var(--spacing-md);
       margin-bottom: var(--spacing-md);
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
+      background: var(--gradient-icon-blue);
+      border: 1px solid rgba(21, 101, 192, 0.15);
       border-radius: var(--radius-sm);
       font-size: 0.875rem;
       color: var(--color-primary-dark);
@@ -325,8 +336,8 @@ interface MonthlyPayment {
       margin-left: 6px;
       font-size: 0.625rem;
       font-weight: 600;
-      color: #0369a1;
-      background: #e0f2fe;
+      color: var(--color-primary-dark);
+      background: var(--gradient-icon-blue);
       padding: 1px 5px;
       border-radius: 8px;
       vertical-align: middle;

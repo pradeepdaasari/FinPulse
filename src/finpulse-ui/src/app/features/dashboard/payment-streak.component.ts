@@ -14,7 +14,7 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
       <mat-card class="streak-card">
         <mat-card-content>
           <div class="streak-content">
-            <div class="streak-icon">
+            <div class="streak-icon" aria-hidden="true">
               <mat-icon>local_fire_department</mat-icon>
             </div>
             <div class="streak-info">
@@ -42,16 +42,26 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
     .streak-card {
       background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
       border: 1px solid #fed7aa;
+      margin-top: var(--spacing-md);
     }
     .streak-content {
       display: flex;
       align-items: center;
       gap: 16px;
     }
+    .streak-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      background: rgba(234, 88, 12, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
     .streak-icon mat-icon {
-      font-size: 36px;
-      width: 36px;
-      height: 36px;
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
       color: #ea580c;
     }
     .streak-info {
@@ -72,7 +82,7 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
     .streak-details {
       margin-left: auto;
       display: flex;
-      gap: 20px;
+      gap: 24px;
     }
     .streak-detail {
       display: flex;
@@ -90,14 +100,15 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
       color: #9a3412;
       text-transform: uppercase;
       letter-spacing: 0.03em;
+      font-weight: 600;
     }
     .status-icon {
-      font-size: 22px;
-      width: 22px;
-      height: 22px;
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
       color: #9a3412;
     }
-    .status-icon.paid { color: #16a34a; }
+    .status-icon.paid { color: var(--color-success); }
   `]
 })
 export class PaymentStreakComponent implements OnInit {
