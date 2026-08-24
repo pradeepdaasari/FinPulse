@@ -1,9 +1,10 @@
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using FinPulse.Core.Models;
 
 namespace FinPulse.Core.Data;
 
-public class FinPulseDbContext : DbContext
+public class FinPulseDbContext : IdentityDbContext<ApplicationUser>
 {
     public FinPulseDbContext(DbContextOptions<FinPulseDbContext> options)
         : base(options)

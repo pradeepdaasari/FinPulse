@@ -8,7 +8,7 @@ namespace FinPulse.Api.Controllers;
 
 [ApiController]
 [Route("api/profile")]
-// [Authorize] // TODO: Uncomment when Entra ID is configured
+[Authorize]
 public class UserProfileController : ControllerBase
 {
     private readonly FinPulseDbContext _db;

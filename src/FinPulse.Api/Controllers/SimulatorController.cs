@@ -10,7 +10,7 @@ namespace FinPulse.Api.Controllers;
 
 [ApiController]
 [Route("api/simulator")]
-// [Authorize] // TODO: Uncomment when Entra ID is configured
+[Authorize]
 public class SimulatorController : ControllerBase
 {
     private readonly FinPulseDbContext _db;

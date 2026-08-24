@@ -10,7 +10,7 @@ namespace FinPulse.Api.Controllers;
 
 [ApiController]
 [Route("api/budget")]
-// [Authorize] // TODO: Uncomment when Entra ID is configured
+[Authorize]
 public class BudgetController : ControllerBase
 {
     private readonly FinPulseDbContext _db;

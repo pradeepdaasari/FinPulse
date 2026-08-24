@@ -11,7 +11,7 @@ namespace FinPulse.Api.Controllers;
 
 [ApiController]
 [Route("api/loans")]
-// [Authorize] // TODO: Uncomment when Entra ID is configured
+[Authorize]
 public class LoansController : ControllerBase
 {
     private readonly FinPulseDbContext _db;

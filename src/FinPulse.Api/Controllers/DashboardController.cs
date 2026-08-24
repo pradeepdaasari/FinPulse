@@ -10,7 +10,7 @@ namespace FinPulse.Api.Controllers;
 
 [ApiController]
 [Route("api/dashboard")]
-// [Authorize] // TODO: Uncomment when Entra ID is configured
+[Authorize]
 public class DashboardController : ControllerBase
 {
     private readonly FinPulseDbContext _db;

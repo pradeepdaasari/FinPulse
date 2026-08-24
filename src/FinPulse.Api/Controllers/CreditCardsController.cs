@@ -11,7 +11,7 @@ namespace FinPulse.Api.Controllers;
 
 [ApiController]
 [Route("api/creditcards")]
-// [Authorize] // TODO: Uncomment when Entra ID is configured
+[Authorize]
 public class CreditCardsController : ControllerBase
 {
     private readonly FinPulseDbContext _db;

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FinPulse.Core.Data;
@@ -9,6 +10,7 @@ namespace FinPulse.Api.Controllers;
 
 [ApiController]
 [Route("api/payments")]
+[Authorize]
 public class PaymentsController : ControllerBase
 {
     private readonly FinPulseDbContext _db;
