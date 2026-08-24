@@ -138,10 +138,10 @@ import { AuthService } from '../core/services/auth.service';
         </div>
       </mat-sidenav-content>
 
-      <button mat-fab class="global-fab" (click)="openQuickExpense()" aria-label="Log expense">
-        <mat-icon>add</mat-icon>
-      </button>
     </mat-sidenav-container>
+    <button mat-fab class="global-fab" (click)="openQuickExpense()" aria-label="Log expense">
+      <mat-icon>add</mat-icon>
+    </button>
   `,
   styles: [`
     .shell-container {
