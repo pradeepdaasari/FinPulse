@@ -12,8 +12,10 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatFabButton } from '@angular/material/button';
 import { DailyExpenseService } from '../../core/services/daily-expense.service';
-import { DailyExpense, DailyExpenseCreate, SpendingSummary } from '../../core/models/daily-expense.model';
+import { DailyExpense, DailyExpenseCreate, ExpenseFilter, SpendingSummary } from '../../core/models/daily-expense.model';
 import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dialog.component';
+import { ExpenseFilterBarComponent } from './expense-filter-bar.component';
+import { MonthComparisonComponent } from './month-comparison.component';
 
 @Component({
   selector: 'app-expenses-page',
@@ -21,7 +23,8 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dial
   imports: [
     CommonModule, MatTabsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatTableModule, MatProgressBarModule, MatProgressSpinnerModule, MatChipsModule,
-    MatDialogModule, MatTooltipModule, CurrencyPipe, DatePipe
+    MatDialogModule, MatTooltipModule, CurrencyPipe, DatePipe,
+    ExpenseFilterBarComponent, MonthComparisonComponent
   ],
   template: `
     <div class="expenses-header">
@@ -107,8 +110,13 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dial
               <button mat-raised-button color="primary" (click)="addExpense()">
                 <mat-icon>add</mat-icon> Log Transaction
               </button>
+              <button mat-stroked-button (click)="exportCsv()">
+                <mat-icon>download</mat-icon> Export CSV
+              </button>
               <span class="expense-count">{{ expenses().length }} transactions</span>
             </div>
+
+            <app-expense-filter-bar (filterChange)="onFilterChange($event)"></app-expense-filter-bar>
 
             @if (expenses().length > 0) {
               <mat-card>
@@ -146,6 +154,12 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dial
                               <mat-icon class="source-icon">account_balance</mat-icon>
                               {{ e.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon> {{ e.toFundingSourceName }}
                             </span>
+                          } @else if (e.transactionType === 'CardPayment' && e.fundingSourceName && e.toFundingSourceName) {
+                            <span class="source-cell card-payment-source">
+                              <mat-icon class="source-icon">account_balance</mat-icon>
+                              {{ e.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon>
+                              <mat-icon class="source-icon">credit_card</mat-icon> {{ e.toFundingSourceName }}
+                            </span>
                           } @else if (e.fundingSourceName) {
                             <span class="source-cell">
                               <mat-icon class="source-icon">{{ e.fundingSourceType === 'BankAccount' ? 'account_balance' : 'credit_card' }}</mat-icon>
@@ -161,16 +175,21 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dial
                         <td mat-cell *matCellDef="let e" [class.amount-cell]="true"
                             [class.income-amount]="e.transactionType === 'Income'"
                             [class.transfer-amount]="e.transactionType === 'Transfer'"
-                            [class.refund-amount]="e.transactionType === 'Refund'">
+                            [class.refund-amount]="e.transactionType === 'Refund'"
+                            [class.card-payment-amount]="e.transactionType === 'CardPayment'">
                           @if (e.transactionType === 'Income') { +{{ e.amount | currency }} }
                           @else if (e.transactionType === 'Transfer') { ↔ {{ e.amount | currency }} }
                           @else if (e.transactionType === 'Refund') { ↩ {{ e.amount | currency }} }
+                          @else if (e.transactionType === 'CardPayment') { 💳 {{ e.amount | currency }} }
                           @else { {{ e.amount | currency }} }
                         </td>
                       </ng-container>
                       <ng-container matColumnDef="actions">
                         <th mat-header-cell *matHeaderCellDef></th>
                         <td mat-cell *matCellDef="let e">
+                          <button mat-icon-button (click)="duplicateExpense(e)" matTooltip="Duplicate">
+                            <mat-icon>content_copy</mat-icon>
+                          </button>
                           <button mat-icon-button (click)="editExpense(e)" matTooltip="Edit">
                             <mat-icon>edit</mat-icon>
                           </button>
@@ -192,6 +211,12 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dial
                 </mat-card-content>
               </mat-card>
             }
+          </div>
+        </mat-tab>
+        <!-- Month Comparison Tab -->
+        <mat-tab label="Month Comparison">
+          <div class="tab-content">
+            <app-month-comparison [year]="currentYear" [month]="currentMonth"></app-month-comparison>
           </div>
         </mat-tab>
       </mat-tab-group>
@@ -241,9 +266,11 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dial
     .income-amount { color: #2e7d32; }
     .transfer-amount { color: #1565c0; }
     .refund-amount { color: #2e7d32; font-style: italic; }
+    .card-payment-amount { color: #6a1b9a; }
     .source-cell { display: flex; align-items: center; gap: 4px; font-size: 0.85rem; }
     .source-icon { font-size: 16px; width: 16px; height: 16px; opacity: 0.7; }
     .transfer-source { color: #1565c0; }
+    .card-payment-source { color: #6a1b9a; }
     .arrow-icon { font-size: 14px; width: 14px; height: 14px; }
 
     @media (max-width: 768px) {
@@ -268,6 +295,7 @@ export class ExpensesPageComponent implements OnInit {
   currentMonth = new Date().getMonth() + 1;
   monthLabel = signal('');
 
+  activeFilter: Partial<ExpenseFilter> = {};
   logColumns = ['date', 'merchant', 'description', 'category', 'source', 'amount', 'actions'];
 
   ngOnInit(): void {
@@ -287,7 +315,7 @@ export class ExpensesPageComponent implements OnInit {
       },
       error: () => { this.loading.set(false); }
     });
-    this.expenseService.getExpenses(this.currentYear, this.currentMonth).subscribe({
+    this.expenseService.getExpenses({ year: this.currentYear, month: this.currentMonth, ...this.activeFilter }).subscribe({
       next: (data) => this.expenses.set(data),
       error: () => this.expenses.set([])
     });
@@ -321,8 +349,11 @@ export class ExpensesPageComponent implements OnInit {
   addExpense(): void {
     const data: ExpenseDialogData = { expense: null };
     const ref = this.dialog.open(AddExpenseDialogComponent, { data });
-    ref.afterClosed().subscribe((result: DailyExpenseCreate | undefined) => {
-      if (result) {
+    ref.afterClosed().subscribe((result: any) => {
+      if (!result) return;
+      if (result.splits) {
+        this.expenseService.createSplit(result.splits).subscribe(() => this.loadData());
+      } else {
         this.expenseService.create(result).subscribe(() => this.loadData());
       }
     });
@@ -330,6 +361,16 @@ export class ExpensesPageComponent implements OnInit {
 
   addExpenseForCategory(categoryId: number): void {
     const data: ExpenseDialogData = { expense: null, prefilledCategoryId: categoryId };
+    const ref = this.dialog.open(AddExpenseDialogComponent, { data });
+    ref.afterClosed().subscribe((result: DailyExpenseCreate | undefined) => {
+      if (result) {
+        this.expenseService.create(result).subscribe(() => this.loadData());
+      }
+    });
+  }
+
+  duplicateExpense(expense: DailyExpense): void {
+    const data: ExpenseDialogData = { expense: null, prefill: expense };
     const ref = this.dialog.open(AddExpenseDialogComponent, { data });
     ref.afterClosed().subscribe((result: DailyExpenseCreate | undefined) => {
       if (result) {
@@ -346,6 +387,15 @@ export class ExpensesPageComponent implements OnInit {
         this.expenseService.update(expense.id, result).subscribe(() => this.loadData());
       }
     });
+  }
+
+  onFilterChange(filter: Partial<ExpenseFilter>): void {
+    this.activeFilter = filter;
+    this.loadData();
+  }
+
+  exportCsv(): void {
+    this.expenseService.exportCsv(this.currentYear, this.currentMonth);
   }
 
   deleteExpense(expense: DailyExpense): void {

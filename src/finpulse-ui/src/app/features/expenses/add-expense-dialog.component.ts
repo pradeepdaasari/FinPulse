@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormArray, FormGroup, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -19,6 +19,7 @@ import { FundingSource } from '../../core/models/funding-source.model';
 export interface ExpenseDialogData {
   expense: DailyExpense | null;
   prefilledCategoryId?: number;
+  prefill?: Partial<DailyExpense>;
 }
 
 @Component({
@@ -46,6 +47,9 @@ export interface ExpenseDialogData {
           <mat-button-toggle value="Refund">
             <mat-icon>undo</mat-icon> Refund
           </mat-button-toggle>
+          <mat-button-toggle value="CardPayment">
+            <mat-icon>credit_card_off</mat-icon> Pay Card
+          </mat-button-toggle>
         </mat-button-toggle-group>
 
         <mat-form-field>
@@ -55,7 +59,7 @@ export interface ExpenseDialogData {
           <mat-datepicker #picker></mat-datepicker>
         </mat-form-field>
 
-        @if (form.value.transactionType !== 'Transfer') {
+        @if (form.value.transactionType !== 'Transfer' && form.value.transactionType !== 'CardPayment') {
           <mat-form-field>
             <mat-label>Category</mat-label>
             <mat-select formControlName="categoryId">
@@ -130,6 +134,30 @@ export interface ExpenseDialogData {
               }
             </mat-select>
           </mat-form-field>
+        } @else if (form.value.transactionType === 'CardPayment') {
+          <mat-form-field>
+            <mat-label>From Account</mat-label>
+            <mat-select formControlName="fundingSourceKey">
+              @for (source of bankAccountSources(); track source.id) {
+                <mat-option [value]="'BankAccount:' + source.id">
+                  <mat-icon>account_balance</mat-icon>
+                  {{ source.name }} ({{ source.currentBalance | currency }})
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field>
+            <mat-label>Pay Card</mat-label>
+            <mat-select formControlName="toFundingSourceKey">
+              @for (source of creditCardSources(); track source.id) {
+                <mat-option [value]="'CreditCard:' + source.id">
+                  <mat-icon>credit_card</mat-icon>
+                  {{ source.name }} ({{ source.currentBalance | currency }})
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
         } @else {
           <mat-form-field>
             <mat-label>{{ form.value.transactionType === 'Income' ? 'Received into' : form.value.transactionType === 'Refund' ? 'Refunded to' : 'Paid with' }}</mat-label>
@@ -145,7 +173,7 @@ export interface ExpenseDialogData {
           </mat-form-field>
         }
 
-        @if (form.value.transactionType !== 'Transfer') {
+        @if (form.value.transactionType !== 'Transfer' && form.value.transactionType !== 'CardPayment') {
           <mat-form-field>
             <mat-label>Merchant (optional)</mat-label>
             <input matInput formControlName="merchant" placeholder="e.g. Walmart, Shell, Chipotle">
@@ -158,9 +186,58 @@ export interface ExpenseDialogData {
         </mat-form-field>
       </form>
     </mat-dialog-content>
+    @if (splitMode()) {
+      <div class="split-section">
+        <div class="split-header">
+          <span class="split-title">Split across categories</span>
+          <span class="split-total" [class.split-valid]="splitTotalValid()" [class.split-invalid]="!splitTotalValid()">
+            Total: {{ splitTotal() | currency }} / {{ form.value.amount | currency }}
+          </span>
+        </div>
+        @for (row of splitRows.controls; track $index) {
+          <div class="split-row" [formGroup]="$any(row)">
+            <mat-form-field class="split-cat">
+              <mat-label>Category</mat-label>
+              <mat-select formControlName="categoryId">
+                @for (parent of categories(); track parent.id) {
+                  <mat-optgroup [label]="parent.name">
+                    @for (child of parent.children; track child.id) {
+                      <mat-option [value]="child.id">{{ child.name }}</mat-option>
+                    }
+                    @if (!parent.children || parent.children.length === 0) {
+                      <mat-option [value]="parent.id">{{ parent.name }}</mat-option>
+                    }
+                  </mat-optgroup>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field class="split-amt">
+              <mat-label>Amount</mat-label>
+              <input matInput type="number" formControlName="amount" min="0.01" step="0.01">
+              <span matTextPrefix>$&nbsp;</span>
+            </mat-form-field>
+            <button mat-icon-button color="warn" (click)="removeSplitRow($index)" type="button" [disabled]="splitRows.length <= 2">
+              <mat-icon>remove_circle</mat-icon>
+            </button>
+          </div>
+        }
+        <button mat-button type="button" (click)="addSplitRow()">
+          <mat-icon>add</mat-icon> Add Row
+        </button>
+      </div>
+    }
+
     <mat-dialog-actions align="end">
+      @if (!data?.expense && form.value.transactionType === 'Expense' && !splitMode()) {
+        <button mat-button (click)="enableSplit()" type="button">
+          <mat-icon>call_split</mat-icon> Split
+        </button>
+      }
+      @if (splitMode()) {
+        <button mat-button (click)="splitMode.set(false)" type="button">Cancel Split</button>
+      }
       <button mat-button mat-dialog-close>Cancel</button>
-      <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid">
+      <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid || (splitMode() && !splitTotalValid())">
         {{ data?.expense ? 'Update' : 'Save' }}
       </button>
     </mat-dialog-actions>
@@ -184,6 +261,15 @@ export interface ExpenseDialogData {
     }
     .flex-1 { flex: 1; }
     .add-cat-btn { align-self: flex-start; }
+    .split-section { border-top: 1px solid rgba(0,0,0,0.12); padding-top: 12px; margin-top: 8px; }
+    .split-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .split-title { font-weight: 500; font-size: 0.9rem; }
+    .split-total { font-size: 0.85rem; font-weight: 600; }
+    .split-valid { color: #2e7d32; }
+    .split-invalid { color: #c62828; }
+    .split-row { display: flex; gap: 8px; align-items: center; }
+    .split-cat { flex: 2; }
+    .split-amt { flex: 1; }
   `]
 })
 export class AddExpenseDialogComponent implements OnInit {
@@ -197,18 +283,53 @@ export class AddExpenseDialogComponent implements OnInit {
   allSources = signal<FundingSource[]>([]);
   filteredSources = signal<FundingSource[]>([]);
   bankAccountSources = signal<FundingSource[]>([]);
+  creditCardSources = signal<FundingSource[]>([]);
   toAccountSources = signal<FundingSource[]>([]);
   showNewCategory = signal(false);
+  splitMode = signal(false);
+  splitRows = this.fb.array<FormGroup>([]);
+  splitTotal = signal(0);
+
+  splitTotalValid(): boolean {
+    const total = this.form.value.amount;
+    return !!total && Math.abs(this.splitTotal() - total) < 0.01;
+  }
+
+  enableSplit(): void {
+    this.splitMode.set(true);
+    this.splitRows.clear();
+    this.addSplitRow();
+    this.addSplitRow();
+  }
+
+  addSplitRow(): void {
+    this.splitRows.push(this.fb.group({
+      categoryId: [null as number | null, Validators.required],
+      amount: [null as number | null, [Validators.required, Validators.min(0.01)]]
+    }) as any);
+  }
+
+  removeSplitRow(index: number): void {
+    this.splitRows.removeAt(index);
+    this.updateSplitTotal();
+  }
+
+  private updateSplitTotal(): void {
+    const total = this.splitRows.controls.reduce((sum, row) => sum + ((row as FormGroup).value.amount || 0), 0);
+    this.splitTotal.set(total);
+  }
+
+  private get source() { return this.data?.expense ?? this.data?.prefill ?? null; }
 
   form = this.fb.group({
-    transactionType: [(this.data?.expense?.transactionType ?? 'Expense') as TransactionType, Validators.required],
+    transactionType: [(this.source?.transactionType ?? 'Expense') as TransactionType, Validators.required],
     date: [this.data?.expense ? new Date(this.data.expense.date) : new Date(), Validators.required],
-    categoryId: [this.data?.expense?.categoryId ?? this.data?.prefilledCategoryId ?? null as number | null],
-    amount: [this.data?.expense?.amount ?? null as number | null, [Validators.required, Validators.min(0.01)]],
-    merchant: [this.data?.expense?.merchant ?? ''],
-    description: [this.data?.expense?.description ?? '', [Validators.required, Validators.maxLength(500)]],
-    fundingSourceKey: [this.buildSourceKey(this.data?.expense) as string | null],
-    toFundingSourceKey: [this.buildToSourceKey(this.data?.expense) as string | null],
+    categoryId: [this.source?.categoryId ?? this.data?.prefilledCategoryId ?? null as number | null],
+    amount: [this.source?.amount ?? null as number | null, [Validators.required, Validators.min(0.01)]],
+    merchant: [this.source?.merchant ?? ''],
+    description: [this.source?.description ?? '', [Validators.required, Validators.maxLength(500)]],
+    fundingSourceKey: [this.buildSourceKey(this.source as DailyExpense | null) as string | null],
+    toFundingSourceKey: [this.buildToSourceKey(this.source as DailyExpense | null) as string | null],
     newCategoryName: [''],
     newCategoryParent: [null as number | null]
   });
@@ -228,6 +349,8 @@ export class AddExpenseDialogComponent implements OnInit {
     this.form.get('fundingSourceKey')!.valueChanges.subscribe(() => {
       this.updateToAccounts();
     });
+
+    this.splitRows.valueChanges.subscribe(() => this.updateSplitTotal());
   }
 
   private loadCategories(): void {
@@ -240,7 +363,9 @@ export class AddExpenseDialogComponent implements OnInit {
   private filterSources(): void {
     const txnType = this.form.value.transactionType;
     const banks = this.allSources().filter(s => s.type === 'BankAccount');
+    const cards = this.allSources().filter(s => s.type === 'CreditCard');
     this.bankAccountSources.set(banks);
+    this.creditCardSources.set(cards);
     this.updateToAccounts();
 
     if (txnType === 'Income') {
@@ -287,8 +412,9 @@ export class AddExpenseDialogComponent implements OnInit {
   save(): void {
     const val = this.form.value;
     const isTransfer = val.transactionType === 'Transfer';
+    const isCardPayment = val.transactionType === 'CardPayment';
 
-    if (!isTransfer && !val.categoryId) return;
+    if (!isTransfer && !isCardPayment && !val.categoryId) return;
     if (!val.amount || !val.description) return;
 
     let fundingSourceType: FundingSourceType | null = null;
@@ -307,11 +433,36 @@ export class AddExpenseDialogComponent implements OnInit {
       fundingSourceType = 'BankAccount';
     }
 
+    if (isCardPayment && val.toFundingSourceKey) {
+      const [, id] = val.toFundingSourceKey.split(':');
+      toFundingSourceId = parseInt(id, 10);
+      fundingSourceType = 'BankAccount';
+    }
+
+    if (this.splitMode()) {
+      const splits: DailyExpenseCreate[] = this.splitRows.controls.map(ctrl => {
+        const row = (ctrl as FormGroup).value;
+        return {
+          date: (val.date as Date).toISOString(),
+          categoryId: row.categoryId!,
+          amount: row.amount!,
+          merchant: val.merchant || null,
+          description: val.description!,
+          transactionType: 'Expense' as TransactionType,
+          fundingSourceType,
+          fundingSourceId,
+          toFundingSourceId: null
+        };
+      });
+      this.dialogRef.close({ splits });
+      return;
+    }
+
     const expense: DailyExpenseCreate = {
       date: (val.date as Date).toISOString(),
       categoryId: val.categoryId ?? 1,
       amount: val.amount!,
-      merchant: isTransfer ? null : (val.merchant || null),
+      merchant: (isTransfer || isCardPayment) ? null : (val.merchant || null),
       description: val.description!,
       transactionType: val.transactionType as TransactionType,
       fundingSourceType,

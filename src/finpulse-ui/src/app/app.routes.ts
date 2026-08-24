@@ -71,5 +71,15 @@ export const routes: Routes = [
     path: 'payments',
     loadComponent: () => import('./features/payments/payment-history.component').then(m => m.PaymentHistoryComponent),
     canActivate: [authGuard]
+  },
+  {
+    path: 'recurring',
+    loadComponent: () => import('./features/recurring/recurring-page.component').then(m => m.RecurringPageComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'goals',
+    loadComponent: () => import('./features/goals/goals-page.component').then(m => m.GoalsPageComponent),
+    canActivate: [authGuard]
   }
 ];

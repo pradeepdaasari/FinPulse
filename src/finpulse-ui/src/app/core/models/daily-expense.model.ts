@@ -1,4 +1,4 @@
-export type TransactionType = 'Expense' | 'Income' | 'Transfer' | 'Refund';
+export type TransactionType = 'Expense' | 'Income' | 'Transfer' | 'Refund' | 'CardPayment';
 export type FundingSourceType = 'BankAccount' | 'CreditCard';
 
 export interface DailyExpense {
@@ -17,6 +17,7 @@ export interface DailyExpense {
   fundingSourceName: string | null;
   toFundingSourceId: number | null;
   toFundingSourceName: string | null;
+  splitGroupId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -41,4 +42,37 @@ export interface SpendingSummary {
   spent: number;
   remaining: number;
   percentUsed: number;
+}
+
+export interface ExpenseFilter {
+  year?: number;
+  month?: number;
+  search?: string;
+  categoryId?: number;
+  transactionType?: number;
+  fundingSourceId?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  minAmount?: number;
+  maxAmount?: number;
+}
+
+export interface CategoryComparison {
+  categoryId: number;
+  categoryName: string;
+  categoryIcon?: string | null;
+  currentMonthAmount: number;
+  previousMonthAmount: number;
+  difference: number;
+  percentChange: number;
+}
+
+export interface MonthComparison {
+  currentYear: number;
+  currentMonth: number;
+  previousYear: number;
+  previousMonth: number;
+  currentTotal: number;
+  previousTotal: number;
+  categories: CategoryComparison[];
 }

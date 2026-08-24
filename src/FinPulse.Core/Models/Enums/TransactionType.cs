@@ -5,5 +5,6 @@ public enum TransactionType
     Expense,
     Income,
     Transfer,
-    Refund
+    Refund,
+    CardPayment
 }

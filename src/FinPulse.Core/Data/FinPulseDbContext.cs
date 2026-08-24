@@ -20,6 +20,8 @@ public class FinPulseDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<DailyExpense> DailyExpenses => Set<DailyExpense>();
     public DbSet<CustomCategory> CustomCategories => Set<CustomCategory>();
     public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
+    public DbSet<RecurringTransaction> RecurringTransactions => Set<RecurringTransaction>();
+    public DbSet<SavingsGoal> SavingsGoals => Set<SavingsGoal>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -67,12 +69,29 @@ public class FinPulseDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(e => e.Date);
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => new { e.FundingSourceType, e.FundingSourceId });
+            entity.HasIndex(e => e.SplitGroupId).HasFilter("[SplitGroupId] IS NOT NULL");
         });
 
         // BankAccount
         modelBuilder.Entity<BankAccount>(entity =>
         {
             entity.Property(e => e.CurrentBalance).HasPrecision(18, 2);
+            entity.HasIndex(e => e.UserId);
+        });
+
+        // RecurringTransaction
+        modelBuilder.Entity<RecurringTransaction>(entity =>
+        {
+            entity.Property(e => e.Amount).HasPrecision(18, 2);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => new { e.IsActive, e.NextRunDate });
+        });
+
+        // SavingsGoal
+        modelBuilder.Entity<SavingsGoal>(entity =>
+        {
+            entity.Property(e => e.TargetAmount).HasPrecision(18, 2);
+            entity.Property(e => e.CurrentAmount).HasPrecision(18, 2);
             entity.HasIndex(e => e.UserId);
         });
 
@@ -162,6 +181,18 @@ public class FinPulseDbContext : IdentityDbContext<ApplicationUser>
                 account.UpdatedAt = now;
                 if (entry.State == EntityState.Added)
                     account.CreatedAt = now;
+            }
+            else if (entry.Entity is RecurringTransaction recurring)
+            {
+                recurring.UpdatedAt = now;
+                if (entry.State == EntityState.Added)
+                    recurring.CreatedAt = now;
+            }
+            else if (entry.Entity is SavingsGoal goal)
+            {
+                goal.UpdatedAt = now;
+                if (entry.State == EntityState.Added)
+                    goal.CreatedAt = now;
             }
         }
     }

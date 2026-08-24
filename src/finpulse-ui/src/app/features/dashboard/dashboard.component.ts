@@ -6,6 +6,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartData, ChartOptions } from 'chart.js';
 import { DashboardService } from '../../core/services/dashboard.service';
+import { RecurringService } from '../../core/services/recurring.service';
 import { DashboardSummary } from '../../core/models/dashboard.model';
 import { SummaryCardsComponent } from './summary-cards.component';
 import { UpcomingPaymentsComponent } from './upcoming-payments.component';
@@ -117,6 +118,7 @@ import { FinancialSummaryComponent } from './financial-summary.component';
 })
 export class DashboardComponent implements OnInit {
   private dashboardService = inject(DashboardService);
+  private recurringService = inject(RecurringService);
 
   summary = signal<DashboardSummary | null>(null);
   loading = signal(true);
@@ -130,6 +132,7 @@ export class DashboardComponent implements OnInit {
   };
 
   ngOnInit(): void {
+    this.recurringService.generate().subscribe();
     this.dashboardService.getSummary().subscribe({
       next: (data) => {
         this.summary.set(data);
