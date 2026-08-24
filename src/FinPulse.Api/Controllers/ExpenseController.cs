@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using FinPulse.Core.Data;
 using FinPulse.Core.DTOs;
 using FinPulse.Core.Models;
+using FinPulse.Core.Models.Enums;
 
 namespace FinPulse.Api.Controllers;
 
@@ -36,23 +37,45 @@ public class ExpenseController : ControllerBase
             .Where(e => e.UserId == UserId && e.Date >= startDate && e.Date < endDate)
             .OrderByDescending(e => e.Date)
             .ThenByDescending(e => e.CreatedAt)
-            .Select(e => new
-            {
-                e.Id,
-                e.Date,
-                e.CategoryId,
-                CategoryName = e.Category.Name,
-                CategoryIcon = e.Category.Icon,
-                ParentCategoryName = e.Category.Parent != null ? e.Category.Parent.Name : null,
-                e.Amount,
-                e.Description,
-                e.Merchant,
-                e.CreatedAt,
-                e.UpdatedAt
-            })
             .ToListAsync();
 
-        return Ok(expenses);
+        var bankAccountIds = expenses.Where(e => e.FundingSourceType == FundingSourceType.BankAccount && e.FundingSourceId.HasValue).Select(e => e.FundingSourceId!.Value).Distinct();
+        var creditCardIds = expenses.Where(e => e.FundingSourceType == FundingSourceType.CreditCard && e.FundingSourceId.HasValue).Select(e => e.FundingSourceId!.Value).Distinct();
+
+        var bankNames = await _db.BankAccounts.Where(a => bankAccountIds.Contains(a.Id)).ToDictionaryAsync(a => a.Id, a => a.AccountName);
+        var cardNames = await _db.CreditCards.Where(c => creditCardIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.CardName);
+
+        var result = expenses.Select(e => new
+        {
+            e.Id,
+            e.Date,
+            e.CategoryId,
+            CategoryName = e.Category.Name,
+            CategoryIcon = e.Category.Icon,
+            ParentCategoryName = e.Category.Parent?.Name,
+            e.Amount,
+            e.Description,
+            e.Merchant,
+            TransactionType = e.TransactionType?.ToString(),
+            FundingSourceType = e.FundingSourceType?.ToString(),
+            e.FundingSourceId,
+            FundingSourceName = ResolveFundingSourceName(e, bankNames, cardNames),
+            e.CreatedAt,
+            e.UpdatedAt
+        });
+
+        return Ok(result);
+    }
+
+    private static string? ResolveFundingSourceName(DailyExpense e, Dictionary<int, string> bankNames, Dictionary<int, string> cardNames)
+    {
+        if (e.FundingSourceType == null || e.FundingSourceId == null) return null;
+        return e.FundingSourceType switch
+        {
+            FundingSourceType.BankAccount => bankNames.GetValueOrDefault(e.FundingSourceId.Value),
+            FundingSourceType.CreditCard => cardNames.GetValueOrDefault(e.FundingSourceId.Value),
+            _ => null
+        };
     }
 
     [HttpGet("summary")]
@@ -65,7 +88,7 @@ public class ExpenseController : ControllerBase
 
         var dailyExpenses = await _db.DailyExpenses
             .Include(e => e.Category)
-            .Where(e => e.UserId == UserId && e.Date >= startDate && e.Date < endDate)
+            .Where(e => e.UserId == UserId && e.Date >= startDate && e.Date < endDate && e.TransactionType != TransactionType.Income)
             .ToListAsync();
 
         var budgets = await _db.BudgetExpenses
@@ -119,6 +142,15 @@ public class ExpenseController : ControllerBase
     [HttpPost]
     public async Task<ActionResult> Create(DailyExpenseCreateDto dto)
     {
+        if (dto.FundingSourceType.HasValue && dto.FundingSourceId.HasValue)
+        {
+            var valid = await ValidateFundingSource(dto.FundingSourceType.Value, dto.FundingSourceId.Value);
+            if (!valid) return BadRequest(new { message = "Invalid funding source." });
+        }
+
+        if (dto.TransactionType == TransactionType.Income && dto.FundingSourceType == FundingSourceType.CreditCard)
+            return BadRequest(new { message = "Income cannot be received into a credit card." });
+
         var expense = new DailyExpense
         {
             Date = dto.Date,
@@ -126,10 +158,14 @@ public class ExpenseController : ControllerBase
             Amount = dto.Amount,
             Description = dto.Description,
             Merchant = dto.Merchant,
+            TransactionType = dto.TransactionType,
+            FundingSourceType = dto.FundingSourceType,
+            FundingSourceId = dto.FundingSourceId,
             UserId = UserId
         };
 
         _db.DailyExpenses.Add(expense);
+        await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
         await _db.SaveChangesAsync();
 
         var created = await _db.DailyExpenses
@@ -146,6 +182,9 @@ public class ExpenseController : ControllerBase
             created.Amount,
             created.Description,
             created.Merchant,
+            TransactionType = created.TransactionType?.ToString(),
+            FundingSourceType = created.FundingSourceType?.ToString(),
+            created.FundingSourceId,
             created.CreatedAt,
             created.UpdatedAt
         });
@@ -157,12 +196,29 @@ public class ExpenseController : ControllerBase
         var expense = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == id && e.UserId == UserId);
         if (expense is null) return NotFound();
 
+        if (dto.FundingSourceType.HasValue && dto.FundingSourceId.HasValue)
+        {
+            var valid = await ValidateFundingSource(dto.FundingSourceType.Value, dto.FundingSourceId.Value);
+            if (!valid) return BadRequest(new { message = "Invalid funding source." });
+        }
+
+        if (dto.TransactionType == TransactionType.Income && dto.FundingSourceType == FundingSourceType.CreditCard)
+            return BadRequest(new { message = "Income cannot be received into a credit card." });
+
+        // Reverse old balance adjustment
+        await ReverseBalance(expense.TransactionType, expense.FundingSourceType, expense.FundingSourceId, expense.Amount);
+
         expense.Date = dto.Date;
         expense.CategoryId = dto.CategoryId;
         expense.Amount = dto.Amount;
         expense.Description = dto.Description;
         expense.Merchant = dto.Merchant;
+        expense.TransactionType = dto.TransactionType;
+        expense.FundingSourceType = dto.FundingSourceType;
+        expense.FundingSourceId = dto.FundingSourceId;
 
+        // Apply new balance adjustment
+        await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
         await _db.SaveChangesAsync();
 
         var updated = await _db.DailyExpenses
@@ -179,6 +235,9 @@ public class ExpenseController : ControllerBase
             updated.Amount,
             updated.Description,
             updated.Merchant,
+            TransactionType = updated.TransactionType?.ToString(),
+            FundingSourceType = updated.FundingSourceType?.ToString(),
+            updated.FundingSourceId,
             updated.CreatedAt,
             updated.UpdatedAt
         });
@@ -190,8 +249,55 @@ public class ExpenseController : ControllerBase
         var expense = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == id && e.UserId == UserId);
         if (expense is null) return NotFound();
 
+        await ReverseBalance(expense.TransactionType, expense.FundingSourceType, expense.FundingSourceId, expense.Amount);
         _db.DailyExpenses.Remove(expense);
         await _db.SaveChangesAsync();
         return NoContent();
+    }
+
+    private async Task<bool> ValidateFundingSource(FundingSourceType type, int id)
+    {
+        return type switch
+        {
+            FundingSourceType.BankAccount => await _db.BankAccounts.AnyAsync(a => a.Id == id && a.UserId == UserId),
+            FundingSourceType.CreditCard => await _db.CreditCards.AnyAsync(c => c.Id == id && c.UserId == UserId),
+            _ => false
+        };
+    }
+
+    private async Task AdjustBalance(TransactionType txnType, FundingSourceType? sourceType, int? sourceId, decimal amount)
+    {
+        if (sourceType == null || sourceId == null) return;
+
+        if (sourceType == FundingSourceType.BankAccount)
+        {
+            var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == sourceId && a.UserId == UserId);
+            if (account != null)
+                account.CurrentBalance += txnType == TransactionType.Income ? amount : -amount;
+        }
+        else if (sourceType == FundingSourceType.CreditCard)
+        {
+            var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == sourceId && c.UserId == UserId);
+            if (card != null)
+                card.CurrentBalance += amount; // expense increases CC balance
+        }
+    }
+
+    private async Task ReverseBalance(TransactionType? txnType, FundingSourceType? sourceType, int? sourceId, decimal amount)
+    {
+        if (txnType == null || sourceType == null || sourceId == null) return;
+
+        if (sourceType == FundingSourceType.BankAccount)
+        {
+            var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == sourceId && a.UserId == UserId);
+            if (account != null)
+                account.CurrentBalance += txnType == TransactionType.Income ? -amount : amount;
+        }
+        else if (sourceType == FundingSourceType.CreditCard)
+        {
+            var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == sourceId && c.UserId == UserId);
+            if (card != null)
+                card.CurrentBalance -= amount;
+        }
     }
 }

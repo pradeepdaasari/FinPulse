@@ -7,12 +7,14 @@ import { Category, CategoryCreate } from '../models/category.model';
 export class CategoryService {
   private http = inject(HttpClient);
 
-  getAll(): Observable<Category[]> {
-    return this.http.get<Category[]>('/api/categories');
+  getAll(type?: string): Observable<Category[]> {
+    const params = type ? `?type=${type}` : '';
+    return this.http.get<Category[]>(`/api/categories${params}`);
   }
 
-  getFlat(): Observable<Category[]> {
-    return this.http.get<Category[]>('/api/categories/flat');
+  getFlat(type?: string): Observable<Category[]> {
+    const params = type ? `?type=${type}` : '';
+    return this.http.get<Category[]>(`/api/categories/flat${params}`);
   }
 
   create(dto: CategoryCreate): Observable<Category> {

@@ -19,6 +19,7 @@ public class FinPulseDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<BudgetExpense> BudgetExpenses => Set<BudgetExpense>();
     public DbSet<DailyExpense> DailyExpenses => Set<DailyExpense>();
     public DbSet<CustomCategory> CustomCategories => Set<CustomCategory>();
+    public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -64,6 +65,14 @@ public class FinPulseDbContext : IdentityDbContext<ApplicationUser>
         {
             entity.Property(e => e.Amount).HasPrecision(18, 2);
             entity.HasIndex(e => e.Date);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => new { e.FundingSourceType, e.FundingSourceId });
+        });
+
+        // BankAccount
+        modelBuilder.Entity<BankAccount>(entity =>
+        {
+            entity.Property(e => e.CurrentBalance).HasPrecision(18, 2);
             entity.HasIndex(e => e.UserId);
         });
 
@@ -147,6 +156,12 @@ public class FinPulseDbContext : IdentityDbContext<ApplicationUser>
                 cat.UpdatedAt = now;
                 if (entry.State == EntityState.Added)
                     cat.CreatedAt = now;
+            }
+            else if (entry.Entity is BankAccount account)
+            {
+                account.UpdatedAt = now;
+                if (entry.State == EntityState.Added)
+                    account.CreatedAt = now;
             }
         }
     }

@@ -105,7 +105,7 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dial
           <div class="tab-content">
             <div class="log-header">
               <button mat-raised-button color="primary" (click)="addExpense()">
-                <mat-icon>add</mat-icon> Log Expense
+                <mat-icon>add</mat-icon> Log Transaction
               </button>
               <span class="expense-count">{{ expenses().length }} transactions</span>
             </div>
@@ -138,9 +138,24 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dial
                           </mat-chip>
                         </td>
                       </ng-container>
+                      <ng-container matColumnDef="source">
+                        <th mat-header-cell *matHeaderCellDef>Source</th>
+                        <td mat-cell *matCellDef="let e">
+                          @if (e.fundingSourceName) {
+                            <span class="source-cell">
+                              <mat-icon class="source-icon">{{ e.fundingSourceType === 'BankAccount' ? 'account_balance' : 'credit_card' }}</mat-icon>
+                              {{ e.fundingSourceName }}
+                            </span>
+                          } @else {
+                            —
+                          }
+                        </td>
+                      </ng-container>
                       <ng-container matColumnDef="amount">
                         <th mat-header-cell *matHeaderCellDef>Amount</th>
-                        <td mat-cell *matCellDef="let e" class="amount-cell">{{ e.amount | currency }}</td>
+                        <td mat-cell *matCellDef="let e" [class.amount-cell]="true" [class.income-amount]="e.transactionType === 'Income'">
+                          {{ e.transactionType === 'Income' ? '+' : '' }}{{ e.amount | currency }}
+                        </td>
                       </ng-container>
                       <ng-container matColumnDef="actions">
                         <th mat-header-cell *matHeaderCellDef></th>
@@ -209,9 +224,12 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dial
 
     .log-header { display: flex; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-md); }
     .expense-count { font-size: 0.9rem; opacity: 0.6; }
-    .table-wrapper { overflow-x: auto; }
-    table { width: 100%; min-width: 600px; }
+    .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; min-width: 700px; }
     .amount-cell { font-weight: 600; }
+    .income-amount { color: #2e7d32; }
+    .source-cell { display: flex; align-items: center; gap: 4px; font-size: 0.85rem; }
+    .source-icon { font-size: 16px; width: 16px; height: 16px; opacity: 0.7; }
 
     @media (max-width: 768px) {
       .totals-row { flex-direction: column; align-items: center; }
@@ -235,7 +253,7 @@ export class ExpensesPageComponent implements OnInit {
   currentMonth = new Date().getMonth() + 1;
   monthLabel = signal('');
 
-  logColumns = ['date', 'merchant', 'description', 'category', 'amount', 'actions'];
+  logColumns = ['date', 'merchant', 'description', 'category', 'source', 'amount', 'actions'];
 
   ngOnInit(): void {
     this.updateMonthLabel();
