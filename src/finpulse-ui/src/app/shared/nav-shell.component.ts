@@ -78,8 +78,8 @@ import { AuthService } from '../core/services/auth.service';
           </a>
           <a mat-list-item routerLink="/expenses" routerLinkActive="active-link"
              (click)="onNavClick()">
-            <mat-icon matListItemIcon>shopping_cart</mat-icon>
-            <span matListItemTitle>Expenses</span>
+            <mat-icon matListItemIcon>swap_horiz</mat-icon>
+            <span matListItemTitle>Transactions</span>
           </a>
           <a mat-list-item routerLink="/categories" routerLinkActive="active-link"
              (click)="onNavClick()">
@@ -299,7 +299,7 @@ export class NavShellComponent {
     '/strategies': 'Payoff Strategies',
     '/simulator': 'What-If Simulator',
     '/budget': 'Budget',
-    '/expenses': 'Expenses',
+    '/expenses': 'Transactions',
     '/categories': 'Categories',
     '/payments': 'Payments',
     '/setup': 'Setup',
