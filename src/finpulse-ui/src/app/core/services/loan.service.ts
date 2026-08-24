@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { PersonalLoan } from '../models/personal-loan.model';
-import { AmortizationEntry } from '../models/dashboard.model';
+import { AmortizationSchedule } from '../models/dashboard.model';
 import { PaymentHistory } from '../models/payment-history.model';
 import { environment } from '../../../environments/environment';
 
@@ -31,8 +31,8 @@ export class LoanService {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
 
-  getAmortization(id: string): Observable<AmortizationEntry[]> {
-    return this.http.get<AmortizationEntry[]>(`${this.baseUrl}/${id}/amortization`);
+  getAmortization(id: string): Observable<AmortizationSchedule> {
+    return this.http.get<AmortizationSchedule>(`${this.baseUrl}/${id}/amortization`);
   }
 
   recordPayment(id: string, payment: { amountPaid: number; paymentDate: string; notes?: string }): Observable<PaymentHistory> {

@@ -27,6 +27,18 @@ export interface AmortizationEntry {
   principalPortion: number;
   interestPortion: number;
   remainingBalance: number;
+  isPaid: boolean;
+}
+
+export interface AmortizationSchedule {
+  entries: AmortizationEntry[];
+  paidPrincipal: number;
+  paidInterest: number;
+  pendingPrincipal: number;
+  pendingInterest: number;
+  totalInterest: number;
+  originalAmount: number;
+  totalCost: number;
 }
 
 export interface PayoffEntry {

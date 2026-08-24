@@ -8,7 +8,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { LoanService } from '../../core/services/loan.service';
 import { PersonalLoan } from '../../core/models/personal-loan.model';
-import { AmortizationEntry } from '../../core/models/dashboard.model';
+import { AmortizationSchedule } from '../../core/models/dashboard.model';
 import { PaymentHistory } from '../../core/models/payment-history.model';
 import { sumCurrency } from '../../core/utils/currency';
 import { AmortizationTableComponent } from './amortization-table.component';
@@ -96,9 +96,9 @@ import { AmortizationTableComponent } from './amortization-table.component';
         </mat-card>
       }
 
-      @if (amortization().length > 0) {
+      @if (amortizationSchedule()) {
         <h3>Amortization Schedule</h3>
-        <app-amortization-table [entries]="amortization()"></app-amortization-table>
+        <app-amortization-table [schedule]="amortizationSchedule()!"></app-amortization-table>
       }
     }
   `,
@@ -145,7 +145,7 @@ export class LoanDetailComponent implements OnInit {
   private loanService = inject(LoanService);
 
   loan = signal<PersonalLoan | null>(null);
-  amortization = signal<AmortizationEntry[]>([]);
+  amortizationSchedule = signal<AmortizationSchedule | null>(null);
   paymentHistory = signal<PaymentHistory[]>([]);
   totalPaid = signal(0);
   loading = signal(true);
@@ -161,7 +161,7 @@ export class LoanDetailComponent implements OnInit {
       error: () => { this.loading.set(false); }
     });
     this.loanService.getAmortization(id).subscribe({
-      next: (entries) => { this.amortization.set(entries); }
+      next: (schedule) => { this.amortizationSchedule.set(schedule); }
     });
     this.loanService.getPayments(id).subscribe({
       next: (payments) => {

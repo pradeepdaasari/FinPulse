@@ -11,7 +11,17 @@ public interface IFinancialCalculationService
         decimal aprPercent,
         int remainingMonths,
         decimal paymentAmount,
-        PaymentFrequency frequency);
+        PaymentFrequency frequency,
+        int dueDay = 0);
+
+    AmortizationScheduleDto GenerateFullAmortizationSchedule(
+        decimal originalAmount,
+        decimal aprPercent,
+        int durationMonths,
+        decimal paymentAmount,
+        PaymentFrequency frequency,
+        DateTime loanStartDate,
+        int dueDay);
 
     decimal CalculateMonthlyPayment(decimal principal, decimal annualRate, int months);
 
