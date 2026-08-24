@@ -10,9 +10,11 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { DailyExpense, DailyExpenseCreate, TransactionType, FundingSourceType } from '../../core/models/daily-expense.model';
 import { Category } from '../../core/models/category.model';
 import { CategoryService } from '../../core/services/category.service';
+import { DailyExpenseService } from '../../core/services/daily-expense.service';
 import { FundingSourceService } from '../../core/services/funding-source.service';
 import { FundingSource } from '../../core/models/funding-source.model';
 
@@ -28,7 +30,7 @@ export interface ExpenseDialogData {
   imports: [
     CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatDatepickerModule, MatNativeDateModule,
-    MatButtonModule, MatIconModule, MatButtonToggleModule
+    MatButtonModule, MatIconModule, MatButtonToggleModule, MatAutocompleteModule
   ],
   template: `
     <h2 mat-dialog-title>{{ data?.expense ? 'Edit' : 'Log' }} Transaction</h2>
@@ -184,6 +186,18 @@ export interface ExpenseDialogData {
           <mat-label>Description</mat-label>
           <input matInput formControlName="description" placeholder="{{ form.value.transactionType === 'Transfer' ? 'e.g. Fund brokerage account' : 'What was this for?' }}">
         </mat-form-field>
+
+        <mat-form-field>
+          <mat-label>Tag (optional)</mat-label>
+          <input matInput formControlName="tag" [matAutocomplete]="tagAutoDialog"
+                 placeholder="e.g. Hawaii 2026" (input)="onTagDialogInput()">
+          <mat-icon matPrefix>label</mat-icon>
+          <mat-autocomplete #tagAutoDialog="matAutocomplete">
+            @for (t of filteredTagOptions(); track t) {
+              <mat-option [value]="t">{{ t }}</mat-option>
+            }
+          </mat-autocomplete>
+        </mat-form-field>
       </form>
     </mat-dialog-content>
     @if (splitMode()) {
@@ -276,6 +290,7 @@ export class AddExpenseDialogComponent implements OnInit {
   private fb = inject(FormBuilder);
   private dialogRef = inject(MatDialogRef<AddExpenseDialogComponent>);
   private categoryService = inject(CategoryService);
+  private expenseService = inject(DailyExpenseService);
   private fundingSourceService = inject(FundingSourceService);
   data = inject<ExpenseDialogData>(MAT_DIALOG_DATA);
 
@@ -286,6 +301,8 @@ export class AddExpenseDialogComponent implements OnInit {
   creditCardSources = signal<FundingSource[]>([]);
   toAccountSources = signal<FundingSource[]>([]);
   showNewCategory = signal(false);
+  allTagOptions = signal<string[]>([]);
+  filteredTagOptions = signal<string[]>([]);
   splitMode = signal(false);
   splitRows = this.fb.array<FormGroup>([]);
   splitTotal = signal(0);
@@ -293,6 +310,11 @@ export class AddExpenseDialogComponent implements OnInit {
   splitTotalValid(): boolean {
     const total = this.form.value.amount;
     return !!total && Math.abs(this.splitTotal() - total) < 0.01;
+  }
+
+  onTagDialogInput(): void {
+    const q = (this.form.value.tag || '').toLowerCase();
+    this.filteredTagOptions.set(this.allTagOptions().filter(t => t.toLowerCase().includes(q)));
   }
 
   enableSplit(): void {
@@ -330,6 +352,7 @@ export class AddExpenseDialogComponent implements OnInit {
     description: [this.source?.description ?? '', [Validators.required, Validators.maxLength(500)]],
     fundingSourceKey: [this.buildSourceKey(this.source as DailyExpense | null) as string | null],
     toFundingSourceKey: [this.buildToSourceKey(this.source as DailyExpense | null) as string | null],
+    tag: [this.source?.tag ?? ''],
     newCategoryName: [''],
     newCategoryParent: [null as number | null]
   });
@@ -339,6 +362,10 @@ export class AddExpenseDialogComponent implements OnInit {
     this.fundingSourceService.getAll().subscribe(sources => {
       this.allSources.set(sources);
       this.filterSources();
+    });
+    this.expenseService.getTags().subscribe(tags => {
+      this.allTagOptions.set(tags);
+      this.filteredTagOptions.set(tags);
     });
 
     this.form.get('transactionType')!.valueChanges.subscribe(() => {
@@ -451,7 +478,8 @@ export class AddExpenseDialogComponent implements OnInit {
           transactionType: 'Expense' as TransactionType,
           fundingSourceType,
           fundingSourceId,
-          toFundingSourceId: null
+          toFundingSourceId: null,
+          tag: val.tag || null
         };
       });
       this.dialogRef.close({ splits });
@@ -467,7 +495,8 @@ export class AddExpenseDialogComponent implements OnInit {
       transactionType: val.transactionType as TransactionType,
       fundingSourceType,
       fundingSourceId,
-      toFundingSourceId
+      toFundingSourceId,
+      tag: val.tag || null
     };
     this.dialogRef.close(expense);
   }

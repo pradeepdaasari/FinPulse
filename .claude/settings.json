@@ -1,14 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(curl -s http://localhost:5050/api/profile)",
-      "Bash(dotnet build *)",
-      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(f'id={l[\\\\\"id\\\\\"]} name={l[\\\\\"lenderName\\\\\"]}'\\) for l in data]\")",
-      "Bash(curl -s -w \"\\\\n%{http_code}\" -X POST http://localhost:5050/api/loans/2/payments -H \"Content-Type: application/json\" -d '{\"amountPaid\": 9, \"paymentDate\": \"2026-08-23T00:00:00.000Z\"}')",
-      "Bash(curl -s http://localhost:5050/api/loans/2)",
-      "Bash(kill 97104)",
-      "Bash(dotnet run *)",
-      "Bash(curl -s -w \"%{http_code}\" -o /dev/null http://localhost:5050/api/loans)"
+      "Bash(npm run *)",
+      "Bash(dotnet *)",
+      "Bash(git *)",
+      "Bash(curl *)",
+      "Bash(kill *)",
+      "Bash(python3 *)",
+      "Edit",
+      "Write",
+      "Read"
     ]
   }
 }

@@ -24,6 +24,8 @@ public class DailyExpense
     public int? FundingSourceId { get; set; }
     public int? ToFundingSourceId { get; set; }
     public Guid? SplitGroupId { get; set; }
+    [MaxLength(100)]
+    public string? Tag { get; set; }
 
     public string? UserId { get; set; }
 

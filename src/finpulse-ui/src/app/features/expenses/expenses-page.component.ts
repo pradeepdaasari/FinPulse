@@ -133,7 +133,12 @@ import { MonthComparisonComponent } from './month-comparison.component';
                       </ng-container>
                       <ng-container matColumnDef="description">
                         <th mat-header-cell *matHeaderCellDef>Description</th>
-                        <td mat-cell *matCellDef="let e">{{ e.description }}</td>
+                        <td mat-cell *matCellDef="let e">
+                          {{ e.description }}
+                          @if (e.tag) {
+                            <span class="tag-badge">{{ e.tag }}</span>
+                          }
+                        </td>
                       </ng-container>
                       <ng-container matColumnDef="category">
                         <th mat-header-cell *matHeaderCellDef>Category</th>
@@ -272,6 +277,17 @@ import { MonthComparisonComponent } from './month-comparison.component';
     .transfer-source { color: #1565c0; }
     .card-payment-source { color: #6a1b9a; }
     .arrow-icon { font-size: 14px; width: 14px; height: 14px; }
+    .tag-badge {
+      display: inline-block;
+      background: #e3f2fd;
+      color: #1565c0;
+      font-size: 0.7rem;
+      padding: 1px 6px;
+      border-radius: 10px;
+      margin-left: 6px;
+      font-weight: 500;
+      vertical-align: middle;
+    }
 
     @media (max-width: 768px) {
       .totals-row { flex-direction: column; align-items: center; }
