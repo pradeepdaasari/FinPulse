@@ -25,3 +25,7 @@ Thumbs.db
 appsettings.Production.json
 *.pfx
 *.key
+
+## Build/deploy artifacts
+deploy.zip
+publish/

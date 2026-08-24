@@ -1,6 +1,7 @@
-using Microsoft.Identity.Web;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using FinPulse.Core.Data;
+using FinPulse.Core.Models;
 using FinPulse.Core.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,9 +19,34 @@ else
         options.UseSqlServer(connectionString));
 }
 
-// Add Microsoft Identity Web authentication
-// TODO: Uncomment when Entra ID app registrations are configured
-// builder.Services.AddMicrosoftIdentityWebApiAuthentication(builder.Configuration, "AzureAd");
+// Add ASP.NET Core Identity
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+{
+    options.Password.RequireDigit = true;
+    options.Password.RequiredLength = 6;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequireUppercase = false;
+})
+.AddEntityFrameworkStores<FinPulseDbContext>()
+.AddDefaultTokenProviders();
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.ExpireTimeSpan = TimeSpan.FromDays(14);
+    options.SlidingExpiration = true;
+    options.Events.OnRedirectToLogin = ctx =>
+    {
+        ctx.Response.StatusCode = 401;
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToAccessDenied = ctx =>
+    {
+        ctx.Response.StatusCode = 403;
+        return Task.CompletedTask;
+    };
+});
 
 // Add application services
 builder.Services.AddFinPulseCoreServices();
@@ -32,7 +58,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins("http://localhost:4200")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
@@ -41,7 +68,6 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 
@@ -69,9 +95,8 @@ if (app.Environment.IsDevelopment())
 if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 
-// TODO: Uncomment when Entra ID is configured
-// app.UseAuthentication();
-// app.UseAuthorization();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseStaticFiles();
 app.MapControllers();

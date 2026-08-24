@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { filter } from 'rxjs/operators';
+import { AuthService } from '../core/services/auth.service';
 
 @Component({
   selector: 'app-nav-shell',
@@ -205,6 +206,7 @@ export class NavShellComponent {
 
   private breakpointObserver = inject(BreakpointObserver);
   private router = inject(Router);
+  private authService = inject(AuthService);
 
   isMobile = signal(false);
   pageTitle = signal('Dashboard');
@@ -240,6 +242,6 @@ export class NavShellComponent {
   }
 
   logout(): void {
-    console.log('Logout - auth not configured yet');
+    this.authService.logout();
   }
 }
