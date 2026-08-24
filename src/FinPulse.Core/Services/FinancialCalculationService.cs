@@ -13,11 +13,24 @@ public class FinancialCalculationService : IFinancialCalculationService
         decimal aprPercent,
         int remainingMonths,
         decimal paymentAmount,
-        PaymentFrequency frequency)
+        PaymentFrequency frequency,
+        int dueDay = 0)
     {
         var schedule = new List<AmortizationEntryDto>();
         var balance = currentBalance;
-        var startDate = DateTime.Today;
+        var today = DateTime.Today;
+
+        DateTime startDate;
+        if (dueDay >= 1 && dueDay <= 28 && frequency == PaymentFrequency.Monthly)
+        {
+            startDate = new DateTime(today.Year, today.Month, dueDay);
+            if (startDate <= today)
+                startDate = startDate.AddMonths(1);
+        }
+        else
+        {
+            startDate = today;
+        }
 
         int periodsPerYear = frequency switch
         {
@@ -50,7 +63,7 @@ public class FinancialCalculationService : IFinancialCalculationService
             {
                 PaymentFrequency.Biweekly => startDate.AddDays(14 * period),
                 PaymentFrequency.Weekly => startDate.AddDays(7 * period),
-                _ => startDate.AddMonths(period)
+                _ => startDate.AddMonths(period - 1)
             };
 
             schedule.Add(new AmortizationEntryDto
@@ -65,6 +78,86 @@ public class FinancialCalculationService : IFinancialCalculationService
         }
 
         return schedule;
+    }
+
+    public AmortizationScheduleDto GenerateFullAmortizationSchedule(
+        decimal originalAmount,
+        decimal aprPercent,
+        int durationMonths,
+        decimal paymentAmount,
+        PaymentFrequency frequency,
+        DateTime loanStartDate,
+        int dueDay)
+    {
+        var schedule = new List<AmortizationEntryDto>();
+        var balance = originalAmount;
+        var today = DateTime.Today;
+
+        DateTime firstPaymentDate;
+        if (dueDay >= 1 && dueDay <= 28 && frequency == PaymentFrequency.Monthly)
+        {
+            firstPaymentDate = new DateTime(loanStartDate.Year, loanStartDate.Month, dueDay);
+            if (firstPaymentDate <= loanStartDate)
+                firstPaymentDate = firstPaymentDate.AddMonths(1);
+        }
+        else
+        {
+            firstPaymentDate = loanStartDate.AddMonths(1);
+        }
+
+        int periodsPerYear = frequency switch
+        {
+            PaymentFrequency.Biweekly => 26,
+            PaymentFrequency.Weekly => 52,
+            _ => 12
+        };
+
+        decimal periodicRate = aprPercent / 100m / periodsPerYear;
+
+        for (int period = 1; period <= durationMonths && balance > 0; period++)
+        {
+            decimal interest = Math.Round(balance * periodicRate, 2);
+            decimal payment = Math.Min(paymentAmount, balance + interest);
+            decimal principal = payment - interest;
+
+            balance -= principal;
+            if (balance < 0.01m)
+                balance = 0;
+
+            DateTime paymentDate = frequency switch
+            {
+                PaymentFrequency.Biweekly => firstPaymentDate.AddDays(14 * (period - 1)),
+                PaymentFrequency.Weekly => firstPaymentDate.AddDays(7 * (period - 1)),
+                _ => firstPaymentDate.AddMonths(period - 1)
+            };
+
+            schedule.Add(new AmortizationEntryDto
+            {
+                PeriodNumber = period,
+                PaymentDate = paymentDate,
+                PaymentAmount = payment,
+                PrincipalPortion = principal,
+                InterestPortion = interest,
+                RemainingBalance = balance,
+                IsPaid = paymentDate <= today
+            });
+        }
+
+        var paid = schedule.Where(e => e.IsPaid).ToList();
+        var pending = schedule.Where(e => !e.IsPaid).ToList();
+        var totalInterest = schedule.Sum(e => e.InterestPortion);
+
+        return new AmortizationScheduleDto
+        {
+            Entries = schedule,
+            PaidPrincipal = paid.Sum(e => e.PrincipalPortion),
+            PaidInterest = paid.Sum(e => e.InterestPortion),
+            PendingPrincipal = pending.Sum(e => e.PrincipalPortion),
+            PendingInterest = pending.Sum(e => e.InterestPortion),
+            TotalInterest = totalInterest,
+            OriginalAmount = originalAmount,
+            TotalCost = originalAmount + totalInterest
+        };
     }
 
     public decimal CalculateMonthlyPayment(decimal principal, decimal annualRate, int months)

@@ -98,18 +98,19 @@ public class LoansController : ControllerBase
     }
 
     [HttpGet("{id}/amortization")]
-    public async Task<ActionResult<List<AmortizationEntryDto>>> GetAmortization(int id)
+    public async Task<ActionResult<AmortizationScheduleDto>> GetAmortization(int id)
     {
         var loan = await _db.PersonalLoans.FindAsync(id);
         if (loan is null) return NotFound();
 
-        var remainingMonths = _calcService.CalculateRemainingMonths(loan);
-        var schedule = _calcService.GenerateAmortizationSchedule(
-            loan.CurrentBalance,
+        var schedule = _calcService.GenerateFullAmortizationSchedule(
+            loan.OriginalAmount,
             loan.AprPercent,
-            remainingMonths,
+            loan.DurationMonths,
             loan.MonthlyPayment,
-            loan.PaymentFrequency);
+            loan.PaymentFrequency,
+            loan.StartDate,
+            loan.DueDay);
 
         return Ok(schedule);
     }
