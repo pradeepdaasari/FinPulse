@@ -3,109 +3,111 @@ import { CommonModule, CurrencyPipe } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDividerModule } from '@angular/material/divider';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { FinancialSummary } from '../../core/models/dashboard.model';
 
 @Component({
   selector: 'app-financial-summary',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatChipsModule, MatDividerModule, CurrencyPipe],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatChipsModule, CurrencyPipe],
   template: `
     @if (data()) {
       <div class="fin-summary">
-        <!-- Monthly Cash Flow -->
-        <mat-card class="section-card">
+        <!-- Row 1: Income / Expenses / Net Cash Flow -->
+        <div class="flow-cards">
+          <mat-card class="flow-card">
+            <mat-card-content>
+              <mat-icon class="flow-icon income-icon">trending_up</mat-icon>
+              <span class="flow-label">Income</span>
+              <span class="flow-value income-value">{{ data()!.totalIncome | currency }}</span>
+            </mat-card-content>
+          </mat-card>
+          <mat-card class="flow-card">
+            <mat-card-content>
+              <mat-icon class="flow-icon expense-icon">trending_down</mat-icon>
+              <span class="flow-label">Expenses</span>
+              <span class="flow-value expense-value">{{ data()!.totalExpenses | currency }}</span>
+            </mat-card-content>
+          </mat-card>
+          <mat-card class="flow-card">
+            <mat-card-content>
+              <mat-icon class="flow-icon" [class.income-icon]="data()!.netCashFlow >= 0" [class.expense-icon]="data()!.netCashFlow < 0">
+                {{ data()!.netCashFlow >= 0 ? 'savings' : 'warning' }}
+              </mat-icon>
+              <span class="flow-label">Net Cash Flow</span>
+              <span class="flow-value" [class.income-value]="data()!.netCashFlow >= 0" [class.expense-value]="data()!.netCashFlow < 0">
+                {{ data()!.netCashFlow | currency }}
+              </span>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <!-- Row 2: Trading P&L (always visible) -->
+        <mat-card class="trading-card">
           <mat-card-content>
-            <div class="section-title">
-              <mat-icon>calendar_today</mat-icon> This Month's Cash Flow
-              @if (data()!.savingsRate > 0) {
-                <span class="savings-badge">
-                  <mat-icon>savings</mat-icon> {{ data()!.savingsRate }}% saved
+            <div class="trading-row">
+              <div class="trading-item">
+                <mat-icon class="trading-icon income-icon">show_chart</mat-icon>
+                <span class="trading-label">Trading Gains</span>
+                <span class="trading-value income-value">+{{ data()!.tradingGains | currency }}</span>
+              </div>
+              <div class="trading-item">
+                <mat-icon class="trading-icon expense-icon">trending_down</mat-icon>
+                <span class="trading-label">Trading Losses</span>
+                <span class="trading-value expense-value">-{{ data()!.tradingLosses | currency }}</span>
+              </div>
+              <div class="trading-item trading-net">
+                <mat-icon class="trading-icon" [class.income-icon]="data()!.tradingNetPnL >= 0" [class.expense-icon]="data()!.tradingNetPnL < 0">candlestick_chart</mat-icon>
+                <span class="trading-label">Net P&L</span>
+                <span class="trading-value" [class.income-value]="data()!.tradingNetPnL >= 0" [class.expense-value]="data()!.tradingNetPnL < 0">
+                  {{ data()!.tradingNetPnL | currency }}
                 </span>
-              }
-            </div>
-            <div class="flow-grid">
-              <div class="flow-item">
-                <div class="flow-icon-wrap income-bg">
-                  <mat-icon>trending_up</mat-icon>
-                </div>
-                <div class="flow-detail">
-                  <span class="flow-label">Income</span>
-                  <span class="flow-value income-value">{{ data()!.totalIncome | currency }}</span>
-                </div>
-              </div>
-              <div class="flow-item">
-                <div class="flow-icon-wrap expense-bg">
-                  <mat-icon>trending_down</mat-icon>
-                </div>
-                <div class="flow-detail">
-                  <span class="flow-label">Expenses</span>
-                  <span class="flow-value expense-value">{{ data()!.totalExpenses | currency }}</span>
-                </div>
-              </div>
-              <div class="flow-item">
-                <div class="flow-icon-wrap" [class.income-bg]="data()!.netCashFlow >= 0" [class.expense-bg]="data()!.netCashFlow < 0">
-                  <mat-icon>{{ data()!.netCashFlow >= 0 ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
-                </div>
-                <div class="flow-detail">
-                  <span class="flow-label">Net Cash Flow</span>
-                  <span class="flow-value" [class.income-value]="data()!.netCashFlow >= 0" [class.expense-value]="data()!.netCashFlow < 0">
-                    {{ data()!.netCashFlow | currency }}
-                  </span>
-                </div>
               </div>
             </div>
           </mat-card-content>
         </mat-card>
 
-        <!-- Trading P&L -->
-        @if (data()!.tradingGains > 0 || data()!.tradingLosses > 0) {
-          <mat-card class="section-card trading-card">
-            <mat-card-content>
-              <div class="section-title">
-                <mat-icon>candlestick_chart</mat-icon> Trading P&L
+        <!-- Row 3: Net Worth breakdown -->
+        <mat-card class="networth-card">
+          <mat-card-content>
+            <div class="networth-row">
+              <div class="nw-item">
+                <span class="nw-label">Assets (Bank Accounts)</span>
+                <span class="nw-value positive">{{ data()!.totalBankBalance | currency }}</span>
               </div>
-              <div class="trading-grid">
-                <div class="trading-item">
-                  <span class="trading-label">Gains</span>
-                  <span class="trading-value income-value">+{{ data()!.tradingGains | currency }}</span>
-                </div>
-                <div class="trading-item">
-                  <span class="trading-label">Losses</span>
-                  <span class="trading-value expense-value">-{{ data()!.tradingLosses | currency }}</span>
-                </div>
-                <div class="trading-item trading-net">
-                  <span class="trading-label">Net P&L</span>
-                  <span class="trading-value" [class.income-value]="data()!.tradingNetPnL >= 0" [class.expense-value]="data()!.tradingNetPnL < 0">
-                    {{ data()!.tradingNetPnL | currency }}
-                  </span>
-                </div>
+              <div class="nw-item">
+                <span class="nw-label">Credit Card Debt</span>
+                <span class="nw-value negative">-{{ data()!.totalCreditCardDebt | currency }}</span>
               </div>
-            </mat-card-content>
-          </mat-card>
-        }
+              <div class="nw-item">
+                <span class="nw-label">Loan Debt</span>
+                <span class="nw-value negative">-{{ data()!.totalLoanDebt | currency }}</span>
+              </div>
+              <div class="nw-item nw-total">
+                <span class="nw-label">Net Worth</span>
+                <span class="nw-value" [class.positive]="data()!.netWorth >= 0" [class.negative]="data()!.netWorth < 0">
+                  {{ data()!.netWorth | currency }}
+                </span>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
 
-        <!-- Account Balances -->
+        <!-- Row 4: Account Balances (only if accounts exist) -->
         @if (data()!.bankAccounts.length > 0) {
-          <mat-card class="section-card">
+          <mat-card class="accounts-card">
             <mat-card-content>
-              <div class="section-title">
-                <mat-icon>account_balance</mat-icon> Account Balances
-                <span class="section-total">{{ data()!.totalBankBalance | currency }}</span>
+              <div class="accounts-header">
+                <span class="accounts-title"><mat-icon>account_balance</mat-icon> Account Balances</span>
+                <span class="accounts-total">Total: {{ data()!.totalBankBalance | currency }}</span>
               </div>
               <div class="accounts-list">
                 @for (account of data()!.bankAccounts; track account.id) {
                   <div class="account-row">
-                    <div class="account-info">
-                      <mat-icon class="account-type-icon">
-                        {{ account.type === 'Brokerage' ? 'show_chart' : account.type === 'Savings' ? 'savings' : 'account_balance_wallet' }}
-                      </mat-icon>
-                      <div>
-                        <span class="account-name">{{ account.name }}</span>
-                        <span class="account-type">{{ account.type }}</span>
-                      </div>
-                    </div>
+                    <span class="account-name">
+                      {{ account.name }}
+                      <mat-chip>{{ account.type }}</mat-chip>
+                    </span>
                     <span class="account-balance" [class.positive]="account.balance >= 0" [class.negative]="account.balance < 0">
                       {{ account.balance | currency }}
                     </span>
@@ -115,176 +117,98 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
             </mat-card-content>
           </mat-card>
         }
-
-        <!-- Net Worth -->
-        <mat-card class="section-card networth-card">
-          <mat-card-content>
-            <div class="section-title">
-              <mat-icon>assessment</mat-icon> Net Worth
-              <span class="section-total" [class.positive]="data()!.netWorth >= 0" [class.negative]="data()!.netWorth < 0">
-                {{ data()!.netWorth | currency }}
-              </span>
-            </div>
-            <div class="nw-breakdown">
-              <div class="nw-row">
-                <span class="nw-label"><mat-icon class="nw-icon positive">add_circle</mat-icon> Assets</span>
-                <span class="nw-value positive">{{ data()!.totalBankBalance | currency }}</span>
-              </div>
-              <div class="nw-row">
-                <span class="nw-label"><mat-icon class="nw-icon negative">remove_circle</mat-icon> Credit Card Debt</span>
-                <span class="nw-value negative">{{ data()!.totalCreditCardDebt | currency }}</span>
-              </div>
-              <div class="nw-row">
-                <span class="nw-label"><mat-icon class="nw-icon negative">remove_circle</mat-icon> Loan Debt</span>
-                <span class="nw-value negative">{{ data()!.totalLoanDebt | currency }}</span>
-              </div>
-            </div>
-          </mat-card-content>
-        </mat-card>
       </div>
     }
   `,
   styles: [`
-    .fin-summary {
-      display: flex;
-      flex-direction: column;
-      gap: var(--spacing-md);
-      margin-bottom: var(--spacing-lg);
-    }
+    .fin-summary { margin-bottom: var(--spacing-lg); }
 
-    .section-card {
-      border-radius: 12px;
-    }
-
-    .section-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 600;
-      font-size: 0.95rem;
-      margin-bottom: var(--spacing-md);
-      color: var(--color-on-surface, #333);
-    }
-    .section-title mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-      color: var(--color-primary, #1976d2);
-    }
-    .section-total {
-      margin-left: auto;
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--color-primary, #1976d2);
-    }
-    .savings-badge {
-      margin-left: auto;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: #2e7d32;
-      background: rgba(46, 125, 50, 0.08);
-      padding: 2px 10px;
-      border-radius: 12px;
-    }
-    .savings-badge mat-icon {
-      font-size: 14px;
-      width: 14px;
-      height: 14px;
-      color: #2e7d32;
-    }
-
-    /* Cash Flow Grid */
-    .flow-grid {
+    .flow-cards {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
     }
-    .flow-item {
+    .flow-card mat-card-content {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 12px;
+      padding: var(--spacing-md) !important;
+      text-align: center;
     }
-    .flow-icon-wrap {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .flow-icon-wrap mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-      color: white;
-    }
-    .income-bg { background: #2e7d32; }
-    .expense-bg { background: #c62828; }
-    .flow-detail { display: flex; flex-direction: column; }
-    .flow-label { font-size: 0.75rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.5px; }
-    .flow-value { font-size: 1.2rem; font-weight: 700; }
+    .flow-icon { font-size: 28px; width: 28px; height: 28px; margin-bottom: 4px; }
+    .income-icon { color: #2e7d32; }
+    .expense-icon { color: #c62828; }
+    .flow-label { font-size: 0.85rem; opacity: 0.7; }
+    .flow-value { font-size: 1.4rem; font-weight: 700; margin-top: 4px; }
     .income-value { color: #2e7d32; }
     .expense-value { color: #c62828; }
 
     /* Trading P&L */
-    .trading-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+    .trading-card { margin-bottom: var(--spacing-md); }
+    .trading-row {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
       gap: var(--spacing-md);
     }
     .trading-item { text-align: center; }
-    .trading-label { display: block; font-size: 0.8rem; opacity: 0.6; }
-    .trading-value { display: block; font-size: 1.2rem; font-weight: 700; margin-top: 4px; }
+    .trading-icon { font-size: 24px; width: 24px; height: 24px; }
+    .trading-label { display: block; font-size: 0.8rem; opacity: 0.7; margin-top: 2px; }
+    .trading-value { display: block; font-size: 1.3rem; font-weight: 700; margin-top: 4px; }
     .trading-net {
       border-left: 2px solid var(--color-primary, #1976d2);
-      padding-left: var(--spacing-md);
+      padding-left: var(--spacing-lg);
     }
 
+    /* Net Worth */
+    .networth-card { margin-bottom: var(--spacing-md); }
+    .networth-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-around;
+      gap: var(--spacing-md);
+    }
+    .nw-item { text-align: center; }
+    .nw-label { display: block; font-size: 0.85rem; opacity: 0.7; }
+    .nw-value { display: block; font-size: 1.5rem; font-weight: 700; margin-top: 4px; }
+    .nw-total { border-left: 2px solid var(--color-primary, #1976d2); padding-left: var(--spacing-lg); }
+    .positive { color: #2e7d32; }
+    .negative { color: #c62828; }
+
     /* Account Balances */
+    .accounts-card { margin-bottom: var(--spacing-md); }
+    .accounts-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-sm);
+    }
+    .accounts-title {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .accounts-total { font-weight: 700; color: var(--color-primary, #1976d2); }
     .accounts-list { display: flex; flex-direction: column; gap: 8px; }
     .account-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 10px 14px;
-      border-radius: 10px;
+      padding: 8px 12px;
+      border-radius: 8px;
       background: var(--color-surface-variant, rgba(0,0,0,0.03));
-      transition: background 0.15s;
     }
-    .account-row:hover { background: var(--color-surface-variant-hover, rgba(0,0,0,0.06)); }
-    .account-info { display: flex; align-items: center; gap: 12px; }
-    .account-type-icon { color: var(--color-primary, #1976d2); font-size: 22px; width: 22px; height: 22px; }
-    .account-name { display: block; font-weight: 500; }
-    .account-type { display: block; font-size: 0.75rem; opacity: 0.6; text-transform: uppercase; }
-    .account-balance { font-weight: 700; font-size: 1.05rem; }
-
-    /* Net Worth */
-    .nw-breakdown { display: flex; flex-direction: column; gap: 8px; }
-    .nw-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 6px 0;
-    }
-    .nw-label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.9rem;
-    }
-    .nw-icon { font-size: 18px; width: 18px; height: 18px; }
-    .nw-value { font-weight: 600; font-size: 1rem; }
-    .positive { color: #2e7d32; }
-    .negative { color: #c62828; }
+    .account-name { display: flex; align-items: center; gap: 8px; }
+    .account-balance { font-weight: 600; font-size: 1.1rem; }
 
     @media (max-width: 600px) {
-      .flow-grid { grid-template-columns: 1fr; gap: var(--spacing-sm); }
-      .trading-grid { grid-template-columns: 1fr; }
-      .trading-net { border-left: none; border-top: 2px solid var(--color-primary, #1976d2); padding-left: 0; padding-top: 8px; text-align: center; }
+      .flow-cards { grid-template-columns: 1fr; }
+      .trading-row { flex-direction: column; align-items: center; }
+      .trading-net { border-left: none; border-top: 2px solid var(--color-primary, #1976d2); padding-left: 0; padding-top: var(--spacing-sm); }
+      .networth-row { flex-direction: column; align-items: center; }
+      .nw-total { border-left: none; border-top: 2px solid var(--color-primary, #1976d2); padding-left: 0; padding-top: var(--spacing-sm); }
     }
   `]
 })
