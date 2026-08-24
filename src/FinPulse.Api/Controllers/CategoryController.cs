@@ -19,11 +19,16 @@ public class CategoryController : ControllerBase
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] string? type)
     {
-        var categories = await _db.CustomCategories
+        var query = _db.CustomCategories
             .Include(c => c.Children)
-            .Where(c => c.ParentId == null && (c.UserId == null || c.UserId == UserId))
+            .Where(c => c.ParentId == null && (c.UserId == null || c.UserId == UserId));
+
+        if (!string.IsNullOrEmpty(type) && Enum.TryParse<CategoryType>(type, true, out var catType))
+            query = query.Where(c => c.Type == catType);
+
+        var categories = await query
             .OrderBy(c => c.IsFixed ? 0 : 1)
             .ThenBy(c => c.Name)
             .Select(c => new
@@ -49,11 +54,16 @@ public class CategoryController : ControllerBase
     }
 
     [HttpGet("flat")]
-    public async Task<IActionResult> GetFlat()
+    public async Task<IActionResult> GetFlat([FromQuery] string? type)
     {
-        var categories = await _db.CustomCategories
+        var query = _db.CustomCategories
             .Include(c => c.Parent)
-            .Where(c => c.UserId == null || c.UserId == UserId)
+            .Where(c => c.UserId == null || c.UserId == UserId);
+
+        if (!string.IsNullOrEmpty(type) && Enum.TryParse<CategoryType>(type, true, out var catType))
+            query = query.Where(c => c.Type == catType);
+
+        var categories = await query
             .OrderBy(c => c.Parent != null ? c.Parent.Name : c.Name)
             .ThenBy(c => c.ParentId.HasValue ? 1 : 0)
             .ThenBy(c => c.Name)

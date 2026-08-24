@@ -56,6 +56,11 @@ import { AuthService } from '../core/services/auth.service';
             <mat-icon matListItemIcon>credit_card</mat-icon>
             <span matListItemTitle>My Cards</span>
           </a>
+          <a mat-list-item routerLink="/accounts" routerLinkActive="active-link"
+             (click)="onNavClick()">
+            <mat-icon matListItemIcon>savings</mat-icon>
+            <span matListItemTitle>Bank Accounts</span>
+          </a>
           <a mat-list-item routerLink="/strategies" routerLinkActive="active-link"
              (click)="onNavClick()">
             <mat-icon matListItemIcon>trending_down</mat-icon>
@@ -290,6 +295,7 @@ export class NavShellComponent {
     '/dashboard': 'Dashboard',
     '/loans': 'My Loans',
     '/cards': 'My Cards',
+    '/accounts': 'Bank Accounts',
     '/strategies': 'Payoff Strategies',
     '/simulator': 'What-If Simulator',
     '/budget': 'Budget',

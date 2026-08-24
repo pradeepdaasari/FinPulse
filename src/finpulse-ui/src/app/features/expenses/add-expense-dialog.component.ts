@@ -9,9 +9,12 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { DailyExpense, DailyExpenseCreate } from '../../core/models/daily-expense.model';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { DailyExpense, DailyExpenseCreate, TransactionType, FundingSourceType } from '../../core/models/daily-expense.model';
 import { Category } from '../../core/models/category.model';
 import { CategoryService } from '../../core/services/category.service';
+import { FundingSourceService } from '../../core/services/funding-source.service';
+import { FundingSource } from '../../core/models/funding-source.model';
 
 export interface ExpenseDialogData {
   expense: DailyExpense | null;
@@ -24,12 +27,21 @@ export interface ExpenseDialogData {
   imports: [
     CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatDatepickerModule, MatNativeDateModule,
-    MatButtonModule, MatIconModule
+    MatButtonModule, MatIconModule, MatButtonToggleModule
   ],
   template: `
-    <h2 mat-dialog-title>{{ data?.expense ? 'Edit' : 'Log' }} Expense</h2>
+    <h2 mat-dialog-title>{{ data?.expense ? 'Edit' : 'Log' }} Transaction</h2>
     <mat-dialog-content>
       <form [formGroup]="form" class="expense-form">
+        <mat-button-toggle-group formControlName="transactionType" class="txn-toggle">
+          <mat-button-toggle value="Expense">
+            <mat-icon>trending_down</mat-icon> Expense
+          </mat-button-toggle>
+          <mat-button-toggle value="Income">
+            <mat-icon>trending_up</mat-icon> Income
+          </mat-button-toggle>
+        </mat-button-toggle-group>
+
         <mat-form-field>
           <mat-label>Date</mat-label>
           <input matInput [matDatepicker]="picker" formControlName="date">
@@ -87,6 +99,19 @@ export interface ExpenseDialogData {
         </mat-form-field>
 
         <mat-form-field>
+          <mat-label>{{ form.value.transactionType === 'Income' ? 'Received into' : 'Paid with' }}</mat-label>
+          <mat-select formControlName="fundingSourceKey">
+            <mat-option [value]="null">-- None --</mat-option>
+            @for (source of filteredSources(); track source.type + source.id) {
+              <mat-option [value]="source.type + ':' + source.id">
+                <mat-icon>{{ source.type === 'BankAccount' ? 'account_balance' : 'credit_card' }}</mat-icon>
+                {{ source.name }} ({{ source.currentBalance | currency }})
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field>
           <mat-label>Merchant (optional)</mat-label>
           <input matInput formControlName="merchant" placeholder="e.g. Walmart, Shell, Chipotle">
         </mat-form-field>
@@ -111,6 +136,11 @@ export interface ExpenseDialogData {
       gap: 4px;
       min-width: 320px;
     }
+    .txn-toggle {
+      margin-bottom: 12px;
+      width: 100%;
+    }
+    .txn-toggle mat-button-toggle { flex: 1; }
     .new-category-row {
       display: flex;
       gap: 8px;
@@ -124,23 +154,58 @@ export class AddExpenseDialogComponent implements OnInit {
   private fb = inject(FormBuilder);
   private dialogRef = inject(MatDialogRef<AddExpenseDialogComponent>);
   private categoryService = inject(CategoryService);
+  private fundingSourceService = inject(FundingSourceService);
   data = inject<ExpenseDialogData>(MAT_DIALOG_DATA);
 
   categories = signal<Category[]>([]);
+  allSources = signal<FundingSource[]>([]);
+  filteredSources = signal<FundingSource[]>([]);
   showNewCategory = signal(false);
 
   form = this.fb.group({
+    transactionType: [(this.data?.expense?.transactionType ?? 'Expense') as TransactionType, Validators.required],
     date: [this.data?.expense ? new Date(this.data.expense.date) : new Date(), Validators.required],
     categoryId: [this.data?.expense?.categoryId ?? this.data?.prefilledCategoryId ?? null as number | null, Validators.required],
     amount: [this.data?.expense?.amount ?? null as number | null, [Validators.required, Validators.min(0.01)]],
     merchant: [this.data?.expense?.merchant ?? ''],
     description: [this.data?.expense?.description ?? '', [Validators.required, Validators.maxLength(500)]],
+    fundingSourceKey: [this.buildSourceKey(this.data?.expense) as string | null],
     newCategoryName: [''],
     newCategoryParent: [null as number | null]
   });
 
   ngOnInit(): void {
-    this.categoryService.getAll().subscribe(cats => this.categories.set(cats));
+    this.loadCategories();
+    this.fundingSourceService.getAll().subscribe(sources => {
+      this.allSources.set(sources);
+      this.filterSources();
+    });
+
+    this.form.get('transactionType')!.valueChanges.subscribe(() => {
+      this.loadCategories();
+      this.filterSources();
+    });
+  }
+
+  private loadCategories(): void {
+    const type = this.form.value.transactionType === 'Income' ? 'Income' : 'Expense';
+    this.categoryService.getAll(type).subscribe(cats => {
+      this.categories.set(cats);
+    });
+  }
+
+  private filterSources(): void {
+    const txnType = this.form.value.transactionType;
+    if (txnType === 'Income') {
+      this.filteredSources.set(this.allSources().filter(s => s.type === 'BankAccount'));
+    } else {
+      this.filteredSources.set(this.allSources());
+    }
+  }
+
+  private buildSourceKey(expense: DailyExpense | null | undefined): string | null {
+    if (!expense?.fundingSourceType || !expense?.fundingSourceId) return null;
+    return `${expense.fundingSourceType}:${expense.fundingSourceId}`;
   }
 
   createCategory(): void {
@@ -148,9 +213,10 @@ export class AddExpenseDialogComponent implements OnInit {
     const parentId = this.form.value.newCategoryParent;
     if (!name) return;
 
-    this.categoryService.create({ name, isFixed: false, type: 'Expense', parentId: parentId ?? null })
+    const type = this.form.value.transactionType === 'Income' ? 'Income' : 'Expense';
+    this.categoryService.create({ name, isFixed: false, type, parentId: parentId ?? null })
       .subscribe(created => {
-        this.categoryService.getAll().subscribe(cats => this.categories.set(cats));
+        this.loadCategories();
         this.form.patchValue({ categoryId: created.id, newCategoryName: '' });
         this.showNewCategory.set(false);
       });
@@ -159,12 +225,24 @@ export class AddExpenseDialogComponent implements OnInit {
   save(): void {
     if (this.form.invalid) return;
     const val = this.form.value;
+
+    let fundingSourceType: FundingSourceType | null = null;
+    let fundingSourceId: number | null = null;
+    if (val.fundingSourceKey) {
+      const [type, id] = val.fundingSourceKey.split(':');
+      fundingSourceType = type as FundingSourceType;
+      fundingSourceId = parseInt(id, 10);
+    }
+
     const expense: DailyExpenseCreate = {
       date: (val.date as Date).toISOString(),
       categoryId: val.categoryId!,
       amount: val.amount!,
       merchant: val.merchant || null,
-      description: val.description!
+      description: val.description!,
+      transactionType: val.transactionType as TransactionType,
+      fundingSourceType,
+      fundingSourceId
     };
     this.dialogRef.close(expense);
   }

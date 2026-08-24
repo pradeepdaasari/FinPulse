@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using FinPulse.Core.Models.Enums;
 
 namespace FinPulse.Core.Models;
 
@@ -17,6 +18,10 @@ public class DailyExpense
     public string Description { get; set; } = string.Empty;
     [MaxLength(200)]
     public string? Merchant { get; set; }
+
+    public TransactionType? TransactionType { get; set; }
+    public FundingSourceType? FundingSourceType { get; set; }
+    public int? FundingSourceId { get; set; }
 
     public string? UserId { get; set; }
 
