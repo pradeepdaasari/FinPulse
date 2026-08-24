@@ -70,6 +70,14 @@ export interface CategoryComparison {
   percentChange: number;
 }
 
+export interface TagSummary {
+  tag: string;
+  totalAmount: number;
+  transactionCount: number;
+  firstDate: string;
+  lastDate: string;
+}
+
 export interface MonthComparison {
   currentYear: number;
   currentMonth: number;
