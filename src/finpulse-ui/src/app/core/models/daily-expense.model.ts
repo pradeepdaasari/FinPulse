@@ -19,6 +19,7 @@ export interface DailyExpense {
   toFundingSourceName: string | null;
   splitGroupId: string | null;
   tag: string | null;
+  tagType: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -34,6 +35,7 @@ export interface DailyExpenseCreate {
   fundingSourceId: number | null;
   toFundingSourceId: number | null;
   tag?: string | null;
+  tagType?: string | null;
 }
 
 export interface SpendingSummary {
@@ -72,6 +74,7 @@ export interface CategoryComparison {
 
 export interface TagSummary {
   tag: string;
+  tagType: string | null;
   totalAmount: number;
   transactionCount: number;
   firstDate: string;

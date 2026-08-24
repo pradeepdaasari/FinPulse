@@ -114,6 +114,7 @@ public class ExpenseController : ControllerBase
                 : null,
             e.SplitGroupId,
             e.Tag,
+            e.TagType,
             e.CreatedAt,
             e.UpdatedAt
         });
@@ -212,7 +213,7 @@ public class ExpenseController : ControllerBase
         var cardNames = await _db.CreditCards.Where(c => c.UserId == UserId).ToDictionaryAsync(c => c.Id, c => c.CardName);
 
         var sb = new StringBuilder();
-        sb.AppendLine("Date,Type,Description,Merchant,Category,Amount,Source,Tag");
+        sb.AppendLine("Date,Type,Description,Merchant,Category,Amount,Source,Tag,TagType");
         foreach (var e in expenses)
         {
             var type = e.TransactionType?.ToString() ?? "Expense";
@@ -224,7 +225,7 @@ public class ExpenseController : ControllerBase
                 source = bankNames.GetValueOrDefault(e.FundingSourceId.Value) ?? "";
             else if (e.FundingSourceType == FundingSourceType.CreditCard && e.FundingSourceId.HasValue)
                 source = cardNames.GetValueOrDefault(e.FundingSourceId.Value) ?? "";
-            sb.AppendLine($"{e.Date:yyyy-MM-dd},{type},{desc},{merchant},{category},{e.Amount},{EscapeCsv(source)},{EscapeCsv(e.Tag ?? "")}");
+            sb.AppendLine($"{e.Date:yyyy-MM-dd},{type},{desc},{merchant},{category},{e.Amount},{EscapeCsv(source)},{EscapeCsv(e.Tag ?? "")},{EscapeCsv(e.TagType ?? "")}");
         }
 
         var bytes = Encoding.UTF8.GetBytes(sb.ToString());
@@ -251,11 +252,16 @@ public class ExpenseController : ControllerBase
     }
 
     [HttpGet("tag-summary")]
-    public async Task<ActionResult> GetTagSummary()
+    public async Task<ActionResult> GetTagSummary([FromQuery] string? tagType)
     {
-        var expenses = await _db.DailyExpenses
-            .Where(e => e.UserId == UserId && e.Tag != null && e.TransactionType == TransactionType.Expense)
-            .Select(e => new { e.Tag, e.Amount, e.Date })
+        var query = _db.DailyExpenses
+            .Where(e => e.UserId == UserId && e.Tag != null && e.TransactionType == TransactionType.Expense);
+
+        if (!string.IsNullOrWhiteSpace(tagType))
+            query = query.Where(e => e.TagType == tagType);
+
+        var expenses = await query
+            .Select(e => new { e.Tag, e.TagType, e.Amount, e.Date })
             .ToListAsync();
 
         var summary = expenses
@@ -263,6 +269,7 @@ public class ExpenseController : ControllerBase
             .Select(g => new
             {
                 Tag = g.Key,
+                TagType = g.First().TagType,
                 TotalAmount = g.Sum(e => e.Amount),
                 TransactionCount = g.Count(),
                 FirstDate = g.Min(e => e.Date),
@@ -384,6 +391,7 @@ public class ExpenseController : ControllerBase
             FundingSourceId = dto.FundingSourceId,
             ToFundingSourceId = dto.ToFundingSourceId,
             Tag = dto.Tag,
+            TagType = dto.TagType,
             UserId = UserId
         };
 
@@ -450,6 +458,8 @@ public class ExpenseController : ControllerBase
                 FundingSourceId = dto.FundingSourceId,
                 ToFundingSourceId = dto.ToFundingSourceId,
                 SplitGroupId = groupId,
+                Tag = dto.Tag,
+                TagType = dto.TagType,
                 UserId = UserId
             };
             _db.DailyExpenses.Add(expense);
@@ -494,6 +504,7 @@ public class ExpenseController : ControllerBase
         expense.FundingSourceId = dto.FundingSourceId;
         expense.ToFundingSourceId = dto.ToFundingSourceId;
         expense.Tag = dto.Tag;
+        expense.TagType = dto.TagType;
 
         // Apply new balance adjustment
         if (dto.TransactionType == TransactionType.Transfer && dto.FundingSourceId.HasValue && dto.ToFundingSourceId.HasValue)
