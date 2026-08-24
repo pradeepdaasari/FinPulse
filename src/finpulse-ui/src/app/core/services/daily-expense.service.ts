@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { DailyExpense, DailyExpenseCreate, SpendingSummary } from '../models/daily-expense.model';
+import { DailyExpense, DailyExpenseCreate, ExpenseFilter, MonthComparison, SpendingSummary } from '../models/daily-expense.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -9,10 +9,12 @@ export class DailyExpenseService {
   private http = inject(HttpClient);
   private baseUrl = `${environment.apiUrl}/expenses`;
 
-  getExpenses(year?: number, month?: number): Observable<DailyExpense[]> {
+  getExpenses(filter: ExpenseFilter = {}): Observable<DailyExpense[]> {
     const params: Record<string, string> = {};
-    if (year) params['year'] = year.toString();
-    if (month) params['month'] = month.toString();
+    Object.entries(filter).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '')
+        params[key] = value.toString();
+    });
     return this.http.get<DailyExpense[]>(this.baseUrl, { params });
   }
 
@@ -33,5 +35,30 @@ export class DailyExpenseService {
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
+  createSplit(items: DailyExpenseCreate[]): Observable<{ splitGroupId: string; count: number }> {
+    return this.http.post<{ splitGroupId: string; count: number }>(`${this.baseUrl}/split`, items);
+  }
+
+  getComparison(year?: number, month?: number): Observable<MonthComparison> {
+    const params: Record<string, string> = {};
+    if (year) params['year'] = year.toString();
+    if (month) params['month'] = month.toString();
+    return this.http.get<MonthComparison>(`${this.baseUrl}/comparison`, { params });
+  }
+
+  exportCsv(year: number, month: number): void {
+    this.http.get(`${this.baseUrl}/export`, {
+      params: { year: year.toString(), month: month.toString() },
+      responseType: 'blob'
+    }).subscribe(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `transactions_${year}_${month.toString().padStart(2, '0')}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    });
   }
 }

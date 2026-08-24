@@ -86,6 +86,16 @@ import { AuthService } from '../core/services/auth.service';
             <mat-icon matListItemIcon>category</mat-icon>
             <span matListItemTitle>Categories</span>
           </a>
+          <a mat-list-item routerLink="/recurring" routerLinkActive="active-link"
+             (click)="onNavClick()">
+            <mat-icon matListItemIcon>repeat</mat-icon>
+            <span matListItemTitle>Recurring</span>
+          </a>
+          <a mat-list-item routerLink="/goals" routerLinkActive="active-link"
+             (click)="onNavClick()">
+            <mat-icon matListItemIcon>flag</mat-icon>
+            <span matListItemTitle>Goals</span>
+          </a>
           <a mat-list-item routerLink="/payments" routerLinkActive="active-link"
              (click)="onNavClick()">
             <mat-icon matListItemIcon>receipt_long</mat-icon>
@@ -301,6 +311,8 @@ export class NavShellComponent {
     '/budget': 'Budget',
     '/expenses': 'Transactions',
     '/categories': 'Categories',
+    '/recurring': 'Recurring',
+    '/goals': 'Goals',
     '/payments': 'Payments',
     '/setup': 'Setup',
   };
