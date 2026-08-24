@@ -160,9 +160,11 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dial
                         <th mat-header-cell *matHeaderCellDef>Amount</th>
                         <td mat-cell *matCellDef="let e" [class.amount-cell]="true"
                             [class.income-amount]="e.transactionType === 'Income'"
-                            [class.transfer-amount]="e.transactionType === 'Transfer'">
+                            [class.transfer-amount]="e.transactionType === 'Transfer'"
+                            [class.refund-amount]="e.transactionType === 'Refund'">
                           @if (e.transactionType === 'Income') { +{{ e.amount | currency }} }
                           @else if (e.transactionType === 'Transfer') { ↔ {{ e.amount | currency }} }
+                          @else if (e.transactionType === 'Refund') { ↩ {{ e.amount | currency }} }
                           @else { {{ e.amount | currency }} }
                         </td>
                       </ng-container>
@@ -238,6 +240,7 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dial
     .amount-cell { font-weight: 600; }
     .income-amount { color: #2e7d32; }
     .transfer-amount { color: #1565c0; }
+    .refund-amount { color: #2e7d32; font-style: italic; }
     .source-cell { display: flex; align-items: center; gap: 4px; font-size: 0.85rem; }
     .source-icon { font-size: 16px; width: 16px; height: 16px; opacity: 0.7; }
     .transfer-source { color: #1565c0; }

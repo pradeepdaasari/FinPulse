@@ -94,7 +94,7 @@ public class ExpenseController : ControllerBase
 
         var dailyExpenses = await _db.DailyExpenses
             .Include(e => e.Category)
-            .Where(e => e.UserId == UserId && e.Date >= startDate && e.Date < endDate && e.TransactionType != TransactionType.Income && e.TransactionType != TransactionType.Transfer)
+            .Where(e => e.UserId == UserId && e.Date >= startDate && e.Date < endDate && e.TransactionType == TransactionType.Expense)
             .ToListAsync();
 
         var budgets = await _db.BudgetExpenses
@@ -309,13 +309,16 @@ public class ExpenseController : ControllerBase
         {
             var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == sourceId && a.UserId == UserId);
             if (account != null)
-                account.CurrentBalance += txnType == TransactionType.Income ? amount : -amount;
+            {
+                account.CurrentBalance += (txnType == TransactionType.Income || txnType == TransactionType.Refund)
+                    ? amount : -amount;
+            }
         }
         else if (sourceType == FundingSourceType.CreditCard)
         {
             var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == sourceId && c.UserId == UserId);
             if (card != null)
-                card.CurrentBalance += amount; // expense increases CC balance
+                card.CurrentBalance += txnType == TransactionType.Refund ? -amount : amount;
         }
     }
 
@@ -327,13 +330,16 @@ public class ExpenseController : ControllerBase
         {
             var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == sourceId && a.UserId == UserId);
             if (account != null)
-                account.CurrentBalance += txnType == TransactionType.Income ? -amount : amount;
+            {
+                account.CurrentBalance += (txnType == TransactionType.Income || txnType == TransactionType.Refund)
+                    ? -amount : amount;
+            }
         }
         else if (sourceType == FundingSourceType.CreditCard)
         {
             var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == sourceId && c.UserId == UserId);
             if (card != null)
-                card.CurrentBalance -= amount;
+                card.CurrentBalance += txnType == TransactionType.Refund ? amount : -amount;
         }
     }
 
