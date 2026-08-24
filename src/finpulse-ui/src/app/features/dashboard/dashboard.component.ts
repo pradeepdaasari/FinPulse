@@ -13,6 +13,7 @@ import { MonthlyPaymentsComponent } from './monthly-payments.component';
 import { DebtTrendChartComponent } from './debt-trend-chart.component';
 import { PaymentStreakComponent } from './payment-streak.component';
 import { DebtCountdownComponent } from './debt-countdown.component';
+import { BudgetHealthComponent } from './budget-health.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -28,7 +29,8 @@ import { DebtCountdownComponent } from './debt-countdown.component';
     MonthlyPaymentsComponent,
     DebtTrendChartComponent,
     PaymentStreakComponent,
-    DebtCountdownComponent
+    DebtCountdownComponent,
+    BudgetHealthComponent
   ],
   template: `
     @if (loading()) {
@@ -39,6 +41,7 @@ import { DebtCountdownComponent } from './debt-countdown.component';
       <h2><mat-icon class="section-icon">space_dashboard</mat-icon> Dashboard</h2>
       <app-summary-cards [summary]="summary()!"></app-summary-cards>
       <app-payment-streak></app-payment-streak>
+      <app-budget-health></app-budget-health>
       <app-monthly-payments></app-monthly-payments>
 
       <div class="dashboard-row">

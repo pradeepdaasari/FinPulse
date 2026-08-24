@@ -365,11 +365,17 @@ export class MonthlyPaymentsComponent implements OnInit {
   columns = ['name', 'amount', 'balance', 'paid', 'dueDate', 'status', 'actions'];
 
   ngOnInit(): void {
-    const savedPaycheckDay = this.profileService.getPaycheckDay();
-    if (savedPaycheckDay) {
-      this.paycheckDay.set(savedPaycheckDay);
-      this.calculatePaycheckInfo(savedPaycheckDay);
-    }
+    this.profileService.getProfile().subscribe({
+      next: (profile) => {
+        if (profile.nextPayDate) {
+          const nextPay = new Date(profile.nextPayDate);
+          const day = nextPay.getDate();
+          this.paycheckDay.set(day);
+          this.calculatePaycheckInfo(day);
+        }
+      },
+      error: () => {}
+    });
 
     this.loadPayments();
   }

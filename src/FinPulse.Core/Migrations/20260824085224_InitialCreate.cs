@@ -74,6 +74,31 @@ namespace FinPulse.Core.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "CustomCategories",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    IsFixed = table.Column<bool>(type: "bit", nullable: false),
+                    Type = table.Column<int>(type: "int", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    ParentId = table.Column<int>(type: "int", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CustomCategories", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CustomCategories_CustomCategories_ParentId",
+                        column: x => x.ParentId,
+                        principalTable: "CustomCategories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "MonthlySnapshots",
                 columns: table => new
                 {
@@ -122,6 +147,9 @@ namespace FinPulse.Core.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     MonthlyIncome = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    PayFrequency = table.Column<int>(type: "int", nullable: false),
+                    NetPayPerCheck = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    NextPayDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
@@ -237,6 +265,58 @@ namespace FinPulse.Core.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "BudgetExpenses",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    CategoryId = table.Column<int>(type: "int", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    IsFixed = table.Column<bool>(type: "bit", nullable: false),
+                    DueDay = table.Column<int>(type: "int", nullable: true),
+                    Frequency = table.Column<int>(type: "int", nullable: false),
+                    IsAutopay = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BudgetExpenses", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BudgetExpenses_CustomCategories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "CustomCategories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "DailyExpenses",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Date = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CategoryId = table.Column<int>(type: "int", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    Merchant = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DailyExpenses", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DailyExpenses_CustomCategories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "CustomCategories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PaymentHistories",
                 columns: table => new
                 {
@@ -305,6 +385,33 @@ namespace FinPulse.Core.Migrations
                 filter: "[NormalizedUserName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_BudgetExpenses_CategoryId",
+                table: "BudgetExpenses",
+                column: "CategoryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CustomCategories_Name_ParentId_UserId",
+                table: "CustomCategories",
+                columns: new[] { "Name", "ParentId", "UserId" },
+                unique: true,
+                filter: "[ParentId] IS NOT NULL AND [UserId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CustomCategories_ParentId",
+                table: "CustomCategories",
+                column: "ParentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DailyExpenses_CategoryId",
+                table: "DailyExpenses",
+                column: "CategoryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DailyExpenses_Date",
+                table: "DailyExpenses",
+                column: "Date");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_MonthlySnapshots_Year_Month",
                 table: "MonthlySnapshots",
                 columns: new[] { "Year", "Month" },
@@ -340,6 +447,12 @@ namespace FinPulse.Core.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
+                name: "BudgetExpenses");
+
+            migrationBuilder.DropTable(
+                name: "DailyExpenses");
+
+            migrationBuilder.DropTable(
                 name: "MonthlySnapshots");
 
             migrationBuilder.DropTable(
@@ -353,6 +466,9 @@ namespace FinPulse.Core.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
+
+            migrationBuilder.DropTable(
+                name: "CustomCategories");
 
             migrationBuilder.DropTable(
                 name: "CreditCards");
