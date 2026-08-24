@@ -94,8 +94,8 @@ import { FinancialSummaryComponent } from './financial-summary.component';
     .dashboard-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: var(--spacing-xl);
-      margin-top: var(--spacing-lg);
+      gap: var(--spacing-md);
+      margin-top: var(--spacing-md);
     }
     .chart-card canvas {
       max-height: 300px;

@@ -284,8 +284,8 @@ import { AuthService } from '../core/services/auth.service';
     }
 
     .content-area {
-      padding: 40px;
-      max-width: 1400px;
+      padding: 24px 28px;
+      max-width: 1200px;
       min-height: calc(100vh - 56px);
     }
 

@@ -29,7 +29,6 @@ import { TagSummaryComponent } from './tag-summary.component';
   ],
   template: `
     <div class="expenses-header">
-      <h2>Transactions</h2>
       <div class="month-nav">
         <button mat-icon-button (click)="prevMonth()"><mat-icon>chevron_left</mat-icon></button>
         <span class="month-label">{{ monthLabel() }}</span>
@@ -239,12 +238,11 @@ import { TagSummaryComponent } from './tag-summary.component';
     .expenses-header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-end;
       flex-wrap: wrap;
       gap: var(--spacing-sm);
-      margin-bottom: var(--spacing-md);
+      margin-bottom: var(--spacing-sm);
     }
-    .expenses-header h2 { margin: 0; }
     .month-nav {
       display: flex;
       align-items: center;
@@ -254,13 +252,13 @@ import { TagSummaryComponent } from './tag-summary.component';
       padding: 4px;
     }
     .month-label { font-size: var(--text-base); font-weight: 600; min-width: 140px; text-align: center; }
-    .tab-content { padding: var(--spacing-md) 0; }
+    .tab-content { padding: var(--spacing-sm) 0; }
 
-    .totals-card { margin-bottom: var(--spacing-lg); }
-    .totals-row { display: flex; justify-content: space-around; flex-wrap: wrap; gap: var(--spacing-md); }
+    .totals-card { margin-bottom: var(--spacing-md); }
+    .totals-row { display: flex; justify-content: space-around; flex-wrap: wrap; gap: var(--spacing-sm); }
     .total-item { text-align: center; }
     .total-label { display: block; font-size: 0.85rem; opacity: 0.7; }
-    .total-value { display: block; font-size: 1.75rem; font-weight: 700; margin-top: 4px; }
+    .total-value { display: block; font-size: 1.3rem; font-weight: 700; margin-top: 4px; }
     .total-value.budgeted { color: var(--color-primary); }
     .total-value.spent { color: var(--color-warning); }
     .total-value.positive { color: var(--color-success); }
@@ -278,7 +276,7 @@ import { TagSummaryComponent } from './tag-summary.component';
     .remaining.over { color: var(--color-danger); }
     .percent { opacity: 0.6; }
 
-    .log-header { display: flex; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-md); }
+    .log-header { display: flex; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm); }
     .expense-count { font-size: 0.9rem; opacity: 0.6; }
     .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table { width: 100%; min-width: 700px; }

@@ -51,21 +51,21 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
     .streak-content {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 12px;
     }
     .streak-icon {
-      width: 52px;
-      height: 52px;
-      border-radius: 14px;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
       background: rgba(234, 88, 12, 0.08);
       display: flex;
       align-items: center;
       justify-content: center;
     }
     .streak-icon mat-icon {
-      font-size: 28px;
-      width: 28px;
-      height: 28px;
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
       color: var(--color-warning);
     }
     .streak-info {
@@ -73,7 +73,7 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
       flex-direction: column;
     }
     .streak-count {
-      font-size: 2rem;
+      font-size: 1.5rem;
       font-weight: 700;
       color: var(--color-text);
       line-height: 1;
@@ -86,7 +86,7 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
     .streak-details {
       margin-left: auto;
       display: flex;
-      gap: 24px;
+      gap: 16px;
     }
     .streak-detail {
       display: flex;
@@ -95,7 +95,7 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
       gap: 2px;
     }
     .detail-value {
-      font-size: 1.25rem;
+      font-size: 1.1rem;
       font-weight: 700;
       color: var(--color-text);
     }

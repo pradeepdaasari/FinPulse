@@ -45,7 +45,7 @@ import { TrendData } from '../../core/models/dashboard.model';
     </mat-card>
   `,
   styles: [`
-    .trend-card { margin-top: var(--spacing-lg); }
+    .trend-card { margin-top: var(--spacing-md); }
     .card-title-row {
       display: flex;
       justify-content: space-between;
@@ -71,7 +71,7 @@ import { TrendData } from '../../core/models/dashboard.model';
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: var(--spacing-lg);
+      padding: var(--spacing-md);
       color: var(--color-text-muted);
     }
   `]

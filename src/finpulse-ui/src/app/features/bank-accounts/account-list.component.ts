@@ -18,7 +18,6 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
   imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatProgressSpinnerModule, CurrencyPipe],
   template: `
     <div class="header-row">
-      <h2>Bank Accounts</h2>
       <button mat-raised-button color="primary" (click)="openAddAccount()">
         <mat-icon>add</mat-icon> Add Account
       </button>
@@ -27,10 +26,16 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
     @if (loading()) {
       <mat-spinner></mat-spinner>
     } @else if (accounts().length === 0) {
-      <mat-card class="empty-state">
-        <mat-icon>account_balance</mat-icon>
-        <p>No bank accounts yet. Add your checking or savings account to start tracking balances.</p>
-      </mat-card>
+      <div class="empty-state">
+        <div class="empty-icon-wrap blue">
+          <mat-icon>account_balance</mat-icon>
+        </div>
+        <h3>Add your first account</h3>
+        <p>Connect your checking or savings accounts to see your full financial picture in one place.</p>
+        <button mat-raised-button color="primary" (click)="openAddAccount()">
+          <mat-icon>add</mat-icon> Add Account
+        </button>
+      </div>
     } @else {
       <mat-card>
         <div class="table-wrapper">
@@ -77,10 +82,9 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
   `,
   styles: [`
     .header-row {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: var(--spacing-lg); flex-wrap: wrap; gap: var(--spacing-sm);
+      display: flex; justify-content: flex-end; align-items: center;
+      margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);
     }
-    .header-row h2 { margin: 0; }
     mat-card { overflow: hidden; padding: 0 !important; }
     .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table { width: 100%; min-width: 400px; }
@@ -89,10 +93,6 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
       margin-top: var(--spacing-md); text-align: right;
       font-size: 1.1rem; padding: var(--spacing-sm) var(--spacing-md);
     }
-    .empty-state {
-      text-align: center; padding: var(--spacing-xl) !important;
-    }
-    .empty-state mat-icon { font-size: 56px; height: 56px; width: 56px; color: var(--color-text-muted); }
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
     }

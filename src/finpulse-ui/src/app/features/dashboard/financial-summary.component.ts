@@ -129,26 +129,29 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
     }
   `,
   styles: [`
-    .fin-summary { margin-bottom: var(--spacing-lg); }
+    .fin-summary { margin-bottom: var(--spacing-md); }
 
     .flow-cards {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: var(--spacing-md);
-      margin-bottom: var(--spacing-md);
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-sm);
     }
     .flow-card mat-card-content {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: var(--spacing-md) !important;
+      padding: 12px !important;
       text-align: center;
     }
-    .flow-icon { font-size: 28px; width: 28px; height: 28px; margin-bottom: 4px; }
+    .flow-card:nth-child(1) { border-top: 3px solid var(--color-success); }
+    .flow-card:nth-child(2) { border-top: 3px solid var(--color-danger); }
+    .flow-card:nth-child(3) { border-top: 3px solid var(--color-value-blue); }
+    .flow-icon { font-size: 24px; width: 24px; height: 24px; margin-bottom: 2px; }
     .income-icon { color: var(--color-success); }
     .expense-icon { color: var(--color-danger); }
-    .flow-label { font-size: 0.85rem; opacity: 0.7; }
-    .flow-value { font-size: 1.75rem; font-weight: 700; margin-top: 4px; }
+    .flow-label { font-size: 0.8rem; opacity: 0.7; }
+    .flow-value { font-size: 1.4rem; font-weight: 700; margin-top: 2px; }
     .income-value { color: var(--color-success); }
     .expense-value { color: var(--color-danger); }
 
@@ -159,43 +162,45 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
       gap: 10px;
       padding: 12px 16px;
       border-radius: var(--radius-sm);
-      background: var(--color-surface-secondary);
+      background: var(--color-surface);
+      border-left: 4px solid var(--color-value-blue);
       margin-bottom: var(--spacing-md);
+      box-shadow: var(--shadow-sm);
     }
     .pace-icon { font-size: 20px; width: 20px; height: 20px; }
-    .pace-icon.on-track { color: var(--color-primary); }
-    .pace-icon.ahead { color: var(--color-success); }
+    .pace-icon.on-track { color: var(--color-value-blue); }
+    .pace-icon.ahead { color: var(--color-value-green); }
     .pace-icon.over { color: var(--color-danger); }
-    .pace-text { font-size: var(--text-sm); color: var(--color-text-secondary); }
+    .pace-text { font-size: var(--text-sm); color: var(--color-text); font-weight: 500; }
 
     /* Trading P&L */
-    .trading-card { margin-bottom: var(--spacing-md); }
+    .trading-card { margin-bottom: var(--spacing-sm); }
     .trading-row {
       display: flex;
       justify-content: space-around;
       flex-wrap: wrap;
-      gap: var(--spacing-md);
+      gap: var(--spacing-sm);
     }
     .trading-item { text-align: center; }
-    .trading-icon { font-size: 24px; width: 24px; height: 24px; }
-    .trading-label { display: block; font-size: 0.8rem; opacity: 0.7; margin-top: 2px; }
-    .trading-value { display: block; font-size: 1.3rem; font-weight: 700; margin-top: 4px; }
+    .trading-icon { font-size: 20px; width: 20px; height: 20px; }
+    .trading-label { display: block; font-size: 0.75rem; opacity: 0.7; margin-top: 2px; }
+    .trading-value { display: block; font-size: 1.1rem; font-weight: 700; margin-top: 2px; }
     .trading-net {
       border-left: 2px solid var(--color-primary, #1976d2);
       padding-left: var(--spacing-lg);
     }
 
     /* Net Worth */
-    .networth-card { margin-bottom: var(--spacing-md); }
+    .networth-card { margin-bottom: var(--spacing-sm); }
     .networth-row {
       display: flex;
       flex-wrap: wrap;
       justify-content: space-around;
-      gap: var(--spacing-md);
+      gap: var(--spacing-sm);
     }
     .nw-item { text-align: center; }
-    .nw-label { display: block; font-size: 0.85rem; opacity: 0.7; }
-    .nw-value { display: block; font-size: 1.5rem; font-weight: 700; margin-top: 4px; }
+    .nw-label { display: block; font-size: 0.8rem; opacity: 0.7; }
+    .nw-value { display: block; font-size: 1.25rem; font-weight: 700; margin-top: 2px; }
     .nw-total { border-left: 2px solid var(--color-primary, #1976d2); padding-left: var(--spacing-lg); }
     .positive { color: var(--color-success); }
     .negative { color: var(--color-danger); }
