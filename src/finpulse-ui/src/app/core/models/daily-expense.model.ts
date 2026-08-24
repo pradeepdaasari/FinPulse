@@ -1,4 +1,4 @@
-export type TransactionType = 'Expense' | 'Income' | 'Transfer';
+export type TransactionType = 'Expense' | 'Income' | 'Transfer' | 'Refund';
 export type FundingSourceType = 'BankAccount' | 'CreditCard';
 
 export interface DailyExpense {

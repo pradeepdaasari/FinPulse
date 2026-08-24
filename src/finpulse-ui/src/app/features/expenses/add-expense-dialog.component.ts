@@ -43,6 +43,9 @@ export interface ExpenseDialogData {
           <mat-button-toggle value="Transfer">
             <mat-icon>swap_horiz</mat-icon> Transfer
           </mat-button-toggle>
+          <mat-button-toggle value="Refund">
+            <mat-icon>undo</mat-icon> Refund
+          </mat-button-toggle>
         </mat-button-toggle-group>
 
         <mat-form-field>
@@ -98,7 +101,7 @@ export interface ExpenseDialogData {
         }
 
         <mat-form-field>
-          <mat-label>{{ form.value.transactionType === 'Transfer' ? 'Transfer Amount' : 'Amount' }}</mat-label>
+          <mat-label>{{ form.value.transactionType === 'Transfer' ? 'Transfer Amount' : form.value.transactionType === 'Refund' ? 'Refund Amount' : 'Amount' }}</mat-label>
           <input matInput type="number" formControlName="amount" min="0.01" step="0.01">
           <span matTextPrefix>$&nbsp;</span>
         </mat-form-field>
@@ -129,7 +132,7 @@ export interface ExpenseDialogData {
           </mat-form-field>
         } @else {
           <mat-form-field>
-            <mat-label>{{ form.value.transactionType === 'Income' ? 'Received into' : 'Paid with' }}</mat-label>
+            <mat-label>{{ form.value.transactionType === 'Income' ? 'Received into' : form.value.transactionType === 'Refund' ? 'Refunded to' : 'Paid with' }}</mat-label>
             <mat-select formControlName="fundingSourceKey">
               <mat-option [value]="null">-- None --</mat-option>
               @for (source of filteredSources(); track source.type + source.id) {
