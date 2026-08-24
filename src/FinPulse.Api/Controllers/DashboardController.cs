@@ -76,6 +76,7 @@ public class DashboardController : ControllerBase
             {
                 upcomingPayments.Add(new UpcomingPaymentDto
                 {
+                    DebtId = loan.Id,
                     DebtName = loan.LenderName,
                     DebtType = DebtType.PersonalLoan,
                     Amount = loan.MonthlyPayment,
@@ -95,6 +96,7 @@ public class DashboardController : ControllerBase
             {
                 upcomingPayments.Add(new UpcomingPaymentDto
                 {
+                    DebtId = card.Id,
                     DebtName = card.CardName,
                     DebtType = DebtType.CreditCard,
                     Amount = card.MinimumPayment,
