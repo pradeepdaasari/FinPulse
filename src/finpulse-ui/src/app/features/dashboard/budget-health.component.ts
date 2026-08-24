@@ -44,7 +44,7 @@ import { SpendingSummary } from '../../core/models/daily-expense.model';
               <span class="alerts-title">Watch List</span>
               @for (alert of alerts(); track alert.categoryId) {
                 <div class="alert-row" [class.over]="alert.remaining < 0">
-                  <mat-icon class="alert-icon">{{ alert.remaining < 0 ? 'warning' : 'info' }}</mat-icon>
+                  <mat-icon class="alert-icon">{{ alert.categoryIcon || (alert.remaining < 0 ? 'warning' : 'info') }}</mat-icon>
                   <span class="alert-name">{{ alert.categoryName }}</span>
                   <span class="alert-detail">{{ alert.percentUsed | number:'1.0-0' }}%</span>
                 </div>

@@ -3,6 +3,7 @@ export interface DailyExpense {
   date: string;
   categoryId: number;
   categoryName: string;
+  categoryIcon?: string | null;
   parentCategoryName?: string | null;
   amount: number;
   description: string;
@@ -22,6 +23,7 @@ export interface DailyExpenseCreate {
 export interface SpendingSummary {
   categoryId: number;
   categoryName: string;
+  categoryIcon?: string | null;
   budgeted: number;
   spent: number;
   remaining: number;
