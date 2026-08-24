@@ -29,3 +29,7 @@ appsettings.Production.json
 ## Build/deploy artifacts
 deploy.zip
 publish/
+
+## wwwroot is populated by Angular build at deploy time
+src/FinPulse.Api/wwwroot/*
+!src/FinPulse.Api/wwwroot/.gitkeep
