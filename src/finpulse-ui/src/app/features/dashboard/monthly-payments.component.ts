@@ -8,12 +8,12 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { forkJoin } from 'rxjs';
-import { LoanService } from '../../core/services/loan.service';
-import { CreditCardService } from '../../core/services/credit-card.service';
+import { DebtService } from '../../core/services/debt.service';
 import { UserProfileService } from '../../core/services/user-profile.service';
 import { PaymentService } from '../../core/services/payment.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog.component';
+import { DebtItem } from '../../core/models/debt-item.model';
 import { roundCurrency, sumCurrency } from '../../core/utils/currency';
 
 interface MonthlyPayment {
@@ -350,8 +350,7 @@ interface MonthlyPayment {
   `]
 })
 export class MonthlyPaymentsComponent implements OnInit {
-  private loanService = inject(LoanService);
-  private cardService = inject(CreditCardService);
+  private debtService = inject(DebtService);
   private profileService = inject(UserProfileService);
   private paymentService = inject(PaymentService);
   private notify = inject(NotificationService);
@@ -401,10 +400,9 @@ export class MonthlyPaymentsComponent implements OnInit {
 
   private loadPayments(): void {
     forkJoin({
-      loans: this.loanService.getAll(),
-      cards: this.cardService.getAll(),
+      debts: this.debtService.getAll(),
       paymentResponse: this.paymentService.getAll()
-    }).subscribe(({ loans, cards, paymentResponse }) => {
+    }).subscribe(({ debts, paymentResponse }) => {
       const now = new Date();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
@@ -412,15 +410,18 @@ export class MonthlyPaymentsComponent implements OnInit {
 
       const monthlyPayments: MonthlyPayment[] = [];
 
-      for (const loan of loans) {
-        const dueDay = loan.dueDay ?? 1;
+      for (const debt of debts) {
+        const dueDay = debt.dueDay ?? 1;
         const dueDate = new Date(currentYear, currentMonth, dueDay);
         const daysUntilDue = dueDay - today;
         const cycleStart = this.getCycleStart(dueDay, now);
-        const paidAmount = this.sumPaymentsInCycle(paymentResponse.payments, loan.id, 'PersonalLoan', cycleStart);
+        const paidAmount = this.sumPaymentsInCycle(paymentResponse.payments, debt.id, debt.type, cycleStart);
+
+        const isLoan = debt.type === 'PersonalLoan';
+        const dueAmount = isLoan ? debt.monthlyPayment : debt.currentBalance;
 
         let status: MonthlyPayment['status'];
-        if (roundCurrency(paidAmount) >= roundCurrency(loan.monthlyPayment)) {
+        if (roundCurrency(paidAmount) >= roundCurrency(dueAmount)) {
           status = 'paid';
         } else if (daysUntilDue < 0) {
           status = 'overdue';
@@ -430,53 +431,20 @@ export class MonthlyPaymentsComponent implements OnInit {
           status = 'upcoming';
         }
 
-        monthlyPayments.push({
-          id: loan.id,
-          name: loan.lenderName,
-          type: 'Loan',
-          amount: loan.monthlyPayment,
-          minimumPayment: null,
-          minimumPaid: false,
-          isAutopay: loan.isAutopay ?? false,
-          currentBalance: loan.currentBalance,
-          paidAmount,
-          dueDate,
-          nextDueDate: new Date(currentYear, currentMonth + 1, dueDay),
-          daysUntilDue,
-          status
-        });
-      }
-
-      for (const card of cards) {
-        const dueDay = card.dueDay ?? 1;
-        const dueDate = new Date(currentYear, currentMonth, dueDay);
-        const daysUntilDue = dueDay - today;
-        const cycleStart = this.getCycleStart(dueDay, now);
-        const paidAmount = this.sumPaymentsInCycle(paymentResponse.payments, card.id, 'CreditCard', cycleStart);
-
-        let status: MonthlyPayment['status'];
-        if (roundCurrency(paidAmount) >= roundCurrency(card.currentBalance)) {
-          status = 'paid';
-        } else if (daysUntilDue < 0) {
-          status = 'overdue';
-        } else if (daysUntilDue <= 5) {
-          status = 'due-soon';
-        } else {
-          status = 'upcoming';
-        }
-
-        const minimumPaid = (card.minimumPayment === 0 && paidAmount > 0) ||
-          (card.minimumPayment > 0 && roundCurrency(paidAmount) >= roundCurrency(card.minimumPayment));
+        const minimumPaid = !isLoan && (
+          (debt.monthlyPayment === 0 && paidAmount > 0) ||
+          (debt.monthlyPayment > 0 && roundCurrency(paidAmount) >= roundCurrency(debt.monthlyPayment))
+        );
 
         monthlyPayments.push({
-          id: card.id,
-          name: card.cardName,
-          type: 'Credit Card',
-          amount: card.currentBalance,
-          minimumPayment: card.minimumPayment > 0 ? card.minimumPayment : null,
+          id: debt.id,
+          name: debt.name,
+          type: isLoan ? 'Loan' : 'Credit Card',
+          amount: dueAmount,
+          minimumPayment: !isLoan && debt.monthlyPayment > 0 ? debt.monthlyPayment : null,
           minimumPaid,
-          isAutopay: card.isAutopay ?? false,
-          currentBalance: card.currentBalance,
+          isAutopay: debt.isAutopay,
+          currentBalance: debt.currentBalance,
           paidAmount,
           dueDate,
           nextDueDate: new Date(currentYear, currentMonth + 1, dueDay),

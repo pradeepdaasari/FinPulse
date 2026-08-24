@@ -6,12 +6,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { Subject, debounceTime } from 'rxjs';
-import { LoanService } from '../../core/services/loan.service';
-import { CreditCardService } from '../../core/services/credit-card.service';
+import { DebtService } from '../../core/services/debt.service';
 import { SimulatorService } from '../../core/services/simulator.service';
 import { WhatIfResult, ExtraPaymentEntry } from '../../core/models/simulator.model';
-import { PersonalLoan } from '../../core/models/personal-loan.model';
-import { CreditCard } from '../../core/models/credit-card.model';
+import { DebtItem } from '../../core/models/debt-item.model';
 
 interface DebtSlider {
   key: string;
@@ -146,8 +144,7 @@ interface DebtSlider {
   `]
 })
 export class WhatIfComponent implements OnInit {
-  private loanService = inject(LoanService);
-  private cardService = inject(CreditCardService);
+  private debtService = inject(DebtService);
   private simulatorService = inject(SimulatorService);
 
   debts = signal<DebtSlider[]>([]);
@@ -161,23 +158,13 @@ export class WhatIfComponent implements OnInit {
   ngOnInit(): void {
     this.changeSubject.pipe(debounceTime(500)).subscribe(() => this.runSimulation());
 
-    this.loanService.getAll().subscribe({
-      next: (loans) => {
-        const items = loans.map(l => ({
-          key: `Loan:${l.id}`, debtId: l.id, debtName: l.lenderName, type: 'Loan',
-          balance: l.currentBalance, extraAmount: 0
+    this.debtService.getAll().subscribe({
+      next: (debts) => {
+        const items = debts.map(d => ({
+          key: d.key, debtId: String(d.id), debtName: d.name,
+          type: d.type, balance: d.currentBalance, extraAmount: 0
         }));
-        this.debts.set([...this.debts(), ...items]);
-      }
-    });
-
-    this.cardService.getAll().subscribe({
-      next: (cards) => {
-        const items = cards.map(c => ({
-          key: `CreditCard:${c.id}`, debtId: c.id, debtName: c.cardName, type: 'CreditCard',
-          balance: c.currentBalance, extraAmount: 0
-        }));
-        this.debts.set([...this.debts(), ...items]);
+        this.debts.set(items);
         this.loadingDebts.set(false);
       },
       error: () => { this.loadingDebts.set(false); }
