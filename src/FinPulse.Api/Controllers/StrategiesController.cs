@@ -66,8 +66,10 @@ public class StrategiesController : ControllerBase
             });
         }
 
+        snapshots = snapshots.Where(s => s.Balance > 0).ToList();
+
         // Total monthly budget = sum of all minimum payments + any extra from profile
-        var totalMinimumPayments = loans.Sum(l => l.MonthlyPayment) + cards.Sum(c => c.MinimumPayment);
+        var totalMinimumPayments = snapshots.Sum(s => s.MinimumPayment);
         var extraFromProfile = profile?.MonthlyIncome * 0.2m ?? 0m; // Use 20% of income as debt budget if available
         var totalMonthlyBudget = totalMinimumPayments + extraFromProfile;
 

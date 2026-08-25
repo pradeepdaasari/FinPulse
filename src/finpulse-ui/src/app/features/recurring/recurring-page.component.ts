@@ -45,7 +45,7 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
             <th mat-header-cell *matHeaderCellDef>Description</th>
             <td mat-cell *matCellDef="let r">
               <div class="desc-cell">
-                <span class="cat-icon">{{ r.categoryIcon }}</span>
+                <mat-icon class="cat-icon">{{ r.categoryIcon }}</mat-icon>
                 <div>
                   <div class="desc-text">{{ r.description }}</div>
                   @if (r.merchant) { <div class="merchant-text">{{ r.merchant }}</div> }
@@ -113,7 +113,7 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
     table { width: 100%; min-width: 600px; }
     .amount { font-weight: 600; color: var(--color-primary); }
     .desc-cell { display: flex; align-items: center; gap: 8px; }
-    .cat-icon { font-size: 1.2rem; }
+    .cat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); }
     .desc-text { font-weight: 500; }
     .merchant-text { font-size: 0.8rem; color: var(--color-text-secondary); }
     .toggle-label { font-size: var(--text-xs); font-weight: 500; }
