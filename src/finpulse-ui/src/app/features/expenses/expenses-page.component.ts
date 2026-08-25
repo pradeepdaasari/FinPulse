@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
@@ -10,6 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSort, MatSortModule, Sort } from '@angular/material/sort';
 import { MatFabButton } from '@angular/material/button';
 import { DailyExpenseService } from '../../core/services/daily-expense.service';
 import { DailyExpense, DailyExpenseCreate, ExpenseFilter, SpendingSummary } from '../../core/models/daily-expense.model';
@@ -18,13 +19,17 @@ import { ExpenseFilterBarComponent } from './expense-filter-bar.component';
 import { MonthComparisonComponent } from './month-comparison.component';
 import { TagSummaryComponent } from './tag-summary.component';
 
+function compare(a: number | string, b: number | string, isAsc: boolean): number {
+  return (a < b ? -1 : 1) * (isAsc ? 1 : -1);
+}
+
 @Component({
   selector: 'app-expenses-page',
   standalone: true,
   imports: [
     CommonModule, MatTabsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatTableModule, MatProgressBarModule, MatProgressSpinnerModule, MatChipsModule,
-    MatDialogModule, MatTooltipModule, CurrencyPipe, DatePipe,
+    MatDialogModule, MatTooltipModule, MatSortModule, CurrencyPipe, DatePipe,
     ExpenseFilterBarComponent, MonthComparisonComponent, TagSummaryComponent
   ],
   template: `
@@ -40,6 +45,122 @@ import { TagSummaryComponent } from './tag-summary.component';
       <mat-spinner></mat-spinner>
     } @else {
       <mat-tab-group animationDuration="200ms">
+        <!-- Transaction Log Tab -->
+        <mat-tab label="Transaction Log">
+          <div class="tab-content">
+            <div class="log-header">
+              <button mat-raised-button color="primary" (click)="addExpense()">
+                <mat-icon>add</mat-icon> Log Transaction
+              </button>
+              <button mat-stroked-button (click)="exportCsv()">
+                <mat-icon>download</mat-icon> Export CSV
+              </button>
+              <span class="expense-count">{{ filteredExpenses().length }} transactions</span>
+            </div>
+
+            <app-expense-filter-bar (filterChange)="onFilterChange($event)"></app-expense-filter-bar>
+
+            @if (filteredExpenses().length > 0) {
+              <mat-card>
+                <mat-card-content>
+                  <div class="table-wrapper">
+                    <table mat-table [dataSource]="filteredExpenses()" matSort (matSortChange)="sortData($event)">
+                      <ng-container matColumnDef="date">
+                        <th mat-header-cell *matHeaderCellDef mat-sort-header>Date</th>
+                        <td mat-cell *matCellDef="let e">{{ e.date | date:'MMM d' }}</td>
+                      </ng-container>
+                      <ng-container matColumnDef="merchant">
+                        <th mat-header-cell *matHeaderCellDef mat-sort-header>Merchant</th>
+                        <td mat-cell *matCellDef="let e">{{ e.merchant || '—' }}</td>
+                      </ng-container>
+                      <ng-container matColumnDef="description">
+                        <th mat-header-cell *matHeaderCellDef>Description</th>
+                        <td mat-cell *matCellDef="let e">
+                          {{ e.description }}
+                          @if (e.tag) {
+                            <span class="tag-badge">{{ e.tag }}</span>
+                          }
+                        </td>
+                      </ng-container>
+                      <ng-container matColumnDef="category">
+                        <th mat-header-cell *matHeaderCellDef mat-sort-header>Category</th>
+                        <td mat-cell *matCellDef="let e">
+                          <mat-chip>
+                            @if (e.categoryIcon) {
+                              <mat-icon matChipAvatar>{{ e.categoryIcon }}</mat-icon>
+                            }
+                            {{ e.categoryName }}
+                          </mat-chip>
+                        </td>
+                      </ng-container>
+                      <ng-container matColumnDef="source">
+                        <th mat-header-cell *matHeaderCellDef>Source</th>
+                        <td mat-cell *matCellDef="let e">
+                          @if (e.transactionType === 'Transfer' && e.fundingSourceName && e.toFundingSourceName) {
+                            <span class="source-cell transfer-source">
+                              <mat-icon class="source-icon">account_balance</mat-icon>
+                              {{ e.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon> {{ e.toFundingSourceName }}
+                            </span>
+                          } @else if (e.transactionType === 'CardPayment' && e.fundingSourceName && e.toFundingSourceName) {
+                            <span class="source-cell card-payment-source">
+                              <mat-icon class="source-icon">account_balance</mat-icon>
+                              {{ e.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon>
+                              <mat-icon class="source-icon">credit_card</mat-icon> {{ e.toFundingSourceName }}
+                            </span>
+                          } @else if (e.fundingSourceName) {
+                            <span class="source-cell">
+                              <mat-icon class="source-icon">{{ e.fundingSourceType === 'BankAccount' ? 'account_balance' : 'credit_card' }}</mat-icon>
+                              {{ e.fundingSourceName }}
+                            </span>
+                          } @else {
+                            —
+                          }
+                        </td>
+                      </ng-container>
+                      <ng-container matColumnDef="amount">
+                        <th mat-header-cell *matHeaderCellDef mat-sort-header>Amount</th>
+                        <td mat-cell *matCellDef="let e" [class.amount-cell]="true"
+                            [class.income-amount]="e.transactionType === 'Income'"
+                            [class.transfer-amount]="e.transactionType === 'Transfer'"
+                            [class.refund-amount]="e.transactionType === 'Refund'"
+                            [class.card-payment-amount]="e.transactionType === 'CardPayment'">
+                          @if (e.transactionType === 'Income') { +{{ e.amount | currency }} }
+                          @else if (e.transactionType === 'Transfer') { ⇔ {{ e.amount | currency }} }
+                          @else if (e.transactionType === 'Refund') { ↩ {{ e.amount | currency }} }
+                          @else if (e.transactionType === 'CardPayment') { 💳 {{ e.amount | currency }} }
+                          @else { {{ e.amount | currency }} }
+                        </td>
+                      </ng-container>
+                      <ng-container matColumnDef="actions">
+                        <th mat-header-cell *matHeaderCellDef></th>
+                        <td mat-cell *matCellDef="let e">
+                          <button mat-icon-button (click)="duplicateExpense(e)" matTooltip="Duplicate">
+                            <mat-icon>content_copy</mat-icon>
+                          </button>
+                          <button mat-icon-button (click)="editExpense(e)" matTooltip="Edit">
+                            <mat-icon>edit</mat-icon>
+                          </button>
+                          <button mat-icon-button color="warn" (click)="deleteExpense(e)" matTooltip="Delete">
+                            <mat-icon>delete</mat-icon>
+                          </button>
+                        </td>
+                      </ng-container>
+                      <tr mat-header-row *matHeaderRowDef="logColumns"></tr>
+                      <tr mat-row *matRowDef="let row; columns: logColumns;"></tr>
+                    </table>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+            } @else {
+              <mat-card>
+                <mat-card-content>
+                  <p>No expenses logged this month. Click "Log Expense" to start tracking.</p>
+                </mat-card-content>
+              </mat-card>
+            }
+          </div>
+        </mat-tab>
+
         <!-- Spending Summary Tab -->
         <mat-tab label="Spending Summary">
           <div class="tab-content">
@@ -103,121 +224,6 @@ import { TagSummaryComponent } from './tag-summary.component';
           </div>
         </mat-tab>
 
-        <!-- Transaction Log Tab -->
-        <mat-tab label="Transaction Log">
-          <div class="tab-content">
-            <div class="log-header">
-              <button mat-raised-button color="primary" (click)="addExpense()">
-                <mat-icon>add</mat-icon> Log Transaction
-              </button>
-              <button mat-stroked-button (click)="exportCsv()">
-                <mat-icon>download</mat-icon> Export CSV
-              </button>
-              <span class="expense-count">{{ expenses().length }} transactions</span>
-            </div>
-
-            <app-expense-filter-bar (filterChange)="onFilterChange($event)"></app-expense-filter-bar>
-
-            @if (expenses().length > 0) {
-              <mat-card>
-                <mat-card-content>
-                  <div class="table-wrapper">
-                    <table mat-table [dataSource]="expenses()">
-                      <ng-container matColumnDef="date">
-                        <th mat-header-cell *matHeaderCellDef>Date</th>
-                        <td mat-cell *matCellDef="let e">{{ e.date | date:'MMM d' }}</td>
-                      </ng-container>
-                      <ng-container matColumnDef="merchant">
-                        <th mat-header-cell *matHeaderCellDef>Merchant</th>
-                        <td mat-cell *matCellDef="let e">{{ e.merchant || '—' }}</td>
-                      </ng-container>
-                      <ng-container matColumnDef="description">
-                        <th mat-header-cell *matHeaderCellDef>Description</th>
-                        <td mat-cell *matCellDef="let e">
-                          {{ e.description }}
-                          @if (e.tag) {
-                            <span class="tag-badge">{{ e.tag }}</span>
-                          }
-                        </td>
-                      </ng-container>
-                      <ng-container matColumnDef="category">
-                        <th mat-header-cell *matHeaderCellDef>Category</th>
-                        <td mat-cell *matCellDef="let e">
-                          <mat-chip>
-                            @if (e.categoryIcon) {
-                              <mat-icon matChipAvatar>{{ e.categoryIcon }}</mat-icon>
-                            }
-                            {{ e.categoryName }}
-                          </mat-chip>
-                        </td>
-                      </ng-container>
-                      <ng-container matColumnDef="source">
-                        <th mat-header-cell *matHeaderCellDef>Source</th>
-                        <td mat-cell *matCellDef="let e">
-                          @if (e.transactionType === 'Transfer' && e.fundingSourceName && e.toFundingSourceName) {
-                            <span class="source-cell transfer-source">
-                              <mat-icon class="source-icon">account_balance</mat-icon>
-                              {{ e.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon> {{ e.toFundingSourceName }}
-                            </span>
-                          } @else if (e.transactionType === 'CardPayment' && e.fundingSourceName && e.toFundingSourceName) {
-                            <span class="source-cell card-payment-source">
-                              <mat-icon class="source-icon">account_balance</mat-icon>
-                              {{ e.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon>
-                              <mat-icon class="source-icon">credit_card</mat-icon> {{ e.toFundingSourceName }}
-                            </span>
-                          } @else if (e.fundingSourceName) {
-                            <span class="source-cell">
-                              <mat-icon class="source-icon">{{ e.fundingSourceType === 'BankAccount' ? 'account_balance' : 'credit_card' }}</mat-icon>
-                              {{ e.fundingSourceName }}
-                            </span>
-                          } @else {
-                            —
-                          }
-                        </td>
-                      </ng-container>
-                      <ng-container matColumnDef="amount">
-                        <th mat-header-cell *matHeaderCellDef>Amount</th>
-                        <td mat-cell *matCellDef="let e" [class.amount-cell]="true"
-                            [class.income-amount]="e.transactionType === 'Income'"
-                            [class.transfer-amount]="e.transactionType === 'Transfer'"
-                            [class.refund-amount]="e.transactionType === 'Refund'"
-                            [class.card-payment-amount]="e.transactionType === 'CardPayment'">
-                          @if (e.transactionType === 'Income') { +{{ e.amount | currency }} }
-                          @else if (e.transactionType === 'Transfer') { ↔ {{ e.amount | currency }} }
-                          @else if (e.transactionType === 'Refund') { ↩ {{ e.amount | currency }} }
-                          @else if (e.transactionType === 'CardPayment') { 💳 {{ e.amount | currency }} }
-                          @else { {{ e.amount | currency }} }
-                        </td>
-                      </ng-container>
-                      <ng-container matColumnDef="actions">
-                        <th mat-header-cell *matHeaderCellDef></th>
-                        <td mat-cell *matCellDef="let e">
-                          <button mat-icon-button (click)="duplicateExpense(e)" matTooltip="Duplicate">
-                            <mat-icon>content_copy</mat-icon>
-                          </button>
-                          <button mat-icon-button (click)="editExpense(e)" matTooltip="Edit">
-                            <mat-icon>edit</mat-icon>
-                          </button>
-                          <button mat-icon-button color="warn" (click)="deleteExpense(e)" matTooltip="Delete">
-                            <mat-icon>delete</mat-icon>
-                          </button>
-                        </td>
-                      </ng-container>
-                      <tr mat-header-row *matHeaderRowDef="logColumns"></tr>
-                      <tr mat-row *matRowDef="let row; columns: logColumns;"></tr>
-                    </table>
-                  </div>
-                </mat-card-content>
-              </mat-card>
-            } @else {
-              <mat-card>
-                <mat-card-content>
-                  <p>No expenses logged this month. Click "Log Expense" to start tracking.</p>
-                </mat-card-content>
-              </mat-card>
-            }
-          </div>
-        </mat-tab>
         <!-- Month Comparison Tab -->
         <mat-tab label="Month Comparison">
           <div class="tab-content">
@@ -311,10 +317,13 @@ export class ExpensesPageComponent implements OnInit {
   private expenseService = inject(DailyExpenseService);
   private dialog = inject(MatDialog);
 
+  @ViewChild(MatSort) sort!: MatSort;
+
   Math = Math;
 
   summary = signal<SpendingSummary[]>([]);
   expenses = signal<DailyExpense[]>([]);
+  filteredExpenses = signal<DailyExpense[]>([]);
   loading = signal(true);
   totalBudgeted = signal(0);
   totalSpent = signal(0);
@@ -345,8 +354,14 @@ export class ExpensesPageComponent implements OnInit {
       error: () => { this.loading.set(false); }
     });
     this.expenseService.getExpenses({ year: this.currentYear, month: this.currentMonth, ...this.activeFilter }).subscribe({
-      next: (data) => this.expenses.set(data),
-      error: () => this.expenses.set([])
+      next: (data) => {
+        this.expenses.set(data);
+        this.filteredExpenses.set(data);
+      },
+      error: () => {
+        this.expenses.set([]);
+        this.filteredExpenses.set([]);
+      }
     });
   }
 
@@ -373,6 +388,24 @@ export class ExpensesPageComponent implements OnInit {
     if (percent >= 100) return 'warn';
     if (percent >= 80) return 'accent';
     return 'primary';
+  }
+
+  sortData(sort: Sort): void {
+    if (!sort.active || sort.direction === '') {
+      this.filteredExpenses.set([...this.expenses()]);
+      return;
+    }
+    const sorted = [...this.expenses()].sort((a, b) => {
+      const isAsc = sort.direction === 'asc';
+      switch (sort.active) {
+        case 'date': return compare(new Date(a.date).getTime(), new Date(b.date).getTime(), isAsc);
+        case 'amount': return compare(a.amount, b.amount, isAsc);
+        case 'category': return compare(a.categoryName || '', b.categoryName || '', isAsc);
+        case 'merchant': return compare(a.merchant || '', b.merchant || '', isAsc);
+        default: return 0;
+      }
+    });
+    this.filteredExpenses.set(sorted);
   }
 
   addExpense(): void {
@@ -428,8 +461,14 @@ export class ExpensesPageComponent implements OnInit {
   }
 
   deleteExpense(expense: DailyExpense): void {
-    if (confirm(`Delete "${expense.description}"?`)) {
-      this.expenseService.delete(expense.id).subscribe(() => this.loadData());
-    }
+    import('../../shared/confirm-dialog.component').then(m => {
+      this.dialog.open(m.ConfirmDialogComponent, {
+        width: '400px',
+        data: { title: 'Delete Transaction?', message: `"${expense.description}" will be permanently removed.`, confirmText: 'Delete', color: 'warn' }
+      }).afterClosed().subscribe(confirmed => {
+        if (!confirmed) return;
+        this.expenseService.delete(expense.id).subscribe(() => this.loadData());
+      });
+    });
   }
 }

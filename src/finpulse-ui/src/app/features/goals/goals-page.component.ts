@@ -5,7 +5,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatDialog } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { SavingsGoalService } from '../../core/services/savings-goal.service';
 import { SavingsGoal } from '../../core/models/savings-goal.model';
 import { NotificationService } from '../../core/services/notification.service';
@@ -14,7 +16,7 @@ import { GoalDialogComponent } from './goal-dialog.component';
 @Component({
   selector: 'app-goals-page',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatProgressBarModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatProgressBarModule, MatProgressSpinnerModule, MatFormFieldModule, MatInputModule, MatDialogModule, CurrencyPipe, DatePipe],
   template: `
     <div class="header-row">
       <button mat-raised-button color="primary" (click)="openAdd()">
@@ -75,7 +77,11 @@ import { GoalDialogComponent } from './goal-dialog.component';
               }
             </div>
 
-            @if (getProgress(goal) >= 100) {
+            @if (getProgress(goal) < 100) {
+              <button mat-stroked-button class="contribute-btn" (click)="quickContribute(goal)">
+                <mat-icon>add_circle</mat-icon> Add Money
+              </button>
+            } @else {
               <div class="goal-complete-badge">
                 <mat-icon>celebration</mat-icon> Goal Achieved!
               </div>
@@ -130,6 +136,19 @@ import { GoalDialogComponent } from './goal-dialog.component';
       font-size: 16px;
       width: 16px;
       height: 16px;
+    }
+    .contribute-btn {
+      width: 100%;
+      margin-top: 10px;
+      border-color: var(--color-success) !important;
+      color: var(--color-success) !important;
+      font-weight: 500;
+    }
+    .contribute-btn mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      margin-right: 4px;
     }
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
@@ -189,11 +208,36 @@ export class GoalsPageComponent implements OnInit {
     });
   }
 
+  quickContribute(goal: SavingsGoal): void {
+    import('../../shared/amount-input-dialog.component').then(m => {
+      this.dialog.open(m.AmountInputDialogComponent, {
+        width: '360px',
+        data: { title: `Add to "${goal.name}"`, message: `Current: $${goal.currentAmount.toFixed(2)} of $${goal.targetAmount.toFixed(2)}`, defaultValue: 50, icon: 'savings' }
+      }).afterClosed().subscribe(amount => {
+        if (!amount) return;
+        const updated = {
+          name: goal.name,
+          targetAmount: goal.targetAmount,
+          currentAmount: goal.currentAmount + amount,
+          targetDate: goal.targetDate || undefined,
+          linkedAccountId: goal.linkedAccountId || undefined,
+          icon: goal.icon || undefined
+        };
+        this.service.update(goal.id, updated as any).subscribe({
+          next: () => { this.notify.success(`Added $${amount} to ${goal.name}`); this.loadData(); },
+          error: () => this.notify.error('Failed to update goal')
+        });
+      });
+    });
+  }
+
   deleteGoal(goal: SavingsGoal): void {
-    if (!this.notify.confirmDelete(goal.name)) return;
-    this.service.delete(goal.id).subscribe({
-      next: () => { this.notify.success('Goal deleted'); this.loadData(); },
-      error: (err) => this.notify.error(err.error?.message || 'Failed to delete')
+    this.notify.confirmDeleteAsync(goal.name).subscribe(confirmed => {
+      if (!confirmed) return;
+      this.service.delete(goal.id).subscribe({
+        next: () => { this.notify.success('Goal deleted'); this.loadData(); },
+        error: (err) => this.notify.error(err.error?.message || 'Failed to delete')
+      });
     });
   }
 }

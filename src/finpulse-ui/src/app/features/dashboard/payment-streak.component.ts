@@ -1,6 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { PaymentStreak } from '../../core/models/dashboard.model';
@@ -8,126 +7,94 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
 @Component({
   selector: 'app-payment-streak',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule],
+  imports: [CommonModule, MatIconModule],
   template: `
-    @if (streak()) {
-      <mat-card class="streak-card">
-        <mat-card-content>
-          <div class="streak-content">
-            <div class="streak-icon" aria-hidden="true">
-              <mat-icon>local_fire_department</mat-icon>
-            </div>
-            <div class="streak-info">
-              <span class="streak-count">{{ streak()!.currentStreak }}</span>
-              <span class="streak-label">month streak</span>
-            </div>
-            <div class="streak-details">
-              <div class="streak-detail">
-                <span class="detail-value">{{ streak()!.longestStreak }}</span>
-                <span class="detail-label">Best</span>
-              </div>
-              <div class="streak-detail">
-                <mat-icon class="status-icon" [class.paid]="streak()!.currentMonthAllPaid">
-                  {{ streak()!.currentMonthAllPaid ? 'check_circle' : 'pending' }}
-                </mat-icon>
-                <span class="detail-label">This Month</span>
-              </div>
-            </div>
-          </div>
-          @if (streak()?.currentStreak && streak()!.currentStreak >= 6) {
-            <div class="streak-milestone">
-              <mat-icon>local_fire_department</mat-icon>
-              {{ streak()!.currentStreak >= 12 ? 'Incredible! 1 year+' : 'Amazing! 6+ months' }}
-            </div>
+    @if (streak() && streak()!.currentStreak > 0) {
+      <div class="streak-bar">
+        <div class="streak-left">
+          <mat-icon class="fire-icon">local_fire_department</mat-icon>
+          <span class="streak-count">{{ streak()!.currentStreak }}</span>
+          <span class="streak-label">month payment streak</span>
+          @if (streak()!.currentStreak >= 6) {
+            <span class="streak-badge">{{ streak()!.currentStreak >= 12 ? '1yr+' : '6mo+' }}</span>
           }
-        </mat-card-content>
-      </mat-card>
+        </div>
+        <div class="streak-right">
+          <span class="streak-best">Best: {{ streak()!.longestStreak }}</span>
+          <mat-icon class="status-icon" [class.paid]="streak()!.currentMonthAllPaid">
+            {{ streak()!.currentMonthAllPaid ? 'check_circle' : 'radio_button_unchecked' }}
+          </mat-icon>
+          <span class="status-text">{{ streak()!.currentMonthAllPaid ? 'Paid' : 'Pending' }}</span>
+        </div>
+      </div>
     }
   `,
   styles: [`
-    .streak-card {
+    .streak-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
       margin-top: var(--spacing-md);
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-sm);
     }
-    .streak-content {
+    .streak-left {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
     }
-    .streak-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      background: rgba(234, 88, 12, 0.08);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .streak-icon mat-icon {
-      font-size: 24px;
-      width: 24px;
-      height: 24px;
-      color: var(--color-warning);
-    }
-    .streak-info {
-      display: flex;
-      flex-direction: column;
+    .fire-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: #EA580C;
     }
     .streak-count {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       font-weight: 700;
       color: var(--color-text);
-      line-height: 1;
     }
     .streak-label {
-      font-size: 0.8125rem;
+      font-size: var(--text-sm);
       color: var(--color-text-secondary);
       font-weight: 500;
     }
-    .streak-details {
-      margin-left: auto;
-      display: flex;
-      gap: 16px;
-    }
-    .streak-detail {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-    }
-    .detail-value {
-      font-size: 1.1rem;
+    .streak-badge {
+      font-size: 0.6rem;
       font-weight: 700;
-      color: var(--color-text);
-    }
-    .detail-label {
-      font-size: 0.6875rem;
-      color: var(--color-text-secondary);
-      letter-spacing: 0.03em;
-      font-weight: 600;
-    }
-    .status-icon {
-      font-size: 24px;
-      width: 24px;
-      height: 24px;
-      color: var(--color-text-secondary);
-    }
-    .status-icon.paid { color: var(--color-success); }
-    .streak-milestone {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
+      padding: 2px 6px;
       border-radius: var(--radius-full);
       background: var(--color-warning-bg);
-      color: var(--color-warning);
+      color: #EA580C;
+      text-transform: uppercase;
+    }
+    .streak-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .streak-best {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      font-weight: 500;
+    }
+    .status-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: var(--color-text-muted);
+    }
+    .status-icon.paid { color: var(--color-success); }
+    .status-text {
       font-size: var(--text-xs);
       font-weight: 600;
-      margin-top: 8px;
+      color: var(--color-text-secondary);
     }
-    .streak-milestone mat-icon {
-      font-size: 16px;
-      width: 16px;
-      height: 16px;
+    @media (max-width: 480px) {
+      .streak-label { display: none; }
     }
   `]
 })

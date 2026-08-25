@@ -41,7 +41,7 @@ interface MonthlyPayment {
       <mat-card-header>
         <mat-card-title>
           <div class="card-title-row">
-            <span class="card-title-text"><mat-icon class="card-title-icon">calendar_month</mat-icon> This Month's Payments</span>
+            <span class="card-title-text"><mat-icon class="card-title-icon">receipt_long</mat-icon> This Month's Payments</span>
             <span class="payment-count">{{ payments().length }} pending</span>
           </div>
         </mat-card-title>
@@ -160,7 +160,7 @@ interface MonthlyPayment {
                         <mat-icon class="min-paid-check" matTooltip="Minimum paid">check_circle_outline</mat-icon>
                       }
                       <button mat-icon-button color="primary" (click)="recordPayment(p)" aria-label="Record Payment">
-                        <mat-icon>price_check</mat-icon>
+                        <mat-icon>paid</mat-icon>
                       </button>
                     </div>
                   }

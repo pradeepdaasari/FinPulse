@@ -12,6 +12,8 @@ public class CreditCard
 
     public decimal CurrentBalance { get; set; }
 
+    public decimal CreditLimit { get; set; }
+
     public decimal AprPercent { get; set; }
 
     public decimal MinimumPayment { get; set; }

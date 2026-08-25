@@ -375,8 +375,14 @@ export class BudgetPageComponent implements OnInit {
   }
 
   deleteExpense(expense: BudgetExpense): void {
-    if (confirm(`Delete "${expense.name}"?`)) {
-      this.budgetService.deleteExpense(expense.id).subscribe(() => this.loadData());
-    }
+    import('../../shared/confirm-dialog.component').then(m => {
+      this.dialog.open(m.ConfirmDialogComponent, {
+        width: '400px',
+        data: { title: 'Delete Budget Item?', message: `"${expense.name}" will be removed from your budget.`, confirmText: 'Delete', color: 'warn' }
+      }).afterClosed().subscribe(confirmed => {
+        if (!confirmed) return;
+        this.budgetService.deleteExpense(expense.id).subscribe(() => this.loadData());
+      });
+    });
   }
 }

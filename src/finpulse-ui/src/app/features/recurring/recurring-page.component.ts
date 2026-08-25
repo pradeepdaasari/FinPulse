@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatDialog } from '@angular/material/dialog';
 import { RecurringService } from '../../core/services/recurring.service';
 import { RecurringTransaction } from '../../core/models/recurring.model';
@@ -15,7 +16,7 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
 @Component({
   selector: 'app-recurring-page',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatProgressSpinnerModule, MatSlideToggleModule, CurrencyPipe, DatePipe],
   template: `
     <div class="header-row">
       <button mat-raised-button color="primary" (click)="openAdd()">
@@ -73,9 +74,13 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
           <ng-container matColumnDef="status">
             <th mat-header-cell *matHeaderCellDef>Status</th>
             <td mat-cell *matCellDef="let r">
-              <mat-chip [class.active-chip]="r.isActive" [class.inactive-chip]="!r.isActive">
-                {{ r.isActive ? 'Active' : 'Paused' }}
-              </mat-chip>
+              <mat-slide-toggle
+                [checked]="r.isActive"
+                (change)="toggleStatus(r)"
+                [aria-label]="r.isActive ? 'Pause ' + r.description : 'Activate ' + r.description"
+                color="primary">
+                <span class="toggle-label">{{ r.isActive ? 'Active' : 'Paused' }}</span>
+              </mat-slide-toggle>
             </td>
           </ng-container>
 
@@ -111,8 +116,7 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
     .cat-icon { font-size: 1.2rem; }
     .desc-text { font-weight: 500; }
     .merchant-text { font-size: 0.8rem; color: var(--color-text-secondary); }
-    .active-chip { background-color: color-mix(in srgb, var(--color-success) 12%, transparent) !important; color: var(--color-success) !important; }
-    .inactive-chip { background-color: color-mix(in srgb, var(--color-warning) 12%, transparent) !important; color: var(--color-warning) !important; }
+    .toggle-label { font-size: var(--text-xs); font-weight: 500; }
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
     }
@@ -166,11 +170,51 @@ export class RecurringPageComponent implements OnInit {
     });
   }
 
+  toggleStatus(item: RecurringTransaction): void {
+    const updated = {
+      description: item.description,
+      merchant: item.merchant,
+      amount: item.amount,
+      categoryId: item.categoryId,
+      transactionType: this.transactionTypeToNumber(item.transactionType),
+      fundingSourceType: item.fundingSourceType ? this.fundingSourceToNumber(item.fundingSourceType) : undefined,
+      fundingSourceId: item.fundingSourceId,
+      frequency: this.frequencyToNumber(item.frequency),
+      nextRunDate: item.nextRunDate,
+      endDate: item.endDate,
+      isActive: !item.isActive
+    };
+    this.service.update(item.id, updated as any).subscribe({
+      next: () => {
+        this.notify.success(item.isActive ? 'Paused' : 'Activated');
+        this.loadData();
+      },
+      error: () => this.notify.error('Failed to update status')
+    });
+  }
+
+  private frequencyToNumber(freq: string): number {
+    const map: Record<string, number> = { Daily: 0, Weekly: 1, Biweekly: 2, Monthly: 3 };
+    return map[freq] ?? 3;
+  }
+
+  private transactionTypeToNumber(type: string): number {
+    const map: Record<string, number> = { Expense: 0, Income: 1, Transfer: 2, Refund: 3, CardPayment: 4 };
+    return map[type] ?? 0;
+  }
+
+  private fundingSourceToNumber(type: string): number {
+    const map: Record<string, number> = { BankAccount: 0, CreditCard: 1 };
+    return map[type] ?? 0;
+  }
+
   deleteItem(item: RecurringTransaction): void {
-    if (!this.notify.confirmDelete(item.description)) return;
-    this.service.delete(item.id).subscribe({
-      next: () => { this.notify.success('Recurring transaction deleted'); this.loadData(); },
-      error: (err) => this.notify.error(err.error?.message || 'Failed to delete')
+    this.notify.confirmDeleteAsync(item.description).subscribe(confirmed => {
+      if (!confirmed) return;
+      this.service.delete(item.id).subscribe({
+        next: () => { this.notify.success('Recurring transaction deleted'); this.loadData(); },
+        error: (err) => this.notify.error(err.error?.message || 'Failed to delete')
+      });
     });
   }
 }

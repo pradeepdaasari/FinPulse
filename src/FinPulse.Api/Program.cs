@@ -88,6 +88,24 @@ using (var scope = app.Services.CreateScope())
     }
 
     SeedData.Initialize(db);
+
+    // Seed Admin role and user
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+    if (!await roleManager.RoleExistsAsync("Admin"))
+        await roleManager.CreateAsync(new IdentityRole("Admin"));
+    if (!await roleManager.RoleExistsAsync("User"))
+        await roleManager.CreateAsync(new IdentityRole("User"));
+
+    var adminUser = await userManager.FindByNameAsync("pradeepdasari");
+    if (adminUser == null)
+    {
+        adminUser = new ApplicationUser { UserName = "pradeepdasari", Email = "pradeepdasari@finpulse.app", EmailConfirmed = true };
+        var result = await userManager.CreateAsync(adminUser, "MyDtecoFinance@27");
+        if (result.Succeeded)
+            await userManager.AddToRoleAsync(adminUser, "Admin");
+    }
 }
 
 // Configure the HTTP request pipeline.

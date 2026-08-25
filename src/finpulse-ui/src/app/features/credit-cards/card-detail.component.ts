@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,7 +7,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDialog } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { CreditCardService } from '../../core/services/credit-card.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { CreditCard } from '../../core/models/credit-card.model';
 import { PayoffEntry } from '../../core/models/dashboard.model';
 import { PaymentHistory } from '../../core/models/payment-history.model';
@@ -16,16 +19,29 @@ import { sumCurrency } from '../../core/utils/currency';
 @Component({
   selector: 'app-card-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatPaginatorModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatPaginatorModule, MatProgressSpinnerModule, MatTooltipModule, CurrencyPipe, DatePipe, DecimalPipe],
   template: `
     @if (loading()) {
       <mat-spinner></mat-spinner>
     } @else if (card()) {
       <div class="header-row">
-        <h2>{{ card()!.cardName }}</h2>
-        <button mat-button (click)="goBack()">
-          <mat-icon>arrow_back</mat-icon> Back to Cards
-        </button>
+        <div class="header-left">
+          <button mat-button (click)="goBack()">
+            <mat-icon>arrow_back</mat-icon> Back to Cards
+          </button>
+          <h2>{{ card()!.cardName }}</h2>
+        </div>
+        <div class="detail-actions">
+          <button mat-raised-button color="primary" (click)="recordPayment()" aria-label="Record payment">
+            <mat-icon>payments</mat-icon> Record Payment
+          </button>
+          <button mat-stroked-button (click)="updateBalance()" aria-label="Update balance">
+            <mat-icon>account_balance_wallet</mat-icon> Update Balance
+          </button>
+          <button mat-stroked-button color="warn" (click)="deleteCard()" aria-label="Delete card">
+            <mat-icon>delete</mat-icon> Delete
+          </button>
+        </div>
       </div>
 
       <mat-card class="detail-card">
@@ -34,6 +50,21 @@ import { sumCurrency } from '../../core/utils/currency';
             <div class="detail-item">
               <span class="label">Current Balance</span>
               <span class="value">{{ card()!.currentBalance | currency }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">Credit Limit</span>
+              <span class="value">{{ card()!.creditLimit | currency }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">Utilization</span>
+              <span class="value">
+                <div class="util-detail">
+                  <div class="util-bar-detail">
+                    <div class="util-fill-detail" [style.width.%]="getUtilization()" [class]="getUtilColor()"></div>
+                  </div>
+                  <span [class]="getUtilColor()">{{ getUtilization() | number:'1.0-0' }}%</span>
+                </div>
+              </span>
             </div>
             <div class="detail-item">
               <span class="label">APR</span>
@@ -141,6 +172,18 @@ import { sumCurrency } from '../../core/utils/currency';
       gap: var(--spacing-sm);
     }
     .header-row h2 { margin: 0; }
+    .header-left { display: flex; align-items: center; gap: var(--spacing-sm); }
+    .detail-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .detail-actions button mat-icon {
+      margin-right: 4px;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
     .detail-card { margin-bottom: var(--spacing-lg); }
     .detail-grid {
       display: grid;
@@ -163,6 +206,26 @@ import { sumCurrency } from '../../core/utils/currency';
     }
     .history-count { color: var(--color-text-secondary); }
     .amount-cell { font-weight: 600; color: var(--color-success); }
+    .util-detail {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .util-bar-detail {
+      width: 80px;
+      height: 8px;
+      background: var(--color-border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .util-fill-detail {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+    .util-green { background: #4caf50; color: #4caf50; }
+    .util-orange { background: #ff9800; color: #ff9800; }
+    .util-red { background: #f44336; color: #f44336; }
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
     }
@@ -172,6 +235,8 @@ export class CardDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private cardService = inject(CreditCardService);
+  private dialog = inject(MatDialog);
+  private notify = inject(NotificationService);
 
   card = signal<CreditCard | null>(null);
   timeline = signal<PayoffEntry[]>([]);
@@ -181,7 +246,24 @@ export class CardDetailComponent implements OnInit {
   timelineColumns = ['month', 'date', 'payment', 'principal', 'interest', 'remainingBalance'];
   paymentColumns = ['paymentDate', 'amountPaid', 'notes'];
 
+  getUtilization(): number {
+    const c = this.card();
+    if (!c || !c.creditLimit || c.creditLimit === 0) return 0;
+    return Math.min(100, (c.currentBalance / c.creditLimit) * 100);
+  }
+
+  getUtilColor(): string {
+    const util = this.getUtilization();
+    if (util > 70) return 'util-red';
+    if (util > 30) return 'util-orange';
+    return 'util-green';
+  }
+
   ngOnInit(): void {
+    this.loadCard();
+  }
+
+  loadCard(): void {
     const id = this.route.snapshot.paramMap.get('id')!;
     this.cardService.getById(id).subscribe({
       next: (card) => {
@@ -203,5 +285,48 @@ export class CardDetailComponent implements OnInit {
 
   goBack(): void {
     this.router.navigate(['/cards']);
+  }
+
+  recordPayment(): void {
+    import('../../shared/record-payment-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.RecordPaymentDialogComponent, {
+        width: '440px',
+        data: { debtType: 'CreditCard', debtId: this.card()!.id, debtName: this.card()!.cardName, amount: this.card()!.minimumPayment }
+      });
+      dialogRef.afterClosed().subscribe(result => {
+        if (result) this.loadCard();
+      });
+    });
+  }
+
+  updateBalance(): void {
+    import('./update-balance-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.UpdateBalanceDialogComponent, {
+        width: '440px',
+        data: { card: this.card() }
+      });
+      dialogRef.afterClosed().subscribe(result => {
+        if (result) this.loadCard();
+      });
+    });
+  }
+
+  deleteCard(): void {
+    import('../../shared/confirm-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.ConfirmDialogComponent, {
+        width: '400px',
+        data: { title: 'Delete Credit Card?', message: 'This action cannot be undone. All payment history for this card will be permanently removed.', confirmText: 'Delete', color: 'warn' }
+      });
+      dialogRef.afterClosed().subscribe(confirmed => {
+        if (!confirmed) return;
+        this.cardService.delete(this.card()!.id).subscribe({
+          next: () => {
+            this.notify.success('Card deleted');
+            this.router.navigate(['/cards']);
+          },
+          error: () => this.notify.error('Failed to delete card')
+        });
+      });
+    });
   }
 }

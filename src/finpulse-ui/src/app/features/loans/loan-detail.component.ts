@@ -6,7 +6,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDialog } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { LoanService } from '../../core/services/loan.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { PersonalLoan } from '../../core/models/personal-loan.model';
 import { AmortizationSchedule } from '../../core/models/dashboard.model';
 import { PaymentHistory } from '../../core/models/payment-history.model';
@@ -16,16 +19,29 @@ import { AmortizationTableComponent } from './amortization-table.component';
 @Component({
   selector: 'app-loan-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTableModule, CurrencyPipe, DatePipe, AmortizationTableComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTableModule, MatTooltipModule, CurrencyPipe, DatePipe, AmortizationTableComponent],
   template: `
     @if (loading()) {
       <mat-spinner></mat-spinner>
     } @else if (loan()) {
       <div class="header-row">
-        <h2>{{ loan()!.lenderName }}</h2>
-        <button mat-button (click)="goBack()">
-          <mat-icon>arrow_back</mat-icon> Back to Loans
-        </button>
+        <div class="header-left">
+          <button mat-button (click)="goBack()">
+            <mat-icon>arrow_back</mat-icon> Back to Loans
+          </button>
+          <h2>{{ loan()!.lenderName }}</h2>
+        </div>
+        <div class="detail-actions">
+          <button mat-raised-button color="primary" (click)="recordPayment()" aria-label="Record payment">
+            <mat-icon>payments</mat-icon> Record Payment
+          </button>
+          <button mat-stroked-button (click)="editLoan()" aria-label="Edit loan">
+            <mat-icon>edit</mat-icon> Edit
+          </button>
+          <button mat-stroked-button color="warn" (click)="deleteLoan()" aria-label="Delete loan">
+            <mat-icon>delete</mat-icon> Delete
+          </button>
+        </div>
       </div>
 
       <mat-card class="detail-card">
@@ -112,6 +128,18 @@ import { AmortizationTableComponent } from './amortization-table.component';
       gap: var(--spacing-sm);
     }
     .header-row h2 { margin: 0; }
+    .header-left { display: flex; align-items: center; gap: var(--spacing-sm); }
+    .detail-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .detail-actions button mat-icon {
+      margin-right: 4px;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
     .detail-card { margin-bottom: var(--spacing-lg); }
     .detail-grid {
       display: grid;
@@ -143,6 +171,8 @@ export class LoanDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private loanService = inject(LoanService);
+  private dialog = inject(MatDialog);
+  private notify = inject(NotificationService);
 
   loan = signal<PersonalLoan | null>(null);
   amortizationSchedule = signal<AmortizationSchedule | null>(null);
@@ -152,6 +182,10 @@ export class LoanDetailComponent implements OnInit {
   paymentColumns = ['paymentDate', 'amountPaid', 'notes'];
 
   ngOnInit(): void {
+    this.loadLoan();
+  }
+
+  loadLoan(): void {
     const id = this.route.snapshot.paramMap.get('id')!;
     this.loanService.getById(id).subscribe({
       next: (loan) => {
@@ -173,5 +207,48 @@ export class LoanDetailComponent implements OnInit {
 
   goBack(): void {
     this.router.navigate(['/loans']);
+  }
+
+  recordPayment(): void {
+    import('../../shared/record-payment-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.RecordPaymentDialogComponent, {
+        width: '440px',
+        data: { debtType: 'PersonalLoan', debtId: this.loan()!.id, debtName: this.loan()!.lenderName, amount: this.loan()!.monthlyPayment }
+      });
+      dialogRef.afterClosed().subscribe(result => {
+        if (result) this.loadLoan();
+      });
+    });
+  }
+
+  editLoan(): void {
+    import('./edit-loan-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.EditLoanDialogComponent, {
+        width: '500px',
+        data: { loan: this.loan() }
+      });
+      dialogRef.afterClosed().subscribe(result => {
+        if (result) this.loadLoan();
+      });
+    });
+  }
+
+  deleteLoan(): void {
+    import('../../shared/confirm-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.ConfirmDialogComponent, {
+        width: '400px',
+        data: { title: 'Delete Loan?', message: 'This action cannot be undone. All payment history for this loan will be permanently removed.', confirmText: 'Delete', color: 'warn' }
+      });
+      dialogRef.afterClosed().subscribe(confirmed => {
+        if (!confirmed) return;
+        this.loanService.delete(this.loan()!.id).subscribe({
+          next: () => {
+            this.notify.success('Loan deleted');
+            this.router.navigate(['/loans']);
+          },
+          error: () => this.notify.error('Failed to delete loan')
+        });
+      });
+    });
   }
 }

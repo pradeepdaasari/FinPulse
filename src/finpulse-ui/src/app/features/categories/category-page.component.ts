@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -330,6 +331,7 @@ const ICON_OPTIONS = [
 export class CategoryPageComponent implements OnInit {
   private categoryService = inject(CategoryService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
 
   allCategories = signal<Category[]>([]);
   activeTab = signal<CategoryType>('Expense');
@@ -431,10 +433,17 @@ export class CategoryPageComponent implements OnInit {
   }
 
   deleteCategory(cat: Category): void {
-    if (!confirm(`Delete "${cat.name}"? This cannot be undone.`)) return;
-    this.categoryService.delete(cat.id).subscribe({
-      next: () => this.loadCategories(),
-      error: (err) => this.showError(err)
+    import('../../shared/confirm-dialog.component').then(m => {
+      this.dialog.open(m.ConfirmDialogComponent, {
+        width: '400px',
+        data: { title: 'Delete Category?', message: `"${cat.name}" will be permanently removed. Transactions using this category will become uncategorized.`, confirmText: 'Delete', color: 'warn' }
+      }).afterClosed().subscribe(confirmed => {
+        if (!confirmed) return;
+        this.categoryService.delete(cat.id).subscribe({
+          next: () => this.loadCategories(),
+          error: (err) => this.showError(err)
+        });
+      });
     });
   }
 
