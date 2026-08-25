@@ -4,6 +4,7 @@ using FinPulse.Core.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FinPulse.Core.Migrations
 {
     [DbContext(typeof(FinPulseDbContext))]
-    partial class FinPulseDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260825140135_AddFromAccountIdToPaymentHistory")]
+    partial class AddFromAccountIdToPaymentHistory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

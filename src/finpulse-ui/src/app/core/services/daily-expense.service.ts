@@ -45,6 +45,10 @@ export class DailyExpenseService {
     return this.http.get<string[]>(`${this.baseUrl}/tags`);
   }
 
+  getTagTypes(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.baseUrl}/tag-types`);
+  }
+
   getTagSummary(tagType?: string): Observable<TagSummary[]> {
     const params: Record<string, string> = {};
     if (tagType) params['tagType'] = tagType;

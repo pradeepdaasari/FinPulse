@@ -251,6 +251,23 @@ public class ExpenseController : ControllerBase
         return Ok(tags);
     }
 
+    [HttpGet("tag-types")]
+    public async Task<ActionResult<List<string>>> GetTagTypes()
+    {
+        var defaults = new[] { "Trip", "Project", "Event", "Business", "Medical", "Gift", "Emergency", "Seasonal", "Reimbursable", "Subscription" };
+
+        var userTypes = await _db.DailyExpenses
+            .Where(e => e.UserId == UserId && e.TagType != null)
+            .Select(e => e.TagType!)
+            .Distinct()
+            .ToListAsync();
+
+        var all = defaults.Union(userTypes, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(t => t)
+            .ToList();
+        return Ok(all);
+    }
+
     [HttpGet("tag-summary")]
     public async Task<ActionResult> GetTagSummary([FromQuery] string? tagType)
     {

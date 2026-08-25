@@ -44,6 +44,10 @@ public class CreditCardsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<CreditCard>> Create(CreditCardCreateDto dto)
     {
+        var exists = await _db.CreditCards.AnyAsync(c => c.UserId == UserId && c.CardName == dto.CardName.Trim());
+        if (exists)
+            return Conflict(new { message = $"A credit card named '{dto.CardName.Trim()}' already exists." });
+
         var card = new CreditCard
         {
             CardName = dto.CardName,
@@ -69,6 +73,10 @@ public class CreditCardsController : ControllerBase
     {
         var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
         if (card is null) return NotFound();
+
+        var duplicate = await _db.CreditCards.AnyAsync(c => c.UserId == UserId && c.Id != id && c.CardName == dto.CardName.Trim());
+        if (duplicate)
+            return Conflict(new { message = $"A credit card named '{dto.CardName.Trim()}' already exists." });
 
         card.CardName = dto.CardName;
         card.CurrentBalance = dto.CurrentBalance;
@@ -126,14 +134,17 @@ public class CreditCardsController : ControllerBase
             AmountPaid = dto.AmountPaid,
             PaymentDate = dto.PaymentDate,
             Notes = dto.Notes,
-            UserId = UserId
+            UserId = UserId,
+            FromAccountId = dto.FromAccountId
         };
 
         card.CurrentBalance = Math.Max(0, card.CurrentBalance - dto.AmountPaid);
 
-        if (dto.AmountPaid >= card.MinimumPayment)
+        if (dto.FromAccountId.HasValue)
         {
-            card.MinimumPayment = 0;
+            var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == dto.FromAccountId && a.UserId == UserId);
+            if (account != null)
+                account.CurrentBalance -= dto.AmountPaid;
         }
 
         _db.PaymentHistories.Add(payment);

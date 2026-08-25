@@ -44,6 +44,10 @@ public class BankAccountsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<BankAccount>> Create(BankAccountCreateDto dto)
     {
+        var exists = await _db.BankAccounts.AnyAsync(a => a.UserId == UserId && a.AccountName == dto.AccountName.Trim());
+        if (exists)
+            return Conflict(new { message = $"A bank account named '{dto.AccountName.Trim()}' already exists." });
+
         var account = new BankAccount
         {
             AccountName = dto.AccountName,
@@ -63,6 +67,10 @@ public class BankAccountsController : ControllerBase
     {
         var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == id && a.UserId == UserId);
         if (account is null) return NotFound();
+
+        var duplicate = await _db.BankAccounts.AnyAsync(a => a.UserId == UserId && a.Id != id && a.AccountName == dto.AccountName.Trim());
+        if (duplicate)
+            return Conflict(new { message = $"A bank account named '{dto.AccountName.Trim()}' already exists." });
 
         account.AccountName = dto.AccountName;
         account.AccountType = dto.AccountType;

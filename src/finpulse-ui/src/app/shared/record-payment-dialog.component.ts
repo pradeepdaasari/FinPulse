@@ -9,8 +9,11 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSelectModule } from '@angular/material/select';
 import { CreditCardService } from '../core/services/credit-card.service';
 import { LoanService } from '../core/services/loan.service';
+import { FundingSourceService } from '../core/services/funding-source.service';
+import { FundingSource } from '../core/models/funding-source.model';
 
 export interface RecordPaymentData {
   debtId: string;
@@ -33,7 +36,8 @@ export interface RecordPaymentData {
     MatNativeDateModule,
     MatButtonModule,
     MatButtonToggleModule,
-    MatIconModule
+    MatIconModule,
+    MatSelectModule
   ],
   template: `
     <h2 mat-dialog-title>Record Payment</h2>
@@ -61,6 +65,19 @@ export interface RecordPaymentData {
           <mat-label>Payment Amount</mat-label>
           <input matInput type="number" formControlName="amountPaid" step="0.01" [readonly]="paymentType() !== 'custom'">
           <span matTextPrefix>$&nbsp;</span>
+        </mat-form-field>
+
+        <mat-form-field class="full-width">
+          <mat-label>From Account</mat-label>
+          <mat-select formControlName="fromAccountId">
+            <mat-option [value]="null">-- Select account --</mat-option>
+            @for (acct of bankAccounts(); track acct.id) {
+              <mat-option [value]="acct.id">
+                {{ acct.name }} ({{ acct.currentBalance | currency }})
+              </mat-option>
+            }
+          </mat-select>
+          <mat-icon matPrefix>account_balance</mat-icon>
         </mat-form-field>
 
         <mat-form-field class="full-width">
@@ -146,17 +163,26 @@ export class RecordPaymentDialogComponent {
   private fb = inject(FormBuilder);
   private cardService = inject(CreditCardService);
   private loanService = inject(LoanService);
+  private fundingSourceService = inject(FundingSourceService);
   private dialogRef = inject(MatDialogRef<RecordPaymentDialogComponent>);
   data: RecordPaymentData = inject(MAT_DIALOG_DATA);
 
   saving = signal(false);
-  paymentType = signal<'full' | 'minimum' | 'custom'>('custom');
+  paymentType = signal<'full' | 'minimum' | 'custom'>('full');
+  bankAccounts = signal<FundingSource[]>([]);
 
   form = this.fb.group({
-    amountPaid: [null as number | null, [Validators.required, Validators.min(0.01)]],
+    amountPaid: [this.data.currentBalance as number | null, [Validators.required, Validators.min(0.01)]],
+    fromAccountId: [null as number | null],
     paymentDate: [new Date(), Validators.required],
     notes: ['']
   });
+
+  constructor() {
+    this.fundingSourceService.getAll().subscribe(sources => {
+      this.bankAccounts.set(sources.filter(s => s.type === 'BankAccount'));
+    });
+  }
 
   setPaymentType(type: 'full' | 'minimum' | 'custom'): void {
     this.paymentType.set(type);
@@ -177,7 +203,8 @@ export class RecordPaymentDialogComponent {
     const payload = {
       amountPaid: value.amountPaid!,
       paymentDate: value.paymentDate!.toISOString(),
-      notes: value.notes || undefined
+      notes: value.notes || undefined,
+      fromAccountId: value.fromAccountId || undefined
     };
 
     const request$ = this.data.debtType === 'CreditCard'

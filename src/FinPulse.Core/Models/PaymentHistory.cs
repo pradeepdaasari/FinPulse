@@ -17,4 +17,6 @@ public class PaymentHistory
     public string? Notes { get; set; }
 
     public string? UserId { get; set; }
+
+    public int? FromAccountId { get; set; }
 }
