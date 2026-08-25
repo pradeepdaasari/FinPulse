@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormArray, FormGroup, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -61,8 +61,12 @@ export interface ExpenseDialogData {
         @if (form.value.transactionType !== 'Transfer' && form.value.transactionType !== 'CardPayment') {
           <mat-form-field appearance="outline">
             <mat-label>Category</mat-label>
-            <mat-select formControlName="categoryId">
-              @for (parent of categories(); track parent.id) {
+            <mat-select formControlName="categoryId" (opened)="categorySearch.set('')">
+              <div class="category-search-box">
+                <mat-icon>search</mat-icon>
+                <input matInput placeholder="Search categories..." (input)="categorySearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+              </div>
+              @for (parent of filteredCategories(); track parent.id) {
                 <mat-optgroup [label]="parent.name">
                   @for (child of parent.children; track child.id) {
                     <mat-option [value]="child.id">{{ child.name }}</mat-option>
@@ -161,7 +165,6 @@ export interface ExpenseDialogData {
           <mat-form-field appearance="outline">
             <mat-label>{{ form.value.transactionType === 'Income' ? 'Received into' : form.value.transactionType === 'Refund' ? 'Refunded to' : 'Paid with' }}</mat-label>
             <mat-select formControlName="fundingSourceKey">
-              <mat-option [value]="null">-- None --</mat-option>
               @for (source of filteredSources(); track source.type + source.id) {
                 <mat-option [value]="source.type + ':' + source.id">
                   <mat-icon>{{ source.type === 'BankAccount' ? 'account_balance' : 'credit_card' }}</mat-icon>
@@ -347,6 +350,19 @@ export interface ExpenseDialogData {
     }
     .flex-1 { flex: 1; }
     .add-cat-btn { align-self: flex-start; }
+    .category-search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--color-border);
+      position: sticky;
+      top: 0;
+      background: var(--color-surface);
+      z-index: 1;
+    }
+    .category-search-box mat-icon { font-size: 20px; width: 20px; height: 20px; opacity: 0.6; }
+    .category-search-box input { border: none; outline: none; flex: 1; font-size: 0.875rem; background: transparent; color: inherit; }
     .split-section { border-top: 1px solid var(--color-border); padding-top: 12px; margin-top: 8px; }
     .split-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .split-title { font-weight: 500; font-size: 0.9rem; }
@@ -368,6 +384,19 @@ export class AddExpenseDialogComponent implements OnInit {
   data = inject<ExpenseDialogData>(MAT_DIALOG_DATA);
 
   categories = signal<Category[]>([]);
+  categorySearch = signal('');
+  filteredCategories = computed(() => {
+    const q = this.categorySearch().toLowerCase();
+    if (!q) return this.categories();
+    return this.categories()
+      .map(parent => {
+        const matchedChildren = (parent.children || []).filter(c => c.name.toLowerCase().includes(q));
+        if (parent.name.toLowerCase().includes(q)) return parent;
+        if (matchedChildren.length > 0) return { ...parent, children: matchedChildren };
+        return null;
+      })
+      .filter(Boolean) as Category[];
+  });
   allSources = signal<FundingSource[]>([]);
   filteredSources = signal<FundingSource[]>([]);
   bankAccountSources = signal<FundingSource[]>([]);
@@ -429,7 +458,7 @@ export class AddExpenseDialogComponent implements OnInit {
     amount: [this.source?.amount ?? null as number | null, [Validators.required, Validators.min(0.01)]],
     merchant: [this.source?.merchant ?? ''],
     description: [this.source?.description ?? '', [Validators.required, Validators.maxLength(500)]],
-    fundingSourceKey: [this.buildSourceKey(this.source as DailyExpense | null) as string | null],
+    fundingSourceKey: [this.buildSourceKey(this.source as DailyExpense | null) as string | null, Validators.required],
     toFundingSourceKey: [this.buildToSourceKey(this.source as DailyExpense | null) as string | null],
     tag: [this.source?.tag ?? ''],
     tagType: [this.source?.tagType ?? ''],

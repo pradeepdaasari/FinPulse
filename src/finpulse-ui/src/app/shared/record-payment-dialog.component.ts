@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { CreditCardService } from '../core/services/credit-card.service';
 import { LoanService } from '../core/services/loan.service';
@@ -16,6 +17,7 @@ export interface RecordPaymentData {
   debtName: string;
   debtType: 'PersonalLoan' | 'CreditCard';
   currentBalance: number;
+  minimumPayment?: number;
 }
 
 @Component({
@@ -30,6 +32,7 @@ export interface RecordPaymentData {
     MatDatepickerModule,
     MatNativeDateModule,
     MatButtonModule,
+    MatButtonToggleModule,
     MatIconModule
   ],
   template: `
@@ -44,11 +47,20 @@ export interface RecordPaymentData {
       </div>
 
       <form [formGroup]="form" class="payment-form">
+        <div class="payment-type-row">
+          <mat-button-toggle-group [value]="paymentType()" (change)="setPaymentType($event.value)">
+            <mat-button-toggle value="full">Full ({{ data.currentBalance | currency }})</mat-button-toggle>
+            @if (data.minimumPayment) {
+              <mat-button-toggle value="minimum">Min ({{ data.minimumPayment | currency }})</mat-button-toggle>
+            }
+            <mat-button-toggle value="custom">Custom</mat-button-toggle>
+          </mat-button-toggle-group>
+        </div>
+
         <mat-form-field class="full-width">
           <mat-label>Payment Amount</mat-label>
-          <input matInput type="number" formControlName="amountPaid" step="0.01">
+          <input matInput type="number" formControlName="amountPaid" step="0.01" [readonly]="paymentType() !== 'custom'">
           <span matTextPrefix>$&nbsp;</span>
-          <mat-hint>Enter partial or full amount</mat-hint>
         </mat-form-field>
 
         <mat-form-field class="full-width">
@@ -110,6 +122,16 @@ export interface RecordPaymentData {
       flex-direction: column;
       gap: var(--spacing-xs);
     }
+    .payment-type-row {
+      margin-bottom: var(--spacing-sm);
+    }
+    .payment-type-row mat-button-toggle-group {
+      width: 100%;
+    }
+    .payment-type-row mat-button-toggle {
+      flex: 1;
+      font-size: 0.8125rem;
+    }
     .full-width {
       width: 100%;
     }
@@ -128,12 +150,24 @@ export class RecordPaymentDialogComponent {
   data: RecordPaymentData = inject(MAT_DIALOG_DATA);
 
   saving = signal(false);
+  paymentType = signal<'full' | 'minimum' | 'custom'>('custom');
 
   form = this.fb.group({
     amountPaid: [null as number | null, [Validators.required, Validators.min(0.01)]],
     paymentDate: [new Date(), Validators.required],
     notes: ['']
   });
+
+  setPaymentType(type: 'full' | 'minimum' | 'custom'): void {
+    this.paymentType.set(type);
+    if (type === 'full') {
+      this.form.patchValue({ amountPaid: this.data.currentBalance });
+    } else if (type === 'minimum') {
+      this.form.patchValue({ amountPaid: this.data.minimumPayment ?? null });
+    } else {
+      this.form.patchValue({ amountPaid: null });
+    }
+  }
 
   save(): void {
     if (this.form.invalid) return;

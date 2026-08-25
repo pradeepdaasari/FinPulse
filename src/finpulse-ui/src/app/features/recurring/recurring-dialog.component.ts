@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { CategoryService } from '../../core/services/category.service';
@@ -18,7 +19,7 @@ import { RecurringTransaction } from '../../core/models/recurring.model';
   imports: [
     CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatButtonModule, MatDatepickerModule,
-    MatSlideToggleModule, MatButtonToggleModule
+    MatNativeDateModule, MatSlideToggleModule, MatButtonToggleModule
   ],
   template: `
     <h2 mat-dialog-title>{{ data ? 'Edit' : 'Add' }} Recurring Transaction</h2>
@@ -43,8 +44,15 @@ import { RecurringTransaction } from '../../core/models/recurring.model';
         <mat-form-field appearance="outline">
           <mat-label>Category</mat-label>
           <mat-select formControlName="categoryId">
-            @for (cat of categories(); track cat.id) {
-              <mat-option [value]="cat.id">{{ cat.icon }} {{ cat.name }}</mat-option>
+            @for (parent of categories(); track parent.id) {
+              <mat-optgroup [label]="parent.name">
+                @for (child of parent.children; track child.id) {
+                  <mat-option [value]="child.id">{{ child.name }}</mat-option>
+                }
+                @if (!parent.children || parent.children.length === 0) {
+                  <mat-option [value]="parent.id">{{ parent.name }}</mat-option>
+                }
+              </mat-optgroup>
             }
           </mat-select>
         </mat-form-field>

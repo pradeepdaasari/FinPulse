@@ -10,6 +10,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { filter } from 'rxjs/operators';
 import { AuthService } from '../core/services/auth.service';
+import { DailyExpenseService } from '../core/services/daily-expense.service';
 import { CommandPaletteComponent } from './command-palette.component';
 
 @Component({
@@ -372,6 +373,7 @@ export class NavShellComponent {
   private breakpointObserver = inject(BreakpointObserver);
   private router = inject(Router);
   private authService = inject(AuthService);
+  private expenseService = inject(DailyExpenseService);
   private dialog = inject(MatDialog);
 
   isMobile = signal(false);
@@ -421,9 +423,17 @@ export class NavShellComponent {
 
   openQuickExpense(): void {
     import('../features/expenses/add-expense-dialog.component').then(m => {
-      this.dialog.open(m.AddExpenseDialogComponent, {
+      const ref = this.dialog.open(m.AddExpenseDialogComponent, {
         width: '480px',
         data: { expense: null }
+      });
+      ref.afterClosed().subscribe((result: any) => {
+        if (!result) return;
+        if (result.splits) {
+          this.expenseService.createSplit(result.splits).subscribe();
+        } else {
+          this.expenseService.create(result).subscribe();
+        }
       });
     });
   }
