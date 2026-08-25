@@ -387,7 +387,8 @@ export class MonthlyPaymentsComponent implements OnInit {
         debtId: payment.id,
         debtName: payment.name,
         debtType: payment.type === 'Loan' ? 'PersonalLoan' : 'CreditCard',
-        currentBalance: payment.currentBalance
+        currentBalance: payment.currentBalance,
+        minimumPayment: payment.minimumPayment
       }
     });
     dialogRef.afterClosed().subscribe(result => {

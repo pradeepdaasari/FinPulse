@@ -158,7 +158,8 @@ export class LoanListComponent implements OnInit {
         debtId: loan.id,
         debtName: loan.lenderName,
         debtType: 'PersonalLoan',
-        currentBalance: loan.currentBalance
+        currentBalance: loan.currentBalance,
+        minimumPayment: loan.monthlyPayment
       }
     });
     dialogRef.afterClosed().subscribe(result => {

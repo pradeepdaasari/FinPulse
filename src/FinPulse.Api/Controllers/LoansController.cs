@@ -44,6 +44,10 @@ public class LoansController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<PersonalLoan>> Create(LoanCreateDto dto)
     {
+        var exists = await _db.PersonalLoans.AnyAsync(l => l.UserId == UserId && l.LenderName == dto.LenderName.Trim());
+        if (exists)
+            return Conflict(new { message = $"A loan from '{dto.LenderName.Trim()}' already exists." });
+
         var loan = new PersonalLoan
         {
             LenderName = dto.LenderName,
@@ -71,6 +75,10 @@ public class LoansController : ControllerBase
     {
         var loan = await _db.PersonalLoans.FirstOrDefaultAsync(l => l.Id == id && l.UserId == UserId);
         if (loan is null) return NotFound();
+
+        var duplicate = await _db.PersonalLoans.AnyAsync(l => l.UserId == UserId && l.Id != id && l.LenderName == dto.LenderName.Trim());
+        if (duplicate)
+            return Conflict(new { message = $"A loan from '{dto.LenderName.Trim()}' already exists." });
 
         loan.LenderName = dto.LenderName;
         loan.OriginalAmount = dto.OriginalAmount;
@@ -132,10 +140,18 @@ public class LoansController : ControllerBase
             AmountPaid = dto.AmountPaid,
             PaymentDate = dto.PaymentDate,
             Notes = dto.Notes,
-            UserId = UserId
+            UserId = UserId,
+            FromAccountId = dto.FromAccountId
         };
 
         loan.CurrentBalance = Math.Max(0, loan.CurrentBalance - dto.AmountPaid);
+
+        if (dto.FromAccountId.HasValue)
+        {
+            var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == dto.FromAccountId && a.UserId == UserId);
+            if (account != null)
+                account.CurrentBalance -= dto.AmountPaid;
+        }
 
         _db.PaymentHistories.Add(payment);
         await _db.SaveChangesAsync();

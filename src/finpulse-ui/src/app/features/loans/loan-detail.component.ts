@@ -213,7 +213,7 @@ export class LoanDetailComponent implements OnInit {
     import('../../shared/record-payment-dialog.component').then(m => {
       const dialogRef = this.dialog.open(m.RecordPaymentDialogComponent, {
         width: '440px',
-        data: { debtType: 'PersonalLoan', debtId: this.loan()!.id, debtName: this.loan()!.lenderName, amount: this.loan()!.monthlyPayment }
+        data: { debtType: 'PersonalLoan', debtId: this.loan()!.id, debtName: this.loan()!.lenderName, currentBalance: this.loan()!.currentBalance, minimumPayment: this.loan()!.monthlyPayment }
       });
       dialogRef.afterClosed().subscribe(result => {
         if (result) this.loadLoan();

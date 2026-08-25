@@ -12,4 +12,6 @@ public class PaymentCreateDto
     public DateTime PaymentDate { get; set; }
 
     public string? Notes { get; set; }
+
+    public int? FromAccountId { get; set; }
 }

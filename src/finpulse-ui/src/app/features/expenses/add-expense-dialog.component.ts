@@ -206,16 +206,29 @@ export interface ExpenseDialogData {
 
         <mat-form-field appearance="outline">
           <mat-label>Tag Type (optional)</mat-label>
-          <mat-select formControlName="tagType">
+          <mat-select formControlName="tagType" (opened)="tagTypeSearch.set('')">
+            <div class="category-search-box">
+              <mat-icon>search</mat-icon>
+              <input matInput placeholder="Search tag types..." (input)="tagTypeSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+            </div>
             <mat-option [value]="''">-- None --</mat-option>
-            <mat-option value="Trip">Trip / Vacation</mat-option>
-            <mat-option value="Project">Project</mat-option>
-            <mat-option value="Event">Event</mat-option>
-            <mat-option value="Business">Business</mat-option>
-            <mat-option value="Other">Other</mat-option>
+            @for (tt of filteredTagTypes(); track tt) {
+              <mat-option [value]="tt">{{ tt }}</mat-option>
+            }
+            <mat-option value="__other__">+ New tag type...</mat-option>
           </mat-select>
           <mat-icon matPrefix>category</mat-icon>
         </mat-form-field>
+        @if (form.value.tagType === '__other__') {
+          <mat-form-field appearance="outline">
+            <mat-label>New Tag Type</mat-label>
+            <input matInput formControlName="customTagType" placeholder="Enter new tag type" (input)="customTagTypeValue.set($any($event.target).value)">
+            <mat-icon matPrefix>edit</mat-icon>
+            @if (isTagTypeDuplicate()) {
+              <mat-hint class="warn-hint">This tag type already exists — select it from the dropdown instead.</mat-hint>
+            }
+          </mat-form-field>
+        }
       </form>
     @if (splitMode()) {
       <div class="split-section">
@@ -363,6 +376,7 @@ export interface ExpenseDialogData {
     }
     .category-search-box mat-icon { font-size: 20px; width: 20px; height: 20px; opacity: 0.6; }
     .category-search-box input { border: none; outline: none; flex: 1; font-size: 0.875rem; background: transparent; color: inherit; }
+    .warn-hint { color: #e65100 !important; }
     .split-section { border-top: 1px solid var(--color-border); padding-top: 12px; margin-top: 8px; }
     .split-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .split-title { font-weight: 500; font-size: 0.9rem; }
@@ -405,6 +419,17 @@ export class AddExpenseDialogComponent implements OnInit {
   showNewCategory = signal(false);
   allTagOptions = signal<string[]>([]);
   filteredTagOptions = signal<string[]>([]);
+  tagTypes = signal<string[]>([]);
+  tagTypeSearch = signal('');
+  filteredTagTypes = computed(() => {
+    const q = this.tagTypeSearch().toLowerCase();
+    return q ? this.tagTypes().filter(t => t.toLowerCase().includes(q)) : this.tagTypes();
+  });
+  customTagTypeValue = signal('');
+  isTagTypeDuplicate = computed(() => {
+    const custom = this.customTagTypeValue().toLowerCase().trim();
+    return custom.length > 0 && this.tagTypes().some(t => t.toLowerCase() === custom);
+  });
   filteredMerchants = signal<string[]>([]);
   splitMode = signal(false);
   splitRows = this.fb.array<FormGroup>([]);
@@ -462,6 +487,7 @@ export class AddExpenseDialogComponent implements OnInit {
     toFundingSourceKey: [this.buildToSourceKey(this.source as DailyExpense | null) as string | null],
     tag: [this.source?.tag ?? ''],
     tagType: [this.source?.tagType ?? ''],
+    customTagType: [''],
     newCategoryName: [''],
     newCategoryParent: [null as number | null]
   });
@@ -476,6 +502,7 @@ export class AddExpenseDialogComponent implements OnInit {
       this.allTagOptions.set(tags);
       this.filteredTagOptions.set(tags);
     });
+    this.expenseService.getTagTypes().subscribe(types => this.tagTypes.set(types));
     this.merchantService.getMerchants().subscribe(merchants => {
       this.filteredMerchants.set(merchants.slice(0, 10));
     });
@@ -578,6 +605,8 @@ export class AddExpenseDialogComponent implements OnInit {
       fundingSourceType = 'BankAccount';
     }
 
+    const resolvedTagType = val.tagType === '__other__' ? (val.customTagType || null) : (val.tagType || null);
+
     if (this.splitMode()) {
       const splits: DailyExpenseCreate[] = this.splitRows.controls.map(ctrl => {
         const row = (ctrl as FormGroup).value;
@@ -592,7 +621,7 @@ export class AddExpenseDialogComponent implements OnInit {
           fundingSourceId,
           toFundingSourceId: null,
           tag: val.tag || null,
-          tagType: val.tag ? (val.tagType || null) : null
+          tagType: val.tag ? resolvedTagType : null
         };
       });
       this.dialogRef.close({ splits });
@@ -610,7 +639,7 @@ export class AddExpenseDialogComponent implements OnInit {
       fundingSourceId,
       toFundingSourceId,
       tag: val.tag || null,
-      tagType: val.tag ? (val.tagType || null) : null
+      tagType: val.tag ? resolvedTagType : null
     };
     this.dialogRef.close(expense);
   }
