@@ -18,31 +18,22 @@ public class AuthController : ControllerBase
         _signInManager = signInManager;
     }
 
-    [HttpPost("register")]
-    [AllowAnonymous]
-    public async Task<IActionResult> Register(RegisterRequest request)
-    {
-        var user = new ApplicationUser { UserName = request.Email, Email = request.Email };
-        var result = await _userManager.CreateAsync(user, request.Password);
-
-        if (!result.Succeeded)
-            return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
-
-        await _signInManager.SignInAsync(user, isPersistent: true);
-        return Ok(new { email = user.Email });
-    }
-
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<IActionResult> Login(LoginRequest request)
     {
         var result = await _signInManager.PasswordSignInAsync(
-            request.Email, request.Password, isPersistent: true, lockoutOnFailure: false);
+            request.Username, request.Password, isPersistent: true, lockoutOnFailure: false);
+
+        if (result.IsLockedOut)
+            return Unauthorized(new { error = "Account is deactivated. Contact administrator." });
 
         if (!result.Succeeded)
-            return Unauthorized(new { error = "Invalid email or password" });
+            return Unauthorized(new { error = "Invalid username or password" });
 
-        return Ok(new { email = request.Email });
+        var user = await _userManager.FindByNameAsync(request.Username);
+        var roles = await _userManager.GetRolesAsync(user!);
+        return Ok(new { email = user!.Email, role = roles.FirstOrDefault() ?? "User" });
     }
 
     [HttpPost("logout")]
@@ -54,11 +45,14 @@ public class AuthController : ControllerBase
 
     [HttpGet("me")]
     [Authorize]
-    public IActionResult Me()
+    public async Task<IActionResult> Me()
     {
-        return Ok(new { email = User.Identity?.Name });
+        var user = await _userManager.FindByNameAsync(User.Identity?.Name!);
+        if (user == null)
+            return Unauthorized();
+        var roles = await _userManager.GetRolesAsync(user);
+        return Ok(new { email = user.Email, role = roles.FirstOrDefault() ?? "User" });
     }
 }
 
-public record RegisterRequest(string Email, string Password);
-public record LoginRequest(string Email, string Password);
+public record LoginRequest(string Username, string Password);

@@ -48,6 +48,7 @@ public class CreditCardsController : ControllerBase
         {
             CardName = dto.CardName,
             CurrentBalance = dto.CurrentBalance,
+            CreditLimit = dto.CreditLimit,
             AprPercent = dto.AprPercent,
             MinimumPayment = dto.MinimumPayment,
             DueDay = dto.DueDay,
@@ -71,6 +72,7 @@ public class CreditCardsController : ControllerBase
 
         card.CardName = dto.CardName;
         card.CurrentBalance = dto.CurrentBalance;
+        card.CreditLimit = dto.CreditLimit;
         card.AprPercent = dto.AprPercent;
         card.MinimumPayment = dto.MinimumPayment;
         card.DueDay = dto.DueDay;

@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule, CurrencyPipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -18,7 +18,7 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
 @Component({
   selector: 'app-card-list',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatProgressSpinnerModule, CurrencyPipe],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatProgressSpinnerModule, CurrencyPipe, DecimalPipe],
   template: `
     <div class="header-row">
       <button mat-raised-button color="primary" (click)="openAddCard()">
@@ -56,6 +56,18 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
           <ng-container matColumnDef="currentBalance">
             <th mat-header-cell *matHeaderCellDef>Balance</th>
             <td mat-cell *matCellDef="let card">{{ card.currentBalance | currency }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="utilization">
+            <th mat-header-cell *matHeaderCellDef>Utilization</th>
+            <td mat-cell *matCellDef="let card">
+              <div class="util-cell">
+                <div class="util-bar">
+                  <div class="util-fill" [style.width.%]="getUtilization(card)" [class]="getUtilColor(card)"></div>
+                </div>
+                <span class="util-pct">{{ getUtilization(card) | number:'1.0-0' }}%</span>
+              </div>
+            </td>
           </ng-container>
 
           <ng-container matColumnDef="aprPercent">
@@ -120,6 +132,31 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
       margin-left: 8px;
       font-size: 10px;
     }
+    .util-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .util-bar {
+      width: 60px;
+      height: 6px;
+      background: var(--color-border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .util-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    .util-green { background: #4caf50; }
+    .util-orange { background: #ff9800; }
+    .util-red { background: #f44336; }
+    .util-pct {
+      font-size: 12px;
+      font-weight: 600;
+      min-width: 32px;
+    }
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
     }
@@ -133,7 +170,7 @@ export class CardListComponent implements OnInit {
 
   cards = signal<CreditCard[]>([]);
   loading = signal(true);
-  displayedColumns = ['cardName', 'currentBalance', 'aprPercent', 'minimumPayment', 'dueDay', 'actions'];
+  displayedColumns = ['cardName', 'currentBalance', 'utilization', 'aprPercent', 'minimumPayment', 'dueDay', 'actions'];
 
   ngOnInit(): void {
     this.loadCards();
@@ -147,6 +184,18 @@ export class CardListComponent implements OnInit {
       },
       error: () => { this.loading.set(false); }
     });
+  }
+
+  getUtilization(card: CreditCard): number {
+    if (!card.creditLimit || card.creditLimit === 0) return 0;
+    return Math.min(100, (card.currentBalance / card.creditLimit) * 100);
+  }
+
+  getUtilColor(card: CreditCard): string {
+    const util = this.getUtilization(card);
+    if (util > 70) return 'util-red';
+    if (util > 30) return 'util-orange';
+    return 'util-green';
   }
 
   isPromoActive(card: CreditCard): boolean {

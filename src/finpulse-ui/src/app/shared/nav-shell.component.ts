@@ -10,6 +10,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { filter } from 'rxjs/operators';
 import { AuthService } from '../core/services/auth.service';
+import { CommandPaletteComponent } from './command-palette.component';
 
 @Component({
   selector: 'app-nav-shell',
@@ -23,7 +24,8 @@ import { AuthService } from '../core/services/auth.service';
     MatListModule,
     MatIconModule,
     MatButtonModule,
-    MatTooltipModule
+    MatTooltipModule,
+    CommandPaletteComponent
   ],
   template: `
     <mat-sidenav-container class="shell-container">
@@ -113,6 +115,15 @@ import { AuthService } from '../core/services/auth.service';
             <mat-icon matListItemIcon>settings</mat-icon>
             <span matListItemTitle>Setup</span>
           </a>
+
+          @if (isAdmin()) {
+            <div class="nav-divider"></div>
+            <a mat-list-item routerLink="/admin/users" routerLinkActive="active-link"
+               (click)="onNavClick()">
+              <mat-icon matListItemIcon>admin_panel_settings</mat-icon>
+              <span matListItemTitle>User Management</span>
+            </a>
+          }
         </mat-nav-list>
       </mat-sidenav>
 
@@ -125,6 +136,11 @@ import { AuthService } from '../core/services/auth.service';
           }
           <span class="toolbar-title">{{ pageTitle() }}</span>
           <span class="toolbar-spacer"></span>
+          <button mat-button class="search-trigger" (click)="openPalette()" aria-label="Search">
+            <mat-icon>search</mat-icon>
+            <span class="search-hint">Search</span>
+            <span class="search-kbd">&#8984;K</span>
+          </button>
           <div class="user-info">
             <mat-icon class="user-avatar">account_circle</mat-icon>
             <span class="user-email">{{ userEmail() }}</span>
@@ -142,6 +158,7 @@ import { AuthService } from '../core/services/auth.service';
     <button mat-fab class="global-fab" (click)="openQuickExpense()" aria-label="Log expense">
       <mat-icon>add</mat-icon>
     </button>
+    <app-command-palette></app-command-palette>
   `,
   styles: [`
     .shell-container {
@@ -324,10 +341,33 @@ import { AuthService } from '../core/services/auth.service';
         bottom: 80px;
       }
     }
+
+    .search-trigger {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px !important;
+      border-radius: var(--radius-full) !important;
+      background: var(--color-surface-secondary) !important;
+      color: var(--color-text-secondary) !important;
+      font-size: var(--text-xs) !important;
+      min-height: 32px !important;
+      margin-right: 8px;
+    }
+    .search-trigger mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .search-hint { font-weight: 500; }
+    .search-kbd {
+      font-size: 0.65rem;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+    }
   `]
 })
 export class NavShellComponent {
   @ViewChild('sidenav') sidenav!: MatSidenav;
+  @ViewChild(CommandPaletteComponent) commandPalette!: CommandPaletteComponent;
 
   private breakpointObserver = inject(BreakpointObserver);
   private router = inject(Router);
@@ -337,6 +377,7 @@ export class NavShellComponent {
   isMobile = signal(false);
   pageTitle = signal('Dashboard');
   userEmail = computed(() => this.authService.currentUser()?.email ?? '');
+  isAdmin = computed(() => this.authService.isAdmin());
 
   private pageTitles: Record<string, string> = {
     '/dashboard': 'Dashboard',
@@ -352,6 +393,7 @@ export class NavShellComponent {
     '/goals': 'Goals',
     '/payments': 'Payments',
     '/setup': 'Setup',
+    '/admin': 'User Management',
   };
 
   constructor() {
@@ -384,5 +426,9 @@ export class NavShellComponent {
         data: { expense: null }
       });
     });
+  }
+
+  openPalette(): void {
+    this.commandPalette.open();
   }
 }

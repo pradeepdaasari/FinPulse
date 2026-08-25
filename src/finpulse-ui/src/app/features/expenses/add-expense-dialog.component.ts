@@ -16,6 +16,7 @@ import { Category } from '../../core/models/category.model';
 import { CategoryService } from '../../core/services/category.service';
 import { DailyExpenseService } from '../../core/services/daily-expense.service';
 import { FundingSourceService } from '../../core/services/funding-source.service';
+import { MerchantService } from '../../core/services/merchant.service';
 import { FundingSource } from '../../core/models/funding-source.model';
 
 export interface ExpenseDialogData {
@@ -174,7 +175,12 @@ export interface ExpenseDialogData {
         @if (form.value.transactionType !== 'Transfer' && form.value.transactionType !== 'CardPayment') {
           <mat-form-field appearance="outline">
             <mat-label>Merchant (optional)</mat-label>
-            <input matInput formControlName="merchant" placeholder="e.g. Walmart, Shell, Chipotle">
+            <input matInput formControlName="merchant" [matAutocomplete]="merchantAuto" (input)="filterMerchants($event)" placeholder="e.g. Walmart, Shell, Chipotle">
+            <mat-autocomplete #merchantAuto="matAutocomplete">
+              @for (merchant of filteredMerchants(); track merchant) {
+                <mat-option [value]="merchant">{{ merchant }}</mat-option>
+              }
+            </mat-autocomplete>
           </mat-form-field>
         }
 
@@ -358,6 +364,7 @@ export class AddExpenseDialogComponent implements OnInit {
   private categoryService = inject(CategoryService);
   private expenseService = inject(DailyExpenseService);
   private fundingSourceService = inject(FundingSourceService);
+  private merchantService = inject(MerchantService);
   data = inject<ExpenseDialogData>(MAT_DIALOG_DATA);
 
   categories = signal<Category[]>([]);
@@ -369,6 +376,7 @@ export class AddExpenseDialogComponent implements OnInit {
   showNewCategory = signal(false);
   allTagOptions = signal<string[]>([]);
   filteredTagOptions = signal<string[]>([]);
+  filteredMerchants = signal<string[]>([]);
   splitMode = signal(false);
   splitRows = this.fb.array<FormGroup>([]);
   splitTotal = signal(0);
@@ -381,6 +389,11 @@ export class AddExpenseDialogComponent implements OnInit {
   onTagDialogInput(): void {
     const q = (this.form.value.tag || '').toLowerCase();
     this.filteredTagOptions.set(this.allTagOptions().filter(t => t.toLowerCase().includes(q)));
+  }
+
+  filterMerchants(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.filteredMerchants.set(this.merchantService.filter(value));
   }
 
   enableSplit(): void {
@@ -433,6 +446,9 @@ export class AddExpenseDialogComponent implements OnInit {
     this.expenseService.getTags().subscribe(tags => {
       this.allTagOptions.set(tags);
       this.filteredTagOptions.set(tags);
+    });
+    this.merchantService.getMerchants().subscribe(merchants => {
+      this.filteredMerchants.set(merchants.slice(0, 10));
     });
 
     this.form.get('transactionType')!.valueChanges.subscribe(() => {

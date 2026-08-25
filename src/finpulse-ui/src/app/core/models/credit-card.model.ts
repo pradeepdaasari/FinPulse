@@ -2,6 +2,7 @@ export interface CreditCard {
   id: string;
   cardName: string;
   currentBalance: number;
+  creditLimit: number;
   aprPercent: number;
   minimumPayment: number;
   dueDay: number;

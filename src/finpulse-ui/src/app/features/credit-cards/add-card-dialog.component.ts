@@ -39,11 +39,19 @@ import { CreditCardService } from '../../core/services/credit-card.service';
 
         <div class="form-row">
           <mat-form-field>
+            <mat-label>Credit Limit</mat-label>
+            <input matInput type="number" formControlName="creditLimit">
+            <span matTextPrefix>$&nbsp;</span>
+          </mat-form-field>
+
+          <mat-form-field>
             <mat-label>Statement Balance</mat-label>
             <input matInput type="number" formControlName="currentBalance">
             <span matTextPrefix>$&nbsp;</span>
           </mat-form-field>
+        </div>
 
+        <div class="form-row">
           <mat-form-field>
             <mat-label>Minimum Payment</mat-label>
             <input matInput type="number" formControlName="minimumPayment">
@@ -163,6 +171,7 @@ export class AddCardDialogComponent {
 
   form = this.fb.group({
     cardName: ['', Validators.required],
+    creditLimit: [null as number | null, [Validators.required, Validators.min(1)]],
     currentBalance: [null as number | null, [Validators.required, Validators.min(0)]],
     minimumPayment: [null as number | null, [Validators.required, Validators.min(1)]],
     aprPercent: [null as number | null, [Validators.required, Validators.min(0)]],
@@ -181,6 +190,7 @@ export class AddCardDialogComponent {
     const value = this.form.getRawValue();
     const card: any = {
       cardName: value.cardName,
+      creditLimit: value.creditLimit,
       currentBalance: value.currentBalance,
       minimumPayment: value.minimumPayment,
       aprPercent: value.aprPercent,
