@@ -30,6 +30,67 @@ public class AdminController : ControllerBase
         return Ok(new { message = "Database reseeded successfully" });
     }
 
+    [HttpPost("merge-duplicate-categories")]
+    public async Task<IActionResult> MergeDuplicateCategories()
+    {
+        var categories = await _context.CustomCategories.ToListAsync();
+        int merged = 0;
+
+        // Find parent categories that exist as both global (UserId=null) and user-specific
+        var parents = categories.Where(c => c.ParentId == null).ToList();
+        var userParents = parents.Where(c => c.UserId != null).ToList();
+
+        foreach (var userCat in userParents)
+        {
+            var globalDupe = parents.FirstOrDefault(c =>
+                c.UserId == null && c.Name == userCat.Name && c.Type == userCat.Type);
+            if (globalDupe == null) continue;
+
+            // Move children from global parent to user parent
+            var childrenToMove = categories.Where(c => c.ParentId == globalDupe.Id).ToList();
+            foreach (var child in childrenToMove)
+                child.ParentId = userCat.Id;
+
+            // Reassign expenses/recurring from global to user category
+            await _context.Database.ExecuteSqlRawAsync(
+                "UPDATE DailyExpenses SET CategoryId = {0} WHERE CategoryId = {1}", userCat.Id, globalDupe.Id);
+            await _context.Database.ExecuteSqlRawAsync(
+                "UPDATE RecurringTransactions SET CategoryId = {0} WHERE CategoryId = {1}", userCat.Id, globalDupe.Id);
+
+            _context.CustomCategories.Remove(globalDupe);
+            merged++;
+        }
+
+        await _context.SaveChangesAsync();
+
+        // Reload and merge child duplicates (same name under same parent)
+        categories = await _context.CustomCategories.ToListAsync();
+        var childGroups = categories
+            .Where(c => c.ParentId != null)
+            .GroupBy(c => new { c.Name, c.Type, c.ParentId })
+            .Where(g => g.Count() > 1);
+
+        foreach (var group in childGroups)
+        {
+            var keep = group.OrderBy(c => c.Id).First();
+            var dupes = group.OrderBy(c => c.Id).Skip(1).ToList();
+
+            foreach (var dupe in dupes)
+            {
+                await _context.Database.ExecuteSqlRawAsync(
+                    "UPDATE DailyExpenses SET CategoryId = {0} WHERE CategoryId = {1}", keep.Id, dupe.Id);
+                await _context.Database.ExecuteSqlRawAsync(
+                    "UPDATE RecurringTransactions SET CategoryId = {0} WHERE CategoryId = {1}", keep.Id, dupe.Id);
+
+                _context.CustomCategories.Remove(dupe);
+                merged++;
+            }
+        }
+
+        await _context.SaveChangesAsync();
+        return Ok(new { message = $"Merged {merged} duplicate categories" });
+    }
+
     [HttpGet("users")]
     public async Task<IActionResult> GetUsers()
     {
