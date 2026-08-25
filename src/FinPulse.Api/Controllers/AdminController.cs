@@ -91,6 +91,14 @@ public class AdminController : ControllerBase
         return Ok(new { message = $"Merged {merged} duplicate categories" });
     }
 
+    [HttpPost("globalize-categories")]
+    public async Task<IActionResult> GlobalizeCategories()
+    {
+        var updated = await _context.Database.ExecuteSqlRawAsync(
+            "UPDATE CustomCategories SET UserId = NULL WHERE UserId IS NOT NULL");
+        return Ok(new { message = $"Converted {updated} categories to global" });
+    }
+
     [HttpGet("users")]
     public async Task<IActionResult> GetUsers()
     {
