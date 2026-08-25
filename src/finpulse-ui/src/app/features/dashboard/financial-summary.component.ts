@@ -3,6 +3,7 @@ import { CommonModule, CurrencyPipe } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { DashboardService } from '../../core/services/dashboard.service';
+import { BankAccountService } from '../../core/services/bank-account.service';
 import { FinancialSummary } from '../../core/models/dashboard.model';
 
 @Component({
@@ -12,8 +13,15 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
   template: `
     @if (data()) {
       <div class="fin-summary">
-        <!-- Row 1: Income / Expenses / Net Cash Flow -->
+        <!-- Row 1: Bank Balance / Income / Expenses / Net Cash Flow -->
         <div class="flow-cards">
+          <mat-card class="flow-card bank-card">
+            <mat-card-content>
+              <mat-icon class="flow-icon bank-icon">account_balance</mat-icon>
+              <span class="flow-label">Bank Balance</span>
+              <span class="flow-value bank-value">{{ totalBankBalance() | currency }}</span>
+            </mat-card-content>
+          </mat-card>
           <mat-card class="flow-card">
             <mat-card-content>
               <mat-icon class="flow-icon income-icon">trending_up</mat-icon>
@@ -85,7 +93,7 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
 
     .flow-cards {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: var(--spacing-sm);
       margin-bottom: var(--spacing-sm);
     }
@@ -96,9 +104,12 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
       padding: 12px !important;
       text-align: center;
     }
-    .flow-card:nth-child(1) { border-top: 3px solid var(--color-success); }
-    .flow-card:nth-child(2) { border-top: 3px solid var(--color-danger); }
-    .flow-card:nth-child(3) { border-top: 3px solid var(--color-value-blue); }
+    .flow-card:nth-child(1) { border-top: 3px solid var(--color-primary); }
+    .flow-card:nth-child(2) { border-top: 3px solid var(--color-success); }
+    .flow-card:nth-child(3) { border-top: 3px solid var(--color-danger); }
+    .flow-card:nth-child(4) { border-top: 3px solid var(--color-value-blue); }
+    .bank-icon { color: var(--color-primary); }
+    .bank-value { color: var(--color-primary); }
     .flow-icon { font-size: 24px; width: 24px; height: 24px; margin-bottom: 2px; }
     .income-icon { color: var(--color-success); }
     .expense-icon { color: var(--color-danger); }
@@ -142,6 +153,9 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
       padding-left: var(--spacing-lg);
     }
 
+    @media (max-width: 900px) {
+      .flow-cards { grid-template-columns: repeat(2, 1fr); }
+    }
     @media (max-width: 600px) {
       .flow-cards { grid-template-columns: 1fr; }
       .trading-row { flex-direction: column; align-items: center; }
@@ -151,7 +165,9 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
 })
 export class FinancialSummaryComponent implements OnInit {
   private dashboardService = inject(DashboardService);
+  private bankAccountService = inject(BankAccountService);
   data = signal<FinancialSummary | null>(null);
+  totalBankBalance = signal(0);
 
   paceStatus = computed(() => {
     const d = this.data();
@@ -195,6 +211,10 @@ export class FinancialSummaryComponent implements OnInit {
   ngOnInit(): void {
     this.dashboardService.getFinancialSummary().subscribe({
       next: (summary) => this.data.set(summary),
+      error: () => {}
+    });
+    this.bankAccountService.getAll().subscribe({
+      next: (accounts) => this.totalBankBalance.set(accounts.reduce((sum, a) => sum + a.currentBalance, 0)),
       error: () => {}
     });
   }

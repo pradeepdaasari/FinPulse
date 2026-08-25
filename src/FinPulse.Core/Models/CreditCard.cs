@@ -18,7 +18,7 @@ public class CreditCard
 
     public decimal MinimumPayment { get; set; }
 
-    [Range(1, 28)]
+    [Range(1, 31)]
     public int DueDay { get; set; }
 
     [Range(20, 45)]

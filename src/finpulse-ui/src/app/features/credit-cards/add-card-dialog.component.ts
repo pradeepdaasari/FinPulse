@@ -166,7 +166,7 @@ export class AddCardDialogComponent {
   private cardService = inject(CreditCardService);
   private dialogRef = inject(MatDialogRef<AddCardDialogComponent>);
 
-  dueDays = Array.from({ length: 28 }, (_, i) => i + 1);
+  dueDays = Array.from({ length: 31 }, (_, i) => i + 1);
   saving = signal(false);
 
   form = this.fb.group({

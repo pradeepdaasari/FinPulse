@@ -453,10 +453,11 @@ export class MonthlyPaymentsComponent implements OnInit {
         });
       }
 
+      const filtered = monthlyPayments.filter(p => p.status === 'paid' || p.daysUntilDue >= 0);
       const statusOrder = { overdue: 0, 'due-soon': 1, upcoming: 2, paid: 3 };
-      monthlyPayments.sort((a, b) => statusOrder[a.status] - statusOrder[b.status] || a.daysUntilDue - b.daysUntilDue);
-      this.payments.set(monthlyPayments);
-      this.totalDue.set(sumCurrency(monthlyPayments.filter(p => p.status !== 'paid').map(p => p.amount)));
+      filtered.sort((a, b) => statusOrder[a.status] - statusOrder[b.status] || a.daysUntilDue - b.daysUntilDue);
+      this.payments.set(filtered);
+      this.totalDue.set(sumCurrency(filtered.filter(p => p.status !== 'paid').map(p => p.amount)));
     });
   }
 

@@ -7,6 +7,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { CreditCardService } from '../../core/services/credit-card.service';
 import { CreditCard } from '../../core/models/credit-card.model';
 
@@ -21,7 +24,10 @@ import { CreditCard } from '../../core/models/credit-card.model';
     MatInputModule,
     MatButtonModule,
     MatIconModule,
-    MatDividerModule
+    MatDividerModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+    MatSlideToggleModule
   ],
   template: `
     <div class="dialog-header">
@@ -40,6 +46,13 @@ import { CreditCard } from '../../core/models/credit-card.model';
       <form [formGroup]="form" class="update-form">
         <div class="form-section">
           <span class="section-label">Balance & Payments</span>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Credit Limit</mat-label>
+            <mat-icon matPrefix>credit_score</mat-icon>
+            <input matInput type="number" formControlName="creditLimit" step="0.01">
+            <span matTextPrefix>$&nbsp;</span>
+          </mat-form-field>
+
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Statement Balance</mat-label>
             <mat-icon matPrefix>account_balance_wallet</mat-icon>
@@ -72,6 +85,29 @@ import { CreditCard } from '../../core/models/credit-card.model';
               <mat-hint>1–31</mat-hint>
             </mat-form-field>
           </div>
+        </div>
+
+        <div class="form-section promo-section">
+          <mat-slide-toggle formControlName="hasPromo" color="primary">
+            Promotional Rate
+          </mat-slide-toggle>
+
+          @if (form.get('hasPromo')?.value) {
+            <div class="field-row promo-fields">
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Promo APR</mat-label>
+                <input matInput type="number" formControlName="promoAprPercent" step="0.01">
+                <span matTextSuffix>%</span>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Promo End Date</mat-label>
+                <input matInput [matDatepicker]="promoPicker" formControlName="promoEndDate">
+                <mat-datepicker-toggle matIconSuffix [for]="promoPicker"></mat-datepicker-toggle>
+                <mat-datepicker #promoPicker></mat-datepicker>
+              </mat-form-field>
+            </div>
+          }
         </div>
       </form>
     </mat-dialog-content>
@@ -207,6 +243,18 @@ import { CreditCard } from '../../core/models/credit-card.model';
       margin-right: 8px;
     }
 
+    .promo-section {
+      margin-top: 8px;
+      padding: 12px;
+      background: var(--color-surface-secondary, #f8fafc);
+      border-radius: 8px;
+      border: 1px solid var(--color-border, #e2e8f0);
+    }
+
+    .promo-fields {
+      margin-top: 12px;
+    }
+
     @media (max-width: 600px) {
       mat-dialog-content {
         min-width: unset;
@@ -227,10 +275,14 @@ export class UpdateBalanceDialogComponent {
   saving = signal(false);
 
   form = this.fb.group({
+    creditLimit: [this.data.creditLimit, [Validators.required, Validators.min(1)]],
     currentBalance: [this.data.currentBalance, [Validators.required, Validators.min(0)]],
     minimumPayment: [this.data.minimumPayment, [Validators.required, Validators.min(0)]],
     aprPercent: [this.data.aprPercent, [Validators.required, Validators.min(0)]],
-    dueDay: [this.data.dueDay, [Validators.required, Validators.min(1), Validators.max(31)]]
+    dueDay: [this.data.dueDay, [Validators.required, Validators.min(1), Validators.max(31)]],
+    hasPromo: [this.data.promoAprPercent != null],
+    promoAprPercent: [this.data.promoAprPercent as number | null],
+    promoEndDate: [this.data.promoEndDate ? new Date(this.data.promoEndDate) : null as Date | null]
   });
 
   save(): void {
@@ -238,16 +290,23 @@ export class UpdateBalanceDialogComponent {
     this.saving.set(true);
 
     const value = this.form.getRawValue();
-    this.cardService.update(this.data.id, {
+    const payload: any = {
       cardName: this.data.cardName,
+      creditLimit: value.creditLimit!,
       currentBalance: value.currentBalance!,
       minimumPayment: value.minimumPayment!,
       aprPercent: value.aprPercent!,
       dueDay: value.dueDay!,
-      isAutopay: this.data.isAutopay,
-      promoAprPercent: this.data.promoAprPercent,
-      promoEndDate: this.data.promoEndDate
-    }).subscribe({
+      isAutopay: this.data.isAutopay
+    };
+    if (value.hasPromo && value.promoAprPercent != null) {
+      payload.promoAprPercent = value.promoAprPercent;
+      payload.promoEndDate = value.promoEndDate;
+    } else {
+      payload.promoAprPercent = null;
+      payload.promoEndDate = null;
+    }
+    this.cardService.update(this.data.id, payload).subscribe({
       next: (updated) => {
         this.dialogRef.close(updated);
       },

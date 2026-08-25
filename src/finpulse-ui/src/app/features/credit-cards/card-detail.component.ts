@@ -291,7 +291,7 @@ export class CardDetailComponent implements OnInit {
     import('../../shared/record-payment-dialog.component').then(m => {
       const dialogRef = this.dialog.open(m.RecordPaymentDialogComponent, {
         width: '440px',
-        data: { debtType: 'CreditCard', debtId: this.card()!.id, debtName: this.card()!.cardName, amount: this.card()!.minimumPayment }
+        data: { debtType: 'CreditCard', debtId: this.card()!.id, debtName: this.card()!.cardName, currentBalance: this.card()!.currentBalance, minimumPayment: this.card()!.minimumPayment }
       });
       dialogRef.afterClosed().subscribe(result => {
         if (result) this.loadCard();

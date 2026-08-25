@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -18,7 +18,7 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
 @Component({
   selector: 'app-card-list',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatProgressSpinnerModule, CurrencyPipe, DecimalPipe],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, DecimalPipe],
   template: `
     <div class="header-row">
       <button mat-raised-button color="primary" (click)="openAddCard()">
@@ -85,6 +85,17 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
             <td mat-cell *matCellDef="let card">{{ card.dueDay }}</td>
           </ng-container>
 
+          <ng-container matColumnDef="promoEndDate">
+            <th mat-header-cell *matHeaderCellDef>Promo Ends</th>
+            <td mat-cell *matCellDef="let card">
+              @if (isPromoActive(card)) {
+                {{ card.promoEndDate | date:'MMM d, y' }}
+              } @else {
+                <span class="no-promo">—</span>
+              }
+            </td>
+          </ng-container>
+
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>Actions</th>
             <td mat-cell *matCellDef="let card">
@@ -132,6 +143,7 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
       margin-left: 8px;
       font-size: 10px;
     }
+    .no-promo { color: var(--color-text-muted); }
     .util-cell {
       display: flex;
       align-items: center;
@@ -170,7 +182,7 @@ export class CardListComponent implements OnInit {
 
   cards = signal<CreditCard[]>([]);
   loading = signal(true);
-  displayedColumns = ['cardName', 'currentBalance', 'utilization', 'aprPercent', 'minimumPayment', 'dueDay', 'actions'];
+  displayedColumns = ['cardName', 'currentBalance', 'utilization', 'aprPercent', 'minimumPayment', 'dueDay', 'promoEndDate', 'actions'];
 
   ngOnInit(): void {
     this.loadCards();
@@ -215,7 +227,8 @@ export class CardListComponent implements OnInit {
         debtId: card.id,
         debtName: card.cardName,
         debtType: 'CreditCard',
-        currentBalance: card.currentBalance
+        currentBalance: card.currentBalance,
+        minimumPayment: card.minimumPayment
       }
     });
     dialogRef.afterClosed().subscribe(result => {
