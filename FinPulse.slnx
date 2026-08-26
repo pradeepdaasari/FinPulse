@@ -1,6 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/FinPulse.Api/FinPulse.Api.csproj" />
-    <Project Path="src/FinPulse.Core/FinPulse.Core.csproj" />
-  </Folder>
-</Solution>

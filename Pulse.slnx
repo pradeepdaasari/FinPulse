@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Pulse.Api/Pulse.Api.csproj" />
+    <Project Path="src/Pulse.Core/Pulse.Core.csproj" />
+  </Folder>
+</Solution>
