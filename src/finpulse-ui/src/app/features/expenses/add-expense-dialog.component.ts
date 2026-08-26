@@ -23,6 +23,7 @@ export interface ExpenseDialogData {
   expense: DailyExpense | null;
   prefilledCategoryId?: number;
   prefill?: Partial<DailyExpense>;
+  preselectedType?: string;
 }
 
 @Component({
@@ -44,11 +45,11 @@ export interface ExpenseDialogData {
     <mat-dialog-content>
       <form [formGroup]="form" class="expense-form">
         <mat-button-toggle-group formControlName="transactionType" class="txn-toggle">
-          <mat-button-toggle value="Expense" class="toggle-expense">Expense</mat-button-toggle>
-          <mat-button-toggle value="Income" class="toggle-income">Income</mat-button-toggle>
-          <mat-button-toggle value="Transfer" class="toggle-transfer">Transfer</mat-button-toggle>
-          <mat-button-toggle value="Refund" class="toggle-refund">Refund</mat-button-toggle>
-          <mat-button-toggle value="CardPayment" class="toggle-card">Card Pay</mat-button-toggle>
+          <mat-button-toggle value="Expense" class="toggle-expense"><mat-icon>remove_circle_outline</mat-icon>Expense</mat-button-toggle>
+          <mat-button-toggle value="Income" class="toggle-income"><mat-icon>add_circle_outline</mat-icon>Income</mat-button-toggle>
+          <mat-button-toggle value="Transfer" class="toggle-transfer"><mat-icon>swap_horiz</mat-icon>Transfer</mat-button-toggle>
+          <mat-button-toggle value="Refund" class="toggle-refund"><mat-icon>undo</mat-icon>Refund</mat-button-toggle>
+          <mat-button-toggle value="CardPayment" class="toggle-card"><mat-icon>credit_card</mat-icon>Card Pay</mat-button-toggle>
         </mat-button-toggle-group>
 
         <mat-form-field appearance="outline">
@@ -291,70 +292,92 @@ export interface ExpenseDialogData {
     :host { display: block; }
     .dialog-header {
       text-align: center;
-      padding: 8px 0 16px;
+      padding: 4px 0 10px;
       border-bottom: 1px solid var(--color-border);
-      margin-bottom: var(--spacing-md);
+      margin-bottom: 12px;
     }
     .dialog-header-icon {
-      width: 52px;
-      height: 52px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       background: linear-gradient(135deg, rgba(0, 122, 255, 0.12) 0%, rgba(88, 86, 214, 0.12) 100%);
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 12px;
+      margin: 0 auto 8px;
     }
     .dialog-header-icon mat-icon {
-      font-size: 26px;
-      width: 26px;
-      height: 26px;
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
       color: var(--color-primary);
     }
     h2[mat-dialog-title] {
       margin: 0 !important;
       padding: 0 !important;
-      font-size: var(--text-xl) !important;
+      font-size: var(--text-lg) !important;
       font-weight: 700 !important;
     }
     .dialog-subtitle {
       color: var(--color-text-secondary);
-      font-size: var(--text-sm);
-      margin: 4px 0 0;
+      font-size: var(--text-xs);
+      margin: 2px 0 0;
     }
     .expense-form {
       display: flex;
       flex-direction: column;
       gap: 4px;
-      min-width: 380px;
+      min-width: 0;
+      width: 100%;
     }
     .txn-toggle {
-      margin-bottom: 4px;
+      margin-bottom: 8px;
       width: 100%;
-      border-radius: var(--radius-sm) !important;
+      border-radius: var(--radius-md) !important;
       background: var(--color-surface-secondary) !important;
       border: none !important;
-      padding: 4px !important;
+      padding: 5px !important;
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch;
+    }
+    .txn-toggle .mat-button-toggle-appearance-standard .mat-button-toggle-label-content {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 16px !important;
+      font-size: 0.9rem !important;
+      font-weight: 600 !important;
+      line-height: 1.2 !important;
+    }
+    .txn-toggle mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+    .txn-toggle .mat-button-toggle-appearance-standard {
+      border-radius: var(--radius-sm) !important;
+      border: none !important;
+      transition: all 0.15s ease;
     }
     .txn-toggle .mat-button-toggle-checked.toggle-expense {
       background: rgba(255, 59, 48, 0.12) !important;
-      color: var(--color-danger) !important;
+      color: #d32f2f !important;
     }
     .txn-toggle .mat-button-toggle-checked.toggle-income {
       background: rgba(48, 209, 88, 0.12) !important;
-      color: var(--color-value-green) !important;
+      color: #2e7d32 !important;
     }
     .txn-toggle .mat-button-toggle-checked.toggle-transfer {
       background: rgba(0, 122, 255, 0.12) !important;
-      color: var(--color-primary) !important;
+      color: #1565c0 !important;
     }
     .txn-toggle .mat-button-toggle-checked.toggle-refund {
       background: rgba(255, 159, 10, 0.12) !important;
-      color: var(--color-value-amber) !important;
+      color: #e65100 !important;
     }
     .txn-toggle .mat-button-toggle-checked.toggle-card {
       background: rgba(191, 90, 242, 0.12) !important;
-      color: var(--color-value-purple) !important;
+      color: #7b1fa2 !important;
     }
     .new-category-row {
       display: flex;
@@ -477,7 +500,7 @@ export class AddExpenseDialogComponent implements OnInit {
   private get source() { return this.data?.expense ?? this.data?.prefill ?? null; }
 
   form = this.fb.group({
-    transactionType: [(this.source?.transactionType ?? 'Expense') as TransactionType, Validators.required],
+    transactionType: [(this.data?.preselectedType ?? this.source?.transactionType ?? 'Expense') as TransactionType, Validators.required],
     date: [this.data?.expense ? new Date(this.data.expense.date) : new Date(), Validators.required],
     categoryId: [this.source?.categoryId ?? this.data?.prefilledCategoryId ?? null as number | null],
     amount: [this.source?.amount ?? null as number | null, [Validators.required, Validators.min(0.01)]],
@@ -508,6 +531,7 @@ export class AddExpenseDialogComponent implements OnInit {
     });
 
     this.form.get('transactionType')!.valueChanges.subscribe(() => {
+      this.form.patchValue({ categoryId: null });
       this.loadCategories();
       this.filterSources();
     });
@@ -582,6 +606,7 @@ export class AddExpenseDialogComponent implements OnInit {
 
     if (!isTransfer && !isCardPayment && !val.categoryId) return;
     if (!val.amount || !val.description) return;
+    if ((isTransfer || isCardPayment) && (!val.fundingSourceKey || !val.toFundingSourceKey)) return;
 
     let fundingSourceType: FundingSourceType | null = null;
     let fundingSourceId: number | null = null;
@@ -630,7 +655,7 @@ export class AddExpenseDialogComponent implements OnInit {
 
     const expense: DailyExpenseCreate = {
       date: (val.date as Date).toISOString(),
-      categoryId: val.categoryId ?? 1,
+      categoryId: val.categoryId || null,
       amount: val.amount!,
       merchant: (isTransfer || isCardPayment) ? null : (val.merchant || null),
       description: val.description!,

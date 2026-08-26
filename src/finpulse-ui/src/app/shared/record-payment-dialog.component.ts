@@ -40,7 +40,15 @@ export interface RecordPaymentData {
     MatSelectModule
   ],
   template: `
-    <h2 mat-dialog-title>Record Payment</h2>
+    <div class="dialog-header">
+      <div class="header-icon green">
+        <mat-icon>payments</mat-icon>
+      </div>
+      <div class="header-text">
+        <h2 mat-dialog-title>Record Payment</h2>
+        <span class="dialog-subtitle">{{ data.debtName }}</span>
+      </div>
+    </div>
     <mat-dialog-content>
       <div class="debt-info">
         <mat-icon>{{ data.debtType === 'CreditCard' ? 'credit_card' : 'account_balance' }}</mat-icon>
@@ -105,9 +113,22 @@ export interface RecordPaymentData {
     </mat-dialog-actions>
   `,
   styles: [`
+    .dialog-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 24px 12px;
+    }
+    .header-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .header-icon.green { background: rgba(46,125,50,0.12); }
+    .header-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #2e7d32; }
+    .header-text h2 { margin: 0 !important; padding: 0 !important; font-size: 1.1rem !important; font-weight: 700 !important; }
+    .dialog-subtitle { font-size: 0.75rem; color: var(--color-text-secondary); }
     mat-dialog-content {
-      min-width: 350px;
+      min-width: 0;
       max-width: 450px;
+      width: 100%;
     }
     .debt-info {
       display: flex;

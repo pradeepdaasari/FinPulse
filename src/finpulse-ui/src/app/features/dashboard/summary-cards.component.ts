@@ -137,12 +137,30 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
     .stat-card:nth-child(2) .stat-value { color: var(--color-value-blue); }
     .stat-card:nth-child(3) .stat-value { color: var(--color-value-green); }
     .stat-card:nth-child(4) .stat-value { color: var(--color-value-purple); }
-    @media (max-width: 480px) {
+    @media (max-width: 599px) {
       .summary-grid {
         grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .stat-card {
+        padding: 10px;
+        gap: 8px;
+      }
+      .stat-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+      }
+      .stat-icon mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
       }
       .stat-value {
-        font-size: 1.125rem;
+        font-size: 1rem;
+      }
+      .stat-label {
+        font-size: 0.65rem;
       }
     }
   `]

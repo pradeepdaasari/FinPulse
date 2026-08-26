@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { PaymentService } from '../core/services/payment.service';
 import { PaymentHistory } from '../core/models/payment-history.model';
 
@@ -21,10 +22,19 @@ import { PaymentHistory } from '../core/models/payment-history.model';
     MatInputModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    MatButtonModule
+    MatButtonModule,
+    MatIconModule
   ],
   template: `
-    <h2 mat-dialog-title>Edit Payment</h2>
+    <div class="dialog-header">
+      <div class="header-icon blue">
+        <mat-icon>edit</mat-icon>
+      </div>
+      <div class="header-text">
+        <h2 mat-dialog-title>Edit Payment</h2>
+        <span class="dialog-subtitle">Update payment details</span>
+      </div>
+    </div>
     <mat-dialog-content>
       <form [formGroup]="form" class="payment-form">
         <mat-form-field class="full-width">
@@ -58,6 +68,18 @@ import { PaymentHistory } from '../core/models/payment-history.model';
     </mat-dialog-actions>
   `,
   styles: [`
+    .dialog-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 24px 12px;
+    }
+    .header-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .header-icon.blue { background: rgba(21,101,192,0.12); }
+    .header-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #1565c0; }
+    .header-text h2 { margin: 0 !important; padding: 0 !important; font-size: 1.1rem !important; font-weight: 700 !important; }
+    .dialog-subtitle { font-size: 0.75rem; color: var(--color-text-secondary); }
     .payment-form {
       display: flex;
       flex-direction: column;

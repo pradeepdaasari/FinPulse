@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -10,6 +10,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatIconModule } from '@angular/material/icon';
 import { CategoryService } from '../../core/services/category.service';
 import { RecurringTransaction } from '../../core/models/recurring.model';
 
@@ -19,10 +20,18 @@ import { RecurringTransaction } from '../../core/models/recurring.model';
   imports: [
     CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatButtonModule, MatDatepickerModule,
-    MatNativeDateModule, MatSlideToggleModule, MatButtonToggleModule
+    MatNativeDateModule, MatSlideToggleModule, MatButtonToggleModule, MatIconModule
   ],
   template: `
-    <h2 mat-dialog-title>{{ data ? 'Edit' : 'Add' }} Recurring Transaction</h2>
+    <div class="dialog-header">
+      <div class="header-icon orange">
+        <mat-icon>repeat</mat-icon>
+      </div>
+      <div class="header-text">
+        <h2 mat-dialog-title>{{ data ? 'Edit' : 'Add' }} Recurring Transaction</h2>
+        <span class="dialog-subtitle">Automate your tracking</span>
+      </div>
+    </div>
     <mat-dialog-content>
       <form [formGroup]="form" class="form-grid">
         <mat-form-field appearance="outline" class="full-width">
@@ -43,16 +52,27 @@ import { RecurringTransaction } from '../../core/models/recurring.model';
 
         <mat-form-field appearance="outline">
           <mat-label>Category</mat-label>
+          <mat-select [value]="selectedParentId()" (selectionChange)="onParentChange($event.value)">
+            <div class="search-box">
+              <input matInput placeholder="Search..." (input)="parentSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+            </div>
+            @for (parent of filteredParents(); track parent.id) {
+              <mat-option [value]="parent.id">{{ parent.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Subcategory</mat-label>
           <mat-select formControlName="categoryId">
-            @for (parent of categories(); track parent.id) {
-              <mat-optgroup [label]="parent.name">
-                @for (child of parent.children; track child.id) {
-                  <mat-option [value]="child.id">{{ child.name }}</mat-option>
-                }
-                @if (!parent.children || parent.children.length === 0) {
-                  <mat-option [value]="parent.id">{{ parent.name }}</mat-option>
-                }
-              </mat-optgroup>
+            <div class="search-box">
+              <input matInput placeholder="Search..." (input)="childSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+            </div>
+            @for (child of filteredChildren(); track child.id) {
+              <mat-option [value]="child.id">{{ child.name }}</mat-option>
+            }
+            @if (filteredChildren().length === 0 && selectedParentId()) {
+              <mat-option [value]="selectedParentId()">{{ selectedParentName() }} (no subs)</mat-option>
             }
           </mat-select>
         </mat-form-field>
@@ -100,10 +120,25 @@ import { RecurringTransaction } from '../../core/models/recurring.model';
     </mat-dialog-actions>
   `,
   styles: [`
+    .dialog-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 24px 12px;
+    }
+    .header-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .header-icon.orange { background: rgba(230,81,0,0.12); }
+    .header-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #e65100; }
+    .header-text h2 { margin: 0 !important; padding: 0 !important; font-size: 1.1rem !important; font-weight: 700 !important; }
+    .dialog-subtitle { font-size: 0.75rem; color: var(--color-text-secondary); }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; padding: 8px 0; }
     .full-width { grid-column: 1 / -1; }
     .toggle-row { display: flex; align-items: center; gap: 12px; grid-column: 1 / -1; margin-bottom: 8px; }
     .toggle-row label { font-weight: 500; }
+    .search-box { position: sticky; top: 0; z-index: 1; background: var(--mat-select-panel-background-color, white); padding: 8px; border-bottom: 1px solid #ddd; }
+    .search-box input { width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; outline: none; }
+    .search-box input:focus { border-color: var(--mdc-theme-primary, #6750a4); }
     @media (max-width: 500px) { .form-grid { grid-template-columns: 1fr; } }
   `]
 })
@@ -114,6 +149,29 @@ export class RecurringDialogComponent implements OnInit {
   data: RecurringTransaction | null = inject(MAT_DIALOG_DATA);
 
   categories = signal<any[]>([]);
+  selectedParentId = signal<number | null>(null);
+  parentSearch = signal('');
+  childSearch = signal('');
+
+  filteredParents = computed(() => {
+    const search = this.parentSearch().toLowerCase();
+    return this.categories().filter(c => c.name.toLowerCase().includes(search));
+  });
+
+  filteredChildren = computed(() => {
+    const parentId = this.selectedParentId();
+    if (!parentId) return [];
+    const parent = this.categories().find((c: any) => c.id === parentId);
+    if (!parent || !parent.children) return [];
+    const search = this.childSearch().toLowerCase();
+    return parent.children.filter((c: any) => c.name.toLowerCase().includes(search));
+  });
+
+  selectedParentName = computed(() => {
+    const parentId = this.selectedParentId();
+    const parent = this.categories().find((c: any) => c.id === parentId);
+    return parent?.name || '';
+  });
 
   form: FormGroup = this.fb.group({
     description: ['', Validators.required],
@@ -131,8 +189,6 @@ export class RecurringDialogComponent implements OnInit {
   private typeMap: Record<string, number> = { Expense: 0, Income: 1, Transfer: 2, Refund: 3, CardPayment: 4 };
 
   ngOnInit(): void {
-    this.categoryService.getAll().subscribe(cats => this.categories.set(cats));
-
     if (this.data) {
       this.form.patchValue({
         description: this.data.description,
@@ -146,6 +202,38 @@ export class RecurringDialogComponent implements OnInit {
         isActive: this.data.isActive
       });
     }
+
+    this.loadCategories();
+
+    this.form.get('transactionType')!.valueChanges.subscribe(() => {
+      this.loadCategories();
+      this.selectedParentId.set(0);
+      this.form.patchValue({ categoryId: null });
+    });
+  }
+
+  private loadCategories(): void {
+    const type = this.form.value.transactionType === 1 ? 'Income' : 'Expense';
+    this.categoryService.getAll(type).subscribe(cats => {
+      this.categories.set(cats);
+      if (this.data?.categoryId) {
+        const parent = cats.find((c: any) =>
+          c.children?.some((ch: any) => ch.id === this.data!.categoryId)
+        );
+        if (parent) {
+          this.selectedParentId.set(parent.id);
+        } else {
+          const directParent = cats.find((c: any) => c.id === this.data!.categoryId);
+          if (directParent) this.selectedParentId.set(directParent.id);
+        }
+      }
+    });
+  }
+
+  onParentChange(parentId: number): void {
+    this.selectedParentId.set(parentId);
+    this.childSearch.set('');
+    this.form.patchValue({ categoryId: null });
   }
 
   save(): void {

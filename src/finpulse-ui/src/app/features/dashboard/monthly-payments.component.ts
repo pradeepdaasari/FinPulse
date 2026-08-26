@@ -41,8 +41,8 @@ interface MonthlyPayment {
       <mat-card-header>
         <mat-card-title>
           <div class="card-title-row">
-            <span class="card-title-text"><mat-icon class="card-title-icon">receipt_long</mat-icon> This Month's Payments</span>
-            <span class="payment-count">{{ payments().length }} pending</span>
+            <span class="card-title-text"><mat-icon class="card-title-icon">receipt_long</mat-icon> Upcoming Payments</span>
+            <span class="payment-count">{{ payments().length }} due in next 30 days</span>
           </div>
         </mat-card-title>
       </mat-card-header>
@@ -96,12 +96,8 @@ interface MonthlyPayment {
 
               <ng-container matColumnDef="dueDate">
                 <th mat-header-cell *matHeaderCellDef>Due Date</th>
-                <td mat-cell *matCellDef="let p">
-                  @if (p.status === 'paid') {
-                    <span class="next-due">Next: {{ p.nextDueDate | date:'MMM d, y' }}</span>
-                  } @else {
-                    {{ p.dueDate | date:'MMM d, y' }}
-                  }
+                <td mat-cell *matCellDef="let p" class="due-date-cell">
+                  {{ p.dueDate | date:'MMM d, y' }}
                 </td>
               </ng-container>
 
@@ -121,9 +117,7 @@ interface MonthlyPayment {
               <ng-container matColumnDef="paid">
                 <th mat-header-cell *matHeaderCellDef>Paid</th>
                 <td mat-cell *matCellDef="let p" class="paid-cell">
-                  @if (p.status === 'paid') {
-                    <span class="paid-progress">{{ p.paidAmount | currency }}</span>
-                  } @else if (p.paidAmount > 0) {
+                  @if (p.paidAmount > 0) {
                     <span class="paid-progress">{{ p.paidAmount | currency }}</span>
                     <span class="paid-remaining">({{ p.amount - p.paidAmount | currency }} left)</span>
                   } @else {
@@ -136,11 +130,7 @@ interface MonthlyPayment {
                 <th mat-header-cell *matHeaderCellDef>Status</th>
                 <td mat-cell *matCellDef="let p">
                   <span class="status-badge" [class]="'status-' + p.status">
-                    @if (p.status === 'paid') {
-                      Paid
-                    } @else if (p.status === 'overdue') {
-                      Overdue
-                    } @else if (p.status === 'due-soon') {
+                    @if (p.status === 'due-soon') {
                       Due in {{ p.daysUntilDue }}d
                     } @else {
                       {{ p.daysUntilDue }} days
@@ -152,18 +142,14 @@ interface MonthlyPayment {
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef></th>
                 <td mat-cell *matCellDef="let p">
-                  @if (p.status === 'paid') {
-                    <mat-icon class="paid-check">check_circle</mat-icon>
-                  } @else {
-                    <div class="actions-wrap">
-                      @if (p.minimumPaid) {
-                        <mat-icon class="min-paid-check" matTooltip="Minimum paid">check_circle_outline</mat-icon>
-                      }
-                      <button mat-icon-button color="primary" (click)="recordPayment(p)" aria-label="Record Payment">
-                        <mat-icon>paid</mat-icon>
-                      </button>
-                    </div>
-                  }
+                  <div class="actions-wrap">
+                    @if (p.minimumPaid) {
+                      <mat-icon class="min-paid-check" matTooltip="Minimum paid">check_circle_outline</mat-icon>
+                    }
+                    <button mat-icon-button color="primary" (click)="recordPayment(p)" aria-label="Record Payment">
+                      <mat-icon>paid</mat-icon>
+                    </button>
+                  </div>
                 </td>
               </ng-container>
 
@@ -245,6 +231,9 @@ interface MonthlyPayment {
     .balance-cell {
       font-weight: 500;
       color: var(--color-text-secondary);
+    }
+    .due-date-cell {
+      white-space: nowrap;
     }
     .status-badge {
       padding: 4px 10px;
@@ -347,6 +336,16 @@ interface MonthlyPayment {
       width: 11px;
       height: 11px;
     }
+    @media (max-width: 599px) {
+      table { min-width: 0; }
+      .mat-column-balance,
+      .mat-column-dueDate,
+      .mat-column-daysLeft,
+      .mat-column-paid { display: none; }
+      .account-name { font-size: 0.8125rem; }
+      .account-icon { display: none; }
+      .account-cell { gap: 0; }
+    }
   `]
 })
 export class MonthlyPaymentsComponent implements OnInit {
@@ -411,22 +410,31 @@ export class MonthlyPaymentsComponent implements OnInit {
 
       const monthlyPayments: MonthlyPayment[] = [];
 
+      const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
       for (const debt of debts) {
         const dueDay = debt.dueDay ?? 1;
-        const dueDate = new Date(currentYear, currentMonth, dueDay);
-        const daysUntilDue = dueDay - today;
         const cycleStart = this.getCycleStart(dueDay, now);
         const paidAmount = this.sumPaymentsInCycle(paymentResponse.payments, debt.id, debt.type, cycleStart);
 
         const isLoan = debt.type === 'PersonalLoan';
         const dueAmount = isLoan ? debt.monthlyPayment : debt.currentBalance;
 
+        const isPaid = roundCurrency(paidAmount) >= roundCurrency(dueAmount);
+        if (isPaid) continue;
+
+        let dueDate = new Date(currentYear, currentMonth, dueDay);
+        let daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (daysUntilDue < 0) {
+          dueDate = new Date(currentYear, currentMonth + 1, dueDay);
+          daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        }
+
+        if (daysUntilDue > 30) continue;
+
         let status: MonthlyPayment['status'];
-        if (roundCurrency(paidAmount) >= roundCurrency(dueAmount)) {
-          status = 'paid';
-        } else if (daysUntilDue < 0) {
-          status = 'overdue';
-        } else if (daysUntilDue <= 5) {
+        if (daysUntilDue <= 5) {
           status = 'due-soon';
         } else {
           status = 'upcoming';
@@ -454,11 +462,9 @@ export class MonthlyPaymentsComponent implements OnInit {
         });
       }
 
-      const filtered = monthlyPayments.filter(p => p.status === 'paid' || p.daysUntilDue >= 0);
-      const statusOrder = { overdue: 0, 'due-soon': 1, upcoming: 2, paid: 3 };
-      filtered.sort((a, b) => statusOrder[a.status] - statusOrder[b.status] || a.daysUntilDue - b.daysUntilDue);
-      this.payments.set(filtered);
-      this.totalDue.set(sumCurrency(filtered.filter(p => p.status !== 'paid').map(p => p.amount)));
+      monthlyPayments.sort((a, b) => a.daysUntilDue - b.daysUntilDue);
+      this.payments.set(monthlyPayments);
+      this.totalDue.set(sumCurrency(monthlyPayments.map(p => p.amount)));
     });
   }
 

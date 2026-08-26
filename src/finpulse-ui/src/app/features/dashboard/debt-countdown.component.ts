@@ -78,11 +78,14 @@ import { DebtFreeCountdown } from '../../core/models/dashboard.model';
     .debt-meta { font-size: 0.6875rem; color: var(--color-text-muted); }
     .projection-bar { min-width: 120px; }
     .payoff-date { font-size: 0.75rem; font-weight: 500; color: var(--color-text-secondary); white-space: nowrap; }
-    @media (max-width: 600px) {
+    @media (max-width: 599px) {
+      .card-title-row { flex-direction: column; align-items: flex-start; gap: 6px; }
+      .overall-date { font-size: 0.75rem; }
       .projection-row {
         grid-template-columns: 1fr;
-        gap: 6px;
+        gap: 4px;
       }
+      .projection-bar { min-width: 0; }
     }
   `]
 })

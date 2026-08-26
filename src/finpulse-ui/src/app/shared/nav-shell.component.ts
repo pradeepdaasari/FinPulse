@@ -7,10 +7,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
+import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { filter } from 'rxjs/operators';
 import { AuthService } from '../core/services/auth.service';
 import { DailyExpenseService } from '../core/services/daily-expense.service';
+import { NotificationService } from '../core/services/notification.service';
 import { CommandPaletteComponent } from './command-palette.component';
 
 @Component({
@@ -134,6 +136,9 @@ import { CommandPaletteComponent } from './command-palette.component';
             <button mat-icon-button (click)="sidenav.toggle()" aria-label="Toggle menu">
               <mat-icon>menu</mat-icon>
             </button>
+            <a class="mobile-brand" routerLink="/dashboard">
+              <mat-icon class="mobile-brand-icon">account_balance_wallet</mat-icon>
+            </a>
           }
           <span class="toolbar-title">{{ pageTitle() }}</span>
           <span class="toolbar-spacer"></span>
@@ -262,6 +267,9 @@ import { CommandPaletteComponent } from './command-palette.component';
       border-bottom: none;
       box-shadow: none;
       height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
 
     .toolbar-title {
@@ -302,8 +310,7 @@ import { CommandPaletteComponent } from './command-palette.component';
     }
 
     .content-area {
-      padding: 24px 28px;
-      max-width: 1200px;
+      padding: 24px 32px;
       min-height: calc(100vh - 56px);
     }
 
@@ -321,25 +328,86 @@ import { CommandPaletteComponent } from './command-palette.component';
         padding: 4px;
         background: none;
       }
+      .search-trigger .search-hint,
+      .search-trigger .search-kbd {
+        display: none;
+      }
+      .search-trigger {
+        min-width: 36px !important;
+        padding: 4px 8px !important;
+        margin-right: 4px;
+      }
+    }
+
+    .mobile-brand {
+      display: none;
+    }
+
+    @media (max-width: 599px) {
+      .mobile-brand {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(0,122,255,0.15) 0%, rgba(88,86,214,0.15) 100%);
+        margin-right: 8px;
+        text-decoration: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .mobile-brand-icon {
+        font-size: 20px !important;
+        width: 20px !important;
+        height: 20px !important;
+        color: var(--color-primary);
+      }
+      .content-area {
+        padding: 14px 12px;
+        padding-bottom: 100px;
+      }
+      .app-toolbar {
+        height: 52px;
+        padding: 0 10px !important;
+      }
+      .app-toolbar button[mat-icon-button] {
+        width: 44px;
+        height: 44px;
+      }
     }
 
     .global-fab {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
+      bottom: 32px;
+      right: 32px;
       z-index: 100;
-      background: var(--color-primary) !important;
+      width: 56px !important;
+      height: 56px !important;
+      background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%) !important;
       color: #fff !important;
-      box-shadow: var(--shadow-lg) !important;
+      box-shadow: 0 6px 20px rgba(0, 122, 255, 0.4), var(--shadow-lg) !important;
       transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    .global-fab mat-icon {
+      font-size: 28px !important;
+      width: 28px !important;
+      height: 28px !important;
     }
     .global-fab:hover {
       transform: scale(1.08);
-      box-shadow: var(--shadow-xl) !important;
+      box-shadow: 0 8px 28px rgba(0, 122, 255, 0.5), var(--shadow-xl) !important;
     }
-    @media (max-width: 768px) {
+    @media (max-width: 599px) {
       .global-fab {
-        bottom: 80px;
+        bottom: 24px;
+        right: 20px;
+        width: 60px !important;
+        height: 60px !important;
+      }
+      .global-fab mat-icon {
+        font-size: 30px !important;
+        width: 30px !important;
+        height: 30px !important;
       }
     }
 
@@ -374,7 +442,9 @@ export class NavShellComponent {
   private router = inject(Router);
   private authService = inject(AuthService);
   private expenseService = inject(DailyExpenseService);
+  private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
+  private bottomSheet = inject(MatBottomSheet);
 
   isMobile = signal(false);
   pageTitle = signal('Dashboard');
@@ -396,6 +466,7 @@ export class NavShellComponent {
     '/payments': 'Payments',
     '/setup': 'Setup',
     '/admin': 'User Management',
+    '/admin/users': 'User Management',
   };
 
   constructor() {
@@ -406,8 +477,12 @@ export class NavShellComponent {
     this.router.events.pipe(
       filter((e): e is NavigationEnd => e instanceof NavigationEnd)
     ).subscribe(event => {
-      const path = '/' + event.urlAfterRedirects.split('/')[1];
-      this.pageTitle.set(this.pageTitles[path] ?? 'FinPulse');
+      const url = event.urlAfterRedirects;
+      const path = '/' + url.split('/')[1];
+      this.pageTitle.set(this.pageTitles[url] ?? this.pageTitles[path] ?? 'FinPulse');
+      if (this.isMobile() && this.sidenav) {
+        this.sidenav.close();
+      }
     });
   }
 
@@ -422,17 +497,39 @@ export class NavShellComponent {
   }
 
   openQuickExpense(): void {
+    if (this.isMobile()) {
+      import('./txn-type-sheet.component').then(m => {
+        const sheetRef = this.bottomSheet.open(m.TxnTypeSheetComponent);
+        sheetRef.afterDismissed().subscribe((type: string | undefined) => {
+          if (type) {
+            this.openExpenseDialog(type);
+          }
+        });
+      });
+    } else {
+      this.openExpenseDialog();
+    }
+  }
+
+  private openExpenseDialog(preselectedType?: string): void {
     import('../features/expenses/add-expense-dialog.component').then(m => {
       const ref = this.dialog.open(m.AddExpenseDialogComponent, {
         width: '480px',
-        data: { expense: null }
+        maxWidth: '95vw',
+        data: { expense: null, preselectedType }
       });
       ref.afterClosed().subscribe((result: any) => {
         if (!result) return;
         if (result.splits) {
-          this.expenseService.createSplit(result.splits).subscribe();
+          this.expenseService.createSplit(result.splits).subscribe({
+            next: () => this.notify.success('Transaction saved'),
+            error: (err) => this.notify.error(err.error?.message || 'Failed to save transaction')
+          });
         } else {
-          this.expenseService.create(result).subscribe();
+          this.expenseService.create(result).subscribe({
+            next: () => this.notify.success('Transaction saved'),
+            error: (err) => this.notify.error(err.error?.message || 'Failed to save transaction')
+          });
         }
       });
     });

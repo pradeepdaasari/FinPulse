@@ -8,8 +8,8 @@ public class DailyExpense
     public int Id { get; set; }
     public DateTime Date { get; set; }
 
-    public int CategoryId { get; set; }
-    public CustomCategory Category { get; set; } = null!;
+    public int? CategoryId { get; set; }
+    public CustomCategory? Category { get; set; }
 
     [Range(0.01, double.MaxValue)]
     public decimal Amount { get; set; }

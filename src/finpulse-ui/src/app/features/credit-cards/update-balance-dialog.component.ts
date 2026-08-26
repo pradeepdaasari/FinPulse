@@ -134,36 +134,36 @@ import { CreditCard } from '../../core/models/credit-card.model';
     .dialog-header {
       display: flex;
       align-items: center;
-      gap: 16px;
-      padding: 20px 24px 16px;
+      gap: 12px;
+      padding: 16px 24px 12px;
     }
 
     .header-icon {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: rgba(106,27,154,0.12);
     }
 
     .header-icon mat-icon {
-      font-size: 24px;
-      width: 24px;
-      height: 24px;
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
+      color: #6a1b9a;
     }
 
     .header-text h2 {
       margin: 0;
-      font-size: 1.25rem;
-      font-weight: 600;
+      font-size: 1.1rem;
+      font-weight: 700;
       color: var(--color-text, #1a1a2e);
     }
 
     .card-name {
-      font-size: 0.85rem;
+      font-size: 0.75rem;
       color: var(--color-text-secondary, #64748b);
       font-weight: 500;
     }

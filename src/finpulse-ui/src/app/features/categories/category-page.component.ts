@@ -104,8 +104,8 @@ const ICON_OPTIONS = [
             <mat-expansion-panel>
               <mat-expansion-panel-header>
                 <mat-panel-title>
-                  <span class="cat-icon-badge parent-badge">
-                    <mat-icon>{{ parent.icon || 'category' }}</mat-icon>
+                  <span class="cat-icon-badge parent-badge" [style.background]="getCatBg(parent.name)" [style.border-color]="getCatColor(parent.name)">
+                    <mat-icon [style.color]="getCatColor(parent.name)">{{ parent.icon || 'category' }}</mat-icon>
                   </span>
                   @if (editingId() === parent.id) {
                     <input class="inline-edit" [(ngModel)]="editName" (keyup.enter)="saveEdit(parent)" (click)="$event.stopPropagation()">
@@ -185,8 +185,8 @@ const ICON_OPTIONS = [
                 <div class="children-list">
                   @for (child of parent.children; track child.id) {
                     <div class="child-row">
-                      <span class="cat-icon-badge child-badge">
-                        <mat-icon>{{ child.icon || 'label' }}</mat-icon>
+                      <span class="cat-icon-badge child-badge" [style.background]="getCatBg(child.name)" [style.border-color]="getCatColor(child.name)">
+                        <mat-icon [style.color]="getCatColor(child.name)">{{ child.icon || 'label' }}</mat-icon>
                       </span>
                       @if (editingId() === child.id) {
                         <button mat-icon-button [matMenuTriggerFor]="editChildIconMenu" class="icon-picker-btn" matTooltip="Change icon">
@@ -265,26 +265,22 @@ const ICON_OPTIONS = [
     .parent-badge {
       width: 36px;
       height: 36px;
-      background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 12%, transparent), color-mix(in srgb, var(--color-primary) 6%, transparent));
-      border: 1px solid var(--color-border);
+      border: 1px solid;
     }
     .parent-badge mat-icon {
       font-size: 20px;
       width: 20px;
       height: 20px;
-      color: var(--color-primary);
     }
     .child-badge {
       width: 30px;
       height: 30px;
-      background: linear-gradient(135deg, color-mix(in srgb, var(--color-text-muted) 10%, transparent), color-mix(in srgb, var(--color-text-muted) 5%, transparent));
-      border: 1px solid var(--color-border);
+      border: 1px solid;
     }
     .child-badge mat-icon {
       font-size: 16px;
       width: 16px;
       height: 16px;
-      color: var(--color-text-secondary);
     }
     .cat-label { font-weight: 600; }
 
@@ -450,5 +446,19 @@ export class CategoryPageComponent implements OnInit {
   private showError(err: any): void {
     const msg = err?.error?.message || err?.error || 'An error occurred';
     this.snackBar.open(msg, 'Dismiss', { duration: 5000 });
+  }
+
+  getCatColor(name: string): string {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    const hue = ((hash % 360) + 360) % 360;
+    return `hsl(${hue}, 55%, 42%)`;
+  }
+
+  getCatBg(name: string): string {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    const hue = ((hash % 360) + 360) % 360;
+    return `hsl(${hue}, 60%, 94%)`;
   }
 }
