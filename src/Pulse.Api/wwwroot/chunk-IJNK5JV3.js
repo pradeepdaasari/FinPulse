@@ -1,1 +1,0 @@
-import{a as i}from"./chunk-ZAQJCETW.js";import{r as o}from"./chunk-CZVMAR5M.js";import{$ as e,ea as r}from"./chunk-65WL2JVZ.js";var a=class t{http=r(o);baseUrl=`${i.apiUrl}/debts`;getAll(){return this.http.get(this.baseUrl)}static \u0275fac=function(m){return new(m||t)};static \u0275prov=e({token:t,factory:t.\u0275fac,providedIn:"root"})};export{a};
