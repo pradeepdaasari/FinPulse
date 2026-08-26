@@ -7,7 +7,6 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { RecurringService } from '../../core/services/recurring.service';
 import { DashboardSummary } from '../../core/models/dashboard.model';
-import { SummaryCardsComponent } from './summary-cards.component';
 import { MonthlyPaymentsComponent } from './monthly-payments.component';
 import { DebtTrendChartComponent } from './debt-trend-chart.component';
 import { PaymentStreakComponent } from './payment-streak.component';
@@ -23,7 +22,6 @@ import { FinancialSummaryComponent } from './financial-summary.component';
     MatCardModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    SummaryCardsComponent,
     MonthlyPaymentsComponent,
     DebtTrendChartComponent,
     PaymentStreakComponent,
@@ -37,13 +35,16 @@ import { FinancialSummaryComponent } from './financial-summary.component';
         <mat-spinner></mat-spinner>
       </div>
     } @else if (summary()) {
-      <app-financial-summary></app-financial-summary>
-      <app-summary-cards [summary]="summary()!"></app-summary-cards>
-      <app-budget-health></app-budget-health>
+      <app-financial-summary [debtSummary]="summary()!"></app-financial-summary>
+      <div class="dashboard-grid">
+        <app-budget-health></app-budget-health>
+        <app-debt-trend-chart></app-debt-trend-chart>
+      </div>
       <app-monthly-payments></app-monthly-payments>
-      <app-debt-trend-chart></app-debt-trend-chart>
-      <app-debt-countdown></app-debt-countdown>
-      <app-payment-streak></app-payment-streak>
+      <div class="dashboard-grid">
+        <app-debt-countdown></app-debt-countdown>
+        <app-payment-streak></app-payment-streak>
+      </div>
     }
   `,
   styles: [`
@@ -55,6 +56,16 @@ import { FinancialSummaryComponent } from './financial-summary.component';
       justify-content: center;
       align-items: center;
       padding: 80px;
+    }
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--spacing-md);
+    }
+    @media (max-width: 1024px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
     }
   `]
 })

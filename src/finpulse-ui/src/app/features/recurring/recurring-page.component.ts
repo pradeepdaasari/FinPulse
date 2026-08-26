@@ -62,7 +62,11 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
           <ng-container matColumnDef="frequency">
             <th mat-header-cell *matHeaderCellDef>Frequency</th>
             <td mat-cell *matCellDef="let r">
-              <mat-chip>{{ r.frequency }}</mat-chip>
+              <span class="freq-badge" [class.freq-daily]="r.frequency === 'Daily'"
+                    [class.freq-weekly]="r.frequency === 'Weekly'"
+                    [class.freq-biweekly]="r.frequency === 'Biweekly'"
+                    [class.freq-monthly]="r.frequency === 'Monthly'"
+                    [class.freq-yearly]="r.frequency === 'Yearly'">{{ r.frequency }}</span>
             </td>
           </ng-container>
 
@@ -117,6 +121,19 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
     .desc-text { font-weight: 500; }
     .merchant-text { font-size: 0.8rem; color: var(--color-text-secondary); }
     .toggle-label { font-size: var(--text-xs); font-weight: 500; }
+    .freq-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+      white-space: nowrap;
+    }
+    .freq-daily { background: rgba(230,81,0,0.1); color: #e65100; }
+    .freq-weekly { background: rgba(21,101,192,0.1); color: #1565c0; }
+    .freq-biweekly { background: rgba(0,105,92,0.1); color: #00695c; }
+    .freq-monthly { background: rgba(106,27,154,0.1); color: #6a1b9a; }
+    .freq-yearly { background: rgba(46,125,50,0.1); color: #2e7d32; }
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
     }

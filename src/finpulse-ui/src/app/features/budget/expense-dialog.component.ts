@@ -20,7 +20,15 @@ import { CategoryService } from '../../core/services/category.service';
     MatInputModule, MatSelectModule, MatSlideToggleModule, MatButtonModule, MatIconModule
   ],
   template: `
-    <h2 mat-dialog-title>{{ data ? 'Edit' : 'Add' }} Expense</h2>
+    <div class="dialog-header">
+      <div class="header-icon red">
+        <mat-icon>receipt_long</mat-icon>
+      </div>
+      <div class="header-text">
+        <h2 mat-dialog-title>{{ data ? 'Edit' : 'Add' }} Expense</h2>
+        <span class="dialog-subtitle">Budget expense item</span>
+      </div>
+    </div>
     <mat-dialog-content>
       <form [formGroup]="form" class="expense-form">
         <mat-form-field>
@@ -99,6 +107,18 @@ import { CategoryService } from '../../core/services/category.service';
     </mat-dialog-actions>
   `,
   styles: [`
+    .dialog-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 24px 12px;
+    }
+    .header-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .header-icon.red { background: rgba(211,47,47,0.12); }
+    .header-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #d32f2f; }
+    .header-text h2 { margin: 0 !important; padding: 0 !important; font-size: 1.1rem !important; font-weight: 700 !important; }
+    .dialog-subtitle { font-size: 0.75rem; color: var(--color-text-secondary); }
     .expense-form {
       display: flex;
       flex-direction: column;
@@ -145,7 +165,7 @@ export class ExpenseDialogComponent implements OnInit {
   }
 
   loadCategories(): void {
-    this.categoryService.getAll().subscribe(cats => this.categories.set(cats));
+    this.categoryService.getAll('Expense').subscribe(cats => this.categories.set(cats));
   }
 
   createCategory(): void {

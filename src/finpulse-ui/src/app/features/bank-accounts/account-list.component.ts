@@ -37,7 +37,8 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
         </button>
       </div>
     } @else {
-      <mat-card>
+      <!-- Desktop table -->
+      <mat-card class="desktop-only">
         <div class="table-wrapper">
         <table mat-table [dataSource]="accounts()">
           <ng-container matColumnDef="accountName">
@@ -48,7 +49,10 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
           <ng-container matColumnDef="accountType">
             <th mat-header-cell *matHeaderCellDef>Type</th>
             <td mat-cell *matCellDef="let a">
-              <mat-chip>{{ a.accountType }}</mat-chip>
+              <span class="acct-type-badge"
+                    [class.acct-checking]="a.accountType === 'Checking'"
+                    [class.acct-savings]="a.accountType === 'Savings'"
+                    [class.acct-brokerage]="a.accountType === 'Brokerage'">{{ a.accountType }}</span>
             </td>
           </ng-container>
 
@@ -75,6 +79,26 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
         </div>
       </mat-card>
 
+      <!-- Mobile cards -->
+      <div class="mobile-cards">
+        @for (a of accounts(); track a.id) {
+          <div class="account-card" (click)="editAccount(a)">
+            <div class="ac-left">
+              <div class="ac-icon">
+                <mat-icon>{{ a.accountType === 'Savings' ? 'savings' : 'account_balance' }}</mat-icon>
+              </div>
+            </div>
+            <div class="ac-mid">
+              <span class="ac-name">{{ a.accountName }}</span>
+              <span class="ac-type">{{ a.accountType }}</span>
+            </div>
+            <div class="ac-right">
+              <span class="ac-balance">{{ a.currentBalance | currency }}</span>
+            </div>
+          </div>
+        }
+      </div>
+
       <div class="total-row">
         <strong>Total Balance:</strong> {{ totalBalance() | currency }}
       </div>
@@ -89,12 +113,51 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
     .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table { width: 100%; min-width: 400px; }
     .balance { font-weight: 600; color: var(--color-primary); }
+    .acct-type-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+      white-space: nowrap;
+    }
+    .acct-checking { background: rgba(21,101,192,0.1); color: #1565c0; }
+    .acct-savings { background: rgba(46,125,50,0.1); color: #2e7d32; }
+    .acct-brokerage { background: rgba(106,27,154,0.1); color: #6a1b9a; }
     .total-row {
       margin-top: var(--spacing-md); text-align: right;
       font-size: 1.1rem; padding: var(--spacing-sm) var(--spacing-md);
     }
+    .mobile-cards { display: none; }
+    .account-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 12px;
+      background: var(--color-surface);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: box-shadow var(--transition-fast);
+    }
+    .account-card:active { box-shadow: var(--shadow-md); }
+    .ac-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--gradient-icon-blue);
+    }
+    .ac-icon mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); }
+    .ac-mid { flex: 1; min-width: 0; }
+    .ac-name { display: block; font-weight: 600; font-size: 0.9rem; }
+    .ac-type { display: block; font-size: 0.75rem; color: var(--color-text-muted); }
+    .ac-balance { font-weight: 700; font-size: 1rem; color: var(--color-primary); }
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
+    }
+    @media (max-width: 599px) {
+      .desktop-only { display: none !important; }
+      .mobile-cards { display: block; }
     }
   `]
 })

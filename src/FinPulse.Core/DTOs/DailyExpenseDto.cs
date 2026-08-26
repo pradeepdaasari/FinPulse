@@ -6,7 +6,7 @@ namespace FinPulse.Core.DTOs;
 public class DailyExpenseCreateDto
 {
     public DateTime Date { get; set; }
-    public int CategoryId { get; set; }
+    public int? CategoryId { get; set; }
     [Range(0.01, double.MaxValue)]
     public decimal Amount { get; set; }
     [Required]

@@ -37,17 +37,17 @@ export interface ConfirmDialogData {
     .confirm-header {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
       margin-bottom: var(--spacing-md);
     }
     .confirm-header h2 {
       margin: 0;
-      font-size: var(--text-lg);
-      font-weight: 600;
+      font-size: 1.15rem;
+      font-weight: 700;
     }
     .confirm-icon-wrap {
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -56,9 +56,9 @@ export interface ConfirmDialogData {
     }
     .confirm-icon-wrap mat-icon {
       color: var(--color-primary);
-      font-size: 22px;
-      width: 22px;
-      height: 22px;
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
     }
     .confirm-icon-wrap.warn {
       background: var(--color-danger-bg);
@@ -67,9 +67,9 @@ export interface ConfirmDialogData {
       color: var(--color-danger);
     }
     .confirm-message {
-      font-size: var(--text-sm);
+      font-size: var(--text-base);
       color: var(--color-text-secondary);
-      line-height: 1.5;
+      line-height: 1.6;
       margin: 0;
     }
   `]

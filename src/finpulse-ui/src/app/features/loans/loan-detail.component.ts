@@ -165,6 +165,11 @@ import { AmortizationTableComponent } from './amortization-table.component';
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
     }
+    @media (max-width: 599px) {
+      .detail-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .detail-actions { flex-wrap: wrap; }
+      table { min-width: 0; }
+    }
   `]
 })
 export class LoanDetailComponent implements OnInit {

@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatIconModule } from '@angular/material/icon';
 import { BankAccountService } from '../../core/services/bank-account.service';
 import { BankAccount } from '../../core/models/bank-account.model';
 import { SavingsGoal } from '../../core/models/savings-goal.model';
@@ -16,10 +17,18 @@ import { SavingsGoal } from '../../core/models/savings-goal.model';
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
-    MatInputModule, MatSelectModule, MatButtonModule, MatDatepickerModule
+    MatInputModule, MatSelectModule, MatButtonModule, MatDatepickerModule, MatIconModule
   ],
   template: `
-    <h2 mat-dialog-title>{{ data ? 'Edit' : 'Add' }} Savings Goal</h2>
+    <div class="dialog-header">
+      <div class="header-icon green">
+        <mat-icon>flag</mat-icon>
+      </div>
+      <div class="header-text">
+        <h2 mat-dialog-title>{{ data ? 'Edit' : 'Add' }} Savings Goal</h2>
+        <span class="dialog-subtitle">Set and track your goals</span>
+      </div>
+    </div>
     <mat-dialog-content>
       <form [formGroup]="form" class="form-grid">
         <mat-form-field appearance="outline" class="full-width">
@@ -71,6 +80,18 @@ import { SavingsGoal } from '../../core/models/savings-goal.model';
     </mat-dialog-actions>
   `,
   styles: [`
+    .dialog-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 24px 12px;
+    }
+    .header-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .header-icon.green { background: rgba(46,125,50,0.12); }
+    .header-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #2e7d32; }
+    .header-text h2 { margin: 0 !important; padding: 0 !important; font-size: 1.1rem !important; font-weight: 700 !important; }
+    .dialog-subtitle { font-size: 0.75rem; color: var(--color-text-secondary); }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; padding: 8px 0; }
     .full-width { grid-column: 1 / -1; }
     @media (max-width: 500px) { .form-grid { grid-template-columns: 1fr; } }

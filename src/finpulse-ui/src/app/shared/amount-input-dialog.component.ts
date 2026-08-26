@@ -47,17 +47,17 @@ export interface AmountInputDialogData {
     .amount-header {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
       margin-bottom: var(--spacing-md);
     }
     .amount-header h2 {
       margin: 0;
-      font-size: var(--text-lg);
-      font-weight: 600;
+      font-size: 1.15rem;
+      font-weight: 700;
     }
     .amount-icon-wrap {
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -66,14 +66,15 @@ export interface AmountInputDialogData {
     }
     .amount-icon-wrap mat-icon {
       color: var(--color-success);
-      font-size: 22px;
-      width: 22px;
-      height: 22px;
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
     }
     .amount-message {
-      font-size: var(--text-sm);
+      font-size: var(--text-base);
       color: var(--color-text-secondary);
       margin: 0 0 var(--spacing-md);
+      line-height: 1.5;
     }
     .amount-field { width: 100%; }
   `]

@@ -1,5 +1,6 @@
 import { Component, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -12,12 +13,18 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSort, MatSortModule, Sort } from '@angular/material/sort';
 import { MatFabButton } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { DailyExpenseService } from '../../core/services/daily-expense.service';
 import { DailyExpense, DailyExpenseCreate, ExpenseFilter, SpendingSummary } from '../../core/models/daily-expense.model';
 import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dialog.component';
 import { ExpenseFilterBarComponent } from './expense-filter-bar.component';
 import { MonthComparisonComponent } from './month-comparison.component';
 import { TagSummaryComponent } from './tag-summary.component';
+import { NotificationService } from '../../core/services/notification.service';
 
 function compare(a: number | string, b: number | string, isAsc: boolean): number {
   return (a < b ? -1 : 1) * (isAsc ? 1 : -1);
@@ -27,18 +34,42 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
   selector: 'app-expenses-page',
   standalone: true,
   imports: [
-    CommonModule, MatTabsModule, MatCardModule, MatButtonModule, MatIconModule,
+    CommonModule, FormsModule, MatTabsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatTableModule, MatProgressBarModule, MatProgressSpinnerModule, MatChipsModule,
-    MatDialogModule, MatTooltipModule, MatSortModule, CurrencyPipe, DatePipe,
+    MatDialogModule, MatTooltipModule, MatSortModule, MatButtonToggleModule,
+    MatDatepickerModule, MatNativeDateModule, MatFormFieldModule, MatInputModule,
+    CurrencyPipe, DatePipe,
     ExpenseFilterBarComponent, MonthComparisonComponent, TagSummaryComponent
   ],
   template: `
     <div class="expenses-header">
-      <div class="month-nav">
-        <button mat-icon-button (click)="prevMonth()"><mat-icon>chevron_left</mat-icon></button>
-        <span class="month-label">{{ monthLabel() }}</span>
-        <button mat-icon-button (click)="nextMonth()"><mat-icon>chevron_right</mat-icon></button>
-      </div>
+      <mat-button-toggle-group [value]="viewMode()" (change)="setViewMode($event.value)" class="view-toggle">
+        <mat-button-toggle value="month">Month</mat-button-toggle>
+        <mat-button-toggle value="range">Date Range</mat-button-toggle>
+      </mat-button-toggle-group>
+
+      @if (viewMode() === 'month') {
+        <div class="month-nav">
+          <button mat-icon-button (click)="prevMonth()"><mat-icon>chevron_left</mat-icon></button>
+          <span class="month-label">{{ monthLabel() }}</span>
+          <button mat-icon-button (click)="nextMonth()"><mat-icon>chevron_right</mat-icon></button>
+        </div>
+      } @else {
+        <div class="range-nav">
+          <mat-form-field appearance="outline" class="range-field">
+            <mat-label>From</mat-label>
+            <input matInput [matDatepicker]="rangeFrom" [(ngModel)]="rangeStartDate" (dateChange)="onRangeChange()">
+            <mat-datepicker-toggle matIconSuffix [for]="rangeFrom"></mat-datepicker-toggle>
+            <mat-datepicker #rangeFrom></mat-datepicker>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="range-field">
+            <mat-label>To</mat-label>
+            <input matInput [matDatepicker]="rangeTo" [(ngModel)]="rangeEndDate" (dateChange)="onRangeChange()">
+            <mat-datepicker-toggle matIconSuffix [for]="rangeTo"></mat-datepicker-toggle>
+            <mat-datepicker #rangeTo></mat-datepicker>
+          </mat-form-field>
+        </div>
+      }
     </div>
 
     @if (loading()) {
@@ -52,7 +83,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
               <button mat-raised-button color="primary" (click)="addExpense()">
                 <mat-icon>add</mat-icon> Log Transaction
               </button>
-              <button mat-stroked-button (click)="exportCsv()">
+              <button mat-stroked-button (click)="exportCsv()" class="desktop-only">
                 <mat-icon>download</mat-icon> Export CSV
               </button>
               <span class="expense-count">{{ filteredExpenses().length }} transactions</span>
@@ -61,13 +92,27 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
             <app-expense-filter-bar (filterChange)="onFilterChange($event)"></app-expense-filter-bar>
 
             @if (filteredExpenses().length > 0) {
-              <mat-card>
+              <!-- Desktop table view -->
+              <mat-card class="desktop-only">
                 <mat-card-content>
                   <div class="table-wrapper">
                     <table mat-table [dataSource]="filteredExpenses()" matSort (matSortChange)="sortData($event)">
+                      <ng-container matColumnDef="type">
+                        <th mat-header-cell *matHeaderCellDef>Type</th>
+                        <td mat-cell *matCellDef="let e">
+                          <span class="type-badge"
+                                [class.type-expense]="e.transactionType === 'Expense' || !e.transactionType"
+                                [class.type-income]="e.transactionType === 'Income'"
+                                [class.type-transfer]="e.transactionType === 'Transfer'"
+                                [class.type-refund]="e.transactionType === 'Refund'"
+                                [class.type-card]="e.transactionType === 'CardPayment'">
+                            {{ e.transactionType || 'Expense' }}
+                          </span>
+                        </td>
+                      </ng-container>
                       <ng-container matColumnDef="date">
                         <th mat-header-cell *matHeaderCellDef mat-sort-header>Date</th>
-                        <td mat-cell *matCellDef="let e">{{ e.date | date:'MMM d' }}</td>
+                        <td mat-cell *matCellDef="let e">{{ e.date | date:'MMM d, h:mm a' }}</td>
                       </ng-container>
                       <ng-container matColumnDef="merchant">
                         <th mat-header-cell *matHeaderCellDef mat-sort-header>Merchant</th>
@@ -85,12 +130,16 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                       <ng-container matColumnDef="category">
                         <th mat-header-cell *matHeaderCellDef mat-sort-header>Category</th>
                         <td mat-cell *matCellDef="let e">
-                          <mat-chip>
-                            @if (e.categoryIcon) {
-                              <mat-icon matChipAvatar>{{ e.categoryIcon }}</mat-icon>
-                            }
-                            {{ e.categoryName }}
-                          </mat-chip>
+                          @if (e.categoryName) {
+                            <span class="cat-chip" [style.background]="getCategoryBg(e.categoryName)" [style.color]="getCategoryColor(e.categoryName)">
+                              @if (e.categoryIcon) {
+                                <mat-icon class="cat-chip-icon" [style.color]="getCategoryColor(e.categoryName)">{{ e.categoryIcon }}</mat-icon>
+                              }
+                              {{ e.categoryName }}
+                            </span>
+                          } @else {
+                            <span class="cat-chip cat-chip-none">—</span>
+                          }
                         </td>
                       </ng-container>
                       <ng-container matColumnDef="source">
@@ -146,15 +195,65 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                         </td>
                       </ng-container>
                       <tr mat-header-row *matHeaderRowDef="logColumns"></tr>
-                      <tr mat-row *matRowDef="let row; columns: logColumns;"></tr>
+                      <tr mat-row *matRowDef="let row; columns: logColumns;"
+                          [class.row-expense]="row.transactionType === 'Expense' || !row.transactionType"
+                          [class.row-income]="row.transactionType === 'Income'"
+                          [class.row-transfer]="row.transactionType === 'Transfer'"
+                          [class.row-refund]="row.transactionType === 'Refund'"
+                          [class.row-card]="row.transactionType === 'CardPayment'"></tr>
                     </table>
                   </div>
                 </mat-card-content>
               </mat-card>
+
+              <!-- Mobile card view -->
+              <div class="mobile-feed">
+                @for (group of groupedExpenses(); track group.label) {
+                  <div class="date-group">
+                    <div class="date-header">{{ group.label }}</div>
+                    @for (e of group.items; track e.id) {
+                      <div class="txn-card" (click)="editExpense(e)">
+                        <div class="txn-left">
+                          <div class="txn-cat-dot" [class.dot-income]="e.transactionType === 'Income'"
+                               [class.dot-transfer]="e.transactionType === 'Transfer'"
+                               [class.dot-refund]="e.transactionType === 'Refund'"
+                               [class.dot-card]="e.transactionType === 'CardPayment'">
+                            <mat-icon>{{ getCategoryIcon(e) }}</mat-icon>
+                          </div>
+                        </div>
+                        <div class="txn-mid">
+                          <span class="txn-desc">{{ e.description }}</span>
+                          <span class="txn-meta">
+                            <span class="txn-type-label"
+                                  [class.type-expense]="e.transactionType === 'Expense' || !e.transactionType"
+                                  [class.type-income]="e.transactionType === 'Income'"
+                                  [class.type-transfer]="e.transactionType === 'Transfer'"
+                                  [class.type-refund]="e.transactionType === 'Refund'"
+                                  [class.type-card]="e.transactionType === 'CardPayment'">{{ e.transactionType || 'Expense' }}</span>
+                            · {{ e.date | date:'shortTime' }}{{ e.categoryName ? ' · ' + e.categoryName : '' }}{{ e.merchant ? ' · ' + e.merchant : '' }}
+                          </span>
+                        </div>
+                        <div class="txn-right">
+                          <span class="txn-amount"
+                                [class.income-amount]="e.transactionType === 'Income'"
+                                [class.transfer-amount]="e.transactionType === 'Transfer'"
+                                [class.refund-amount]="e.transactionType === 'Refund'"
+                                [class.card-payment-amount]="e.transactionType === 'CardPayment'">
+                            @if (e.transactionType === 'Income') { +{{ e.amount | currency }} }
+                            @else if (e.transactionType === 'Transfer') { {{ e.amount | currency }} }
+                            @else if (e.transactionType === 'Refund') { +{{ e.amount | currency }} }
+                            @else { -{{ e.amount | currency }} }
+                          </span>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
             } @else {
               <mat-card>
                 <mat-card-content>
-                  <p>No expenses logged this month. Click "Log Expense" to start tracking.</p>
+                  <p>No transactions found. Click "Log Transaction" to start tracking.</p>
                 </mat-card-content>
               </mat-card>
             }
@@ -244,11 +343,12 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     .expenses-header {
       display: flex;
       align-items: center;
-      justify-content: flex-end;
+      justify-content: center;
       flex-wrap: wrap;
       gap: var(--spacing-sm);
       margin-bottom: var(--spacing-sm);
     }
+    .view-toggle { margin-right: auto; }
     .month-nav {
       display: flex;
       align-items: center;
@@ -258,6 +358,9 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
       padding: 4px;
     }
     .month-label { font-size: var(--text-base); font-weight: 600; min-width: 140px; text-align: center; }
+    .range-nav { display: flex; gap: 8px; align-items: center; }
+    .range-field { width: 150px; }
+    .range-field .mat-mdc-form-field-infix { padding-top: 8px !important; padding-bottom: 8px !important; }
     .tab-content { padding: var(--spacing-sm) 0; }
 
     .totals-card { margin-bottom: var(--spacing-md); }
@@ -282,7 +385,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     .remaining.over { color: var(--color-danger); }
     .percent { opacity: 0.6; }
 
-    .log-header { display: flex; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm); }
+    .log-header { display: flex; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm); flex-wrap: wrap; }
     .expense-count { font-size: 0.9rem; opacity: 0.6; }
     .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table { width: 100%; min-width: 700px; }
@@ -291,6 +394,45 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     .transfer-amount { color: var(--color-primary); }
     .refund-amount { color: var(--color-success); font-style: italic; }
     .card-payment-amount { color: var(--color-accent); }
+
+    /* Type badge */
+    .type-badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: var(--radius-full);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+    .type-expense { background: rgba(255, 59, 48, 0.1); color: #d32f2f; }
+    .type-income { background: rgba(48, 209, 88, 0.1); color: #2e7d32; }
+    .type-transfer { background: rgba(0, 122, 255, 0.1); color: #1565c0; }
+    .type-refund { background: rgba(255, 149, 0, 0.1); color: #e65100; }
+    .type-card { background: rgba(191, 90, 242, 0.1); color: #7b1fa2; }
+
+    /* Row left border by type */
+    tr.mat-mdc-row { border-left: 3px solid transparent; }
+    tr.row-expense { border-left-color: #ff3b30; }
+    tr.row-income { border-left-color: #30d158; }
+    tr.row-transfer { border-left-color: #007aff; }
+    tr.row-refund { border-left-color: #ff9500; }
+    tr.row-card { border-left-color: #bf5af2; }
+
+    .cat-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      white-space: nowrap;
+    }
+    .cat-chip-icon { font-size: 14px; width: 14px; height: 14px; }
+    .cat-chip-none { background: rgba(0,0,0,0.04); color: var(--color-text-muted); }
+
     .source-cell { display: flex; align-items: center; gap: 4px; font-size: 0.85rem; }
     .source-icon { font-size: 16px; width: 16px; height: 16px; opacity: 0.7; }
     .transfer-source { color: var(--color-primary); }
@@ -308,13 +450,76 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
       vertical-align: middle;
     }
 
+    /* Mobile card feed */
+    .mobile-feed { display: none; }
+    .desktop-only { display: block; }
+    .date-group { margin-bottom: 12px; }
+    .date-header {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-text-muted);
+      padding: 8px 0 4px;
+      border-bottom: 1px solid var(--color-border);
+      margin-bottom: 4px;
+    }
+    .txn-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 4px;
+      border-bottom: 1px solid rgba(0,0,0,0.04);
+      cursor: pointer;
+      transition: background var(--transition-fast);
+    }
+    .txn-card:active { background: var(--color-surface-hover); }
+    .txn-cat-dot {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 59, 48, 0.1);
+      flex-shrink: 0;
+    }
+    .txn-cat-dot mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--color-danger); }
+    .txn-cat-dot.dot-income { background: rgba(48, 209, 88, 0.1); }
+    .txn-cat-dot.dot-income mat-icon { color: var(--color-success); }
+    .txn-cat-dot.dot-transfer { background: rgba(0, 122, 255, 0.1); }
+    .txn-cat-dot.dot-transfer mat-icon { color: var(--color-primary); }
+    .txn-cat-dot.dot-refund { background: rgba(255, 149, 0, 0.1); }
+    .txn-cat-dot.dot-refund mat-icon { color: var(--color-warning); }
+    .txn-cat-dot.dot-card { background: rgba(191, 90, 242, 0.1); }
+    .txn-cat-dot.dot-card mat-icon { color: var(--color-accent); }
+    .txn-mid { flex: 1; min-width: 0; }
+    .txn-desc { display: block; font-weight: 500; font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .txn-meta { display: block; font-size: 0.7rem; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .txn-type-label { font-weight: 600; font-size: 0.6rem; padding: 1px 5px; border-radius: var(--radius-full); }
+    .txn-right { flex-shrink: 0; text-align: right; }
+    .txn-amount { font-weight: 700; font-size: 0.9rem; }
+
     @media (max-width: 768px) {
       .totals-row { flex-direction: column; align-items: center; }
+    }
+    @media (max-width: 599px) {
+      .expenses-header { flex-direction: column; align-items: stretch; }
+      .view-toggle { margin-right: 0; align-self: center; }
+      .range-nav { justify-content: center; }
+      .range-field { width: 130px; }
+      .month-label { font-size: var(--text-sm); min-width: 110px; }
+      .mobile-feed { display: block; }
+      .desktop-only { display: none !important; }
+      .total-value { font-size: 1.1rem; }
+      .log-header { justify-content: center; }
+      .expense-count { width: 100%; text-align: center; }
     }
   `]
 })
 export class ExpensesPageComponent implements OnInit {
   private expenseService = inject(DailyExpenseService);
+  private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
 
   @ViewChild(MatSort) sort!: MatSort;
@@ -324,17 +529,22 @@ export class ExpensesPageComponent implements OnInit {
   summary = signal<SpendingSummary[]>([]);
   expenses = signal<DailyExpense[]>([]);
   filteredExpenses = signal<DailyExpense[]>([]);
+  groupedExpenses = signal<{ label: string; items: DailyExpense[] }[]>([]);
   loading = signal(true);
   totalBudgeted = signal(0);
   totalSpent = signal(0);
   totalRemaining = signal(0);
+
+  viewMode = signal<'month' | 'range'>('month');
+  rangeStartDate: Date | null = null;
+  rangeEndDate: Date | null = null;
 
   currentYear = new Date().getFullYear();
   currentMonth = new Date().getMonth() + 1;
   monthLabel = signal('');
 
   activeFilter: Partial<ExpenseFilter> = {};
-  logColumns = ['date', 'merchant', 'description', 'category', 'source', 'amount', 'actions'];
+  logColumns = ['type', 'date', 'merchant', 'description', 'category', 'source', 'amount', 'actions'];
 
   ngOnInit(): void {
     this.updateMonthLabel();
@@ -343,26 +553,108 @@ export class ExpensesPageComponent implements OnInit {
 
   loadData(): void {
     this.loading.set(true);
-    this.expenseService.getSummary(this.currentYear, this.currentMonth).subscribe({
-      next: (data) => {
-        this.summary.set(data);
-        this.totalBudgeted.set(data.reduce((sum, d) => sum + d.budgeted, 0));
-        this.totalSpent.set(data.reduce((sum, d) => sum + d.spent, 0));
-        this.totalRemaining.set(this.totalBudgeted() - this.totalSpent());
-        this.loading.set(false);
-      },
-      error: () => { this.loading.set(false); }
-    });
-    this.expenseService.getExpenses({ year: this.currentYear, month: this.currentMonth, ...this.activeFilter }).subscribe({
+
+    const filter: Partial<ExpenseFilter> = { ...this.activeFilter };
+    if (this.viewMode() === 'month') {
+      filter.year = this.currentYear;
+      filter.month = this.currentMonth;
+    } else {
+      if (this.rangeStartDate) filter.dateFrom = this.rangeStartDate.toISOString().split('T')[0];
+      if (this.rangeEndDate) filter.dateTo = this.rangeEndDate.toISOString().split('T')[0];
+    }
+
+    if (this.viewMode() === 'month') {
+      this.expenseService.getSummary(this.currentYear, this.currentMonth).subscribe({
+        next: (data) => {
+          this.summary.set(data);
+          this.totalBudgeted.set(data.reduce((sum, d) => sum + d.budgeted, 0));
+          this.totalSpent.set(data.reduce((sum, d) => sum + d.spent, 0));
+          this.totalRemaining.set(this.totalBudgeted() - this.totalSpent());
+          this.loading.set(false);
+        },
+        error: () => { this.loading.set(false); }
+      });
+    } else {
+      this.loading.set(false);
+    }
+
+    this.expenseService.getExpenses(filter).subscribe({
       next: (data) => {
         this.expenses.set(data);
         this.filteredExpenses.set(data);
+        this.buildGroupedExpenses(data);
       },
       error: () => {
         this.expenses.set([]);
         this.filteredExpenses.set([]);
+        this.groupedExpenses.set([]);
       }
     });
+  }
+
+  setViewMode(mode: 'month' | 'range'): void {
+    this.viewMode.set(mode);
+    if (mode === 'range' && !this.rangeStartDate) {
+      this.rangeStartDate = new Date(this.currentYear, this.currentMonth - 1, 1);
+      this.rangeEndDate = new Date(this.currentYear, this.currentMonth, 0);
+    }
+    this.loadData();
+  }
+
+  onRangeChange(): void {
+    if (this.rangeStartDate && this.rangeEndDate) {
+      this.loadData();
+    }
+  }
+
+  getCategoryIcon(e: DailyExpense): string {
+    if (e.categoryIcon) return e.categoryIcon;
+    switch (e.transactionType) {
+      case 'Income': return 'trending_up';
+      case 'Transfer': return 'swap_horiz';
+      case 'Refund': return 'undo';
+      case 'CardPayment': return 'credit_card';
+      default: return 'shopping_cart';
+    }
+  }
+
+  getCategoryColor(name: string | null): string {
+    if (!name) return 'hsl(0, 0%, 60%)';
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    const hue = ((hash % 360) + 360) % 360;
+    return `hsl(${hue}, 55%, 45%)`;
+  }
+
+  getCategoryBg(name: string | null): string {
+    if (!name) return 'rgba(0,0,0,0.06)';
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    const hue = ((hash % 360) + 360) % 360;
+    return `hsl(${hue}, 60%, 94%)`;
+  }
+
+  private buildGroupedExpenses(expenses: DailyExpense[]): void {
+    const groups = new Map<string, DailyExpense[]>();
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    for (const e of expenses) {
+      const d = new Date(e.date);
+      let label: string;
+      if (d.toDateString() === today.toDateString()) {
+        label = 'Today';
+      } else if (d.toDateString() === yesterday.toDateString()) {
+        label = 'Yesterday';
+      } else {
+        label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      }
+      if (!groups.has(label)) groups.set(label, []);
+      groups.get(label)!.push(e);
+    }
+
+    this.groupedExpenses.set(Array.from(groups.entries()).map(([label, items]) => ({ label, items })));
   }
 
   prevMonth(): void {
@@ -393,6 +685,7 @@ export class ExpensesPageComponent implements OnInit {
   sortData(sort: Sort): void {
     if (!sort.active || sort.direction === '') {
       this.filteredExpenses.set([...this.expenses()]);
+      this.buildGroupedExpenses(this.expenses());
       return;
     }
     const sorted = [...this.expenses()].sort((a, b) => {
@@ -406,6 +699,7 @@ export class ExpensesPageComponent implements OnInit {
       }
     });
     this.filteredExpenses.set(sorted);
+    this.buildGroupedExpenses(sorted);
   }
 
   addExpense(): void {
@@ -414,9 +708,15 @@ export class ExpensesPageComponent implements OnInit {
     ref.afterClosed().subscribe((result: any) => {
       if (!result) return;
       if (result.splits) {
-        this.expenseService.createSplit(result.splits).subscribe(() => this.loadData());
+        this.expenseService.createSplit(result.splits).subscribe({
+          next: () => { this.notify.success('Transaction saved'); this.loadData(); },
+          error: (err) => this.notify.error(err.error?.message || 'Failed to save transaction')
+        });
       } else {
-        this.expenseService.create(result).subscribe(() => this.loadData());
+        this.expenseService.create(result).subscribe({
+          next: () => { this.notify.success('Transaction saved'); this.loadData(); },
+          error: (err) => this.notify.error(err.error?.message || 'Failed to save transaction')
+        });
       }
     });
   }
@@ -425,9 +725,11 @@ export class ExpensesPageComponent implements OnInit {
     const data: ExpenseDialogData = { expense: null, prefilledCategoryId: categoryId };
     const ref = this.dialog.open(AddExpenseDialogComponent, { data });
     ref.afterClosed().subscribe((result: DailyExpenseCreate | undefined) => {
-      if (result) {
-        this.expenseService.create(result).subscribe(() => this.loadData());
-      }
+      if (!result) return;
+      this.expenseService.create(result).subscribe({
+        next: () => { this.notify.success('Transaction saved'); this.loadData(); },
+        error: (err) => this.notify.error(err.error?.message || 'Failed to save transaction')
+      });
     });
   }
 
@@ -435,9 +737,11 @@ export class ExpensesPageComponent implements OnInit {
     const data: ExpenseDialogData = { expense: null, prefill: expense };
     const ref = this.dialog.open(AddExpenseDialogComponent, { data });
     ref.afterClosed().subscribe((result: DailyExpenseCreate | undefined) => {
-      if (result) {
-        this.expenseService.create(result).subscribe(() => this.loadData());
-      }
+      if (!result) return;
+      this.expenseService.create(result).subscribe({
+        next: () => { this.notify.success('Transaction saved'); this.loadData(); },
+        error: (err) => this.notify.error(err.error?.message || 'Failed to save transaction')
+      });
     });
   }
 
@@ -445,9 +749,11 @@ export class ExpensesPageComponent implements OnInit {
     const data: ExpenseDialogData = { expense };
     const ref = this.dialog.open(AddExpenseDialogComponent, { data });
     ref.afterClosed().subscribe((result: DailyExpenseCreate | undefined) => {
-      if (result) {
-        this.expenseService.update(expense.id, result).subscribe(() => this.loadData());
-      }
+      if (!result) return;
+      this.expenseService.update(expense.id, result).subscribe({
+        next: () => { this.notify.success('Transaction updated'); this.loadData(); },
+        error: (err) => this.notify.error(err.error?.message || 'Failed to update transaction')
+      });
     });
   }
 

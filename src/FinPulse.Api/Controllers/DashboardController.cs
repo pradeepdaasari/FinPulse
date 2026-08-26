@@ -209,10 +209,10 @@ public class DashboardController : ControllerBase
         var totalExpenses = transactions.Where(t => t.TransactionType == TransactionType.Expense || t.TransactionType == null).Sum(t => t.Amount);
 
         var tradingGains = transactions
-            .Where(t => t.TransactionType == TransactionType.Income && t.Category.Name == "Trading Gains")
+            .Where(t => t.TransactionType == TransactionType.Income && t.Category != null && t.Category.Name == "Trading Gains")
             .Sum(t => t.Amount);
         var tradingLosses = transactions
-            .Where(t => t.TransactionType == TransactionType.Expense && t.Category.Name == "Trading Losses")
+            .Where(t => t.TransactionType == TransactionType.Expense && t.Category != null && t.Category.Name == "Trading Losses")
             .Sum(t => t.Amount);
 
         var savingsRate = totalIncome > 0 ? Math.Round((totalIncome - totalExpenses) / totalIncome * 100, 1) : 0;

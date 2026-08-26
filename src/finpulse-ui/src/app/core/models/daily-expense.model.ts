@@ -4,8 +4,8 @@ export type FundingSourceType = 'BankAccount' | 'CreditCard';
 export interface DailyExpense {
   id: number;
   date: string;
-  categoryId: number;
-  categoryName: string;
+  categoryId: number | null;
+  categoryName: string | null;
   categoryIcon?: string | null;
   parentCategoryName?: string | null;
   amount: number;
@@ -26,7 +26,7 @@ export interface DailyExpense {
 
 export interface DailyExpenseCreate {
   date: string;
-  categoryId: number;
+  categoryId: number | null;
   amount: number;
   description: string;
   merchant: string | null;

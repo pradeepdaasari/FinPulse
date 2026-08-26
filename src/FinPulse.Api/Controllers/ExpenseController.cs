@@ -34,7 +34,7 @@ public class ExpenseController : ControllerBase
         [FromQuery] string? tag)
     {
         var query = _db.DailyExpenses
-            .Include(e => e.Category)
+            .Include(e => e.Category!)
             .ThenInclude(c => c.Parent)
             .Where(e => e.UserId == UserId);
 
@@ -96,9 +96,9 @@ public class ExpenseController : ControllerBase
             e.Id,
             e.Date,
             e.CategoryId,
-            CategoryName = e.Category.Name,
-            CategoryIcon = e.Category.Icon,
-            ParentCategoryName = e.Category.Parent?.Name,
+            CategoryName = e.Category != null ? e.Category.Name : null,
+            CategoryIcon = e.Category != null ? e.Category.Icon : null,
+            ParentCategoryName = e.Category != null ? e.Category.Parent?.Name : null,
             e.Amount,
             e.Description,
             e.Merchant,
@@ -174,8 +174,8 @@ public class ExpenseController : ControllerBase
         // Add categories that have spending but no budget
         var budgetedCategoryIds = budgets.Select(b => b.CategoryId).ToHashSet();
         var unbudgeted = dailyExpenses
-            .Where(e => !budgetedCategoryIds.Contains(e.CategoryId))
-            .GroupBy(e => e.CategoryId);
+            .Where(e => e.CategoryId.HasValue && !budgetedCategoryIds.Contains(e.CategoryId.Value))
+            .GroupBy(e => e.CategoryId!.Value);
 
         foreach (var group in unbudgeted)
         {
@@ -315,8 +315,8 @@ public class ExpenseController : ControllerBase
             .ToListAsync();
 
         var monthlyTotals = new List<object>();
-        var allCategoryIds = expenses.Select(e => e.CategoryId).Distinct().ToList();
-        var categoryInfo = expenses.GroupBy(e => e.CategoryId)
+        var allCategoryIds = expenses.Where(e => e.CategoryId.HasValue).Select(e => e.CategoryId!.Value).Distinct().ToList();
+        var categoryInfo = expenses.Where(e => e.CategoryId.HasValue).GroupBy(e => e.CategoryId!.Value)
             .ToDictionary(g => g.Key, g => g.First().Category);
 
         for (int i = 0; i < months; i++)
@@ -382,14 +382,15 @@ public class ExpenseController : ControllerBase
                 && e.Date >= prevStart && e.Date < prevEnd)
             .ToListAsync();
 
-        var currentByCategory = currentExpenses.GroupBy(e => e.CategoryId)
+        var currentByCategory = currentExpenses.Where(e => e.CategoryId.HasValue).GroupBy(e => e.CategoryId!.Value)
             .ToDictionary(g => g.Key, g => g.Sum(e => e.Amount));
-        var prevByCategory = prevExpenses.GroupBy(e => e.CategoryId)
+        var prevByCategory = prevExpenses.Where(e => e.CategoryId.HasValue).GroupBy(e => e.CategoryId!.Value)
             .ToDictionary(g => g.Key, g => g.Sum(e => e.Amount));
 
         var allCategoryIds = currentByCategory.Keys.Union(prevByCategory.Keys).Distinct();
         var categoryInfo = currentExpenses.Concat(prevExpenses)
-            .GroupBy(e => e.CategoryId)
+            .Where(e => e.CategoryId.HasValue)
+            .GroupBy(e => e.CategoryId!.Value)
             .ToDictionary(g => g.Key, g => g.First().Category);
 
         var categories = allCategoryIds.Select(catId =>
@@ -457,7 +458,7 @@ public class ExpenseController : ControllerBase
 
         var expense = new DailyExpense
         {
-            Date = dto.Date,
+            Date = dto.Date.Date + DateTime.UtcNow.TimeOfDay,
             CategoryId = dto.CategoryId,
             Amount = dto.Amount,
             Description = dto.Description,
@@ -483,7 +484,7 @@ public class ExpenseController : ControllerBase
         await _db.SaveChangesAsync();
 
         var created = await _db.DailyExpenses
-            .Include(e => e.Category).ThenInclude(c => c.Parent)
+            .Include(e => e.Category!).ThenInclude(c => c.Parent)
             .FirstAsync(e => e.Id == expense.Id);
 
         return Ok(new
@@ -491,8 +492,8 @@ public class ExpenseController : ControllerBase
             created.Id,
             created.Date,
             created.CategoryId,
-            CategoryName = created.Category.Name,
-            ParentCategoryName = created.Category.Parent?.Name,
+            CategoryName = created.Category?.Name,
+            ParentCategoryName = created.Category?.Parent?.Name,
             created.Amount,
             created.Description,
             created.Merchant,
@@ -524,7 +525,7 @@ public class ExpenseController : ControllerBase
 
             var expense = new DailyExpense
             {
-                Date = dto.Date,
+                Date = dto.Date.Date + DateTime.UtcNow.TimeOfDay,
                 CategoryId = dto.CategoryId,
                 Amount = dto.Amount,
                 Description = dto.Description,
@@ -570,7 +571,9 @@ public class ExpenseController : ControllerBase
         else
             await ReverseBalance(expense.TransactionType, expense.FundingSourceType, expense.FundingSourceId, expense.Amount);
 
-        expense.Date = dto.Date;
+        expense.Date = dto.Date.Date == expense.Date.Date
+            ? expense.Date
+            : dto.Date.Date + DateTime.UtcNow.TimeOfDay;
         expense.CategoryId = dto.CategoryId;
         expense.Amount = dto.Amount;
         expense.Description = dto.Description;
@@ -593,7 +596,7 @@ public class ExpenseController : ControllerBase
         await _db.SaveChangesAsync();
 
         var updated = await _db.DailyExpenses
-            .Include(e => e.Category).ThenInclude(c => c.Parent)
+            .Include(e => e.Category!).ThenInclude(c => c.Parent)
             .FirstAsync(e => e.Id == expense.Id);
 
         return Ok(new
@@ -601,8 +604,8 @@ public class ExpenseController : ControllerBase
             updated.Id,
             updated.Date,
             updated.CategoryId,
-            CategoryName = updated.Category.Name,
-            ParentCategoryName = updated.Category.Parent?.Name,
+            CategoryName = updated.Category?.Name,
+            ParentCategoryName = updated.Category?.Parent?.Name,
             updated.Amount,
             updated.Description,
             updated.Merchant,

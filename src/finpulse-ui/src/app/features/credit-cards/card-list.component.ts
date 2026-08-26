@@ -40,7 +40,8 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
         </button>
       </div>
     } @else {
-      <mat-card>
+      <!-- Desktop table -->
+      <mat-card class="desktop-only">
         <div class="table-wrapper">
         <table mat-table [dataSource]="cards()">
           <ng-container matColumnDef="cardName">
@@ -100,7 +101,7 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
             <th mat-header-cell *matHeaderCellDef>Actions</th>
             <td mat-cell *matCellDef="let card">
               <button mat-icon-button (click)="recordPayment(card)" aria-label="Record Payment">
-                <mat-icon>price_check</mat-icon>
+                <mat-icon>payments</mat-icon>
               </button>
               <button mat-icon-button (click)="updateBalance(card)" aria-label="Update Balance">
                 <mat-icon>edit</mat-icon>
@@ -115,10 +116,54 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+              [class.row-healthy]="getUtilization(row) <= 30"
+              [class.row-warning]="getUtilization(row) > 30 && getUtilization(row) <= 70"
+              [class.row-danger]="getUtilization(row) > 70"></tr>
         </table>
         </div>
       </mat-card>
+
+      <!-- Mobile cards -->
+      <div class="mobile-cards">
+        @for (card of cards(); track card.id) {
+          <div class="cc-card" (click)="viewCard(card.id)">
+            <div class="cc-top">
+              <div class="cc-icon">
+                <mat-icon>credit_card</mat-icon>
+              </div>
+              <div class="cc-info">
+                <span class="cc-name">{{ card.cardName }}</span>
+                <span class="cc-meta">Due day {{ card.dueDay }}
+                  @if (isPromoActive(card)) {
+                    · <span class="cc-promo">PROMO</span>
+                  }
+                </span>
+              </div>
+              <div class="cc-balance">
+                <span class="cc-amount">{{ card.currentBalance | currency }}</span>
+              </div>
+            </div>
+            <div class="cc-util-row">
+              <div class="cc-util-bar">
+                <div class="cc-util-fill" [style.width.%]="getUtilization(card)" [class]="getUtilColor(card)"></div>
+              </div>
+              <span class="cc-util-pct">{{ getUtilization(card) | number:'1.0-0' }}%</span>
+            </div>
+            <div class="cc-actions" (click)="$event.stopPropagation()">
+              <button mat-icon-button (click)="recordPayment(card)" aria-label="Record Payment">
+                <mat-icon>payments</mat-icon>
+              </button>
+              <button mat-icon-button (click)="updateBalance(card)" aria-label="Update Balance">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="deleteCard(card)" aria-label="Delete">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
     }
   `,
   styles: [`
@@ -139,6 +184,10 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
       -webkit-overflow-scrolling: touch;
     }
     table { width: 100%; min-width: 550px; }
+    tr.mat-mdc-row { border-left: 3px solid transparent; }
+    tr.row-healthy { border-left-color: #4caf50; }
+    tr.row-warning { border-left-color: #ff9800; }
+    tr.row-danger { border-left-color: #f44336; }
     .promo-chip {
       margin-left: 8px;
       font-size: 10px;
@@ -169,8 +218,71 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
       font-weight: 600;
       min-width: 32px;
     }
+    .mobile-cards { display: none; }
+    .cc-card {
+      background: var(--color-surface);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      padding: 14px 12px 8px;
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: box-shadow var(--transition-fast);
+    }
+    .cc-card:active { box-shadow: var(--shadow-md); }
+    .cc-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .cc-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--gradient-icon-purple, linear-gradient(135deg, #e8daef 0%, #d2b4de 100%));
+    }
+    .cc-icon mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); }
+    .cc-info { flex: 1; min-width: 0; }
+    .cc-name { display: block; font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cc-meta { display: block; font-size: 0.75rem; color: var(--color-text-muted); }
+    .cc-promo { color: #4caf50; font-weight: 600; }
+    .cc-balance { text-align: right; }
+    .cc-amount { font-weight: 700; font-size: 1rem; }
+    .cc-util-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 0 4px;
+    }
+    .cc-util-bar {
+      flex: 1;
+      height: 6px;
+      background: var(--color-border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .cc-util-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    .cc-util-pct { font-size: 12px; font-weight: 600; min-width: 32px; text-align: right; }
+    .cc-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0;
+      margin-top: 4px;
+    }
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
+    }
+    @media (max-width: 599px) {
+      .desktop-only { display: none !important; }
+      .mobile-cards { display: block; }
+      table { min-width: 0; }
+      .mat-column-apr,
+      .mat-column-promoApr,
+      .mat-column-minimumPayment { display: none; }
+      .util-bar { width: 40px; }
     }
   `]
 })

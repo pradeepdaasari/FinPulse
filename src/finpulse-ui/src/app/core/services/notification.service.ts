@@ -3,6 +3,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { Observable, map } from 'rxjs';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../shared/confirm-dialog.component';
+import { ToastComponent, ToastData } from '../../shared/toast.component';
 
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
@@ -10,20 +11,28 @@ export class NotificationService {
   private dialog = inject(MatDialog);
 
   success(message: string): void {
-    this.snackBar.open(message, 'OK', {
-      duration: 3000,
-      panelClass: 'snack-success',
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom'
-    });
+    this.show({ message, type: 'success' }, 3000);
   }
 
   error(message: string): void {
-    this.snackBar.open(message, 'OK', {
-      duration: 5000,
-      panelClass: 'snack-error',
+    this.show({ message, type: 'error' }, 5000);
+  }
+
+  warning(message: string): void {
+    this.show({ message, type: 'warning' }, 4000);
+  }
+
+  info(message: string): void {
+    this.show({ message, type: 'info' }, 3000);
+  }
+
+  private show(data: ToastData, duration: number): void {
+    this.snackBar.openFromComponent(ToastComponent, {
+      data,
+      duration,
       horizontalPosition: 'center',
-      verticalPosition: 'bottom'
+      verticalPosition: 'bottom',
+      panelClass: 'toast-panel'
     });
   }
 
