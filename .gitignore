@@ -13,9 +13,6 @@ obj/
 src/pulse-ui/node_modules/
 src/pulse-ui/dist/
 src/pulse-ui/.angular/
-src/finpulse-ui/node_modules/
-src/finpulse-ui/dist/
-src/finpulse-ui/.angular/
 
 ## VS Code
 .vscode/.browse.c_cpp.db*
@@ -38,5 +35,3 @@ publish/
 ## wwwroot is populated by Angular build at deploy time
 src/Pulse.Api/wwwroot/*
 !src/Pulse.Api/wwwroot/.gitkeep
-src/FinPulse.Api/wwwroot/*
-!src/FinPulse.Api/wwwroot/.gitkeep

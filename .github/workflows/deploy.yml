@@ -1,12 +1,10 @@
 name: Build and Deploy FinPulse
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 env:
-  AZURE_WEBAPP_NAME: finpulse-app
+  AZURE_WEBAPP_NAME: finpulse-pd
   DOTNET_VERSION: '10.0.x'
   NODE_VERSION: '22.x'
 
@@ -27,21 +25,21 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: src/finpulse-ui/package-lock.json
+          cache-dependency-path: src/pulse-ui/package-lock.json
 
       - name: Install Angular dependencies
         run: npm ci
-        working-directory: src/finpulse-ui
+        working-directory: src/pulse-ui
 
       - name: Build Angular app
         run: npx ng build --configuration production
-        working-directory: src/finpulse-ui
+        working-directory: src/pulse-ui
 
       - name: Publish .NET API
-        run: dotnet publish src/FinPulse.Api/FinPulse.Api.csproj -c Release -o ./publish --nologo
+        run: dotnet publish src/Pulse.Api/Pulse.Api.csproj -c Release -o ./publish --nologo
 
       - name: Copy Angular build to wwwroot
-        run: cp -r src/finpulse-ui/dist/finpulse-ui/browser/* ./publish/wwwroot/
+        run: cp -r src/pulse-ui/dist/pulse-ui/browser/* ./publish/wwwroot/
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3

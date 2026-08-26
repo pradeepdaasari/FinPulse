@@ -21,15 +21,19 @@ import { NotificationService } from '../../core/services/notification.service';
   standalone: true,
   imports: [MatCardModule, MatIconModule, MatButtonModule, MatTableModule, MatSelectModule, MatFormFieldModule, MatProgressSpinnerModule, MatTooltipModule, DatePipe, DecimalPipe, FormsModule, BaseChartDirective],
   template: `
-    <div class="header-row">
-      <mat-form-field appearance="outline" class="filter-field">
-        <mat-select [(value)]="selectedType" (selectionChange)="onTypeChange()" placeholder="All Types">
-          <mat-option [value]="''">All Types</mat-option>
-          @for (type of types(); track type) {
-            <mat-option [value]="type">{{ getMetricLabel(type) }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-select [(value)]="selectedType" (selectionChange)="onTypeChange()" placeholder="All Types">
+            <mat-option [value]="''">All Types</mat-option>
+            @for (type of types(); track type) {
+              <mat-option [value]="type">{{ getMetricLabel(type) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <span class="record-count">{{ metrics().length }} records</span>
+      </div>
       <button mat-raised-button color="primary" (click)="openAddDialog()">
         <mat-icon>add</mat-icon> Log Metric
       </button>
@@ -39,8 +43,8 @@ import { NotificationService } from '../../core/services/notification.service';
       <mat-spinner></mat-spinner>
     } @else if (metrics().length === 0) {
       <div class="empty-state">
-        <div class="empty-icon-wrap blue">
-          <mat-icon>straighten</mat-icon>
+        <div class="empty-icon-wrap">
+          <mat-icon>monitor_heart</mat-icon>
         </div>
         <h3>No metrics recorded yet</h3>
         <p>Start tracking your vitals like weight, blood pressure, heart rate and more.</p>
@@ -49,78 +53,108 @@ import { NotificationService } from '../../core/services/notification.service';
         </button>
       </div>
     } @else {
-      <!-- Trend Chart -->
-      @if (chartData()) {
-        <div class="trend-card">
-          <div class="trend-header">
-            <div class="trend-title">
-              <mat-icon>{{ getMetricIcon(selectedType) }}</mat-icon>
-              <span>{{ getMetricLabel(selectedType) }} Trend</span>
-            </div>
-            <div class="trend-stats">
-              @if (trendCurrent() !== null) {
-                <div class="trend-stat">
-                  <span class="stat-label">Current</span>
-                  <span class="stat-val">{{ trendCurrent() | number:'1.0-1' }}</span>
-                </div>
-                <div class="trend-stat">
-                  <span class="stat-label">Avg</span>
-                  <span class="stat-val">{{ trendAvg() | number:'1.0-1' }}</span>
-                </div>
-                <div class="trend-stat">
-                  <span class="stat-label">Min</span>
-                  <span class="stat-val">{{ trendMin() | number:'1.0-1' }}</span>
-                </div>
-                <div class="trend-stat">
-                  <span class="stat-label">Max</span>
-                  <span class="stat-val">{{ trendMax() | number:'1.0-1' }}</span>
-                </div>
-              }
+      <!-- Stat Cards -->
+      @if (trendData().length > 0 && selectedType) {
+        <div class="stats-row">
+          <div class="stat-card">
+            <mat-icon class="stat-icon blue">{{ getMetricIcon(selectedType) }}</mat-icon>
+            <div class="stat-content">
+              <span class="stat-value">{{ trendCurrent() | number:'1.0-1' }}</span>
+              <span class="stat-label">Current</span>
             </div>
           </div>
-          <div class="chart-container">
-            <canvas baseChart
-              [data]="chartData()!"
-              [options]="chartOptions"
-              type="line">
-            </canvas>
+          <div class="stat-card">
+            <mat-icon class="stat-icon purple">analytics</mat-icon>
+            <div class="stat-content">
+              <span class="stat-value">{{ trendAvg() | number:'1.0-1' }}</span>
+              <span class="stat-label">Average</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <mat-icon class="stat-icon green">arrow_downward</mat-icon>
+            <div class="stat-content">
+              <span class="stat-value">{{ trendMin() | number:'1.0-1' }}</span>
+              <span class="stat-label">Lowest</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <mat-icon class="stat-icon red">arrow_upward</mat-icon>
+            <div class="stat-content">
+              <span class="stat-value">{{ trendMax() | number:'1.0-1' }}</span>
+              <span class="stat-label">Highest</span>
+            </div>
           </div>
         </div>
       }
 
+      <!-- Trend Chart -->
+      @if (chartData()) {
+        <mat-card class="chart-card">
+          <mat-card-content>
+            <div class="chart-header">
+              <span class="chart-title">
+                <mat-icon>show_chart</mat-icon>
+                {{ getMetricLabel(selectedType) }} — 90 Day Trend
+              </span>
+            </div>
+            <div class="chart-container">
+              <canvas baseChart
+                [data]="chartData()!"
+                [options]="chartOptions"
+                type="line">
+              </canvas>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+
       <!-- Desktop Table -->
-      <mat-card class="desktop-only">
-        <table mat-table [dataSource]="metrics()" class="metrics-table">
-          <ng-container matColumnDef="type">
-            <th mat-header-cell *matHeaderCellDef>Type</th>
-            <td mat-cell *matCellDef="let m">{{ getMetricLabel(m.metricType) }}</td>
-          </ng-container>
-          <ng-container matColumnDef="value">
-            <th mat-header-cell *matHeaderCellDef>Value</th>
-            <td mat-cell *matCellDef="let m">{{ m.value | number:'1.0-2' }} {{ m.unit }}</td>
-          </ng-container>
-          <ng-container matColumnDef="date">
-            <th mat-header-cell *matHeaderCellDef>Date</th>
-            <td mat-cell *matCellDef="let m">{{ m.measuredAt | date:'MMM d, yyyy h:mm a' }}</td>
-          </ng-container>
-          <ng-container matColumnDef="notes">
-            <th mat-header-cell *matHeaderCellDef>Notes</th>
-            <td mat-cell *matCellDef="let m">{{ m.notes || '—' }}</td>
-          </ng-container>
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let m">
-              <button mat-icon-button (click)="editMetric(m)" matTooltip="Edit">
-                <mat-icon>edit</mat-icon>
-              </button>
-              <button mat-icon-button color="warn" (click)="confirmDelete(m)" matTooltip="Delete">
-                <mat-icon>delete</mat-icon>
-              </button>
-            </td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        </table>
+      <mat-card class="table-card desktop-only">
+        <mat-card-content>
+          <div class="table-wrapper">
+            <table mat-table [dataSource]="metrics()" class="metrics-table">
+              <ng-container matColumnDef="type">
+                <th mat-header-cell *matHeaderCellDef>Type</th>
+                <td mat-cell *matCellDef="let m">
+                  <span class="metric-type-badge">
+                    <mat-icon class="type-icon">{{ getMetricIcon(m.metricType) }}</mat-icon>
+                    {{ getMetricLabel(m.metricType) }}
+                  </span>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="value">
+                <th mat-header-cell *matHeaderCellDef>Value</th>
+                <td mat-cell *matCellDef="let m">
+                  <span class="metric-value">{{ m.value | number:'1.0-2' }}</span>
+                  <span class="metric-unit">{{ m.unit }}</span>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="date">
+                <th mat-header-cell *matHeaderCellDef>Date</th>
+                <td mat-cell *matCellDef="let m">{{ m.measuredAt | date:'MMM d, yyyy h:mm a' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="notes">
+                <th mat-header-cell *matHeaderCellDef>Notes</th>
+                <td mat-cell *matCellDef="let m">
+                  <span class="notes-text">{{ m.notes || '—' }}</span>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let m">
+                  <button mat-icon-button (click)="editMetric(m)" matTooltip="Edit">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" (click)="confirmDelete(m)" matTooltip="Delete">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+            </table>
+          </div>
+        </mat-card-content>
       </mat-card>
 
       <!-- Mobile Cards -->
@@ -143,54 +177,79 @@ import { NotificationService } from '../../core/services/notification.service';
     }
   `,
   styles: [`
-    .header-row {
-      display: flex; justify-content: flex-end; align-items: center;
+    /* Header */
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
       margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);
     }
-    .filter-field { width: 170px; }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .filter-field { width: 180px; }
     .filter-field .mat-mdc-form-field-subscript-wrapper { display: none; }
+    .record-count { font-size: 0.85rem; color: var(--color-text-muted); font-weight: 500; }
 
+    /* Empty State */
     .empty-state {
       text-align: center; padding: var(--spacing-xl) var(--spacing-md);
     }
     .empty-icon-wrap {
       width: 72px; height: 72px; border-radius: 50%; margin: 0 auto var(--spacing-md);
       display: flex; align-items: center; justify-content: center;
+      background: rgba(21,101,192,0.1);
     }
-    .empty-icon-wrap.blue { background: rgba(21,101,192,0.1); }
-    .empty-icon-wrap.blue mat-icon { color: #1565c0; }
-    .empty-icon-wrap mat-icon { font-size: 32px; width: 32px; height: 32px; }
+    .empty-icon-wrap mat-icon { font-size: 32px; width: 32px; height: 32px; color: #1565c0; }
     .empty-state h3 { margin: 0 0 var(--spacing-xs); font-size: 1.1rem; }
     .empty-state p { color: var(--color-text-muted); margin: 0 auto var(--spacing-md); max-width: 360px; }
 
-    /* Trend Chart */
-    .trend-card {
-      background: var(--color-surface);
-      border-radius: var(--radius-sm);
-      box-shadow: var(--shadow-sm);
-      padding: 16px;
+    /* Stats Row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--spacing-sm);
       margin-bottom: var(--spacing-md);
     }
-    .trend-header {
-      display: flex; justify-content: space-between; align-items: flex-start;
-      flex-wrap: wrap; gap: 12px; margin-bottom: 8px;
+    .stat-card {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      box-shadow: var(--shadow-sm);
     }
-    .trend-title {
+    .stat-icon {
+      font-size: 28px; width: 28px; height: 28px;
+    }
+    .stat-icon.blue { color: var(--color-primary); }
+    .stat-icon.purple { color: #7b1fa2; }
+    .stat-icon.green { color: #2e7d32; }
+    .stat-icon.red { color: #c62828; }
+    .stat-content { display: flex; flex-direction: column; min-width: 0; }
+    .stat-value { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .stat-label { font-size: 0.72rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+    /* Chart */
+    .chart-card { margin-bottom: var(--spacing-md); }
+    .chart-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .chart-title {
       display: flex; align-items: center; gap: 8px;
       font-weight: 700; font-size: 0.9rem;
     }
-    .trend-title mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); }
-    .trend-stats {
-      display: flex; gap: 16px;
-    }
-    .trend-stat { display: flex; flex-direction: column; align-items: center; }
-    .stat-label { font-size: 0.65rem; text-transform: uppercase; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.04em; }
-    .stat-val { font-size: 0.9rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .chart-container { position: relative; height: 200px; }
+    .chart-title mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); }
+    .chart-container { position: relative; height: 220px; }
 
-    /* Desktop */
-    .desktop-only { overflow-x: auto; }
-    .metrics-table { width: 100%; }
+    /* Desktop Table */
+    .table-card { overflow: hidden; }
+    .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .metrics-table { width: 100%; min-width: 600px; }
+    .metric-type-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-weight: 500; font-size: 0.85rem;
+    }
+    .type-icon { font-size: 18px; width: 18px; height: 18px; color: var(--color-primary); }
+    .metric-value { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .metric-unit { font-size: 0.8rem; color: var(--color-text-muted); margin-left: 4px; }
+    .notes-text { font-size: 0.85rem; color: var(--color-text-muted); }
 
     /* Mobile Cards */
     .mobile-cards { display: none; }
@@ -205,7 +264,7 @@ import { NotificationService } from '../../core/services/notification.service';
     .mc-icon {
       width: 40px; height: 40px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
-      background: var(--gradient-icon-blue);
+      background: rgba(21,101,192,0.08);
       flex-shrink: 0;
     }
     .mc-icon mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); }
@@ -216,12 +275,20 @@ import { NotificationService } from '../../core/services/notification.service';
     .mc-value { font-weight: 700; font-size: 1rem; color: var(--color-primary); font-variant-numeric: tabular-nums; }
     .mc-unit { font-size: 0.7rem; color: var(--color-text-muted); font-weight: 500; margin-left: 2px; }
 
+    @media (max-width: 768px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+    }
+
     @media (max-width: 599px) {
       .desktop-only { display: none !important; }
       .mobile-cards { display: block; }
-      .header-row { justify-content: space-between; }
-      .filter-field { width: 140px; }
-      .trend-stats { gap: 10px; }
+      .page-header { flex-direction: column; align-items: stretch; }
+      .header-left { justify-content: space-between; }
+      .filter-field { width: 150px; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .stat-card { padding: 12px; gap: 10px; }
+      .stat-icon { font-size: 22px; width: 22px; height: 22px; }
+      .stat-value { font-size: 1rem; }
       .chart-container { height: 160px; }
     }
   `]
@@ -248,17 +315,17 @@ export class MetricsLogComponent implements OnInit {
     scales: {
       x: {
         grid: { display: false },
-        ticks: { font: { size: 10 }, maxTicksLimit: 6 }
+        ticks: { font: { size: 10 }, maxTicksLimit: 8 }
       },
       y: {
         beginAtZero: false,
-        grid: { color: 'rgba(0,0,0,0.05)' },
+        grid: { color: 'rgba(0,0,0,0.04)' },
         ticks: { font: { size: 10 }, maxTicksLimit: 5 }
       }
     },
     elements: {
-      point: { radius: 3, hoverRadius: 5 },
-      line: { tension: 0.3 }
+      point: { radius: 3, hoverRadius: 6 },
+      line: { tension: 0.35, borderWidth: 2.5 }
     }
   };
 
@@ -312,10 +379,10 @@ export class MetricsLogComponent implements OnInit {
                 label: this.getMetricLabel(this.selectedType),
                 data: data.map(d => d.value),
                 borderColor: '#1565c0',
-                backgroundColor: 'rgba(21, 101, 192, 0.08)',
+                backgroundColor: 'rgba(21, 101, 192, 0.06)',
                 fill: true,
                 pointBackgroundColor: '#1565c0',
-                borderWidth: 2
+                borderWidth: 2.5
               }]
             });
           } else {

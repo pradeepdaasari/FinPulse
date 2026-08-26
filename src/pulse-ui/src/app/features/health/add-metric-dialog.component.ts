@@ -85,8 +85,8 @@ interface MetricConfig {
     :host { display: block; }
     .dialog-banner {
       position: relative;
-      margin: -24px -24px 12px;
-      padding: 16px 24px 14px;
+      margin: -24px -24px 20px;
+      padding: 20px 24px 16px;
       background: var(--gradient-primary);
       overflow: hidden;
     }
@@ -118,7 +118,7 @@ interface MetricConfig {
       letter-spacing: var(--tracking-tight); color: #fff !important;
     }
     .dialog-subtitle { color: rgba(255, 255, 255, 0.75); font-size: 0.72rem; margin: 2px 0 0; }
-    .metric-form { display: flex; flex-direction: column; gap: 4px; min-width: 0; width: 100%; }
+    .metric-form { display: flex; flex-direction: column; gap: 4px; min-width: 0; width: 100%; padding-top: 4px; }
     .full-width { width: 100%; }
     .value-row { display: flex; align-items: center; gap: 12px; }
     .value-field { flex: 1; }
