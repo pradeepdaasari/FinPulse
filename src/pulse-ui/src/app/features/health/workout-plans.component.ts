@@ -44,16 +44,16 @@ import { NotificationService } from '../../core/services/notification.service';
               <span class="pc-name">{{ plan.name }}</span>
               <span class="pc-meta">{{ plan.dayCount }} days · {{ plan.exerciseCount }} exercises</span>
             </div>
-            <div class="pc-right">
+            <div class="pc-actions">
               @if (plan.isActive) {
                 <span class="pc-badge active">Active</span>
               } @else {
                 <button mat-stroked-button class="pc-activate" (click)="activatePlan(plan, $event)">Activate</button>
               }
+              <button mat-icon-button class="pc-delete" (click)="deletePlan(plan, $event)">
+                <mat-icon>delete_outline</mat-icon>
+              </button>
             </div>
-            <button mat-icon-button class="pc-delete" (click)="deletePlan(plan, $event)">
-              <mat-icon>delete_outline</mat-icon>
-            </button>
           </div>
         }
       </div>
@@ -84,32 +84,30 @@ import { NotificationService } from '../../core/services/notification.service';
       padding: 14px 12px; background: var(--color-surface);
       border-radius: var(--radius-sm); box-shadow: var(--shadow-sm);
       cursor: pointer; transition: box-shadow var(--transition-fast);
-      position: relative;
     }
     .plan-card:active { box-shadow: var(--shadow-md); }
     .pc-icon {
       width: 40px; height: 40px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
-      background: rgba(106,27,154,0.1);
+      background: rgba(106,27,154,0.1); flex-shrink: 0;
     }
     .pc-icon mat-icon { font-size: 20px; width: 20px; height: 20px; color: #6a1b9a; }
     .pc-icon.active { background: rgba(46,125,50,0.1); }
     .pc-icon.active mat-icon { color: #2e7d32; }
     .pc-mid { flex: 1; min-width: 0; }
-    .pc-name { display: block; font-weight: 600; font-size: 0.9rem; }
+    .pc-name { display: block; font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .pc-meta { display: block; font-size: 0.75rem; color: var(--color-text-muted); }
-    .pc-right { text-align: right; }
+    .pc-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
     .pc-badge {
       display: inline-block; font-size: 0.7rem; font-weight: 600;
       padding: 3px 8px; border-radius: var(--radius-full);
     }
     .pc-badge.active { background: rgba(46,125,50,0.1); color: #2e7d32; }
     .pc-activate { font-size: 0.75rem; }
-    .pc-delete { position: absolute; top: 4px; right: 4px; opacity: 0; transition: opacity var(--transition-fast); }
-    .plan-card:hover .pc-delete { opacity: 0.7; }
+    .pc-delete { color: var(--color-text-muted); }
+    .pc-delete mat-icon { font-size: 20px; width: 20px; height: 20px; }
 
     @media (max-width: 599px) {
-      .pc-delete { opacity: 0.5; }
       .pc-activate { font-size: 0.7rem; padding: 0 8px; min-width: auto; }
     }
   `]

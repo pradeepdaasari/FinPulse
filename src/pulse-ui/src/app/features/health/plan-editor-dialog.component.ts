@@ -4,7 +4,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTabsModule } from '@angular/material/tabs';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { FormsModule } from '@angular/forms';
 import { WorkoutPlanService } from '../../core/services/workout-plan.service';
@@ -14,75 +13,237 @@ import { NotificationService } from '../../core/services/notification.service';
 @Component({
   selector: 'app-plan-editor-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, MatTabsModule, MatCheckboxModule, FormsModule],
+  imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, MatCheckboxModule, FormsModule],
   template: `
-    <h2 mat-dialog-title>{{ isEditing ? 'Edit Plan' : 'Create Plan' }}</h2>
+    <div class="dialog-banner">
+      <div class="banner-pattern"></div>
+      <div class="banner-content">
+        <div class="dialog-header-icon">
+          <mat-icon>fitness_center</mat-icon>
+        </div>
+        <div>
+          <h2 mat-dialog-title>{{ isEditing ? 'Edit Plan' : 'Create Plan' }}</h2>
+          <p class="dialog-subtitle">{{ isEditing ? 'Update your workout routine' : 'Design your weekly routine' }}</p>
+        </div>
+      </div>
+    </div>
     <mat-dialog-content>
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Plan Name</mat-label>
-        <input matInput [(ngModel)]="planName" placeholder="e.g. Push/Pull/Legs 6-Day">
-      </mat-form-field>
+      <div class="plan-form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Plan Name</mat-label>
+          <input matInput [(ngModel)]="planName" placeholder="e.g. Push/Pull/Legs 6-Day">
+        </mat-form-field>
 
-      <mat-checkbox [(ngModel)]="isActive">Set as active plan</mat-checkbox>
+        <mat-checkbox [(ngModel)]="isActive" class="active-check">Set as active plan</mat-checkbox>
 
-      <mat-tab-group class="days-tabs">
-        @for (day of days; track day.dayOfWeek; let i = $index) {
-          <mat-tab [label]="dayNames[day.dayOfWeek]">
-            <div class="day-content">
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Focus Area</mat-label>
-                <input matInput [(ngModel)]="day.focusArea" placeholder="e.g. Chest & Triceps">
-              </mat-form-field>
+        <!-- Day Selector -->
+        <div class="day-selector">
+          <button mat-icon-button (click)="prevDay()" [disabled]="selectedDayIndex === 0">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+          <div class="day-chips">
+            @for (day of days; track day.dayOfWeek; let i = $index) {
+              <button class="day-chip" [class.active]="selectedDayIndex === i"
+                      [class.has-exercises]="day.exercises.length > 0"
+                      (click)="selectedDayIndex = i">
+                {{ dayAbbrev[day.dayOfWeek] }}
+              </button>
+            }
+          </div>
+          <button mat-icon-button (click)="nextDay()" [disabled]="selectedDayIndex === days.length - 1">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </div>
 
+        <!-- Day Content -->
+        @if (days[selectedDayIndex]; as day) {
+          <div class="day-content">
+            <div class="day-header">
+              <span class="day-label">{{ dayNames[day.dayOfWeek] }}</span>
+              <span class="exercise-count">{{ day.exercises.length }} exercises</span>
+            </div>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Focus Area</mat-label>
+              <input matInput [(ngModel)]="day.focusArea" placeholder="e.g. Chest & Triceps">
+            </mat-form-field>
+
+            <!-- Exercise Cards -->
+            <div class="exercise-list">
               @for (ex of day.exercises; track ex.orderIndex; let j = $index) {
-                <div class="exercise-row">
-                  <mat-form-field appearance="outline" class="ex-name">
-                    <mat-label>Exercise</mat-label>
-                    <input matInput [(ngModel)]="ex.exerciseName">
+                <div class="exercise-card">
+                  <div class="ex-card-header">
+                    <span class="ex-number">{{ j + 1 }}</span>
+                    <mat-form-field appearance="outline" class="ex-name-field">
+                      <mat-label>Exercise</mat-label>
+                      <input matInput [(ngModel)]="ex.exerciseName">
+                    </mat-form-field>
+                    <button mat-icon-button class="ex-remove" (click)="removeExercise(selectedDayIndex, j)">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+                  <div class="ex-card-details">
+                    <mat-form-field appearance="outline" class="ex-field">
+                      <mat-label>Sets</mat-label>
+                      <input matInput type="number" [(ngModel)]="ex.targetSets">
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="ex-field">
+                      <mat-label>Reps</mat-label>
+                      <input matInput [(ngModel)]="ex.targetReps" placeholder="8-12">
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="ex-field">
+                      <mat-label>Weight</mat-label>
+                      <input matInput type="number" [(ngModel)]="ex.targetWeight" placeholder="lbs">
+                    </mat-form-field>
+                  </div>
+                  <mat-form-field appearance="outline" class="full-width ex-video-field">
+                    <mat-label>Video URL</mat-label>
+                    <input matInput [(ngModel)]="ex.videoUrl" placeholder="https://youtube.com/...">
+                    <mat-icon matPrefix class="video-icon">play_circle</mat-icon>
                   </mat-form-field>
-                  <mat-form-field appearance="outline" class="ex-sets">
-                    <mat-label>Sets</mat-label>
-                    <input matInput type="number" [(ngModel)]="ex.targetSets">
-                  </mat-form-field>
-                  <mat-form-field appearance="outline" class="ex-reps">
-                    <mat-label>Reps</mat-label>
-                    <input matInput [(ngModel)]="ex.targetReps" placeholder="8-12">
-                  </mat-form-field>
-                  <mat-form-field appearance="outline" class="ex-weight">
-                    <mat-label>Weight</mat-label>
-                    <input matInput type="number" [(ngModel)]="ex.targetWeight">
-                  </mat-form-field>
-                  <button mat-icon-button (click)="removeExercise(i, j)"><mat-icon>close</mat-icon></button>
                 </div>
               }
-              <button mat-stroked-button (click)="addExercise(i)">
-                <mat-icon>add</mat-icon> Add Exercise
-              </button>
             </div>
-          </mat-tab>
+
+            <button mat-stroked-button class="add-exercise-btn" (click)="addExercise(selectedDayIndex)">
+              <mat-icon>add</mat-icon> Add Exercise
+            </button>
+          </div>
         }
-      </mat-tab-group>
+      </div>
     </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cancel</button>
-      <button mat-flat-button color="primary" [disabled]="!planName" (click)="save()">Save Plan</button>
+    <mat-dialog-actions class="dialog-actions">
+      <button mat-button mat-dialog-close class="cancel-btn">Cancel</button>
+      <button mat-raised-button color="primary" class="save-btn" [disabled]="!planName" (click)="save()">
+        <mat-icon>check</mat-icon> Save Plan
+      </button>
     </mat-dialog-actions>
   `,
   styles: [`
-    mat-dialog-content { min-width: 550px; max-height: 65vh; overflow-y: auto; }
+    :host { display: block; }
+    .dialog-banner {
+      position: relative;
+      margin: -24px -24px 20px;
+      padding: 20px 24px 16px;
+      background: linear-gradient(135deg, #1565c0 0%, #5e35b1 100%);
+      overflow: hidden;
+    }
+    .banner-pattern {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(circle at 20% 80%, rgba(255,255,255,0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.06) 0%, transparent 40%);
+    }
+    .banner-content {
+      position: relative;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .dialog-header-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: rgba(255,255,255,0.2);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(255,255,255,0.3);
+      flex-shrink: 0;
+    }
+    .dialog-header-icon mat-icon { font-size: 18px; width: 18px; height: 18px; color: #fff; }
+    h2[mat-dialog-title] {
+      margin: 0 !important; padding: 0 !important;
+      font-size: 1rem !important; font-weight: 700 !important;
+      color: #fff !important;
+    }
+    .dialog-subtitle { color: rgba(255,255,255,0.75); font-size: 0.72rem; margin: 2px 0 0; }
+
+    .plan-form { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; }
     .full-width { width: 100%; }
-    .days-tabs { margin-top: 12px; }
-    .day-content { padding: 12px 0; }
-    .exercise-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .ex-name { flex: 3; min-width: 140px; }
-    .ex-sets { flex: 1; min-width: 55px; }
-    .ex-reps { flex: 1; min-width: 60px; }
-    .ex-weight { flex: 1; min-width: 65px; }
+    .active-check { margin: -4px 0 8px; }
+
+    /* Day Selector */
+    .day-selector {
+      display: flex; align-items: center; gap: 4px;
+      margin-bottom: 12px;
+    }
+    .day-chips {
+      display: flex; gap: 4px; flex: 1; justify-content: center;
+    }
+    .day-chip {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 2px solid var(--color-border);
+      background: var(--color-surface);
+      font-size: 0.7rem; font-weight: 700;
+      cursor: pointer; transition: all 0.15s ease;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--color-text-muted);
+    }
+    .day-chip.has-exercises { border-color: rgba(21,101,192,0.3); color: var(--color-text); }
+    .day-chip.active {
+      background: var(--color-primary); border-color: var(--color-primary);
+      color: #fff;
+    }
+
+    /* Day Content */
+    .day-content { animation: fadeIn 0.15s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .day-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px;
+    }
+    .day-label { font-weight: 700; font-size: 0.9rem; }
+    .exercise-count { font-size: 0.72rem; color: var(--color-text-muted); font-weight: 600; }
+
+    /* Exercise Cards */
+    .exercise-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+    .exercise-card {
+      background: var(--color-surface-secondary);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      border: 1px solid var(--color-border);
+    }
+    .ex-card-header {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    }
+    .ex-number {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--color-primary); color: #fff;
+      font-size: 0.7rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .ex-name-field { flex: 1; }
+    .ex-remove { flex-shrink: 0; }
+    .ex-remove mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .ex-card-details {
+      display: flex; gap: 8px;
+    }
+    .ex-field { flex: 1; }
+    .ex-video-field { margin-top: 4px; }
+    .video-icon { font-size: 18px; width: 18px; height: 18px; color: var(--color-text-muted); margin-right: 4px; }
+
+    .add-exercise-btn {
+      width: 100%;
+      border-style: dashed !important;
+      font-weight: 600 !important;
+    }
+    .add-exercise-btn mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
+
+    .dialog-actions {
+      padding: 12px 24px 16px !important;
+      border-top: 1px solid var(--color-border);
+      gap: 8px; display: flex; justify-content: flex-end;
+    }
+    .save-btn {
+      border-radius: var(--radius-sm) !important;
+      padding: 0 20px !important;
+      font-weight: 600 !important;
+    }
+    .save-btn mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
+
     .mat-mdc-form-field-subscript-wrapper { display: none; }
+
     @media (max-width: 599px) {
-      mat-dialog-content { min-width: auto; }
-      .exercise-row { flex-direction: column; align-items: stretch; gap: 0; }
-      .ex-name, .ex-sets, .ex-reps, .ex-weight { min-width: auto; flex: auto; }
+      .day-chip { width: 32px; height: 32px; font-size: 0.65rem; }
+      .ex-card-details { flex-wrap: wrap; }
+      .ex-field { min-width: calc(33% - 6px); }
     }
   `]
 })
@@ -92,11 +253,13 @@ export class PlanEditorDialogComponent implements OnInit {
   private notify = inject(NotificationService);
   private data: { planId?: number } = inject(MAT_DIALOG_DATA);
 
-  dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  dayAbbrev = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   isEditing = false;
   planName = '';
   isActive = false;
   days: WorkoutPlanDay[] = [];
+  selectedDayIndex = 0;
 
   ngOnInit() {
     if (this.data?.planId) {
@@ -118,6 +281,14 @@ export class PlanEditorDialogComponent implements OnInit {
       focusArea: i === 0 ? 'Rest' : '',
       exercises: []
     }));
+  }
+
+  prevDay() {
+    if (this.selectedDayIndex > 0) this.selectedDayIndex--;
+  }
+
+  nextDay() {
+    if (this.selectedDayIndex < this.days.length - 1) this.selectedDayIndex++;
   }
 
   addExercise(dayIndex: number) {

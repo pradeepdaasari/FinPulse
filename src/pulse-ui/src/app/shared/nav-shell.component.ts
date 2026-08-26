@@ -680,6 +680,9 @@ import { routeFadeAnimation } from './route-animations';
       .content-area {
         padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 20px) !important;
       }
+      .nav-list {
+        padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 20px);
+      }
     }
   `]
 })
