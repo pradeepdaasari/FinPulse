@@ -4,6 +4,7 @@ import { provideHttpClient, withInterceptors, HttpInterceptorFn } from '@angular
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideServiceWorker } from '@angular/service-worker';
 import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
+import { provideNativeDateAdapter } from '@angular/material/core';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { tap } from 'rxjs/operators';
@@ -30,6 +31,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideAnimationsAsync(),
+    provideNativeDateAdapter(),
     provideCharts(withDefaultRegisterables()),
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),

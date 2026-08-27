@@ -35,6 +35,7 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<DailyReview> DailyReviews => Set<DailyReview>();
     public DbSet<DailyLimits> DailyLimits => Set<DailyLimits>();
     public DbSet<TradingWisdom> TradingWisdoms => Set<TradingWisdom>();
+    public DbSet<CommissionSchedule> CommissionSchedules => Set<CommissionSchedule>();
 
     // Health & Fitness
     public DbSet<HealthMetric> HealthMetrics => Set<HealthMetric>();
@@ -100,6 +101,10 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<BankAccount>(entity =>
         {
             entity.Property(e => e.CurrentBalance).HasPrecision(18, 2);
+            entity.Property(e => e.OptionsCommissionPerContract).HasPrecision(10, 4);
+            entity.Property(e => e.FuturesCommissionPerContract).HasPrecision(10, 4);
+            entity.Property(e => e.OptionsRegFeePerContract).HasPrecision(10, 4);
+            entity.Property(e => e.FuturesRegFeePerContract).HasPrecision(10, 4);
             entity.HasIndex(e => e.UserId);
         });
 
@@ -237,12 +242,25 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.ExitPrice).HasPrecision(18, 6);
             entity.Property(e => e.Quantity).HasPrecision(18, 4);
             entity.Property(e => e.Pnl).HasPrecision(18, 2);
+            entity.Property(e => e.StrikePrice).HasPrecision(18, 6);
+            entity.Property(e => e.StrikePrice2).HasPrecision(18, 6);
+            entity.Property(e => e.StrikePrice3).HasPrecision(18, 6);
+            entity.Property(e => e.StrikePrice4).HasPrecision(18, 6);
+            entity.Property(e => e.EntryPremium).HasPrecision(18, 4);
+            entity.Property(e => e.ExitPremium).HasPrecision(18, 4);
+            entity.Property(e => e.TotalFees).HasPrecision(18, 4);
+            entity.Property(e => e.NetPnl).HasPrecision(18, 2);
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => new { e.UserId, e.Date });
+            entity.HasIndex(e => e.BankAccountId);
             entity.HasMany(e => e.ChecklistResponses)
                 .WithOne(r => r.TradeEntry)
                 .HasForeignKey(r => r.TradeEntryId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.LinkedExpense)
+                .WithMany()
+                .HasForeignKey(e => e.LinkedExpenseId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // TradingRule
@@ -264,6 +282,21 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
         {
             entity.Property(e => e.MaxDailyLoss).HasPrecision(18, 2);
             entity.HasIndex(e => e.UserId).IsUnique();
+        });
+
+        // CommissionSchedule
+        modelBuilder.Entity<CommissionSchedule>(entity =>
+        {
+            entity.Property(e => e.OptionsCommissionPerContract).HasPrecision(10, 4);
+            entity.Property(e => e.FuturesCommissionPerContract).HasPrecision(10, 4);
+            entity.Property(e => e.OptionsRegFeePerContract).HasPrecision(10, 4);
+            entity.Property(e => e.FuturesRegFeePerContract).HasPrecision(10, 4);
+            entity.HasIndex(e => new { e.BankAccountId, e.EffectiveFrom }).IsUnique();
+            entity.HasIndex(e => e.UserId);
+            entity.HasOne(e => e.BankAccount)
+                .WithMany()
+                .HasForeignKey(e => e.BankAccountId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 
@@ -421,6 +454,12 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
             else if (entry.Entity is DailyLimits limits)
             {
                 limits.UpdatedAt = now;
+            }
+            else if (entry.Entity is CommissionSchedule schedule)
+            {
+                schedule.UpdatedAt = now;
+                if (entry.State == EntityState.Added)
+                    schedule.CreatedAt = now;
             }
         }
     }

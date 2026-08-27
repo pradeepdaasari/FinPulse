@@ -12,6 +12,7 @@ public class MonthlyOverviewDto
     public decimal TotalFixedExpenses { get; set; }
     public decimal TotalVariableBudgets { get; set; }
     public decimal TotalDebtPayments { get; set; }
+    public decimal TotalRecurring { get; set; }
     public decimal TotalExpenses { get; set; }
     public decimal Surplus { get; set; }
     public int PaychecksThisMonth { get; set; }

@@ -39,7 +39,7 @@ interface PlanDay {
   imports: [MatCardModule, MatIconModule, MatButtonModule, MatInputModule, MatFormFieldModule, MatProgressSpinnerModule, MatChipsModule, MatDialogModule, FormsModule, RouterLink],
   template: `
     @if (loading()) {
-      <mat-spinner></mat-spinner>
+      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
     } @else if (noPlan()) {
       <div class="empty-state">
         <div class="empty-icon-wrap blue">
@@ -213,6 +213,7 @@ interface PlanDay {
     }
   `,
   styles: [`
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .day-nav {
       display: flex; align-items: center; justify-content: space-between;
       margin-bottom: 8px; padding: 8px 4px;

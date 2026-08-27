@@ -107,6 +107,55 @@ public class RecurringController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("{id}/pay")]
+    public async Task<ActionResult> MarkPaid(int id)
+    {
+        var item = await _db.RecurringTransactions.FirstOrDefaultAsync(r => r.Id == id && r.UserId == UserId);
+        if (item is null) return NotFound();
+
+        var expense = new DailyExpense
+        {
+            Date = item.NextRunDate,
+            CategoryId = item.CategoryId,
+            Amount = item.Amount,
+            Description = item.Description,
+            Merchant = item.Merchant,
+            TransactionType = item.TransactionType,
+            FundingSourceType = item.FundingSourceType,
+            FundingSourceId = item.FundingSourceId,
+            UserId = UserId
+        };
+        _db.DailyExpenses.Add(expense);
+
+        if (item.FundingSourceId != null)
+        {
+            if (item.FundingSourceType == FundingSourceType.BankAccount)
+            {
+                var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == item.FundingSourceId && a.UserId == UserId);
+                if (account != null)
+                {
+                    if (item.TransactionType == TransactionType.Expense)
+                        account.CurrentBalance -= item.Amount;
+                    else if (item.TransactionType == TransactionType.Income)
+                        account.CurrentBalance += item.Amount;
+                }
+            }
+            else if (item.FundingSourceType == FundingSourceType.CreditCard)
+            {
+                var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == item.FundingSourceId && c.UserId == UserId);
+                if (card != null)
+                    card.CurrentBalance += item.Amount;
+            }
+        }
+
+        item.NextRunDate = AdvanceDate(item.NextRunDate, item.Frequency);
+        if (item.EndDate.HasValue && item.NextRunDate > item.EndDate.Value)
+            item.IsActive = false;
+
+        await _db.SaveChangesAsync();
+        return Ok(new { expenseId = expense.Id, nextRunDate = item.NextRunDate });
+    }
+
     [HttpPost("generate")]
     public async Task<ActionResult> Generate()
     {
@@ -115,40 +164,50 @@ public class RecurringController : ControllerBase
             .Where(r => r.UserId == UserId && r.IsActive && r.NextRunDate <= today)
             .ToListAsync();
 
-        var generated = 0;
-        foreach (var item in dueItems)
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
         {
-            while (item.NextRunDate <= today)
+            var generated = 0;
+            foreach (var item in dueItems)
             {
-                var expense = new DailyExpense
+                while (item.NextRunDate <= today)
                 {
-                    Date = item.NextRunDate,
-                    CategoryId = item.CategoryId,
-                    Amount = item.Amount,
-                    Description = item.Description,
-                    Merchant = item.Merchant,
-                    TransactionType = item.TransactionType,
-                    FundingSourceType = item.FundingSourceType,
-                    FundingSourceId = item.FundingSourceId,
-                    UserId = UserId
-                };
-                _db.DailyExpenses.Add(expense);
-                generated++;
+                    var expense = new DailyExpense
+                    {
+                        Date = item.NextRunDate,
+                        CategoryId = item.CategoryId,
+                        Amount = item.Amount,
+                        Description = item.Description,
+                        Merchant = item.Merchant,
+                        TransactionType = item.TransactionType,
+                        FundingSourceType = item.FundingSourceType,
+                        FundingSourceId = item.FundingSourceId,
+                        UserId = UserId
+                    };
+                    _db.DailyExpenses.Add(expense);
+                    generated++;
 
-                item.NextRunDate = AdvanceDate(item.NextRunDate, item.Frequency);
+                    item.NextRunDate = AdvanceDate(item.NextRunDate, item.Frequency);
 
-                if (item.EndDate.HasValue && item.NextRunDate > item.EndDate.Value)
-                {
-                    item.IsActive = false;
-                    break;
+                    if (item.EndDate.HasValue && item.NextRunDate > item.EndDate.Value)
+                    {
+                        item.IsActive = false;
+                        break;
+                    }
                 }
             }
+
+            if (generated > 0)
+                await _db.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+            return Ok(new { generated });
         }
-
-        if (generated > 0)
-            await _db.SaveChangesAsync();
-
-        return Ok(new { generated });
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+        }
     }
 
     private static DateTime AdvanceDate(DateTime date, RecurrenceFrequency frequency)

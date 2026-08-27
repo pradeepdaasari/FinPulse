@@ -5,6 +5,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
 import { WorkoutPlanService } from '../../core/services/workout-plan.service';
 import { WorkoutPlan, WorkoutPlanDay, PlannedExercise } from '../../core/models/workout-plan.model';
@@ -13,7 +14,7 @@ import { NotificationService } from '../../core/services/notification.service';
 @Component({
   selector: 'app-plan-editor-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, MatCheckboxModule, FormsModule],
+  imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, MatCheckboxModule, MatProgressSpinnerModule, FormsModule],
   template: `
     <div class="dialog-banner">
       <div class="banner-pattern"></div>
@@ -28,6 +29,9 @@ import { NotificationService } from '../../core/services/notification.service';
       </div>
     </div>
     <mat-dialog-content>
+      @if (loading()) {
+        <div class="loading-container"><mat-spinner diameter="28"></mat-spinner></div>
+      } @else {
       <div class="plan-form">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Plan Name</mat-label>
@@ -111,10 +115,14 @@ import { NotificationService } from '../../core/services/notification.service';
           </div>
         }
       </div>
+      }
+      @if (saving()) {
+        <div class="saving-overlay"><mat-spinner diameter="32"></mat-spinner></div>
+      }
     </mat-dialog-content>
     <mat-dialog-actions class="dialog-actions">
       <button mat-button mat-dialog-close class="cancel-btn">Cancel</button>
-      <button mat-raised-button color="primary" class="save-btn" [disabled]="!planName" (click)="save()">
+      <button mat-raised-button color="primary" class="save-btn" [disabled]="!planName || loading() || saving()" (click)="save()">
         <mat-icon>check</mat-icon> Save Plan
       </button>
     </mat-dialog-actions>
@@ -239,6 +247,12 @@ import { NotificationService } from '../../core/services/notification.service';
     .save-btn mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
 
     .mat-mdc-form-field-subscript-wrapper { display: none; }
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
+    mat-dialog-content { position: relative; }
+    .saving-overlay {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.7); border-radius: inherit; z-index: 10;
+    }
 
     @media (max-width: 599px) {
       .day-chip { width: 32px; height: 32px; font-size: 0.65rem; }
@@ -253,6 +267,8 @@ export class PlanEditorDialogComponent implements OnInit {
   private notify = inject(NotificationService);
   private data: { planId?: number } = inject(MAT_DIALOG_DATA);
 
+  loading = signal(true);
+  saving = signal(false);
   dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   dayAbbrev = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   isEditing = false;
@@ -269,9 +285,11 @@ export class PlanEditorDialogComponent implements OnInit {
         this.isActive = plan.isActive;
         this.days = plan.days.sort((a, b) => a.dayOfWeek - b.dayOfWeek);
         if (this.days.length === 0) this.initDays();
+        this.loading.set(false);
       });
     } else {
       this.initDays();
+      this.loading.set(false);
     }
   }
 
@@ -312,13 +330,14 @@ export class PlanEditorDialogComponent implements OnInit {
       }))
     };
 
+    this.saving.set(true);
     const obs = this.isEditing
       ? this.planService.update(this.data.planId!, plan as WorkoutPlan)
       : this.planService.create(plan);
 
     obs.subscribe({
-      next: () => { this.notify.success('Plan saved'); this.dialogRef.close(true); },
-      error: () => this.notify.error('Failed to save plan')
+      next: () => { this.saving.set(false); this.notify.success('Plan saved'); this.dialogRef.close(true); },
+      error: () => { this.saving.set(false); this.notify.error('Failed to save plan'); }
     });
   }
 }

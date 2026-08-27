@@ -17,7 +17,7 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
   imports: [MatCardModule, MatIconModule, MatButtonModule, MatSelectModule, MatFormFieldModule, MatProgressSpinnerModule, MatTableModule, DatePipe, DecimalPipe, FormsModule],
   template: `
     @if (loading()) {
-      <mat-spinner></mat-spinner>
+      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
     } @else {
       <!-- Stats Cards -->
       @if (stats()) {
@@ -145,6 +145,7 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
     }
   `,
   styles: [`
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .stats-grid {
       display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
       margin-bottom: var(--spacing-lg);

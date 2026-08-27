@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -15,6 +16,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CategoryService } from '../../core/services/category.service';
 import { Category, CategoryCreate, CategoryType } from '../../core/models/category.model';
 
@@ -39,9 +41,12 @@ const ICON_OPTIONS = [
     CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule,
     MatExpansionModule, MatFormFieldModule, MatInputModule, MatSlideToggleModule,
     MatSnackBarModule, MatTooltipModule, MatChipsModule, MatTabsModule, MatButtonToggleModule,
-    MatMenuModule
+    MatMenuModule, MatProgressSpinnerModule
   ],
   template: `
+    @if (loading()) {
+      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+    } @else {
     <div class="page-header">
       <button mat-raised-button color="primary" (click)="showAddParent.set(true)" [disabled]="showAddParent()">
         <mat-icon>add</mat-icon> Add Category
@@ -114,6 +119,40 @@ const ICON_OPTIONS = [
           </div>
         </mat-card-content>
       </mat-card>
+    }
+
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Search categories</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="e.g. Swimming, Insurance...">
+      @if (searchQuery()) {
+        <button matSuffix mat-icon-button (click)="searchQuery.set('')"><mat-icon>close</mat-icon></button>
+      }
+    </mat-form-field>
+
+    @if (searchQuery() && searchResults().length > 0) {
+      <div class="search-results">
+        @for (result of searchResults(); track result.child?.id || result.parent.id) {
+          <div class="search-result-row">
+            <span class="cat-icon-badge child-badge" [style.background]="getCatBg(result.child?.name || result.parent.name)" [style.border-color]="getCatColor(result.child?.name || result.parent.name)">
+              <mat-icon [style.color]="getCatColor(result.child?.name || result.parent.name)">{{ (result.child?.icon || result.parent.icon) || 'category' }}</mat-icon>
+            </span>
+            <span class="search-result-name">
+              @if (result.child) {
+                {{ result.parent.name }} → {{ result.child.name }}
+              } @else {
+                {{ result.parent.name }}
+              }
+            </span>
+            <mat-chip class="search-result-type">{{ result.parent.type }}</mat-chip>
+          </div>
+        }
+      </div>
+    } @else if (searchQuery() && searchResults().length === 0) {
+      <div class="search-no-results">
+        <mat-icon>search_off</mat-icon>
+        <span>No categories match "{{ searchQuery() }}"</span>
+      </div>
     }
 
     <mat-tab-group (selectedTabChange)="onTabChange($event.index)">
@@ -268,8 +307,10 @@ const ICON_OPTIONS = [
         </mat-card>
       }
     </ng-template>
+    }
   `,
   styles: [`
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .page-header {
       display: flex; align-items: center; justify-content: flex-end;
       margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);
@@ -374,6 +415,26 @@ const ICON_OPTIONS = [
     .no-children { opacity: 0.6; font-style: italic; padding-left: 16px; }
     .empty-state { opacity: 0.6; font-style: italic; text-align: center; padding: var(--spacing-lg); }
 
+    .search-field { width: 100%; margin-bottom: var(--spacing-sm); }
+    .search-field mat-icon { color: var(--color-text-muted); }
+    .search-results {
+      background: var(--color-surface); border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm); margin-bottom: var(--spacing-md);
+      padding: 8px 0; overflow: hidden;
+    }
+    .search-result-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px; transition: background 0.15s;
+    }
+    .search-result-row:hover { background: var(--color-surface-hover); }
+    .search-result-name { flex: 1; font-size: 0.9rem; font-weight: 500; }
+    .search-result-type { font-size: 0.72rem; }
+    .search-no-results {
+      display: flex; align-items: center; gap: 8px; justify-content: center;
+      padding: 16px; color: var(--color-text-muted); font-size: 0.9rem;
+      margin-bottom: var(--spacing-md);
+    }
+
     mat-expansion-panel { margin-bottom: 8px; }
 
     @media (max-width: 768px) {
@@ -392,13 +453,35 @@ export class CategoryPageComponent implements OnInit {
   private categoryService = inject(CategoryService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private router = inject(Router);
 
+  loading = signal(true);
   allCategories = signal<Category[]>([]);
   activeTab = signal<CategoryType>('Expense');
+  searchQuery = signal('');
 
   expenseCategories = computed(() => this.allCategories().filter(c => c.type === 'Expense'));
   incomeCategories = computed(() => this.allCategories().filter(c => c.type === 'Income'));
   fixedCount = computed(() => this.allCategories().filter(c => c.isFixed).length);
+
+  searchResults = computed(() => {
+    const q = this.searchQuery().toLowerCase().trim();
+    if (!q) return [];
+    const results: { parent: Category; child?: Category }[] = [];
+    for (const parent of this.allCategories()) {
+      if (parent.name.toLowerCase().includes(q)) {
+        results.push({ parent });
+      }
+      if (parent.children) {
+        for (const child of parent.children) {
+          if (child.name.toLowerCase().includes(q)) {
+            results.push({ parent, child });
+          }
+        }
+      }
+    }
+    return results;
+  });
 
   showAddParent = signal(false);
   newParentName = '';
@@ -428,7 +511,10 @@ export class CategoryPageComponent implements OnInit {
   }
 
   loadCategories(): void {
-    this.categoryService.getAll().subscribe(data => this.allCategories.set(data));
+    this.categoryService.getAll().subscribe(data => {
+      this.allCategories.set(data);
+      this.loading.set(false);
+    });
   }
 
   saveParent(): void {
@@ -501,9 +587,42 @@ export class CategoryPageComponent implements OnInit {
       }).afterClosed().subscribe(confirmed => {
         if (!confirmed) return;
         this.categoryService.delete(cat.id).subscribe({
-          next: () => this.loadCategories(),
-          error: (err) => this.showError(err)
+          next: () => { this.snackBar.open('Category deleted', 'OK', { duration: 3000 }); this.loadCategories(); },
+          error: (err) => {
+            if (err.status === 409 && err.error?.transactions) {
+              this.showLinkedTransactions(cat, err.error);
+            } else {
+              this.showError(err);
+            }
+          }
         });
+      });
+    });
+  }
+
+  private showLinkedTransactions(cat: Category, data: any): void {
+    const txns = data.transactions as any[];
+    const total = data.totalTransactions as number;
+    let list = txns.map((t: any) =>
+      `• ${new Date(t.date).toLocaleDateString()} — ${t.description} ($${t.amount.toFixed(2)})${t.tag ? ' [' + t.tag + ']' : ''}`
+    ).join('\n');
+    if (total > txns.length) list += `\n\n...and ${total - txns.length} more`;
+
+    const budgets = data.budgetExpenses as any[];
+    if (budgets?.length) {
+      list = `Budget items:\n` + budgets.map((b: any) => `• ${b.name} ($${b.amount.toFixed(2)})`).join('\n') + '\n\n' + (txns.length ? `Transactions:\n${list}` : '');
+    } else if (txns.length) {
+      list = `Transactions using "${cat.name}":\n${list}`;
+    }
+
+    import('../../shared/confirm-dialog.component').then(m => {
+      this.dialog.open(m.ConfirmDialogComponent, {
+        width: '500px',
+        data: { title: 'Category In Use', message: list, confirmText: 'Go to Transactions', color: 'primary' }
+      }).afterClosed().subscribe(confirmed => {
+        if (confirmed) {
+          this.router.navigate(['/expenses']);
+        }
       });
     });
   }

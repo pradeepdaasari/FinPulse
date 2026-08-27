@@ -22,7 +22,7 @@ import { AmortizationTableComponent } from './amortization-table.component';
   imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTableModule, MatTooltipModule, CurrencyPipe, DatePipe, AmortizationTableComponent],
   template: `
     @if (loading()) {
-      <mat-spinner></mat-spinner>
+      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
     } @else if (loan()) {
       <div class="header-row">
         <div class="header-left">
@@ -119,6 +119,7 @@ import { AmortizationTableComponent } from './amortization-table.component';
     }
   `,
   styles: [`
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .header-row {
       display: flex;
       justify-content: space-between;

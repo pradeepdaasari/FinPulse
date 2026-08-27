@@ -7,6 +7,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { RecurringService } from '../../core/services/recurring.service';
 import { RecurringTransaction } from '../../core/models/recurring.model';
@@ -16,7 +17,7 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
 @Component({
   selector: 'app-recurring-page',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatProgressSpinnerModule, MatSlideToggleModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatProgressSpinnerModule, MatSlideToggleModule, MatTooltipModule, CurrencyPipe, DatePipe],
   template: `
     <div class="header-row">
       <button mat-raised-button color="primary" (click)="openAdd()">
@@ -25,7 +26,7 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
     </div>
 
     @if (loading()) {
-      <mat-spinner></mat-spinner>
+      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
     } @else if (items().length === 0) {
       <div class="empty-state">
         <div class="empty-icon-wrap amber">
@@ -70,6 +71,35 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
         </div>
       </div>
 
+      <!-- Due Now Section -->
+      @if (dueItems().length > 0) {
+        <div class="due-section">
+          <div class="due-header">
+            <mat-icon>notifications_active</mat-icon>
+            <span>{{ dueItems().length }} payment{{ dueItems().length > 1 ? 's' : '' }} due</span>
+          </div>
+          @for (r of dueItems(); track r.id) {
+            <div class="due-card">
+              <div class="due-left">
+                <div class="cat-icon-wrap due-icon-wrap">
+                  <mat-icon class="cat-icon">{{ r.categoryIcon }}</mat-icon>
+                </div>
+                <div>
+                  <div class="desc-text">{{ r.description }}</div>
+                  <div class="due-date-text">Due {{ r.nextRunDate | date:'MMM d' }}</div>
+                </div>
+              </div>
+              <div class="due-right">
+                <span class="due-amount">{{ r.amount | currency }}</span>
+                <button mat-raised-button color="primary" class="pay-btn" (click)="markPaid(r)">
+                  <mat-icon>check_circle</mat-icon> Mark Paid
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
       <!-- Desktop table -->
       <mat-card class="desktop-only">
         <div class="table-wrapper">
@@ -107,7 +137,9 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
 
           <ng-container matColumnDef="nextRunDate">
             <th mat-header-cell *matHeaderCellDef>Next Run</th>
-            <td mat-cell *matCellDef="let r">{{ r.nextRunDate | date:'mediumDate' }}</td>
+            <td mat-cell *matCellDef="let r">
+              <span [class.due-highlight]="isDue(r)">{{ r.nextRunDate | date:'mediumDate' }}</span>
+            </td>
           </ng-container>
 
           <ng-container matColumnDef="status">
@@ -127,6 +159,11 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
             <th mat-header-cell *matHeaderCellDef>Actions</th>
             <td mat-cell *matCellDef="let r">
               <div class="action-group">
+                @if (isDue(r)) {
+                  <button mat-icon-button class="action-btn action-pay" (click)="markPaid(r)" matTooltip="Mark Paid">
+                    <mat-icon>check_circle</mat-icon>
+                  </button>
+                }
                 <button mat-icon-button class="action-btn action-edit" (click)="edit(r)">
                   <mat-icon>edit</mat-icon>
                 </button>
@@ -146,7 +183,7 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
       <!-- Mobile cards -->
       <div class="mobile-cards">
         @for (r of items(); track r.id) {
-          <div class="rec-card" [class.rec-paused]="!r.isActive">
+          <div class="rec-card" [class.rec-paused]="!r.isActive" [class.rec-due]="isDue(r)">
             <div class="rec-top">
               <div class="rec-icon-wrap">
                 <mat-icon>{{ r.categoryIcon }}</mat-icon>
@@ -163,6 +200,11 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
             <div class="rec-bottom">
               <span class="rec-next">Next: {{ r.nextRunDate | date:'MMM d' }}</span>
               <div class="rec-actions">
+                @if (isDue(r)) {
+                  <button mat-raised-button color="primary" class="pay-btn-sm" (click)="markPaid(r)">
+                    <mat-icon>check_circle</mat-icon> Pay
+                  </button>
+                }
                 <mat-slide-toggle [checked]="r.isActive" (change)="toggleStatus(r)" color="primary"></mat-slide-toggle>
                 <button mat-icon-button class="action-btn action-edit" (click)="edit(r)">
                   <mat-icon>edit</mat-icon>
@@ -178,6 +220,7 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
     }
   `,
   styles: [`
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .header-row {
       display: flex; justify-content: flex-end; align-items: center;
       margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);
@@ -262,6 +305,38 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
     .rec-next { font-size: 0.75rem; color: var(--color-text-muted); }
     .rec-actions { display: flex; align-items: center; gap: 2px; }
 
+    /* Due Section */
+    .due-section {
+      background: var(--color-surface); border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm); margin-bottom: var(--spacing-md);
+      border-left: 4px solid var(--color-warning);
+      overflow: hidden;
+    }
+    .due-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 16px; font-weight: 600; font-size: 0.9rem;
+      background: var(--color-stat-amber-bg); color: var(--color-stat-amber);
+    }
+    .due-header mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .due-card {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; border-bottom: 1px solid var(--color-border);
+    }
+    .due-card:last-child { border-bottom: none; }
+    .due-left { display: flex; align-items: center; gap: 12px; }
+    .due-icon-wrap { background: var(--color-stat-amber-bg) !important; }
+    .due-date-text { font-size: 0.75rem; color: var(--color-text-muted); }
+    .due-right { display: flex; align-items: center; gap: 12px; }
+    .due-amount { font-weight: 700; font-size: 1.05rem; }
+    .pay-btn { border-radius: var(--radius-sm) !important; font-size: 0.8rem !important; padding: 0 14px !important; }
+    .pay-btn mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; }
+    .pay-btn-sm { font-size: 0.72rem !important; padding: 0 10px !important; min-height: 30px !important; line-height: 30px !important; border-radius: var(--radius-sm) !important; }
+    .pay-btn-sm mat-icon { font-size: 14px; width: 14px; height: 14px; margin-right: 3px; }
+    .due-highlight { color: var(--color-warning); font-weight: 600; }
+    .action-pay { color: var(--color-success) !important; }
+    .action-pay:hover { background: var(--color-stat-green-bg) !important; }
+    .rec-card.rec-due { border-left-color: var(--color-warning); }
+
     /* Empty State */
     .empty-state { text-align: center; padding: 48px 24px; }
     .empty-icon-wrap {
@@ -297,6 +372,11 @@ export class RecurringPageComponent implements OnInit {
 
   activeCount = computed(() => this.items().filter(i => i.isActive).length);
   pausedCount = computed(() => this.items().filter(i => !i.isActive).length);
+  dueItems = computed(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return this.items().filter(i => i.isActive && new Date(i.nextRunDate) <= today);
+  });
   monthlyTotal = computed(() => {
     return this.items()
       .filter(i => i.isActive)
@@ -386,6 +466,20 @@ export class RecurringPageComponent implements OnInit {
   private fundingSourceToNumber(type: string): number {
     const map: Record<string, number> = { BankAccount: 0, CreditCard: 1 };
     return map[type] ?? 0;
+  }
+
+  isDue(item: RecurringTransaction): boolean {
+    if (!item.isActive) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return new Date(item.nextRunDate) <= today;
+  }
+
+  markPaid(item: RecurringTransaction): void {
+    this.service.markPaid(item.id).subscribe({
+      next: () => { this.notify.success(`${item.description} marked as paid`); this.loadData(); },
+      error: (err) => this.notify.error(err.error?.message || 'Failed to mark paid')
+    });
   }
 
   deleteItem(item: RecurringTransaction): void {

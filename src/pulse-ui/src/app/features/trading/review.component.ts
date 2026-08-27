@@ -8,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TradingService } from '../../core/services/trading.service';
 import { DailyReview, TradeGrade, TradingRule, TradeEntry } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
@@ -17,7 +18,7 @@ import { NotificationService } from '../../core/services/notification.service';
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatChipsModule, MatCheckboxModule, CurrencyPipe
+    MatFormFieldModule, MatInputModule, MatChipsModule, MatCheckboxModule, MatProgressSpinnerModule, CurrencyPipe
   ],
   template: `
     <div class="page-banner">
@@ -29,6 +30,9 @@ import { NotificationService } from '../../core/services/notification.service';
       </div>
     </div>
 
+    @if (loading()) {
+      <div class="loading-container"><mat-spinner></mat-spinner></div>
+    } @else {
     <div class="date-nav">
       <button mat-icon-button (click)="prevDay()"><mat-icon>chevron_left</mat-icon></button>
       <span class="date-label">{{ dateLabel() }}</span>
@@ -166,9 +170,11 @@ import { NotificationService } from '../../core/services/notification.service';
         </div>
       </div>
     }
+    }
   `,
   styles: [`
     :host { display: block; }
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .page-banner {
       position: relative; margin: -24px -24px 24px; padding: 40px 24px 32px;
       background: var(--gradient-primary); border-radius: 0 0 var(--radius-lg) var(--radius-lg); overflow: hidden;
@@ -270,6 +276,7 @@ export class ReviewComponent implements OnInit {
   private tradingService = inject(TradingService);
   private notify = inject(NotificationService);
 
+  loading = signal(true);
   currentDate = signal(new Date());
   dateLabel = computed(() => this.currentDate().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }));
 
@@ -308,8 +315,8 @@ export class ReviewComponent implements OnInit {
   loadData(): void {
     const dateStr = this.formatDate(this.currentDate());
     this.tradingService.getTrades(dateStr, dateStr).subscribe({
-      next: t => this.todayTrades.set(t),
-      error: () => this.todayTrades.set([])
+      next: t => { this.todayTrades.set(t); this.loading.set(false); },
+      error: () => { this.todayTrades.set([]); this.loading.set(false); }
     });
     this.tradingService.getRules().subscribe({
       next: r => this.rules.set(r),

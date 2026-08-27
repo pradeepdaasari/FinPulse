@@ -7,6 +7,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
+import { Router } from '@angular/router';
 import { BankAccountService } from '../../core/services/bank-account.service';
 import { BankAccount } from '../../core/models/bank-account.model';
 import { NotificationService } from '../../core/services/notification.service';
@@ -24,7 +25,7 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
     </div>
 
     @if (loading()) {
-      <mat-spinner></mat-spinner>
+      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
     } @else if (accounts().length === 0) {
       <div class="empty-state">
         <div class="empty-icon-wrap blue">
@@ -113,7 +114,7 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="viewAccount(row)" class="clickable-row"></tr>
         </table>
         </div>
       </mat-card>
@@ -121,7 +122,7 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
       <!-- Mobile cards -->
       <div class="mobile-cards">
         @for (a of accounts(); track a.id) {
-          <div class="account-card" (click)="editAccount(a)">
+          <div class="account-card" (click)="viewAccount(a)">
             <div class="ac-left">
               <div class="ac-icon" [class.icon-checking]="a.accountType === 'Checking'" [class.icon-savings]="a.accountType === 'Savings'" [class.icon-brokerage]="a.accountType === 'Brokerage'">
                 <mat-icon>{{ getAccountIcon(a.accountType) }}</mat-icon>
@@ -140,6 +141,7 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
     }
   `,
   styles: [`
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .header-row {
       display: flex; justify-content: flex-end; align-items: center;
       margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);
@@ -167,6 +169,8 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
     .stat-value { font-size: 1.2rem; font-weight: 700; color: var(--color-text); }
     .stat-label { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px; }
 
+    .clickable-row { cursor: pointer; transition: background var(--transition-fast); }
+    .clickable-row:hover { background: var(--color-surface-hover); }
     mat-card { overflow: hidden; padding: 0 !important; }
     .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table { width: 100%; min-width: 400px; }
@@ -249,6 +253,7 @@ export class AccountListComponent implements OnInit {
   private accountService = inject(BankAccountService);
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
+  private router = inject(Router);
 
   accounts = signal<BankAccount[]>([]);
   loading = signal(true);
@@ -272,6 +277,10 @@ export class AccountListComponent implements OnInit {
       },
       error: () => this.loading.set(false)
     });
+  }
+
+  viewAccount(account: BankAccount): void {
+    this.router.navigate(['/accounts', account.id]);
   }
 
   openAddAccount(): void {

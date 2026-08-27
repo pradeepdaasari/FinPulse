@@ -140,10 +140,25 @@ public class CategoryController : ControllerBase
         if (hasChildren)
             return BadRequest("Cannot delete a category that has subcategories. Remove subcategories first.");
 
-        var inUse = await _db.BudgetExpenses.AnyAsync(e => e.CategoryId == id)
-                || await _db.DailyExpenses.AnyAsync(e => e.CategoryId == id);
-        if (inUse)
-            return BadRequest("Cannot delete a category that is in use. Remove or reassign expenses first.");
+        var budgetExpenses = await _db.BudgetExpenses.Where(e => e.CategoryId == id).ToListAsync();
+        var dailyExpenses = await _db.DailyExpenses
+            .Where(e => e.CategoryId == id && e.UserId == UserId)
+            .OrderByDescending(e => e.Date)
+            .Take(20)
+            .Select(e => new { e.Id, e.Date, e.Description, e.Amount, e.TransactionType, e.Tag })
+            .ToListAsync();
+
+        if (budgetExpenses.Count > 0 || dailyExpenses.Count > 0)
+        {
+            var totalDaily = await _db.DailyExpenses.CountAsync(e => e.CategoryId == id && e.UserId == UserId);
+            return Conflict(new
+            {
+                message = "Cannot delete a category that is in use.",
+                budgetExpenses = budgetExpenses.Select(b => new { b.Id, b.Name, b.Amount }),
+                transactions = dailyExpenses,
+                totalTransactions = totalDaily
+            });
+        }
 
         _db.CustomCategories.Remove(category);
         await _db.SaveChangesAsync();

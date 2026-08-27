@@ -52,7 +52,11 @@ public class BudgetController : ControllerBase
 
         var expenses = await _db.BudgetExpenses.Include(e => e.Category).Where(e => e.UserId == UserId).ToListAsync();
         var debts = await GetDebtSnapshots();
-        var plan = _budgetPlanService.GeneratePlan(profile, expenses, debts, targetYear, targetMonth);
+        var recurring = await _db.RecurringTransactions
+            .Include(r => r.Category)
+            .Where(r => r.UserId == UserId && r.IsActive)
+            .ToListAsync();
+        var plan = _budgetPlanService.GeneratePlan(profile, expenses, debts, recurring, targetYear, targetMonth);
         return Ok(plan);
     }
 

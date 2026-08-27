@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { BankAccount, BankAccountCreate } from '../models/bank-account.model';
+import { BankAccount, BankAccountCreate, CommissionSchedule, CommissionScheduleCreate, CommissionScheduleResult } from '../models/bank-account.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -27,5 +27,21 @@ export class BankAccountService {
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
+  getCommissionHistory(accountId: number): Observable<CommissionSchedule[]> {
+    return this.http.get<CommissionSchedule[]>(`${this.baseUrl}/${accountId}/commissions`);
+  }
+
+  createCommissionSchedule(accountId: number, schedule: CommissionScheduleCreate): Observable<CommissionScheduleResult> {
+    return this.http.post<CommissionScheduleResult>(`${this.baseUrl}/${accountId}/commissions`, schedule);
+  }
+
+  updateCommissionSchedule(accountId: number, scheduleId: number, schedule: CommissionScheduleCreate): Observable<CommissionScheduleResult> {
+    return this.http.put<CommissionScheduleResult>(`${this.baseUrl}/${accountId}/commissions/${scheduleId}`, schedule);
+  }
+
+  deleteCommissionSchedule(accountId: number, scheduleId: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${accountId}/commissions/${scheduleId}`);
   }
 }

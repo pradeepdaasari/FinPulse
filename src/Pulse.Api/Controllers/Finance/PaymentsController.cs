@@ -67,27 +67,37 @@ public class PaymentsController : ControllerBase
         var payment = await _db.PaymentHistories.FirstOrDefaultAsync(p => p.Id == id && p.UserId == UserId);
         if (payment is null) return NotFound();
 
-        var difference = dto.AmountPaid - payment.AmountPaid;
-
-        if (payment.DebtType == DebtType.PersonalLoan)
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
         {
-            var loan = await _db.PersonalLoans.FindAsync(payment.DebtId);
-            if (loan != null)
-                loan.CurrentBalance = Math.Max(0, loan.CurrentBalance - difference);
+            var difference = dto.AmountPaid - payment.AmountPaid;
+
+            if (payment.DebtType == DebtType.PersonalLoan)
+            {
+                var loan = await _db.PersonalLoans.FindAsync(payment.DebtId);
+                if (loan != null)
+                    loan.CurrentBalance = Math.Max(0, loan.CurrentBalance - difference);
+            }
+            else
+            {
+                var card = await _db.CreditCards.FindAsync(payment.DebtId);
+                if (card != null)
+                    card.CurrentBalance = Math.Max(0, card.CurrentBalance - difference);
+            }
+
+            payment.AmountPaid = dto.AmountPaid;
+            payment.PaymentDate = dto.PaymentDate;
+            payment.Notes = dto.Notes;
+
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return Ok(payment);
         }
-        else
+        catch (Exception ex)
         {
-            var card = await _db.CreditCards.FindAsync(payment.DebtId);
-            if (card != null)
-                card.CurrentBalance = Math.Max(0, card.CurrentBalance - difference);
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
         }
-
-        payment.AmountPaid = dto.AmountPaid;
-        payment.PaymentDate = dto.PaymentDate;
-        payment.Notes = dto.Notes;
-
-        await _db.SaveChangesAsync();
-        return Ok(payment);
     }
 
     [HttpDelete("{id}")]
@@ -96,21 +106,31 @@ public class PaymentsController : ControllerBase
         var payment = await _db.PaymentHistories.FirstOrDefaultAsync(p => p.Id == id && p.UserId == UserId);
         if (payment is null) return NotFound();
 
-        if (payment.DebtType == DebtType.PersonalLoan)
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
         {
-            var loan = await _db.PersonalLoans.FindAsync(payment.DebtId);
-            if (loan != null)
-                loan.CurrentBalance += payment.AmountPaid;
-        }
-        else
-        {
-            var card = await _db.CreditCards.FindAsync(payment.DebtId);
-            if (card != null)
-                card.CurrentBalance += payment.AmountPaid;
-        }
+            if (payment.DebtType == DebtType.PersonalLoan)
+            {
+                var loan = await _db.PersonalLoans.FindAsync(payment.DebtId);
+                if (loan != null)
+                    loan.CurrentBalance += payment.AmountPaid;
+            }
+            else
+            {
+                var card = await _db.CreditCards.FindAsync(payment.DebtId);
+                if (card != null)
+                    card.CurrentBalance += payment.AmountPaid;
+            }
 
-        _db.PaymentHistories.Remove(payment);
-        await _db.SaveChangesAsync();
-        return NoContent();
+            _db.PaymentHistories.Remove(payment);
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+        }
     }
 }

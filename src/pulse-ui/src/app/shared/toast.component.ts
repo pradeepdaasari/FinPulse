@@ -26,23 +26,31 @@ export interface ToastData {
     .toast {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 12px 14px;
+      gap: 12px;
+      padding: 14px 18px;
       border-radius: 12px;
       font-family: var(--font-primary, -apple-system, BlinkMacSystemFont, sans-serif);
-      font-size: 0.875rem;
+      font-size: 0.95rem;
       font-weight: 500;
       box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-      min-width: 260px;
-      max-width: 380px;
+      min-width: 320px;
+      max-width: 440px;
+    }
+    @media (min-width: 600px) {
+      .toast {
+        min-width: 360px;
+        max-width: 480px;
+        font-size: 1rem;
+        padding: 16px 20px;
+      }
     }
     .toast-icon {
-      width: 32px; height: 32px; border-radius: 8px;
+      width: 36px; height: 36px; border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
     }
     .toast-icon mat-icon {
-      font-size: 18px; width: 18px; height: 18px;
+      font-size: 20px; width: 20px; height: 20px;
     }
     .toast-msg {
       flex: 1;

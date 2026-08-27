@@ -135,7 +135,7 @@ import { NotificationService } from '../../core/services/notification.service';
 
     .header-row { display: flex; margin-bottom: var(--spacing-md); }
 
-    .loading-center { display: flex; justify-content: center; padding: 40px; }
+    .loading-center { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
 
     .empty-state {
       text-align: center; padding: 48px 24px;

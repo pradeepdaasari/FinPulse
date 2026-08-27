@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { forkJoin } from 'rxjs';
 import { DebtService } from '../../core/services/debt.service';
@@ -35,8 +36,11 @@ interface MonthlyPayment {
 @Component({
   selector: 'app-monthly-payments',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatTableModule, MatIconModule, MatButtonModule, MatChipsModule, MatTooltipModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatCardModule, MatTableModule, MatIconModule, MatButtonModule, MatChipsModule, MatTooltipModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
   template: `
+    @if (loading()) {
+      <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
+    } @else {
     <mat-card class="payments-table-card">
       <mat-card-header>
         <mat-card-title>
@@ -164,8 +168,10 @@ interface MonthlyPayment {
         }
       </mat-card-content>
     </mat-card>
+    }
   `,
   styles: [`
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
     .payments-table-card {
       margin-top: var(--spacing-md);
     }
@@ -355,6 +361,7 @@ export class MonthlyPaymentsComponent implements OnInit {
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
 
+  loading = signal(true);
   payments = signal<MonthlyPayment[]>([]);
   totalDue = signal(0);
   paycheckDay = signal<number | null>(null);
@@ -466,6 +473,7 @@ export class MonthlyPaymentsComponent implements OnInit {
       monthlyPayments.sort((a, b) => a.daysUntilDue - b.daysUntilDue);
       this.payments.set(monthlyPayments);
       this.totalDue.set(sumCurrency(monthlyPayments.map(p => p.amount)));
+      this.loading.set(false);
     });
   }
 

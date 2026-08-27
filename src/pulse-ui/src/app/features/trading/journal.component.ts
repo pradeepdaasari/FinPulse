@@ -7,6 +7,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TradingService } from '../../core/services/trading.service';
 import { TradeEntry, TradingSetupSummary } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
@@ -18,7 +19,7 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
   imports: [
     CommonModule, MatCardModule, MatButtonModule, MatIconModule,
     MatTableModule, MatChipsModule, MatDialogModule, MatTooltipModule,
-    CurrencyPipe, DatePipe, DecimalPipe
+    MatProgressSpinnerModule, CurrencyPipe, DatePipe, DecimalPipe
   ],
   template: `
     <div class="page-banner">
@@ -30,6 +31,9 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
       </div>
     </div>
 
+    @if (loading()) {
+      <div class="loading-container"><mat-spinner></mat-spinner></div>
+    } @else {
     <div class="stats-row">
       <div class="stat-card stat-blue">
         <mat-icon>bar_chart</mat-icon>
@@ -43,6 +47,20 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
         <div class="stat-content">
           <span class="stat-value">{{ winRate() | number:'1.0-0' }}%</span>
           <span class="stat-label">Win Rate</span>
+        </div>
+      </div>
+      <div class="stat-card" [class.stat-green]="totalNetPnl() >= 0" [class.stat-red]="totalNetPnl() < 0">
+        <mat-icon>account_balance_wallet</mat-icon>
+        <div class="stat-content">
+          <span class="stat-value">{{ totalNetPnl() | currency:'USD':'symbol':'1.0-0' }}</span>
+          <span class="stat-label">Net P&L</span>
+        </div>
+      </div>
+      <div class="stat-card stat-amber">
+        <mat-icon>receipt_long</mat-icon>
+        <div class="stat-content">
+          <span class="stat-value">{{ totalFees() | currency:'USD':'symbol':'1.0-0' }}</span>
+          <span class="stat-label">Total Fees</span>
         </div>
       </div>
       <div class="stat-card" [class.stat-green]="avgPnl() >= 0" [class.stat-red]="avgPnl() < 0">
@@ -99,7 +117,15 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
               </ng-container>
               <ng-container matColumnDef="instrument">
                 <th mat-header-cell *matHeaderCellDef>Instrument</th>
-                <td mat-cell *matCellDef="let t">{{ t.instrument }}</td>
+                <td mat-cell *matCellDef="let t">
+                  {{ t.instrument }}
+                  @if (t.spreadType) {
+                    <span class="spread-badge">{{ t.spreadType }}</span>
+                  }
+                  @if (t.expirationDate) {
+                    <span class="expiry-label">{{ t.expirationDate | date:'M/d' }}</span>
+                  }
+                </td>
               </ng-container>
               <ng-container matColumnDef="direction">
                 <th mat-header-cell *matHeaderCellDef>Dir</th>
@@ -112,9 +138,19 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
               <ng-container matColumnDef="pnl">
                 <th mat-header-cell *matHeaderCellDef>P&L</th>
                 <td mat-cell *matCellDef="let t">
-                  <span class="pnl-value" [class.pnl-positive]="(t.pnl ?? 0) >= 0" [class.pnl-negative]="(t.pnl ?? 0) < 0">
-                    {{ (t.pnl ?? 0) >= 0 ? '+' : '' }}{{ t.pnl | currency }}
-                  </span>
+                  <div class="pnl-breakdown">
+                    <span class="pnl-gross" [class.pnl-positive]="(t.pnl ?? 0) >= 0" [class.pnl-negative]="(t.pnl ?? 0) < 0">
+                      {{ (t.pnl ?? 0) >= 0 ? '+' : '' }}{{ t.pnl | currency }}
+                    </span>
+                    @if (t.totalFees) {
+                      <span class="pnl-fees">-{{ t.totalFees | currency }} fees</span>
+                    }
+                    @if (t.netPnl != null) {
+                      <span class="pnl-net" [class.pnl-positive]="(t.netPnl ?? 0) >= 0" [class.pnl-negative]="(t.netPnl ?? 0) < 0">
+                        Net: {{ (t.netPnl ?? 0) >= 0 ? '+' : '' }}{{ t.netPnl | currency }}
+                      </span>
+                    }
+                  </div>
                 </td>
               </ng-container>
               <ng-container matColumnDef="compliance">
@@ -154,13 +190,21 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
               </div>
             </div>
             <div class="trade-mid">
-              <span class="trade-instrument">{{ t.instrument }} <span class="setup-badge-sm">{{ t.setupName }}</span></span>
-              <span class="trade-meta">{{ t.date | date:'MMM d, h:mm a' }} · {{ t.quantity }} contracts</span>
+              <span class="trade-instrument">{{ t.instrument }}
+                @if (t.spreadType) { <span class="spread-badge-sm">{{ t.spreadType }}</span> }
+                <span class="setup-badge-sm">{{ t.setupName }}</span>
+              </span>
+              <span class="trade-meta">{{ t.date | date:'MMM d, h:mm a' }} · {{ t.quantity }} contracts
+                @if (t.expirationDate) { · exp {{ t.expirationDate | date:'M/d' }} }
+              </span>
             </div>
             <div class="trade-right">
-              <span class="pnl-value" [class.pnl-positive]="(t.pnl ?? 0) >= 0" [class.pnl-negative]="(t.pnl ?? 0) < 0">
-                {{ (t.pnl ?? 0) >= 0 ? '+' : '' }}{{ t.pnl | currency }}
+              <span class="pnl-value" [class.pnl-positive]="(t.netPnl ?? t.pnl ?? 0) >= 0" [class.pnl-negative]="(t.netPnl ?? t.pnl ?? 0) < 0">
+                {{ (t.netPnl ?? t.pnl ?? 0) >= 0 ? '+' : '' }}{{ (t.netPnl ?? t.pnl) | currency }}
               </span>
+              @if (t.totalFees) {
+                <span class="mobile-fees">{{ t.totalFees | currency }} fees</span>
+              }
               <mat-icon class="compliance-icon-sm" [class.compliant]="t.checklistCompleted" [class.non-compliant]="!t.checklistCompleted">
                 {{ t.checklistCompleted ? 'check_circle' : 'cancel' }}
               </mat-icon>
@@ -180,9 +224,11 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
         </button>
       </div>
     }
+    }
   `,
   styles: [`
     :host { display: block; }
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .page-banner {
       position: relative;
       margin: -24px -24px 24px;
@@ -208,7 +254,7 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
     .banner-subtitle { color: rgba(255,255,255,0.75); font-size: 0.85rem; margin: 4px 0 0; }
 
     .stats-row {
-      display: grid; grid-template-columns: repeat(4, 1fr);
+      display: grid; grid-template-columns: repeat(3, 1fr);
       gap: var(--spacing-sm); margin-bottom: var(--spacing-md);
     }
     .stat-card {
@@ -221,6 +267,7 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
     .stat-card.stat-green > mat-icon { color: var(--color-stat-green); }
     .stat-card.stat-red > mat-icon { color: var(--color-stat-red); }
     .stat-card.stat-purple > mat-icon { color: var(--color-stat-purple); }
+    .stat-card.stat-amber > mat-icon { color: var(--color-stat-amber); }
     .stat-content { display: flex; flex-direction: column; min-width: 0; }
     .stat-value { font-size: 1.2rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .stat-label { font-size: 0.75rem; font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.02em; }
@@ -245,6 +292,18 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
       display: inline-block; padding: 3px 10px; border-radius: var(--radius-full);
       font-size: 0.72rem; font-weight: 600; background: var(--color-stat-blue-bg); color: var(--color-stat-blue);
     }
+    .spread-badge {
+      display: inline-block; padding: 2px 6px; border-radius: var(--radius-full);
+      font-size: 0.65rem; font-weight: 600; background: var(--color-stat-purple-bg); color: var(--color-stat-purple);
+      margin-left: 4px; vertical-align: middle;
+    }
+    .spread-badge-sm {
+      font-size: 0.6rem; padding: 1px 5px; border-radius: var(--radius-full);
+      background: var(--color-stat-purple-bg); color: var(--color-stat-purple); font-weight: 600; margin-left: 4px;
+    }
+    .expiry-label {
+      font-size: 0.68rem; color: var(--color-text-muted); margin-left: 6px;
+    }
     .dir-pill {
       display: inline-block; padding: 2px 8px; border-radius: var(--radius-full);
       font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
@@ -254,6 +313,11 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
     .pnl-value { font-weight: 700; }
     .pnl-positive { color: var(--color-success); }
     .pnl-negative { color: var(--color-danger); }
+    .pnl-breakdown { display: flex; flex-direction: column; gap: 1px; }
+    .pnl-gross { font-size: 0.8rem; font-weight: 600; }
+    .pnl-fees { font-size: 0.68rem; color: var(--color-text-muted); }
+    .pnl-net { font-size: 0.78rem; font-weight: 700; }
+    .mobile-fees { font-size: 0.65rem; color: var(--color-text-muted); }
     .compliance-icon { font-size: 20px; width: 20px; height: 20px; }
     .compliance-icon.compliant { color: var(--color-success); }
     .compliance-icon.non-compliant { color: var(--color-danger); }
@@ -312,6 +376,7 @@ export class JournalComponent implements OnInit {
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
 
+  loading = signal(true);
   trades = signal<TradeEntry[]>([]);
   setups = signal<TradingSetupSummary[]>([]);
   filter = signal<'all' | 'compliant' | 'non-compliant'>('all');
@@ -338,6 +403,14 @@ export class JournalComponent implements OnInit {
     return t.reduce((s, x) => s + (x.pnl ?? 0), 0) / t.length;
   });
 
+  totalFees = computed(() => {
+    return this.trades().reduce((s, x) => s + (x.totalFees ?? 0), 0);
+  });
+
+  totalNetPnl = computed(() => {
+    return this.trades().reduce((s, x) => s + (x.netPnl ?? x.pnl ?? 0), 0);
+  });
+
   complianceRate = computed(() => {
     const t = this.trades();
     if (!t.length) return 0;
@@ -355,8 +428,8 @@ export class JournalComponent implements OnInit {
     const lastDay = new Date(this.currentYear, this.currentMonth, 0).getDate();
     const to = `${this.currentYear}-${String(this.currentMonth).padStart(2, '0')}-${lastDay}`;
     this.tradingService.getTrades(from, to).subscribe({
-      next: data => this.trades.set(data),
-      error: () => this.trades.set([])
+      next: data => { this.trades.set(data); this.loading.set(false); },
+      error: () => { this.trades.set([]); this.loading.set(false); }
     });
   }
 

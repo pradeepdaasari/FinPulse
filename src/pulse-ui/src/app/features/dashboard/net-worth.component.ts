@@ -1,15 +1,18 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { FinancialSummary } from '../../core/models/dashboard.model';
 
 @Component({
   selector: 'app-net-worth',
   standalone: true,
-  imports: [CommonModule, MatIconModule, CurrencyPipe],
+  imports: [CommonModule, MatIconModule, MatProgressSpinnerModule, CurrencyPipe],
   template: `
-    @if (summary()) {
+    @if (loading()) {
+      <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
+    } @else if (summary()) {
       <div class="net-worth-card">
         <span class="nw-label">Net Worth</span>
         <span class="nw-value" [class.positive]="summary()!.netWorth >= 0" [class.negative]="summary()!.netWorth < 0">
@@ -66,6 +69,7 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
       width: 16px;
       height: 16px;
     }
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
     @media (max-width: 599px) {
       .net-worth-card {
         padding: 16px;
@@ -79,6 +83,7 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
 export class NetWorthComponent implements OnInit {
   private dashboardService = inject(DashboardService);
 
+  loading = signal(true);
   summary = signal<FinancialSummary | null>(null);
   previousSummary = signal<FinancialSummary | null>(null);
   trend = signal<number>(0);
@@ -89,8 +94,8 @@ export class NetWorthComponent implements OnInit {
     const currentMonth = now.getMonth() + 1;
 
     this.dashboardService.getFinancialSummary(currentYear, currentMonth).subscribe({
-      next: (data) => this.summary.set(data),
-      error: () => {}
+      next: (data) => { this.summary.set(data); this.loading.set(false); },
+      error: () => { this.loading.set(false); }
     });
 
     // Fetch previous month for trend

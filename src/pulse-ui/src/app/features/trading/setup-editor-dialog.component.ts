@@ -74,7 +74,7 @@ export interface SetupEditorData {
 
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>Cancel</button>
-      <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid || saving()">
+      <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid || items.invalid || saving()">
         <mat-icon>{{ data?.setup ? 'check' : 'save' }}</mat-icon>
         {{ data?.setup ? 'Update' : 'Create' }}
       </button>

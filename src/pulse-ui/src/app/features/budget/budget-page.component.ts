@@ -33,7 +33,7 @@ import { RouterLink } from '@angular/router';
     </div>
 
     @if (loading()) {
-      <mat-spinner></mat-spinner>
+      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
     } @else if (plan()) {
       <mat-tab-group animationDuration="200ms">
         <!-- Monthly Overview Tab -->
@@ -52,6 +52,14 @@ import { RouterLink } from '@angular/router';
                   <div class="stat-label">Fixed Bills</div>
                 </mat-card-content>
               </mat-card>
+              @if (plan()!.monthlyOverview.totalRecurring > 0) {
+                <mat-card class="stat-card recurring">
+                  <mat-card-content>
+                    <div class="stat-value">{{ plan()!.monthlyOverview.totalRecurring | currency }}</div>
+                    <div class="stat-label">Recurring</div>
+                  </mat-card-content>
+                </mat-card>
+              }
               <mat-card class="stat-card variable">
                 <mat-card-content>
                   <div class="stat-value">{{ plan()!.monthlyOverview.totalVariableBudgets | currency }}</div>
@@ -236,6 +244,7 @@ import { RouterLink } from '@angular/router';
     }
   `,
   styles: [`
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .budget-header {
       display: flex;
       align-items: center;
@@ -263,6 +272,7 @@ import { RouterLink } from '@angular/router';
     .stat-card.income .stat-value { color: var(--color-primary); }
     .stat-card.fixed .stat-value { color: var(--color-accent); }
     .stat-card.variable .stat-value { color: var(--color-warning); }
+    .stat-card.recurring .stat-value { color: var(--color-stat-purple); }
     .stat-card.debt .stat-value { color: var(--color-danger); }
     .stat-card.surplus .stat-value { color: var(--color-success); }
     .stat-card.deficit .stat-value { color: var(--color-danger); }

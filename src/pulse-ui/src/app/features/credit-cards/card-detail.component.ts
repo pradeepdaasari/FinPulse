@@ -22,7 +22,7 @@ import { sumCurrency } from '../../core/utils/currency';
   imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatPaginatorModule, MatProgressSpinnerModule, MatTooltipModule, CurrencyPipe, DatePipe, DecimalPipe],
   template: `
     @if (loading()) {
-      <mat-spinner></mat-spinner>
+      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
     } @else if (card()) {
       <div class="header-row">
         <div class="header-left">
@@ -163,6 +163,7 @@ import { sumCurrency } from '../../core/utils/currency';
     }
   `,
   styles: [`
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .header-row {
       display: flex;
       justify-content: space-between;

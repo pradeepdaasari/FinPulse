@@ -78,6 +78,10 @@ export class TradingService {
     return this.http.delete<void>(`${this.baseUrl}/trades/${id}`);
   }
 
+  getTradesByAccount(accountId: number): Observable<TradeEntry[]> {
+    return this.http.get<TradeEntry[]>(`${this.baseUrl}/trades/by-account/${accountId}`);
+  }
+
   // --- Rules ---
   getRules(): Observable<TradingRule[]> {
     return this.http.get<TradingRule[]>(`${this.baseUrl}/rules`);

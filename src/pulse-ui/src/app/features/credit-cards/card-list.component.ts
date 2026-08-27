@@ -7,9 +7,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { CreditCardService } from '../../core/services/credit-card.service';
-import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
 import { CreditCard } from '../../core/models/credit-card.model';
 import { NotificationService } from '../../core/services/notification.service';
 import { AddCardDialogComponent } from './add-card-dialog.component';
@@ -19,7 +19,7 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
 @Component({
   selector: 'app-card-list',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatTooltipModule, SkeletonLoaderComponent, CurrencyPipe, DatePipe, DecimalPipe],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatTooltipModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, DecimalPipe],
   template: `
     <div class="header-row">
       <button mat-raised-button color="primary" (click)="openAddCard()">
@@ -28,7 +28,7 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
     </div>
 
     @if (loading()) {
-      <app-skeleton type="table" [count]="5"></app-skeleton>
+      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
     } @else if (cards().length === 0) {
       <div class="empty-state">
         <div class="empty-icon-wrap purple">
@@ -226,6 +226,7 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
     }
   `,
   styles: [`
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .header-row {
       display: flex;
       justify-content: flex-end;

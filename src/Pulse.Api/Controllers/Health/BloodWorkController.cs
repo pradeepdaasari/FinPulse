@@ -71,19 +71,29 @@ public class BloodWorkController : ControllerBase
             .FirstOrDefaultAsync(r => r.Id == id && r.UserId == UserId);
         if (report == null) return NotFound();
 
-        report.ReportDate = updated.ReportDate;
-        report.LabName = updated.LabName;
-        report.Notes = updated.Notes;
-
-        _db.BloodWorkResults.RemoveRange(report.Results);
-        foreach (var result in updated.Results)
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
         {
-            result.ReportId = id;
-            _db.BloodWorkResults.Add(result);
-        }
+            report.ReportDate = updated.ReportDate;
+            report.LabName = updated.LabName;
+            report.Notes = updated.Notes;
 
-        await _db.SaveChangesAsync();
-        return Ok(report);
+            _db.BloodWorkResults.RemoveRange(report.Results);
+            foreach (var result in updated.Results)
+            {
+                result.ReportId = id;
+                _db.BloodWorkResults.Add(result);
+            }
+
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return Ok(report);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+        }
     }
 
     [HttpDelete("{id}")]

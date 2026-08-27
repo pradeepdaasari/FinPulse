@@ -13,4 +13,10 @@ public class BankAccountCreateDto
 
     [Range(0, double.MaxValue)]
     public decimal CurrentBalance { get; set; }
+
+    // Trading fee profile (Brokerage accounts only)
+    public decimal? OptionsCommissionPerContract { get; set; }
+    public decimal? FuturesCommissionPerContract { get; set; }
+    public decimal? OptionsRegFeePerContract { get; set; }
+    public decimal? FuturesRegFeePerContract { get; set; }
 }

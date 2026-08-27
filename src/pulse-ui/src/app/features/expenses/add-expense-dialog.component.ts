@@ -10,6 +10,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DailyExpense, DailyExpenseCreate, TransactionType, FundingSourceType } from '../../core/models/daily-expense.model';
 import { Category } from '../../core/models/category.model';
 import { CategoryService } from '../../core/services/category.service';
@@ -31,7 +32,7 @@ export interface ExpenseDialogData {
   imports: [
     CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatDatepickerModule, MatNativeDateModule,
-    MatButtonModule, MatIconModule, MatAutocompleteModule
+    MatButtonModule, MatIconModule, MatAutocompleteModule, MatProgressSpinnerModule
   ],
   template: `
     <div class="dialog-banner">
@@ -47,6 +48,9 @@ export interface ExpenseDialogData {
       </div>
     </div>
     <mat-dialog-content>
+      @if (loading()) {
+        <div class="loading-container"><mat-spinner diameter="28"></mat-spinner></div>
+      } @else {
       <form [formGroup]="form" class="expense-form">
         <div class="txn-icons">
           <div class="txn-icon-item" [class.active]="form.value.transactionType === 'Expense'" (click)="form.patchValue({transactionType: 'Expense'})">
@@ -313,6 +317,7 @@ export interface ExpenseDialogData {
         </button>
       </div>
     }
+    }
     </mat-dialog-content>
 
     <mat-dialog-actions align="end" class="dialog-actions">
@@ -326,7 +331,7 @@ export interface ExpenseDialogData {
       }
       <span class="action-spacer"></span>
       <button mat-button mat-dialog-close class="cancel-btn">Cancel</button>
-      <button mat-raised-button color="primary" class="save-btn" (click)="save()" [disabled]="form.invalid || (splitMode() && !splitTotalValid())">
+      <button mat-raised-button color="primary" class="save-btn" (click)="save()" [disabled]="form.invalid || loading() || (splitMode() && !splitTotalValid())">
         <mat-icon>{{ data?.expense ? 'check' : 'save' }}</mat-icon>
         {{ data?.expense ? 'Update' : 'Save' }}
       </button>
@@ -550,6 +555,7 @@ export interface ExpenseDialogData {
     .save-btn mat-icon {
       font-size: 18px; width: 18px; height: 18px; margin-right: 4px;
     }
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
   `]
 })
 export class AddExpenseDialogComponent implements OnInit {
@@ -561,6 +567,8 @@ export class AddExpenseDialogComponent implements OnInit {
   private merchantService = inject(MerchantService);
   data = inject<ExpenseDialogData>(MAT_DIALOG_DATA);
 
+  loading = signal(true);
+  private loadCount = 0;
   categories = signal<Category[]>([]);
   categorySearch = signal('');
   categoryInputCtrl = new FormControl('');
@@ -723,6 +731,13 @@ export class AddExpenseDialogComponent implements OnInit {
     newCategoryParent: [null as number | null]
   });
 
+  private checkLoaded(): void {
+    this.loadCount++;
+    if (this.loadCount >= 3) {
+      this.loading.set(false);
+    }
+  }
+
   ngOnInit(): void {
     this.categoryInputCtrl.valueChanges.subscribe(val => {
       if (typeof val === 'string') {
@@ -734,12 +749,14 @@ export class AddExpenseDialogComponent implements OnInit {
     this.fundingSourceService.getAll().subscribe(sources => {
       this.allSources.set(sources);
       this.filterSources();
+      this.checkLoaded();
     });
     this.expenseService.getTags().subscribe(tags => {
       this.allTagOptions.set(tags);
       this.filteredTagOptions.set(tags);
+      this.checkLoaded();
     });
-    this.expenseService.getTagTypes().subscribe(types => this.tagTypes.set(types));
+    this.expenseService.getTagTypes().subscribe(types => { this.tagTypes.set(types); this.checkLoaded(); });
     this.merchantService.getMerchants().subscribe(merchants => {
       this.filteredMerchants.set(merchants.slice(0, 10));
     });

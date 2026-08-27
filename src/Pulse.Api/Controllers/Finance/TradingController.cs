@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Pulse.Core.Data;
+using Pulse.Core.Models;
+using Pulse.Core.Models.Enums;
 using Pulse.Core.Models.Trading;
 
 namespace Pulse.Api.Controllers.Finance;
@@ -181,8 +183,35 @@ public class TradingController : ControllerBase
                 t.Pnl, t.ChecklistCompleted, t.ChecklistResponses,
                 t.EntryTime, t.ExitTime, t.Notes,
                 Tags = t.Tags != null ? JsonSerializer.Deserialize<string[]>(t.Tags) : null,
-                t.IsRevengeTrading, t.EmotionAtEntry, t.CreatedAt
+                t.IsRevengeTrading, t.EmotionAtEntry, t.CreatedAt,
+                t.AssetType, t.OptionType, t.SpreadType,
+                t.StrikePrice, t.StrikePrice2, t.StrikePrice3, t.StrikePrice4,
+                t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.BankAccountId,
+                t.TotalFees, t.NetPnl
             })
+            .ToListAsync();
+        return Ok(trades);
+    }
+
+    [HttpGet("trades/by-account/{accountId}")]
+    public async Task<ActionResult> GetTradesByAccount(int accountId)
+    {
+        var trades = await _db.TradeEntries
+            .Where(t => t.UserId == UserId && t.BankAccountId == accountId)
+            .Include(t => t.Setup)
+            .OrderByDescending(t => t.Date)
+            .Select(t => new
+            {
+                t.Id, t.Date, t.SetupId,
+                SetupName = t.Setup != null ? t.Setup.Name : null,
+                t.Instrument, t.Direction, t.EntryPrice, t.ExitPrice, t.Quantity,
+                t.Pnl, t.ChecklistCompleted, t.EntryTime, t.ExitTime,
+                t.AssetType, t.OptionType, t.SpreadType,
+                t.StrikePrice, t.StrikePrice2, t.StrikePrice3, t.StrikePrice4,
+                t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.BankAccountId,
+                t.TotalFees, t.NetPnl, t.CreatedAt
+            })
+            .Take(20)
             .ToListAsync();
         return Ok(trades);
     }
@@ -190,34 +219,61 @@ public class TradingController : ControllerBase
     [HttpPost("trades")]
     public async Task<ActionResult> CreateTrade([FromBody] TradeEntryCreateDto input)
     {
-        var trade = new TradeEntry
+        try
         {
-            UserId = UserId,
-            Date = input.Date,
-            SetupId = input.SetupId,
-            Instrument = input.Instrument,
-            Direction = input.Direction,
-            EntryPrice = input.EntryPrice,
-            ExitPrice = input.ExitPrice,
-            Quantity = input.Quantity,
-            Pnl = input.Pnl,
-            ChecklistCompleted = input.ChecklistCompleted,
-            EntryTime = input.EntryTime,
-            ExitTime = input.ExitTime,
-            Notes = input.Notes,
-            Tags = input.Tags != null ? JsonSerializer.Serialize(input.Tags) : null,
-            IsRevengeTrading = input.IsRevengeTrading,
-            EmotionAtEntry = input.EmotionAtEntry,
-            ChecklistResponses = (input.ChecklistResponses ?? new()).Select(r => new ChecklistResponse
+            var fees = await CalculateFees(input.BankAccountId, input.AssetType, input.Quantity, input.SpreadType, input.Date);
+
+            var trade = new TradeEntry
             {
-                ChecklistItemId = r.ChecklistItemId,
-                Label = r.Label,
-                Checked = r.Checked
-            }).ToList()
-        };
-        _db.TradeEntries.Add(trade);
-        await _db.SaveChangesAsync();
-        return Ok(trade);
+                UserId = UserId,
+                Date = input.Date,
+                SetupId = input.SetupId,
+                Instrument = input.Instrument,
+                Direction = input.Direction,
+                EntryPrice = input.EntryPrice,
+                ExitPrice = input.ExitPrice,
+                Quantity = input.Quantity,
+                Pnl = input.Pnl,
+                TotalFees = fees,
+                NetPnl = input.Pnl.HasValue ? input.Pnl.Value - fees : null,
+                ChecklistCompleted = input.ChecklistCompleted,
+                EntryTime = input.EntryTime,
+                ExitTime = input.ExitTime,
+                Notes = input.Notes,
+                Tags = input.Tags != null ? JsonSerializer.Serialize(input.Tags) : null,
+                IsRevengeTrading = input.IsRevengeTrading,
+                EmotionAtEntry = input.EmotionAtEntry,
+                AssetType = input.AssetType,
+                OptionType = input.OptionType,
+                SpreadType = input.SpreadType,
+                StrikePrice = input.StrikePrice,
+                StrikePrice2 = input.StrikePrice2,
+                StrikePrice3 = input.StrikePrice3,
+                StrikePrice4 = input.StrikePrice4,
+                ExpirationDate = input.ExpirationDate,
+                EntryPremium = input.EntryPremium,
+                ExitPremium = input.ExitPremium,
+                BankAccountId = input.BankAccountId,
+                ChecklistResponses = (input.ChecklistResponses ?? new()).Select(r => new ChecklistResponse
+                {
+                    ChecklistItemId = r.ChecklistItemId,
+                    Label = r.Label,
+                    Checked = r.Checked
+                }).ToList()
+            };
+            _db.TradeEntries.Add(trade);
+            await _db.SaveChangesAsync();
+
+            await SyncLinkedExpense(trade);
+
+            trade.Setup = null;
+            trade.LinkedExpense = null;
+            return Ok(trade);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+        }
     }
 
     [HttpPut("trades/{id}")]
@@ -228,42 +284,92 @@ public class TradingController : ControllerBase
             .FirstOrDefaultAsync(t => t.Id == id && t.UserId == UserId);
         if (trade == null) return NotFound();
 
-        trade.Date = input.Date;
-        trade.SetupId = input.SetupId;
-        trade.Instrument = input.Instrument;
-        trade.Direction = input.Direction;
-        trade.EntryPrice = input.EntryPrice;
-        trade.ExitPrice = input.ExitPrice;
-        trade.Quantity = input.Quantity;
-        trade.Pnl = input.Pnl;
-        trade.ChecklistCompleted = input.ChecklistCompleted;
-        trade.EntryTime = input.EntryTime;
-        trade.ExitTime = input.ExitTime;
-        trade.Notes = input.Notes;
-        trade.Tags = input.Tags != null ? JsonSerializer.Serialize(input.Tags) : null;
-        trade.IsRevengeTrading = input.IsRevengeTrading;
-        trade.EmotionAtEntry = input.EmotionAtEntry;
-
-        _db.ChecklistResponses.RemoveRange(trade.ChecklistResponses);
-        trade.ChecklistResponses = (input.ChecklistResponses ?? new()).Select(r => new ChecklistResponse
+        try
         {
-            ChecklistItemId = r.ChecklistItemId,
-            Label = r.Label,
-            Checked = r.Checked
-        }).ToList();
+            var fees = await CalculateFees(input.BankAccountId, input.AssetType, input.Quantity, input.SpreadType, input.Date);
 
-        await _db.SaveChangesAsync();
-        return Ok(trade);
+            trade.Date = input.Date;
+            trade.SetupId = input.SetupId;
+            trade.Instrument = input.Instrument;
+            trade.Direction = input.Direction;
+            trade.EntryPrice = input.EntryPrice;
+            trade.ExitPrice = input.ExitPrice;
+            trade.Quantity = input.Quantity;
+            trade.Pnl = input.Pnl;
+            trade.TotalFees = fees;
+            trade.NetPnl = input.Pnl.HasValue ? input.Pnl.Value - fees : null;
+            trade.ChecklistCompleted = input.ChecklistCompleted;
+            trade.EntryTime = input.EntryTime;
+            trade.ExitTime = input.ExitTime;
+            trade.Notes = input.Notes;
+            trade.Tags = input.Tags != null ? JsonSerializer.Serialize(input.Tags) : null;
+            trade.IsRevengeTrading = input.IsRevengeTrading;
+            trade.EmotionAtEntry = input.EmotionAtEntry;
+            trade.AssetType = input.AssetType;
+            trade.OptionType = input.OptionType;
+            trade.SpreadType = input.SpreadType;
+            trade.StrikePrice = input.StrikePrice;
+            trade.StrikePrice2 = input.StrikePrice2;
+            trade.StrikePrice3 = input.StrikePrice3;
+            trade.StrikePrice4 = input.StrikePrice4;
+            trade.ExpirationDate = input.ExpirationDate;
+            trade.EntryPremium = input.EntryPremium;
+            trade.ExitPremium = input.ExitPremium;
+            trade.BankAccountId = input.BankAccountId;
+
+            _db.ChecklistResponses.RemoveRange(trade.ChecklistResponses);
+            trade.ChecklistResponses = (input.ChecklistResponses ?? new()).Select(r => new ChecklistResponse
+            {
+                ChecklistItemId = r.ChecklistItemId,
+                Label = r.Label,
+                Checked = r.Checked
+            }).ToList();
+
+            await _db.SaveChangesAsync();
+
+            await SyncLinkedExpense(trade);
+
+            trade.Setup = null;
+            trade.LinkedExpense = null;
+            return Ok(trade);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+        }
     }
 
     [HttpDelete("trades/{id}")]
     public async Task<ActionResult> DeleteTrade(int id)
     {
-        var trade = await _db.TradeEntries.FirstOrDefaultAsync(t => t.Id == id && t.UserId == UserId);
+        var trade = await _db.TradeEntries
+            .Include(t => t.ChecklistResponses)
+            .FirstOrDefaultAsync(t => t.Id == id && t.UserId == UserId);
         if (trade == null) return NotFound();
-        _db.TradeEntries.Remove(trade);
-        await _db.SaveChangesAsync();
-        return NoContent();
+
+        try
+        {
+            if (trade.LinkedExpenseId != null)
+            {
+                var expense = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == trade.LinkedExpenseId);
+                if (expense != null)
+                {
+                    var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == trade.BankAccountId && a.UserId == UserId);
+                    if (account != null)
+                        ReverseBalance(account, expense.TransactionType, expense.Amount);
+                    _db.DailyExpenses.Remove(expense);
+                }
+            }
+
+            _db.ChecklistResponses.RemoveRange(trade.ChecklistResponses);
+            _db.TradeEntries.Remove(trade);
+            await _db.SaveChangesAsync();
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+        }
     }
 
     // ─── Rules ────────────────────────────────────────────
@@ -592,6 +698,198 @@ public class TradingController : ControllerBase
         if (grades.Count == 0) return 0;
         return (decimal)Math.Round(grades.Average(g => g switch { "A" => 4, "B" => 3, "C" => 2, "D" => 1, _ => 0 }), 1);
     }
+
+    private async Task<decimal> CalculateFees(int? bankAccountId, string assetType, decimal quantity, string? spreadType = null, DateTime? tradeDate = null)
+    {
+        if (!bankAccountId.HasValue) return 0;
+
+        decimal commission, regFee;
+
+        // Look up commission schedule effective on the trade date
+        var effectiveDate = tradeDate?.Date ?? DateTime.UtcNow.Date;
+        var schedule = await _db.CommissionSchedules
+            .Where(s => s.BankAccountId == bankAccountId.Value
+                     && s.UserId == UserId
+                     && s.EffectiveFrom <= effectiveDate)
+            .OrderByDescending(s => s.EffectiveFrom)
+            .FirstOrDefaultAsync();
+
+        if (schedule != null)
+        {
+            commission = assetType == "Futures"
+                ? (schedule.FuturesCommissionPerContract ?? 0)
+                : (schedule.OptionsCommissionPerContract ?? 0);
+            regFee = assetType == "Futures"
+                ? (schedule.FuturesRegFeePerContract ?? 0)
+                : (schedule.OptionsRegFeePerContract ?? 0);
+        }
+        else
+        {
+            // Fallback to BankAccount fields for backward compatibility
+            var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == bankAccountId.Value && a.UserId == UserId);
+            if (account == null) return 0;
+            commission = assetType == "Futures"
+                ? (account.FuturesCommissionPerContract ?? 0)
+                : (account.OptionsCommissionPerContract ?? 0);
+            regFee = assetType == "Futures"
+                ? (account.FuturesRegFeePerContract ?? 0)
+                : (account.OptionsRegFeePerContract ?? 0);
+        }
+
+        var legs = assetType == "Options" ? GetLegsForSpread(spreadType) : 1;
+
+        return (commission + regFee) * quantity * legs * 2;
+    }
+
+    private static int GetLegsForSpread(string? spreadType) => spreadType switch
+    {
+        "Vertical" or "Calendar" => 2,
+        "Butterfly" => 3,
+        "IronCondor" => 4,
+        _ => 1
+    };
+
+    // ─── Linked Transaction Helpers ───────────────────────────────
+
+    private async Task SyncLinkedExpense(TradeEntry trade)
+    {
+        if (trade.NetPnl == null || trade.BankAccountId == null)
+        {
+            await RemoveLinkedExpense(trade);
+            return;
+        }
+
+        var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == trade.BankAccountId && a.UserId == UserId);
+        if (account == null) return;
+
+        var isProfit = trade.NetPnl.Value >= 0;
+        var amount = Math.Abs(trade.NetPnl.Value);
+        var txnType = isProfit ? TransactionType.Income : TransactionType.Expense;
+        var categoryId = await GetTradingCategoryId(isProfit);
+
+        var pnlLabel = isProfit ? "Profit" : "Loss";
+        var description = $"{pnlLabel} in {trade.Instrument} {trade.Direction}";
+        if (!string.IsNullOrEmpty(trade.SpreadType))
+            description += $" {trade.SpreadType}";
+
+        if (trade.LinkedExpenseId != null)
+        {
+            var existing = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == trade.LinkedExpenseId);
+            if (existing != null)
+            {
+                // Reverse old balance
+                ReverseBalance(account, existing.TransactionType, existing.Amount);
+
+                // Update expense
+                existing.Date = trade.Date;
+                existing.Amount = amount;
+                existing.TransactionType = txnType;
+                existing.CategoryId = categoryId;
+                existing.Description = description;
+
+                // Apply new balance
+                ApplyBalance(account, txnType, amount);
+                await _db.SaveChangesAsync();
+                return;
+            }
+        }
+
+        // Create new linked expense
+        var expense = new DailyExpense
+        {
+            Date = trade.Date,
+            Amount = amount,
+            Description = description,
+            TransactionType = txnType,
+            FundingSourceType = FundingSourceType.BankAccount,
+            FundingSourceId = trade.BankAccountId,
+            CategoryId = categoryId,
+            Tag = "auto-trade",
+            UserId = UserId
+        };
+        _db.DailyExpenses.Add(expense);
+        ApplyBalance(account, txnType, amount);
+        await _db.SaveChangesAsync();
+
+        trade.LinkedExpenseId = expense.Id;
+        await _db.SaveChangesAsync();
+    }
+
+    private async Task RemoveLinkedExpense(TradeEntry trade)
+    {
+        if (trade.LinkedExpenseId == null) return;
+
+        var expense = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == trade.LinkedExpenseId);
+        if (expense == null) return;
+
+        var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == trade.BankAccountId && a.UserId == UserId);
+        if (account != null)
+        {
+            ReverseBalance(account, expense.TransactionType, expense.Amount);
+        }
+
+        _db.DailyExpenses.Remove(expense);
+        trade.LinkedExpenseId = null;
+        await _db.SaveChangesAsync();
+    }
+
+    private void ApplyBalance(BankAccount account, TransactionType? txnType, decimal amount)
+    {
+        if (txnType == TransactionType.Income)
+            account.CurrentBalance += amount;
+        else if (txnType == TransactionType.Expense)
+            account.CurrentBalance -= amount;
+    }
+
+    private void ReverseBalance(BankAccount account, TransactionType? txnType, decimal amount)
+    {
+        if (txnType == TransactionType.Income)
+            account.CurrentBalance -= amount;
+        else if (txnType == TransactionType.Expense)
+            account.CurrentBalance += amount;
+    }
+
+    private async Task<int?> GetTradingCategoryId(bool isProfit)
+    {
+        string categoryName = isProfit ? "Trading Gains" : "Trading Losses";
+
+        var category = await _db.CustomCategories.FirstOrDefaultAsync(c =>
+            c.Name == categoryName && (c.UserId == UserId || c.UserId == null));
+
+        if (category != null)
+            return category.Id;
+
+        // Create under "Day Trading" parent if no existing category found
+        string parentName = isProfit ? "Passive Income" : "Day Trading";
+        var categoryType = isProfit ? CategoryType.Income : CategoryType.Expense;
+
+        var parent = await _db.CustomCategories.FirstOrDefaultAsync(c =>
+            c.Name == parentName && c.ParentId == null && (c.UserId == UserId || c.UserId == null));
+
+        if (parent == null)
+        {
+            parent = new CustomCategory
+            {
+                Name = parentName,
+                Type = categoryType,
+                UserId = UserId
+            };
+            _db.CustomCategories.Add(parent);
+            await _db.SaveChangesAsync();
+        }
+
+        category = new CustomCategory
+        {
+            Name = categoryName,
+            Type = categoryType,
+            ParentId = parent.Id,
+            UserId = UserId
+        };
+        _db.CustomCategories.Add(category);
+        await _db.SaveChangesAsync();
+
+        return category.Id;
+    }
 }
 
 public class TradeEntryCreateDto
@@ -612,6 +910,21 @@ public class TradeEntryCreateDto
     public bool IsRevengeTrading { get; set; }
     public string? EmotionAtEntry { get; set; }
     public List<ChecklistResponseDto>? ChecklistResponses { get; set; }
+
+    // Options fields
+    public string AssetType { get; set; } = "Options";
+    public string? OptionType { get; set; }
+    public string? SpreadType { get; set; }
+    public decimal? StrikePrice { get; set; }
+    public decimal? StrikePrice2 { get; set; }
+    public decimal? StrikePrice3 { get; set; }
+    public decimal? StrikePrice4 { get; set; }
+    public DateTime? ExpirationDate { get; set; }
+    public decimal? EntryPremium { get; set; }
+    public decimal? ExitPremium { get; set; }
+    public int? BankAccountId { get; set; }
+    public decimal? TotalFees { get; set; }
+    public decimal? NetPnl { get; set; }
 }
 
 public class ChecklistResponseDto
