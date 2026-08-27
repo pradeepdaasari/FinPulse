@@ -176,13 +176,25 @@ public class WorkoutPlansController : ControllerBase
     public async Task<ActionResult<WorkoutPlan>> Create([FromBody] WorkoutPlan plan)
     {
         plan.UserId = UserId;
-        if (plan.IsActive)
+
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
         {
-            await DeactivateAllPlans();
+            if (plan.IsActive)
+            {
+                await DeactivateAllPlans();
+            }
+            _db.WorkoutPlans.Add(plan);
+            await _db.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+            return Ok(plan);
         }
-        _db.WorkoutPlans.Add(plan);
-        await _db.SaveChangesAsync();
-        return Ok(plan);
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+        }
     }
 
     [HttpPut("{id}")]
@@ -194,25 +206,35 @@ public class WorkoutPlansController : ControllerBase
             .FirstOrDefaultAsync(p => p.Id == id && p.UserId == UserId);
         if (plan == null) return NotFound();
 
-        plan.Name = updated.Name;
-        plan.IsActive = updated.IsActive;
-
-        if (plan.IsActive)
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
         {
-            await DeactivateAllPlans(id);
+            plan.Name = updated.Name;
+            plan.IsActive = updated.IsActive;
+
+            if (plan.IsActive)
+            {
+                await DeactivateAllPlans(id);
+            }
+
+            _db.PlannedExercises.RemoveRange(plan.Days.SelectMany(d => d.Exercises));
+            _db.WorkoutPlanDays.RemoveRange(plan.Days);
+
+            foreach (var day in updated.Days)
+            {
+                day.PlanId = id;
+                _db.WorkoutPlanDays.Add(day);
+            }
+
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return Ok(plan);
         }
-
-        _db.PlannedExercises.RemoveRange(plan.Days.SelectMany(d => d.Exercises));
-        _db.WorkoutPlanDays.RemoveRange(plan.Days);
-
-        foreach (var day in updated.Days)
+        catch (Exception ex)
         {
-            day.PlanId = id;
-            _db.WorkoutPlanDays.Add(day);
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
         }
-
-        await _db.SaveChangesAsync();
-        return Ok(plan);
     }
 
     [HttpDelete("{id}")]
@@ -234,15 +256,29 @@ public class WorkoutPlansController : ControllerBase
         var plan = await _db.WorkoutPlans.FirstOrDefaultAsync(p => p.Id == id && p.UserId == UserId);
         if (plan == null) return NotFound();
 
-        await DeactivateAllPlans();
-        plan.IsActive = true;
-        await _db.SaveChangesAsync();
-        return Ok(plan);
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            await DeactivateAllPlans();
+            plan.IsActive = true;
+            await _db.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+            return Ok(plan);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+        }
     }
 
     [HttpPost("seed-fittr")]
     public async Task<ActionResult> SeedFittrPlan()
     {
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
         var existing = await _db.WorkoutPlans
             .Include(p => p.Days).ThenInclude(d => d.Exercises)
             .FirstOrDefaultAsync(p => p.UserId == UserId && p.Name == "FITTR Training Plan");
@@ -333,7 +369,15 @@ public class WorkoutPlansController : ControllerBase
 
         _db.WorkoutPlans.Add(plan);
         await _db.SaveChangesAsync();
+
+        await transaction.CommitAsync();
         return Ok(plan);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+        }
     }
 
     private async Task DeactivateAllPlans(int? exceptId = null)

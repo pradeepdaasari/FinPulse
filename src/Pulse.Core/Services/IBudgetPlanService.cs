@@ -5,5 +5,5 @@ namespace Pulse.Core.Services;
 
 public interface IBudgetPlanService
 {
-    BudgetPlanDto GeneratePlan(UserProfile profile, List<BudgetExpense> expenses, List<DebtSnapshotDto> debts, int year, int month);
+    BudgetPlanDto GeneratePlan(UserProfile profile, List<BudgetExpense> expenses, List<DebtSnapshotDto> debts, List<RecurringTransaction> recurring, int year, int month);
 }

@@ -243,6 +243,22 @@ namespace Pulse.Core.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal?>("FuturesCommissionPerContract")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<decimal?>("FuturesRegFeePerContract")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<decimal?>("OptionsCommissionPerContract")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<decimal?>("OptionsRegFeePerContract")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -1145,6 +1161,55 @@ namespace Pulse.Core.Migrations
                     b.ToTable("ChecklistResponses");
                 });
 
+            modelBuilder.Entity("Pulse.Core.Models.Trading.CommissionSchedule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BankAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("EffectiveFrom")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("FuturesCommissionPerContract")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<decimal?>("FuturesRegFeePerContract")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<decimal?>("OptionsCommissionPerContract")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<decimal?>("OptionsRegFeePerContract")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("BankAccountId", "EffectiveFrom")
+                        .IsUnique();
+
+                    b.ToTable("CommissionSchedules");
+                });
+
             modelBuilder.Entity("Pulse.Core.Models.Trading.DailyLimits", b =>
                 {
                     b.Property<int>("Id")
@@ -1304,6 +1369,14 @@ namespace Pulse.Core.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AssetType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("BankAccountId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("ChecklistCompleted")
                         .HasColumnType("bit");
 
@@ -1322,6 +1395,10 @@ namespace Pulse.Core.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<decimal?>("EntryPremium")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
                     b.Property<decimal>("EntryPrice")
                         .HasPrecision(18, 6)
                         .HasColumnType("decimal(18,6)");
@@ -1329,6 +1406,10 @@ namespace Pulse.Core.Migrations
                     b.Property<string>("EntryTime")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal?>("ExitPremium")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal?>("ExitPrice")
                         .HasPrecision(18, 6)
@@ -1338,6 +1419,9 @@ namespace Pulse.Core.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<DateTime?>("ExpirationDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Instrument")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -1346,8 +1430,19 @@ namespace Pulse.Core.Migrations
                     b.Property<bool>("IsRevengeTrading")
                         .HasColumnType("bit");
 
+                    b.Property<int?>("LinkedExpenseId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("NetPnl")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OptionType")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<decimal?>("Pnl")
                         .HasPrecision(18, 2)
@@ -1360,8 +1455,32 @@ namespace Pulse.Core.Migrations
                     b.Property<int>("SetupId")
                         .HasColumnType("int");
 
+                    b.Property<string>("SpreadType")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<decimal?>("StrikePrice")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<decimal?>("StrikePrice2")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<decimal?>("StrikePrice3")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<decimal?>("StrikePrice4")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
                     b.Property<string>("Tags")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("TotalFees")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1370,6 +1489,10 @@ namespace Pulse.Core.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BankAccountId");
+
+                    b.HasIndex("LinkedExpenseId");
 
                     b.HasIndex("SetupId");
 
@@ -1700,13 +1823,31 @@ namespace Pulse.Core.Migrations
                     b.Navigation("TradeEntry");
                 });
 
+            modelBuilder.Entity("Pulse.Core.Models.Trading.CommissionSchedule", b =>
+                {
+                    b.HasOne("Pulse.Core.Models.BankAccount", "BankAccount")
+                        .WithMany()
+                        .HasForeignKey("BankAccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BankAccount");
+                });
+
             modelBuilder.Entity("Pulse.Core.Models.Trading.TradeEntry", b =>
                 {
+                    b.HasOne("Pulse.Core.Models.DailyExpense", "LinkedExpense")
+                        .WithMany()
+                        .HasForeignKey("LinkedExpenseId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Pulse.Core.Models.Trading.TradingSetup", "Setup")
                         .WithMany()
                         .HasForeignKey("SetupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("LinkedExpense");
 
                     b.Navigation("Setup");
                 });

@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TradingService } from '../../core/services/trading.service';
 import { TradingSetupSummary, TradingSetup, PreMarketNote, TradeEntry, DailyLimits, ChecklistResponse } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
@@ -18,7 +19,7 @@ import { NotificationService } from '../../core/services/notification.service';
   standalone: true,
   imports: [
     CommonModule, FormsModule, ReactiveFormsModule, RouterModule, MatCardModule, MatButtonModule,
-    MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatCheckboxModule, CurrencyPipe
+    MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatCheckboxModule, MatProgressSpinnerModule, CurrencyPipe
   ],
   template: `
     <!-- Banner -->
@@ -62,6 +63,10 @@ import { NotificationService } from '../../core/services/notification.service';
         </div>
       </div>
     </div>
+
+    @if (loading()) {
+      <div class="loading-container"><mat-spinner></mat-spinner></div>
+    }
 
     <!-- BLOCKED: No pre-market -->
     @if (!hasPreMarketNote() && !loading()) {
@@ -333,6 +338,7 @@ import { NotificationService } from '../../core/services/notification.service';
   `,
   styles: [`
     :host { display: block; }
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
 
     .page-banner {
       position: relative;

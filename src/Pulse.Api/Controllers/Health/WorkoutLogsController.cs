@@ -77,22 +77,33 @@ public class WorkoutLogsController : ControllerBase
         log.UserId = UserId;
         if (log.Date == default)
             log.Date = DateTime.UtcNow;
-        _db.WorkoutLogs.Add(log);
-        await _db.SaveChangesAsync();
 
-        var activePlan = await _db.WorkoutPlans.FirstOrDefaultAsync(p => p.UserId == UserId && p.IsActive && p.IsSequential);
-        if (activePlan != null && log.PlanDayId == null)
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
         {
-            var today = (int)DateTime.UtcNow.DayOfWeek;
-            var todayDay = await _db.WorkoutPlanDays.FirstOrDefaultAsync(d => d.PlanId == activePlan.Id && d.DayOfWeek == today);
-            if (todayDay != null)
-            {
-                log.PlanDayId = todayDay.Id;
-                await _db.SaveChangesAsync();
-            }
-        }
+            _db.WorkoutLogs.Add(log);
+            await _db.SaveChangesAsync();
 
-        return Ok(log);
+            var activePlan = await _db.WorkoutPlans.FirstOrDefaultAsync(p => p.UserId == UserId && p.IsActive && p.IsSequential);
+            if (activePlan != null && log.PlanDayId == null)
+            {
+                var today = (int)DateTime.UtcNow.DayOfWeek;
+                var todayDay = await _db.WorkoutPlanDays.FirstOrDefaultAsync(d => d.PlanId == activePlan.Id && d.DayOfWeek == today);
+                if (todayDay != null)
+                {
+                    log.PlanDayId = todayDay.Id;
+                    await _db.SaveChangesAsync();
+                }
+            }
+
+            await transaction.CommitAsync();
+            return Ok(log);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+        }
     }
 
     [HttpPut("{id}")]
@@ -103,20 +114,30 @@ public class WorkoutLogsController : ControllerBase
             .FirstOrDefaultAsync(l => l.Id == id && l.UserId == UserId);
         if (log == null) return NotFound();
 
-        log.Date = updated.Date;
-        log.FocusArea = updated.FocusArea;
-        log.DurationMinutes = updated.DurationMinutes;
-        log.Notes = updated.Notes;
-
-        _db.ExerciseSets.RemoveRange(log.Sets);
-        foreach (var set in updated.Sets)
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
         {
-            set.WorkoutLogId = id;
-            _db.ExerciseSets.Add(set);
-        }
+            log.Date = updated.Date;
+            log.FocusArea = updated.FocusArea;
+            log.DurationMinutes = updated.DurationMinutes;
+            log.Notes = updated.Notes;
 
-        await _db.SaveChangesAsync();
-        return Ok(log);
+            _db.ExerciseSets.RemoveRange(log.Sets);
+            foreach (var set in updated.Sets)
+            {
+                set.WorkoutLogId = id;
+                _db.ExerciseSets.Add(set);
+            }
+
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return Ok(log);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+        }
     }
 
     [HttpDelete("{id}")]

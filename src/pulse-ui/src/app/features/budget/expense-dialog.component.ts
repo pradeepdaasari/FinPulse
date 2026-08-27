@@ -8,6 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { BudgetExpense, BudgetExpenseCreate } from '../../core/models/budget.model';
 import { Category } from '../../core/models/category.model';
 import { CategoryService } from '../../core/services/category.service';
@@ -17,7 +18,7 @@ import { CategoryService } from '../../core/services/category.service';
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
-    MatInputModule, MatSelectModule, MatSlideToggleModule, MatButtonModule, MatIconModule
+    MatInputModule, MatSelectModule, MatSlideToggleModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule
   ],
   template: `
     <div class="dialog-header">
@@ -30,6 +31,9 @@ import { CategoryService } from '../../core/services/category.service';
       </div>
     </div>
     <mat-dialog-content>
+      @if (loading()) {
+        <div class="loading-container"><mat-spinner diameter="28"></mat-spinner></div>
+      } @else {
       <form [formGroup]="form" class="expense-form">
         <mat-form-field>
           <mat-label>Name</mat-label>
@@ -98,10 +102,11 @@ import { CategoryService } from '../../core/services/category.service';
           </mat-form-field>
         }
       </form>
+      }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>Cancel</button>
-      <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid">
+      <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid || loading()">
         {{ data ? 'Update' : 'Add' }}
       </button>
     </mat-dialog-actions>
@@ -137,6 +142,7 @@ import { CategoryService } from '../../core/services/category.service';
     }
     .flex-1 { flex: 1; }
     .add-cat-btn { align-self: flex-start; }
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
   `]
 })
 export class ExpenseDialogComponent implements OnInit {
@@ -145,6 +151,7 @@ export class ExpenseDialogComponent implements OnInit {
   private categoryService = inject(CategoryService);
   data = inject<BudgetExpense | null>(MAT_DIALOG_DATA);
 
+  loading = signal(true);
   categories = signal<Category[]>([]);
   showNewCategory = signal(false);
 
@@ -165,7 +172,10 @@ export class ExpenseDialogComponent implements OnInit {
   }
 
   loadCategories(): void {
-    this.categoryService.getAll('Expense').subscribe(cats => this.categories.set(cats));
+    this.categoryService.getAll('Expense').subscribe(cats => {
+      this.categories.set(cats);
+      this.loading.set(false);
+    });
   }
 
   createCategory(): void {

@@ -1,15 +1,18 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { PaymentStreak } from '../../core/models/dashboard.model';
 
 @Component({
   selector: 'app-payment-streak',
   standalone: true,
-  imports: [CommonModule, MatIconModule],
+  imports: [CommonModule, MatIconModule, MatProgressSpinnerModule],
   template: `
-    @if (streak() && streak()!.currentStreak > 0) {
+    @if (loading()) {
+      <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
+    } @else if (streak() && streak()!.currentStreak > 0) {
       <div class="streak-bar">
         <div class="streak-left">
           <mat-icon class="fire-icon">local_fire_department</mat-icon>
@@ -93,6 +96,7 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
       font-weight: 600;
       color: var(--color-text-secondary);
     }
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
     @media (max-width: 480px) {
       .streak-label { display: none; }
     }
@@ -100,11 +104,13 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
 })
 export class PaymentStreakComponent implements OnInit {
   private dashboardService = inject(DashboardService);
+  loading = signal(true);
   streak = signal<PaymentStreak | null>(null);
 
   ngOnInit(): void {
     this.dashboardService.getStreak().subscribe(data => {
       this.streak.set(data);
+      this.loading.set(false);
     });
   }
 }

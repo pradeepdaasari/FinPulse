@@ -2,6 +2,7 @@ import { Component, OnInit, Input, inject, signal, computed } from '@angular/cor
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { BankAccountService } from '../../core/services/bank-account.service';
 import { DashboardSummary } from '../../core/models/dashboard.model';
@@ -10,9 +11,11 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
 @Component({
   selector: 'app-financial-summary',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
   template: `
-    @if (data()) {
+    @if (loading()) {
+      <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
+    } @else if (data()) {
       <div class="panels">
         <!-- Left Panel: Cash Flow -->
         <mat-card class="panel">
@@ -215,6 +218,7 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
       font-weight: 500;
     }
 
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
     @media (max-width: 900px) {
       .panels { grid-template-columns: 1fr; }
     }
@@ -231,6 +235,7 @@ export class FinancialSummaryComponent implements OnInit {
 
   private dashboardService = inject(DashboardService);
   private bankAccountService = inject(BankAccountService);
+  loading = signal(true);
   data = signal<FinancialSummary | null>(null);
   totalBankBalance = signal(0);
 
@@ -277,8 +282,8 @@ export class FinancialSummaryComponent implements OnInit {
 
   ngOnInit(): void {
     this.dashboardService.getFinancialSummary().subscribe({
-      next: (summary) => this.data.set(summary),
-      error: () => {}
+      next: (summary) => { this.data.set(summary); this.loading.set(false); },
+      error: () => { this.loading.set(false); }
     });
     this.bankAccountService.getAll().subscribe({
       next: (accounts) => this.totalBankBalance.set(accounts.reduce((sum, a) => sum + a.currentBalance, 0)),

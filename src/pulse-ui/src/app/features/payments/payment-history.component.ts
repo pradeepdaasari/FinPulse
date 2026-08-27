@@ -6,9 +6,9 @@ import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { PaymentService } from '../../core/services/payment.service';
-import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
 
 import { DebtService } from '../../core/services/debt.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -19,7 +19,7 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
 @Component({
   selector: 'app-payment-history',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatCardModule, MatTableModule, MatChipsModule, MatIconModule, MatButtonModule, SkeletonLoaderComponent, CurrencyPipe, DatePipe],
+  imports: [CommonModule, RouterLink, MatCardModule, MatTableModule, MatChipsModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
   template: `
     <div class="filter-row">
       <mat-chip-set>
@@ -55,7 +55,7 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
     }
 
     @if (loading()) {
-      <app-skeleton type="table" [count]="6"></app-skeleton>
+      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
     } @else {
       <div class="summary-row">
         <mat-card class="summary-card stat-total">
@@ -204,6 +204,7 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
     }
   `,
   styles: [`
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .filter-row {
       margin-bottom: var(--spacing-sm);
     }

@@ -5,14 +5,18 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AdminService, AppUser } from '../../core/services/admin.service';
 import { AddUserDialogComponent } from './add-user-dialog.component';
 
 @Component({
   selector: 'app-user-management',
   standalone: true,
-  imports: [MatTableModule, MatButtonModule, MatIconModule, MatChipsModule, MatDialogModule, MatTooltipModule],
+  imports: [MatTableModule, MatButtonModule, MatIconModule, MatChipsModule, MatDialogModule, MatTooltipModule, MatProgressSpinnerModule],
   template: `
+    @if (loading()) {
+      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+    } @else {
     <div class="page-container">
       <div class="page-header">
         <h2>User Management</h2>
@@ -75,8 +79,10 @@ import { AddUserDialogComponent } from './add-user-dialog.component';
         </table>
       </div>
     </div>
+    }
   `,
   styles: [`
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .page-container {
       padding: 24px;
       max-width: 900px;
@@ -115,6 +121,7 @@ export class UserManagementComponent implements OnInit {
   private adminService = inject(AdminService);
   private dialog = inject(MatDialog);
 
+  loading = signal(true);
   users = signal<AppUser[]>([]);
   displayedColumns = ['username', 'email', 'role', 'status', 'actions'];
 
@@ -123,7 +130,10 @@ export class UserManagementComponent implements OnInit {
   }
 
   loadUsers() {
-    this.adminService.getUsers().subscribe(users => this.users.set(users));
+    this.adminService.getUsers().subscribe(users => {
+      this.users.set(users);
+      this.loading.set(false);
+    });
   }
 
   openAddDialog() {

@@ -5,6 +5,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
 import { BloodWorkService } from '../../core/services/blood-work.service';
 import { BloodWorkResult } from '../../core/models/blood-work.model';
@@ -12,10 +13,13 @@ import { BloodWorkResult } from '../../core/models/blood-work.model';
 @Component({
   selector: 'app-add-blood-work-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, MatAutocompleteModule, FormsModule],
+  imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, MatAutocompleteModule, MatProgressSpinnerModule, FormsModule],
   template: `
     <h2 mat-dialog-title>Add Blood Work Report</h2>
     <mat-dialog-content>
+      @if (loading()) {
+        <div class="loading-container"><mat-spinner diameter="28"></mat-spinner></div>
+      } @else {
       <div class="form-row">
         <mat-form-field appearance="outline" class="half-width">
           <mat-label>Report Date</mat-label>
@@ -72,10 +76,11 @@ import { BloodWorkResult } from '../../core/models/blood-work.model';
           </div>
         }
       </div>
+      }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>Cancel</button>
-      <button mat-flat-button color="primary" [disabled]="!reportDate || results.length === 0" (click)="save()">Save Report</button>
+      <button mat-flat-button color="primary" [disabled]="!reportDate || results.length === 0 || loading()" (click)="save()">Save Report</button>
     </mat-dialog-actions>
   `,
   styles: [`
@@ -97,6 +102,7 @@ import { BloodWorkResult } from '../../core/models/blood-work.model';
     .ref-field { flex: 1; min-width: 60px; }
     .remove-btn { flex-shrink: 0; }
     .mat-mdc-form-field-subscript-wrapper { display: none; }
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
     @media (max-width: 599px) {
       mat-dialog-content { min-width: auto; }
       .form-row { flex-direction: column; gap: 0; }
@@ -110,6 +116,7 @@ export class AddBloodWorkDialogComponent {
   private dialogRef = inject(MatDialogRef<AddBloodWorkDialogComponent>);
   private bloodWorkService = inject(BloodWorkService);
 
+  loading = signal(true);
   reportDate = this.formatDate(new Date());
   labName = '';
   notes = '';
@@ -119,7 +126,10 @@ export class AddBloodWorkDialogComponent {
   filteredTestNames = signal<string[]>([]);
 
   constructor() {
-    this.bloodWorkService.getTestNames().subscribe(names => this.allTestNames.set(names));
+    this.bloodWorkService.getTestNames().subscribe(names => {
+      this.allTestNames.set(names);
+      this.loading.set(false);
+    });
   }
 
   addResult() {

@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DailyExpenseService } from '../../core/services/daily-expense.service';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { MonthComparison } from '../../core/models/daily-expense.model';
@@ -14,9 +15,11 @@ interface Insight {
 @Component({
   selector: 'app-insights',
   standalone: true,
-  imports: [CommonModule, MatIconModule],
+  imports: [CommonModule, MatIconModule, MatProgressSpinnerModule],
   template: `
-    @if (insights().length > 0) {
+    @if (loading()) {
+      <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
+    } @else if (insights().length > 0) {
       <div class="insights-card">
         <div class="insights-header">
           <mat-icon class="header-icon">auto_awesome</mat-icon>
@@ -100,6 +103,7 @@ interface Insight {
       font-weight: 500;
       line-height: 1.3;
     }
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
     @media (max-width: 599px) {
       .insights-card {
         padding: 14px 16px;
@@ -111,12 +115,13 @@ export class InsightsComponent implements OnInit {
   private expenseService = inject(DailyExpenseService);
   private dashboardService = inject(DashboardService);
 
+  loading = signal(true);
   insights = signal<Insight[]>([]);
 
   ngOnInit(): void {
     this.expenseService.getComparison().subscribe({
       next: (data) => this.generateInsights(data),
-      error: () => {}
+      error: () => { this.loading.set(false); }
     });
   }
 
@@ -124,7 +129,7 @@ export class InsightsComponent implements OnInit {
     const results: Insight[] = [];
 
     // If no previous data, skip
-    if (data.previousTotal === 0 && data.currentTotal === 0) return;
+    if (data.previousTotal === 0 && data.currentTotal === 0) { this.loading.set(false); return; }
 
     // Overall spending trend
     if (data.previousTotal > 0) {
@@ -173,13 +178,16 @@ export class InsightsComponent implements OnInit {
             });
           }
           this.insights.set(results.slice(0, 3));
+          this.loading.set(false);
         },
         error: () => {
           this.insights.set(results.slice(0, 3));
+          this.loading.set(false);
         }
       });
     } else {
       this.insights.set(results.slice(0, 3));
+      this.loading.set(false);
     }
   }
 }

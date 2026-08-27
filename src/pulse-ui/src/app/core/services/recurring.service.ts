@@ -25,6 +25,10 @@ export class RecurringService {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
 
+  markPaid(id: number): Observable<{ expenseId: number; nextRunDate: string }> {
+    return this.http.post<{ expenseId: number; nextRunDate: string }>(`${this.baseUrl}/${id}/pay`, {});
+  }
+
   generate(): Observable<{ generated: number }> {
     return this.http.post<{ generated: number }>(`${this.baseUrl}/generate`, {});
   }

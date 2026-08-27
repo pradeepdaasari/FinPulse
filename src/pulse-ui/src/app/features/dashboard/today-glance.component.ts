@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { forkJoin, of, catchError } from 'rxjs';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { DailyExpenseService } from '../../core/services/daily-expense.service';
@@ -12,9 +13,11 @@ import { WorkoutLog } from '../../core/models/workout-log.model';
 @Component({
   selector: 'app-today-glance',
   standalone: true,
-  imports: [CommonModule, MatIconModule, CurrencyPipe],
+  imports: [CommonModule, MatIconModule, MatProgressSpinnerModule, CurrencyPipe],
   template: `
-    @if (loaded()) {
+    @if (loading()) {
+      <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
+    } @else if (loaded()) {
       <div class="glance-card">
         <div class="glance-section">
           <mat-icon class="glance-icon icon-blue">payment</mat-icon>
@@ -106,6 +109,7 @@ import { WorkoutLog } from '../../core/models/workout-log.model';
       color: var(--color-text-muted);
       font-weight: 500;
     }
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
     @media (max-width: 599px) {
       .glance-card {
         flex-direction: column;
@@ -128,6 +132,7 @@ export class TodayGlanceComponent implements OnInit {
   private expenseService = inject(DailyExpenseService);
   private workoutService = inject(WorkoutLogService);
 
+  loading = signal(true);
   loaded = signal(false);
   paymentsDueToday = signal<UpcomingPayment[]>([]);
   paymentsTotalDue = signal<number>(0);
@@ -171,6 +176,7 @@ export class TodayGlanceComponent implements OnInit {
       }
 
       this.loaded.set(true);
+      this.loading.set(false);
     });
   }
 }

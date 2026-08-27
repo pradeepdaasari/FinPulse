@@ -6,9 +6,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { LoanService } from '../../core/services/loan.service';
-import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
 import { PersonalLoan } from '../../core/models/personal-loan.model';
 import { NotificationService } from '../../core/services/notification.service';
 import { AddLoanDialogComponent } from './add-loan-dialog.component';
@@ -18,7 +18,7 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
 @Component({
   selector: 'app-loan-list',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatTooltipModule, SkeletonLoaderComponent, CurrencyPipe],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatTooltipModule, MatProgressSpinnerModule, CurrencyPipe],
   template: `
     <div class="header-row">
       <button mat-raised-button color="primary" (click)="openAddLoan()">
@@ -27,7 +27,7 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
     </div>
 
     @if (loading()) {
-      <app-skeleton type="table" [count]="5"></app-skeleton>
+      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
     } @else if (loans().length === 0) {
       <div class="empty-state">
         <div class="empty-icon-wrap purple">
@@ -199,6 +199,7 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
     }
   `,
   styles: [`
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .header-row {
       display: flex;
       justify-content: flex-end;

@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
 import { DashboardService } from '../../core/services/dashboard.service';
@@ -10,8 +11,11 @@ import { TrendData } from '../../core/models/dashboard.model';
 @Component({
   selector: 'app-debt-trend-chart',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, BaseChartDirective],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, BaseChartDirective],
   template: `
+    @if (loading()) {
+      <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
+    } @else {
     <mat-card class="trend-card">
       <mat-card-header>
         <mat-card-title>
@@ -43,8 +47,10 @@ import { TrendData } from '../../core/models/dashboard.model';
         }
       </mat-card-content>
     </mat-card>
+    }
   `,
   styles: [`
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
     .trend-card { margin-top: var(--spacing-md); }
     .card-title-row {
       display: flex;
@@ -79,6 +85,7 @@ import { TrendData } from '../../core/models/dashboard.model';
 export class DebtTrendChartComponent implements OnInit {
   private dashboardService = inject(DashboardService);
 
+  loading = signal(true);
   trendData = signal<TrendData | null>(null);
   chartData = signal<ChartConfiguration<'line'>['data'] | null>(null);
 
@@ -101,6 +108,7 @@ export class DebtTrendChartComponent implements OnInit {
   ngOnInit(): void {
     this.dashboardService.getTrends().subscribe(data => {
       this.trendData.set(data);
+      this.loading.set(false);
       if (data.snapshots.length > 0) {
         this.chartData.set({
           labels: data.snapshots.map(s => s.label),

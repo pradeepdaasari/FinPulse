@@ -4,13 +4,14 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TradingService } from '../../core/services/trading.service';
 import { WeeklySummary } from '../../core/models/trading.model';
 
 @Component({
   selector: 'app-weekly-summary',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
   template: `
     <div class="page-banner">
       <div class="banner-pattern"></div>
@@ -21,6 +22,9 @@ import { WeeklySummary } from '../../core/models/trading.model';
       </div>
     </div>
 
+    @if (loading()) {
+      <div class="loading-container"><mat-spinner></mat-spinner></div>
+    } @else {
     <!-- Week Navigator -->
     <div class="week-nav">
       <button mat-icon-button (click)="prevWeek()"><mat-icon>chevron_left</mat-icon></button>
@@ -255,9 +259,11 @@ import { WeeklySummary } from '../../core/models/trading.model';
         </div>
       }
     }
+    }
   `,
   styles: [`
     :host { display: block; }
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
 
     .page-banner {
       position: relative;
@@ -456,6 +462,7 @@ import { WeeklySummary } from '../../core/models/trading.model';
 export class WeeklySummaryComponent implements OnInit {
   private tradingService = inject(TradingService);
 
+  loading = signal(true);
   summary = signal<WeeklySummary | null>(null);
   pastWeeks = signal<WeeklySummary[]>([]);
   currentWeekStart = signal(this.getWeekStart(new Date()));
@@ -482,8 +489,8 @@ export class WeeklySummaryComponent implements OnInit {
 
   loadWeek(): void {
     this.tradingService.getWeeklySummary(this.selectedWeekStart()).subscribe({
-      next: (data) => this.summary.set(data),
-      error: () => this.summary.set(null)
+      next: (data) => { this.summary.set(data); this.loading.set(false); },
+      error: () => { this.summary.set(null); this.loading.set(false); }
     });
   }
 

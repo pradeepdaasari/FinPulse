@@ -20,6 +20,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { DailyExpenseService } from '../../core/services/daily-expense.service';
 import { DailyExpense, DailyExpenseCreate, ExpenseFilter, SpendingSummary } from '../../core/models/daily-expense.model';
+import { BankAccountService } from '../../core/services/bank-account.service';
 import { AddExpenseDialogComponent, ExpenseDialogData } from './add-expense-dialog.component';
 import { ExpenseFilterBarComponent } from './expense-filter-bar.component';
 import { MonthComparisonComponent } from './month-comparison.component';
@@ -73,7 +74,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     </div>
 
     @if (loading()) {
-      <mat-spinner></mat-spinner>
+      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
     } @else {
       <mat-tab-group animationDuration="200ms">
         <!-- Transaction Log Tab -->
@@ -147,18 +148,18 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                         <td mat-cell *matCellDef="let e">
                           @if (e.transactionType === 'Transfer' && e.fundingSourceName && e.toFundingSourceName) {
                             <span class="source-cell transfer-source">
-                              <mat-icon class="source-icon">account_balance</mat-icon>
+                              <mat-icon class="source-icon">{{ getSourceIcon(e.fundingSourceId, e.fundingSourceType) }}</mat-icon>
                               {{ e.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon> {{ e.toFundingSourceName }}
                             </span>
                           } @else if (e.transactionType === 'CardPayment' && e.fundingSourceName && e.toFundingSourceName) {
                             <span class="source-cell card-payment-source">
-                              <mat-icon class="source-icon">account_balance</mat-icon>
+                              <mat-icon class="source-icon">{{ getSourceIcon(e.fundingSourceId, e.fundingSourceType) }}</mat-icon>
                               {{ e.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon>
                               <mat-icon class="source-icon">credit_card</mat-icon> {{ e.toFundingSourceName }}
                             </span>
                           } @else if (e.fundingSourceName) {
                             <span class="source-cell">
-                              <mat-icon class="source-icon">{{ e.fundingSourceType === 'BankAccount' ? 'account_balance' : 'credit_card' }}</mat-icon>
+                              <mat-icon class="source-icon">{{ getSourceIcon(e.fundingSourceId, e.fundingSourceType) }}</mat-icon>
                               {{ e.fundingSourceName }}
                             </span>
                           } @else {
@@ -183,15 +184,21 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                       <ng-container matColumnDef="actions">
                         <th mat-header-cell *matHeaderCellDef></th>
                         <td mat-cell *matCellDef="let e">
-                          <button mat-icon-button (click)="duplicateExpense(e)" matTooltip="Duplicate">
-                            <mat-icon>content_copy</mat-icon>
-                          </button>
-                          <button mat-icon-button (click)="editExpense(e)" matTooltip="Edit">
-                            <mat-icon>edit</mat-icon>
-                          </button>
-                          <button mat-icon-button color="warn" (click)="deleteExpense(e)" matTooltip="Delete">
-                            <mat-icon>delete</mat-icon>
-                          </button>
+                          @if (e.linkedToTrade) {
+                            <span class="auto-trade-badge" matTooltip="Linked to trade journal — edit/delete from Trading">
+                              <mat-icon class="auto-trade-icon">link</mat-icon> Trade
+                            </span>
+                          } @else {
+                            <button mat-icon-button (click)="duplicateExpense(e)" matTooltip="Duplicate">
+                              <mat-icon>content_copy</mat-icon>
+                            </button>
+                            <button mat-icon-button (click)="editExpense(e)" matTooltip="Edit">
+                              <mat-icon>edit</mat-icon>
+                            </button>
+                            <button mat-icon-button color="warn" (click)="deleteExpense(e)" matTooltip="Delete">
+                              <mat-icon>delete</mat-icon>
+                            </button>
+                          }
                         </td>
                       </ng-container>
                       <tr mat-header-row *matHeaderRowDef="logColumns"></tr>
@@ -212,7 +219,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                   <div class="date-group">
                     <div class="date-header">{{ group.label }}</div>
                     @for (e of group.items; track e.id) {
-                      <div class="txn-card" (click)="editExpense(e)">
+                      <div class="txn-card" (click)="!e.linkedToTrade && editExpense(e)" [class.auto-trade-card]="e.linkedToTrade">
                         <div class="txn-left">
                           <div class="txn-cat-dot" [class.dot-income]="e.transactionType === 'Income'"
                                [class.dot-transfer]="e.transactionType === 'Transfer'"
@@ -350,6 +357,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     }
   `,
   styles: [`
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .expenses-header {
       display: flex;
       align-items: center;
@@ -504,6 +512,10 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
       transition: background var(--transition-fast);
     }
     .txn-card:active { background: var(--color-surface-hover); }
+    .txn-card.auto-trade-card { cursor: default; opacity: 0.7; }
+    .txn-card.auto-trade-card:active { background: none; }
+    .auto-trade-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--color-primary); font-weight: 500; white-space: nowrap; }
+    .auto-trade-icon { font-size: 16px; width: 16px; height: 16px; }
     .txn-cat-dot {
       width: 36px;
       height: 36px;
@@ -552,8 +564,11 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
 })
 export class ExpensesPageComponent implements OnInit {
   private expenseService = inject(DailyExpenseService);
+  private accountService = inject(BankAccountService);
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
+
+  private accountIconMap = new Map<number, string>();
 
   @ViewChild(MatSort) sort!: MatSort;
 
@@ -582,6 +597,15 @@ export class ExpensesPageComponent implements OnInit {
   ngOnInit(): void {
     this.updateMonthLabel();
     this.loadData();
+    this.accountService.getAll().subscribe(accounts => {
+      accounts.forEach(a => {
+        switch (a.accountType) {
+          case 'Savings': this.accountIconMap.set(a.id, 'savings'); break;
+          case 'Brokerage': this.accountIconMap.set(a.id, 'trending_up'); break;
+          default: this.accountIconMap.set(a.id, 'account_balance'); break;
+        }
+      });
+    });
   }
 
   loadData(): void {
@@ -638,6 +662,14 @@ export class ExpensesPageComponent implements OnInit {
     if (this.rangeStartDate && this.rangeEndDate) {
       this.loadData();
     }
+  }
+
+  getSourceIcon(fundingSourceId: number | null, fundingSourceType: string | null): string {
+    if (fundingSourceType === 'CreditCard') return 'credit_card';
+    if (fundingSourceId && this.accountIconMap.has(fundingSourceId)) {
+      return this.accountIconMap.get(fundingSourceId)!;
+    }
+    return 'account_balance';
   }
 
   getCategoryIcon(e: DailyExpense): string {

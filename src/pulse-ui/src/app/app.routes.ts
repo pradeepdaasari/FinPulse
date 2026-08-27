@@ -54,6 +54,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'accounts/:id',
+    loadComponent: () => import('./features/bank-accounts/account-detail.component').then(m => m.AccountDetailComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'expenses',
     loadComponent: () => import('./features/expenses/expenses-page.component').then(m => m.ExpensesPageComponent),
     canActivate: [authGuard]
@@ -132,6 +137,11 @@ export const routes: Routes = [
   {
     path: 'trading/journal',
     loadComponent: () => import('./features/trading/journal.component').then(m => m.JournalComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'trading/calendar',
+    loadComponent: () => import('./features/trading/trading-calendar.component').then(m => m.TradingCalendarComponent),
     canActivate: [authGuard]
   },
   {

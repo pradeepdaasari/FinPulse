@@ -53,6 +53,10 @@ public class BankAccountsController : ControllerBase
             AccountName = dto.AccountName,
             AccountType = dto.AccountType,
             CurrentBalance = dto.CurrentBalance,
+            OptionsCommissionPerContract = dto.OptionsCommissionPerContract,
+            FuturesCommissionPerContract = dto.FuturesCommissionPerContract,
+            OptionsRegFeePerContract = dto.OptionsRegFeePerContract,
+            FuturesRegFeePerContract = dto.FuturesRegFeePerContract,
             UserId = UserId
         };
 
@@ -75,6 +79,10 @@ public class BankAccountsController : ControllerBase
         account.AccountName = dto.AccountName;
         account.AccountType = dto.AccountType;
         account.CurrentBalance = dto.CurrentBalance;
+        account.OptionsCommissionPerContract = dto.OptionsCommissionPerContract;
+        account.FuturesCommissionPerContract = dto.FuturesCommissionPerContract;
+        account.OptionsRegFeePerContract = dto.OptionsRegFeePerContract;
+        account.FuturesRegFeePerContract = dto.FuturesRegFeePerContract;
 
         await _db.SaveChangesAsync();
 

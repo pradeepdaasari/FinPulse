@@ -63,7 +63,23 @@ export interface TradeEntry {
   isRevengeTrading: boolean;
   emotionAtEntry?: string;
   createdAt?: string;
+  assetType?: string;
+  optionType?: string;
+  spreadType?: string;
+  strikePrice?: number;
+  strikePrice2?: number;
+  strikePrice3?: number;
+  strikePrice4?: number;
+  expirationDate?: string;
+  entryPremium?: number;
+  exitPremium?: number;
+  bankAccountId?: number;
+  totalFees?: number;
+  netPnl?: number;
 }
+
+export type SpreadType = 'Single' | 'Vertical' | 'IronCondor' | 'Butterfly' | 'Calendar';
+export type OptionTypeValue = 'Call' | 'Put';
 
 export type TradeDirection = 'long' | 'short';
 

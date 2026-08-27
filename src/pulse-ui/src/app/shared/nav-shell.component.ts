@@ -148,6 +148,11 @@ import { routeFadeAnimation } from './route-animations';
                 <mat-icon matListItemIcon>auto_stories</mat-icon>
                 <span matListItemTitle>Trade Journal</span>
               </a>
+              <a mat-list-item routerLink="/trading/calendar" routerLinkActive="active-link"
+                 (click)="onNavClick()">
+                <mat-icon matListItemIcon>calendar_month</mat-icon>
+                <span matListItemTitle>Calendar</span>
+              </a>
               <a mat-list-item routerLink="/trading/review" routerLinkActive="active-link"
                  (click)="onNavClick()">
                 <mat-icon matListItemIcon>grading</mat-icon>
@@ -495,6 +500,10 @@ import { routeFadeAnimation } from './route-animations';
       white-space: nowrap;
     }
 
+    :host ::ng-deep .mat-sidenav-content {
+      scrollbar-gutter: stable;
+    }
+
     .content-area {
       position: relative;
       padding: 24px 32px;
@@ -731,6 +740,7 @@ export class NavShellComponent {
     '/trading/premarket': 'Pre-Market Plan',
     '/trading/checklist': 'Trade Checklist',
     '/trading/journal': 'Trade Journal',
+    '/trading/calendar': 'Trading Calendar',
     '/trading/review': 'Daily Review',
     '/trading/setups': 'My Setups',
     '/trading/playbook': 'Playbook & Rules',

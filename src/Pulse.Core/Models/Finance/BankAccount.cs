@@ -17,6 +17,12 @@ public class BankAccount
 
     public string? UserId { get; set; }
 
+    // Trading fee profile (for Brokerage accounts)
+    public decimal? OptionsCommissionPerContract { get; set; }
+    public decimal? FuturesCommissionPerContract { get; set; }
+    public decimal? OptionsRegFeePerContract { get; set; }
+    public decimal? FuturesRegFeePerContract { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }

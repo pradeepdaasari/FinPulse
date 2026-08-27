@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { DailyExpenseService } from '../../core/services/daily-expense.service';
 import { UserProfileService } from '../../core/services/user-profile.service';
@@ -12,8 +13,11 @@ import { SpendingSummary } from '../../core/models/daily-expense.model';
 @Component({
   selector: 'app-budget-health',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatCardModule, MatIconModule, MatProgressBarModule, MatButtonModule, CurrencyPipe],
+  imports: [CommonModule, RouterLink, MatCardModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule, MatButtonModule, CurrencyPipe],
   template: `
+    @if (loading()) {
+      <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
+    } @else {
     <mat-card class="budget-health-card">
       <mat-card-header>
         <mat-card-title><mat-icon class="card-title-icon">monitoring</mat-icon> Budget Health</mat-card-title>
@@ -66,6 +70,7 @@ import { SpendingSummary } from '../../core/models/daily-expense.model';
         <a mat-button routerLink="/expenses">View Details</a>
       </mat-card-actions>
     </mat-card>
+    }
   `,
   styles: [`
     .budget-health-card {
@@ -95,12 +100,14 @@ import { SpendingSummary } from '../../core/models/daily-expense.model';
     .next-pay { display: flex; align-items: center; gap: 8px; margin-top: var(--spacing-md); padding-top: var(--spacing-sm); border-top: 1px solid var(--color-border, #e0e0e0); font-size: 0.9rem; }
     .next-pay mat-icon { color: var(--color-primary); font-size: 18px; width: 18px; height: 18px; }
     .no-data { opacity: 0.6; font-style: italic; }
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
   `]
 })
 export class BudgetHealthComponent implements OnInit {
   private expenseService = inject(DailyExpenseService);
   private profileService = inject(UserProfileService);
 
+  loading = signal(true);
   loaded = signal(false);
   totalBudgeted = signal(0);
   totalSpent = signal(0);
@@ -123,6 +130,7 @@ export class BudgetHealthComponent implements OnInit {
         this.overallPercent.set(budgeted > 0 ? Math.round(spent / budgeted * 100) : 0);
         this.alerts.set(data.filter(d => d.percentUsed >= 75).sort((a, b) => b.percentUsed - a.percentUsed).slice(0, 4));
         this.loaded.set(true);
+        this.loading.set(false);
       }
     });
 

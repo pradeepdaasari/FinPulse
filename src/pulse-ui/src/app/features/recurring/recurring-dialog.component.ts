@@ -11,6 +11,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CategoryService } from '../../core/services/category.service';
 import { RecurringTransaction } from '../../core/models/recurring.model';
 
@@ -20,7 +21,7 @@ import { RecurringTransaction } from '../../core/models/recurring.model';
   imports: [
     CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatButtonModule, MatDatepickerModule,
-    MatNativeDateModule, MatSlideToggleModule, MatButtonToggleModule, MatIconModule
+    MatNativeDateModule, MatSlideToggleModule, MatButtonToggleModule, MatIconModule, MatProgressSpinnerModule
   ],
   template: `
     <div class="dialog-banner">
@@ -36,6 +37,9 @@ import { RecurringTransaction } from '../../core/models/recurring.model';
       </div>
     </div>
     <mat-dialog-content>
+      @if (loading()) {
+        <div class="loading-container"><mat-spinner diameter="28"></mat-spinner></div>
+      } @else {
       <form [formGroup]="form" class="expense-form">
         <div class="txn-icons">
           <div class="txn-icon-item" [class.active]="form.value.transactionType === 0" (click)="form.patchValue({transactionType: 0}); onTypeChange()">
@@ -119,11 +123,12 @@ import { RecurringTransaction } from '../../core/models/recurring.model';
 
         <mat-slide-toggle formControlName="isActive" class="full-width">Active</mat-slide-toggle>
       </form>
+      }
     </mat-dialog-content>
     <mat-dialog-actions align="end" class="dialog-actions">
       <span class="action-spacer"></span>
       <button mat-button mat-dialog-close class="cancel-btn">Cancel</button>
-      <button mat-raised-button color="primary" class="save-btn" [disabled]="form.invalid" (click)="save()">
+      <button mat-raised-button color="primary" class="save-btn" [disabled]="form.invalid || loading()" (click)="save()">
         <mat-icon>{{ data ? 'check' : 'save' }}</mat-icon>
         {{ data ? 'Update' : 'Create' }}
       </button>
@@ -216,6 +221,7 @@ import { RecurringTransaction } from '../../core/models/recurring.model';
       letter-spacing: 0.02em;
     }
     .save-btn mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
   `]
 })
 export class RecurringDialogComponent implements OnInit {
@@ -224,6 +230,7 @@ export class RecurringDialogComponent implements OnInit {
   private dialogRef = inject(MatDialogRef<RecurringDialogComponent>);
   data: RecurringTransaction | null = inject(MAT_DIALOG_DATA);
 
+  loading = signal(true);
   categories = signal<any[]>([]);
   selectedParentId = signal<number | null>(null);
   parentSearch = signal('');
@@ -303,6 +310,7 @@ export class RecurringDialogComponent implements OnInit {
           if (directParent) this.selectedParentId.set(directParent.id);
         }
       }
+      this.loading.set(false);
     });
   }
 

@@ -91,6 +91,12 @@ public class ExpenseController : ControllerBase
         var bankNames = await _db.BankAccounts.Where(a => bankAccountIds.Contains(a.Id)).ToDictionaryAsync(a => a.Id, a => a.AccountName);
         var cardNames = await _db.CreditCards.Where(c => creditCardIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.CardName);
 
+        var expenseIds = expenses.Select(e => e.Id).ToList();
+        var tradeLinkedIds = await _db.TradeEntries
+            .Where(t => t.LinkedExpenseId != null && expenseIds.Contains(t.LinkedExpenseId.Value))
+            .Select(t => t.LinkedExpenseId!.Value)
+            .ToHashSetAsync();
+
         var result = expenses.Select(e => new
         {
             e.Id,
@@ -115,6 +121,7 @@ public class ExpenseController : ControllerBase
             e.SplitGroupId,
             e.Tag,
             e.TagType,
+            LinkedToTrade = tradeLinkedIds.Contains(e.Id),
             e.CreatedAt,
             e.UpdatedAt
         });
@@ -171,19 +178,32 @@ public class ExpenseController : ControllerBase
             });
         }
 
-        // Add categories that have spending but no budget
+        // Add categories that have spending but no budget — roll children into parent
         var budgetedCategoryIds = budgets.Select(b => b.CategoryId).ToHashSet();
         var unbudgeted = dailyExpenses
             .Where(e => e.CategoryId.HasValue && !budgetedCategoryIds.Contains(e.CategoryId.Value))
-            .GroupBy(e => e.CategoryId!.Value);
+            .ToList();
 
-        foreach (var group in unbudgeted)
+        // Resolve parent category for grouping
+        var parentLookup = await _db.CustomCategories
+            .Where(c => c.UserId == UserId && c.ParentId != null)
+            .ToDictionaryAsync(c => c.Id, c => c.ParentId!.Value);
+
+        int ResolveParent(int catId) => parentLookup.TryGetValue(catId, out var pid) ? pid : catId;
+
+        var grouped = unbudgeted
+            .GroupBy(e => ResolveParent(e.CategoryId!.Value));
+
+        foreach (var group in grouped)
         {
+            var parentCatId = group.Key;
+            var parentCat = await _db.CustomCategories.FirstOrDefaultAsync(c => c.Id == parentCatId);
+
             summaries.Add(new SpendingSummaryDto
             {
-                CategoryId = group.Key,
-                CategoryName = group.First().Category?.Name ?? "Unknown",
-                CategoryIcon = group.First().Category?.Icon,
+                CategoryId = parentCatId,
+                CategoryName = parentCat?.Name ?? group.First().Category?.Name ?? "Unknown",
+                CategoryIcon = parentCat?.Icon ?? group.First().Category?.Icon,
                 Budgeted = 0,
                 Spent = group.Sum(e => e.Amount),
                 Remaining = -group.Sum(e => e.Amount),
@@ -484,38 +504,48 @@ public class ExpenseController : ControllerBase
             UserId = UserId
         };
 
-        _db.DailyExpenses.Add(expense);
-
-        if (dto.TransactionType == TransactionType.Transfer)
-            await AdjustTransfer(dto.FundingSourceId!.Value, dto.ToFundingSourceId!.Value, dto.Amount);
-        else if (dto.TransactionType == TransactionType.CardPayment)
-            await AdjustCardPayment(dto.FundingSourceId!.Value, dto.ToFundingSourceId!.Value, dto.Amount);
-        else
-            await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
-
-        await _db.SaveChangesAsync();
-
-        var created = await _db.DailyExpenses
-            .Include(e => e.Category!).ThenInclude(c => c.Parent)
-            .FirstAsync(e => e.Id == expense.Id);
-
-        return Ok(new
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
         {
-            created.Id,
-            created.Date,
-            created.CategoryId,
-            CategoryName = created.Category?.Name,
-            ParentCategoryName = created.Category?.Parent?.Name,
-            created.Amount,
-            created.Description,
-            created.Merchant,
-            TransactionType = created.TransactionType?.ToString(),
-            FundingSourceType = created.FundingSourceType?.ToString(),
-            created.FundingSourceId,
-            created.ToFundingSourceId,
-            created.CreatedAt,
-            created.UpdatedAt
-        });
+            _db.DailyExpenses.Add(expense);
+
+            if (dto.TransactionType == TransactionType.Transfer)
+                await AdjustTransfer(dto.FundingSourceId!.Value, dto.ToFundingSourceId!.Value, dto.Amount);
+            else if (dto.TransactionType == TransactionType.CardPayment)
+                await AdjustCardPayment(dto.FundingSourceId!.Value, dto.ToFundingSourceId!.Value, dto.Amount);
+            else
+                await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
+
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            var created = await _db.DailyExpenses
+                .Include(e => e.Category!).ThenInclude(c => c.Parent)
+                .FirstAsync(e => e.Id == expense.Id);
+
+            return Ok(new
+            {
+                created.Id,
+                created.Date,
+                created.CategoryId,
+                CategoryName = created.Category?.Name,
+                ParentCategoryName = created.Category?.Parent?.Name,
+                created.Amount,
+                created.Description,
+                created.Merchant,
+                TransactionType = created.TransactionType?.ToString(),
+                FundingSourceType = created.FundingSourceType?.ToString(),
+                created.FundingSourceId,
+                created.ToFundingSourceId,
+                created.CreatedAt,
+                created.UpdatedAt
+            });
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+        }
     }
 
     [HttpPost("split")]
@@ -534,30 +564,43 @@ public class ExpenseController : ControllerBase
                 var valid = await ValidateFundingSource(dto.FundingSourceType.Value, dto.FundingSourceId.Value);
                 if (!valid) return BadRequest(new { message = $"Invalid funding source for split item: {dto.Description}" });
             }
-
-            var expense = new DailyExpense
-            {
-                Date = dto.Date.Date + DateTime.UtcNow.TimeOfDay,
-                CategoryId = dto.CategoryId,
-                Amount = dto.Amount,
-                Description = dto.Description,
-                Merchant = dto.Merchant,
-                TransactionType = dto.TransactionType,
-                FundingSourceType = dto.FundingSourceType,
-                FundingSourceId = dto.FundingSourceId,
-                ToFundingSourceId = dto.ToFundingSourceId,
-                SplitGroupId = groupId,
-                Tag = dto.Tag,
-                TagType = dto.TagType,
-                UserId = UserId
-            };
-            _db.DailyExpenses.Add(expense);
-            await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
-            created.Add(expense.Id);
         }
 
-        await _db.SaveChangesAsync();
-        return Ok(new { splitGroupId = groupId, count = created.Count });
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            foreach (var dto in splits)
+            {
+                var expense = new DailyExpense
+                {
+                    Date = dto.Date.Date + DateTime.UtcNow.TimeOfDay,
+                    CategoryId = dto.CategoryId,
+                    Amount = dto.Amount,
+                    Description = dto.Description,
+                    Merchant = dto.Merchant,
+                    TransactionType = dto.TransactionType,
+                    FundingSourceType = dto.FundingSourceType,
+                    FundingSourceId = dto.FundingSourceId,
+                    ToFundingSourceId = dto.ToFundingSourceId,
+                    SplitGroupId = groupId,
+                    Tag = dto.Tag,
+                    TagType = dto.TagType,
+                    UserId = UserId
+                };
+                _db.DailyExpenses.Add(expense);
+                await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
+                created.Add(expense.Id);
+            }
+
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return Ok(new { splitGroupId = groupId, count = created.Count });
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+        }
     }
 
     [HttpPut("{id}")]
@@ -575,59 +618,69 @@ public class ExpenseController : ControllerBase
         if (dto.TransactionType == TransactionType.Income && dto.FundingSourceType == FundingSourceType.CreditCard)
             return BadRequest(new { message = "Income cannot be received into a credit card." });
 
-        // Reverse old balance adjustment
-        if (expense.TransactionType == TransactionType.Transfer && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
-            await ReverseTransfer(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
-        else if (expense.TransactionType == TransactionType.CardPayment && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
-            await ReverseCardPayment(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
-        else
-            await ReverseBalance(expense.TransactionType, expense.FundingSourceType, expense.FundingSourceId, expense.Amount);
-
-        expense.Date = dto.Date.Date == expense.Date.Date
-            ? expense.Date
-            : dto.Date.Date + DateTime.UtcNow.TimeOfDay;
-        expense.CategoryId = dto.CategoryId;
-        expense.Amount = dto.Amount;
-        expense.Description = dto.Description;
-        expense.Merchant = dto.Merchant;
-        expense.TransactionType = dto.TransactionType;
-        expense.FundingSourceType = dto.FundingSourceType;
-        expense.FundingSourceId = dto.FundingSourceId;
-        expense.ToFundingSourceId = dto.ToFundingSourceId;
-        expense.Tag = dto.Tag;
-        expense.TagType = dto.TagType;
-
-        // Apply new balance adjustment
-        if (dto.TransactionType == TransactionType.Transfer && dto.FundingSourceId.HasValue && dto.ToFundingSourceId.HasValue)
-            await AdjustTransfer(dto.FundingSourceId.Value, dto.ToFundingSourceId.Value, dto.Amount);
-        else if (dto.TransactionType == TransactionType.CardPayment && dto.FundingSourceId.HasValue && dto.ToFundingSourceId.HasValue)
-            await AdjustCardPayment(dto.FundingSourceId.Value, dto.ToFundingSourceId.Value, dto.Amount);
-        else
-            await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
-
-        await _db.SaveChangesAsync();
-
-        var updated = await _db.DailyExpenses
-            .Include(e => e.Category!).ThenInclude(c => c.Parent)
-            .FirstAsync(e => e.Id == expense.Id);
-
-        return Ok(new
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
         {
-            updated.Id,
-            updated.Date,
-            updated.CategoryId,
-            CategoryName = updated.Category?.Name,
-            ParentCategoryName = updated.Category?.Parent?.Name,
-            updated.Amount,
-            updated.Description,
-            updated.Merchant,
-            TransactionType = updated.TransactionType?.ToString(),
-            FundingSourceType = updated.FundingSourceType?.ToString(),
-            updated.FundingSourceId,
-            updated.ToFundingSourceId,
-            updated.CreatedAt,
-            updated.UpdatedAt
-        });
+            // Reverse old balance adjustment
+            if (expense.TransactionType == TransactionType.Transfer && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
+                await ReverseTransfer(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
+            else if (expense.TransactionType == TransactionType.CardPayment && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
+                await ReverseCardPayment(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
+            else
+                await ReverseBalance(expense.TransactionType, expense.FundingSourceType, expense.FundingSourceId, expense.Amount);
+
+            expense.Date = dto.Date.Date == expense.Date.Date
+                ? expense.Date
+                : dto.Date.Date + DateTime.UtcNow.TimeOfDay;
+            expense.CategoryId = dto.CategoryId;
+            expense.Amount = dto.Amount;
+            expense.Description = dto.Description;
+            expense.Merchant = dto.Merchant;
+            expense.TransactionType = dto.TransactionType;
+            expense.FundingSourceType = dto.FundingSourceType;
+            expense.FundingSourceId = dto.FundingSourceId;
+            expense.ToFundingSourceId = dto.ToFundingSourceId;
+            expense.Tag = dto.Tag;
+            expense.TagType = dto.TagType;
+
+            // Apply new balance adjustment
+            if (dto.TransactionType == TransactionType.Transfer && dto.FundingSourceId.HasValue && dto.ToFundingSourceId.HasValue)
+                await AdjustTransfer(dto.FundingSourceId.Value, dto.ToFundingSourceId.Value, dto.Amount);
+            else if (dto.TransactionType == TransactionType.CardPayment && dto.FundingSourceId.HasValue && dto.ToFundingSourceId.HasValue)
+                await AdjustCardPayment(dto.FundingSourceId.Value, dto.ToFundingSourceId.Value, dto.Amount);
+            else
+                await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
+
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            var updated = await _db.DailyExpenses
+                .Include(e => e.Category!).ThenInclude(c => c.Parent)
+                .FirstAsync(e => e.Id == expense.Id);
+
+            return Ok(new
+            {
+                updated.Id,
+                updated.Date,
+                updated.CategoryId,
+                CategoryName = updated.Category?.Name,
+                ParentCategoryName = updated.Category?.Parent?.Name,
+                updated.Amount,
+                updated.Description,
+                updated.Merchant,
+                TransactionType = updated.TransactionType?.ToString(),
+                FundingSourceType = updated.FundingSourceType?.ToString(),
+                updated.FundingSourceId,
+                updated.ToFundingSourceId,
+                updated.CreatedAt,
+                updated.UpdatedAt
+            });
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+        }
     }
 
     [HttpDelete("{id}")]
@@ -636,16 +689,26 @@ public class ExpenseController : ControllerBase
         var expense = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == id && e.UserId == UserId);
         if (expense is null) return NotFound();
 
-        if (expense.TransactionType == TransactionType.Transfer && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
-            await ReverseTransfer(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
-        else if (expense.TransactionType == TransactionType.CardPayment && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
-            await ReverseCardPayment(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
-        else
-            await ReverseBalance(expense.TransactionType, expense.FundingSourceType, expense.FundingSourceId, expense.Amount);
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            if (expense.TransactionType == TransactionType.Transfer && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
+                await ReverseTransfer(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
+            else if (expense.TransactionType == TransactionType.CardPayment && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
+                await ReverseCardPayment(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
+            else
+                await ReverseBalance(expense.TransactionType, expense.FundingSourceType, expense.FundingSourceId, expense.Amount);
 
-        _db.DailyExpenses.Remove(expense);
-        await _db.SaveChangesAsync();
-        return NoContent();
+            _db.DailyExpenses.Remove(expense);
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+        }
     }
 
     private async Task<bool> ValidateFundingSource(FundingSourceType type, int id)

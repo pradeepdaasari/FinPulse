@@ -11,6 +11,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CategoryService } from '../../core/services/category.service';
 import { DailyExpenseService } from '../../core/services/daily-expense.service';
 import { Category } from '../../core/models/category.model';
@@ -23,7 +24,7 @@ import { ExpenseFilter } from '../../core/models/daily-expense.model';
     CommonModule, FormsModule, MatFormFieldModule, MatInputModule,
     MatSelectModule, MatIconModule, MatButtonModule, MatChipsModule,
     MatDatepickerModule, MatNativeDateModule, MatExpansionModule,
-    MatAutocompleteModule
+    MatAutocompleteModule, MatProgressSpinnerModule
   ],
   template: `
     <mat-expansion-panel class="filter-panel" [expanded]="false">
@@ -36,6 +37,9 @@ import { ExpenseFilter } from '../../core/models/daily-expense.model';
         </mat-panel-title>
       </mat-expansion-panel-header>
 
+      @if (loading()) {
+        <div class="loading-container"><mat-spinner diameter="28"></mat-spinner></div>
+      } @else {
       <div class="filter-grid">
         <mat-form-field class="filter-field search-field">
           <mat-label>Search</mat-label>
@@ -120,6 +124,7 @@ import { ExpenseFilter } from '../../core/models/daily-expense.model';
           <mat-icon>clear</mat-icon> Clear
         </button>
       </div>
+      }
     </mat-expansion-panel>
   `,
   styles: [`
@@ -140,6 +145,7 @@ import { ExpenseFilter } from '../../core/models/daily-expense.model';
       border-radius: 12px;
       margin-left: 8px;
     }
+    .loading-container { display: flex; justify-content: center; align-items: center; padding: 32px 0; }
     @media (max-width: 600px) {
       .filter-grid { grid-template-columns: 1fr; }
       .search-field { grid-column: span 1; }
@@ -152,6 +158,8 @@ export class ExpenseFilterBarComponent implements OnInit {
 
   filterChange = output<Partial<ExpenseFilter>>();
 
+  loading = signal(true);
+  private loadCount = 0;
   categories = signal<Category[]>([]);
   allTags = signal<string[]>([]);
   filteredTags = signal<string[]>([]);
@@ -164,11 +172,22 @@ export class ExpenseFilterBarComponent implements OnInit {
   maxAmount: number | null = null;
   tag = '';
 
+  private checkLoaded(): void {
+    this.loadCount++;
+    if (this.loadCount >= 2) {
+      this.loading.set(false);
+    }
+  }
+
   ngOnInit(): void {
-    this.categoryService.getAll('Expense').subscribe(cats => this.categories.set(cats));
+    this.categoryService.getAll('Expense').subscribe(cats => {
+      this.categories.set(cats);
+      this.checkLoaded();
+    });
     this.expenseService.getTags().subscribe(tags => {
       this.allTags.set(tags);
       this.filteredTags.set(tags);
+      this.checkLoaded();
     });
   }
 

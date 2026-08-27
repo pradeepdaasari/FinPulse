@@ -1,0 +1,517 @@
+<title>Life Pulse Dashboard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+
+<style>
+:root {
+  --pulse-bg: #0f1117;
+  --pulse-surface: #1a1d27;
+  --pulse-surface-raised: #232733;
+  --pulse-border: rgba(255,255,255,0.06);
+  --pulse-text: #e8eaed;
+  --pulse-text-secondary: #9aa0ad;
+  --pulse-text-muted: #5f6573;
+  --pulse-finance: #4d9fff;
+  --pulse-finance-bg: rgba(77,159,255,0.08);
+  --pulse-finance-glow: rgba(77,159,255,0.15);
+  --pulse-trading: #ff9f43;
+  --pulse-trading-bg: rgba(255,159,67,0.08);
+  --pulse-trading-glow: rgba(255,159,67,0.15);
+  --pulse-health: #26de81;
+  --pulse-health-bg: rgba(38,222,129,0.08);
+  --pulse-health-glow: rgba(38,222,129,0.15);
+  --pulse-danger: #ff6b6b;
+  --pulse-danger-bg: rgba(255,107,107,0.1);
+  --pulse-warning: #feca57;
+  --pulse-success: #26de81;
+  --pulse-radius: 14px;
+  --pulse-radius-sm: 8px;
+  --pulse-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --pulse-mono: 'JetBrains Mono', monospace;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --pulse-bg: #f4f5f7;
+    --pulse-surface: #ffffff;
+    --pulse-surface-raised: #f9fafb;
+    --pulse-border: rgba(0,0,0,0.06);
+    --pulse-text: #1a1d27;
+    --pulse-text-secondary: #5f6573;
+    --pulse-text-muted: #9aa0ad;
+    --pulse-finance-bg: rgba(77,159,255,0.06);
+    --pulse-finance-glow: rgba(77,159,255,0.1);
+    --pulse-trading-bg: rgba(255,159,67,0.06);
+    --pulse-trading-glow: rgba(255,159,67,0.1);
+    --pulse-health-bg: rgba(38,222,129,0.06);
+    --pulse-health-glow: rgba(38,222,129,0.1);
+    --pulse-danger-bg: rgba(255,107,107,0.08);
+  }
+}
+:root[data-theme="light"] {
+  --pulse-bg: #f4f5f7;
+  --pulse-surface: #ffffff;
+  --pulse-surface-raised: #f9fafb;
+  --pulse-border: rgba(0,0,0,0.06);
+  --pulse-text: #1a1d27;
+  --pulse-text-secondary: #5f6573;
+  --pulse-text-muted: #9aa0ad;
+  --pulse-finance-bg: rgba(77,159,255,0.06);
+  --pulse-finance-glow: rgba(77,159,255,0.1);
+  --pulse-trading-bg: rgba(255,159,67,0.06);
+  --pulse-trading-glow: rgba(255,159,67,0.1);
+  --pulse-health-bg: rgba(38,222,129,0.06);
+  --pulse-health-glow: rgba(38,222,129,0.1);
+  --pulse-danger-bg: rgba(255,107,107,0.08);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--pulse-bg);
+  color: var(--pulse-text);
+  font-family: var(--pulse-font);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+.dashboard {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* Greeting */
+.greeting {
+  padding: 8px 0 20px;
+}
+.greeting-text {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.greeting-sub {
+  font-size: 0.825rem;
+  color: var(--pulse-text-muted);
+  margin-top: 2px;
+}
+
+/* Status Cards Row */
+.status-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.status-card {
+  background: var(--pulse-surface);
+  border: 1px solid var(--pulse-border);
+  border-radius: var(--pulse-radius);
+  padding: 14px 12px;
+  position: relative;
+  overflow: hidden;
+}
+.status-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+.status-card.finance::before { background: var(--pulse-finance); }
+.status-card.trading::before { background: var(--pulse-trading); }
+.status-card.health::before { background: var(--pulse-health); }
+
+.status-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  margin-bottom: 8px;
+}
+.finance .status-icon { background: var(--pulse-finance-bg); color: var(--pulse-finance); }
+.trading .status-icon { background: var(--pulse-trading-bg); color: var(--pulse-trading); }
+.health .status-icon { background: var(--pulse-health-bg); color: var(--pulse-health); }
+
+.status-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: var(--pulse-mono);
+  letter-spacing: -0.02em;
+}
+.status-label {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--pulse-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
+/* Action Feed */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.section-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--pulse-text-muted);
+}
+.section-count {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--pulse-text-muted);
+  background: var(--pulse-surface);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.action-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--pulse-surface);
+  border: 1px solid var(--pulse-border);
+  border-radius: var(--pulse-radius-sm);
+  padding: 12px 14px;
+}
+.action-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.action-dot.urgent { background: var(--pulse-danger); box-shadow: 0 0 6px var(--pulse-danger); }
+.action-dot.warning { background: var(--pulse-warning); }
+.action-dot.info { background: var(--pulse-finance); }
+.action-dot.health { background: var(--pulse-health); }
+
+.action-content { flex: 1; min-width: 0; }
+.action-text {
+  font-size: 0.825rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.action-meta {
+  font-size: 0.7rem;
+  color: var(--pulse-text-muted);
+  margin-top: 1px;
+}
+.action-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.action-badge.danger { background: var(--pulse-danger-bg); color: var(--pulse-danger); }
+.action-badge.warning { background: var(--pulse-trading-bg); color: var(--pulse-trading); }
+.action-badge.cta { background: var(--pulse-finance-bg); color: var(--pulse-finance); }
+
+/* Domain Strips */
+.domain-strip {
+  background: var(--pulse-surface);
+  border: 1px solid var(--pulse-border);
+  border-radius: var(--pulse-radius);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.strip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.strip-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.strip-title-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.strip-link {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--pulse-text-muted);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+
+.strip-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+.metric {
+  text-align: center;
+}
+.metric-value {
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: var(--pulse-mono);
+  letter-spacing: -0.02em;
+}
+.metric-value.positive { color: var(--pulse-success); }
+.metric-value.negative { color: var(--pulse-danger); }
+.metric-value.warning { color: var(--pulse-warning); }
+.metric-label {
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: var(--pulse-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
+/* Trading traffic light */
+.traffic-light {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--pulse-surface-raised);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+.tl-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.tl-dot.green { background: var(--pulse-success); box-shadow: 0 0 4px var(--pulse-success); }
+.tl-dot.yellow { background: var(--pulse-warning); }
+.tl-dot.red { background: var(--pulse-danger); }
+
+/* Mini sparkline placeholder */
+.sparkline {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 24px;
+  margin-top: 8px;
+  justify-content: center;
+}
+.spark-bar {
+  width: 4px;
+  border-radius: 2px;
+  min-height: 3px;
+}
+
+/* Streak badge */
+.streak-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--pulse-trading);
+  background: var(--pulse-trading-bg);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+/* Mentor nudge */
+.mentor-nudge {
+  background: linear-gradient(135deg, var(--pulse-trading-bg), var(--pulse-health-bg));
+  border: 1px solid var(--pulse-border);
+  border-radius: var(--pulse-radius);
+  padding: 14px 16px;
+  margin-top: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.nudge-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.nudge-text {
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--pulse-text-secondary);
+}
+.nudge-text strong {
+  color: var(--pulse-text);
+}
+</style>
+
+<div class="dashboard">
+  <!-- Greeting -->
+  <div class="greeting">
+    <div class="greeting-text">Good morning</div>
+    <div class="greeting-sub">Tuesday, Aug 26 — Markets open in 2h 14m</div>
+  </div>
+
+  <!-- Status Cards -->
+  <div class="status-row">
+    <div class="status-card finance">
+      <div class="status-icon">$</div>
+      <div class="status-value">$3,019</div>
+      <div class="status-label">Due this month</div>
+    </div>
+    <div class="status-card trading">
+      <div class="status-icon">&#9650;</div>
+      <div class="status-value">12d</div>
+      <div class="status-label">Rule streak</div>
+    </div>
+    <div class="status-card health">
+      <div class="status-icon">&#9829;</div>
+      <div class="status-value">72</div>
+      <div class="status-label">Resting HR</div>
+    </div>
+  </div>
+
+  <!-- Action Feed -->
+  <div class="section-header">
+    <span class="section-title">Needs Attention</span>
+    <span class="section-count">4 items</span>
+  </div>
+  <div class="action-feed">
+    <div class="action-item">
+      <div class="action-dot urgent"></div>
+      <div class="action-content">
+        <div class="action-text">Chase Sapphire payment due</div>
+        <div class="action-meta">$2,450 · Due in 2 days</div>
+      </div>
+      <span class="action-badge danger">Overdue</span>
+    </div>
+    <div class="action-item">
+      <div class="action-dot warning"></div>
+      <div class="action-content">
+        <div class="action-text">Pre-market ritual not done</div>
+        <div class="action-meta">Complete before market open</div>
+      </div>
+      <span class="action-badge warning">Do now</span>
+    </div>
+    <div class="action-item">
+      <div class="action-dot health"></div>
+      <div class="action-content">
+        <div class="action-text">Leg day scheduled</div>
+        <div class="action-meta">Squats · Lunges · Calf raises</div>
+      </div>
+      <span class="action-badge cta">Start</span>
+    </div>
+    <div class="action-item">
+      <div class="action-dot info"></div>
+      <div class="action-content">
+        <div class="action-text">Car loan autopay tomorrow</div>
+        <div class="action-meta">$569 from Chase Checking</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Finance Strip -->
+  <div class="domain-strip">
+    <div class="strip-header">
+      <span class="strip-title"><span class="strip-title-dot" style="background:var(--pulse-finance)"></span> Finance</span>
+      <a class="strip-link" href="#">View all →</a>
+    </div>
+    <div class="strip-metrics">
+      <div class="metric">
+        <div class="metric-value">$47.2k</div>
+        <div class="metric-label">Total Debt</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value positive">-$1,204</div>
+        <div class="metric-label">This Month</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value">14mo</div>
+        <div class="metric-label">Debt Free</div>
+      </div>
+    </div>
+    <div class="sparkline">
+      <div class="spark-bar" style="height:60%;background:var(--pulse-finance);opacity:0.3"></div>
+      <div class="spark-bar" style="height:55%;background:var(--pulse-finance);opacity:0.4"></div>
+      <div class="spark-bar" style="height:50%;background:var(--pulse-finance);opacity:0.5"></div>
+      <div class="spark-bar" style="height:45%;background:var(--pulse-finance);opacity:0.6"></div>
+      <div class="spark-bar" style="height:42%;background:var(--pulse-finance);opacity:0.7"></div>
+      <div class="spark-bar" style="height:38%;background:var(--pulse-finance);opacity:0.8"></div>
+      <div class="spark-bar" style="height:35%;background:var(--pulse-finance);opacity:0.9"></div>
+      <div class="spark-bar" style="height:32%;background:var(--pulse-finance)"></div>
+    </div>
+  </div>
+
+  <!-- Trading Strip -->
+  <div class="domain-strip">
+    <div class="strip-header">
+      <span class="strip-title"><span class="strip-title-dot" style="background:var(--pulse-trading)"></span> Trading</span>
+      <div class="traffic-light"><span class="tl-dot green"></span> Clear to trade</div>
+    </div>
+    <div class="strip-metrics">
+      <div class="metric">
+        <div class="metric-value negative">-$340</div>
+        <div class="metric-label">Week P&L</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value">B+</div>
+        <div class="metric-label">Avg Grade</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value">87%</div>
+        <div class="metric-label">Checklist</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+      <span class="streak-badge">🔥 12 day streak</span>
+      <span style="font-size:0.7rem;color:var(--pulse-text-muted)">0/3 trades today</span>
+    </div>
+  </div>
+
+  <!-- Health Strip -->
+  <div class="domain-strip">
+    <div class="strip-header">
+      <span class="strip-title"><span class="strip-title-dot" style="background:var(--pulse-health)"></span> Health</span>
+      <a class="strip-link" href="#">View all →</a>
+    </div>
+    <div class="strip-metrics">
+      <div class="metric">
+        <div class="metric-value">183</div>
+        <div class="metric-label">Weight (lbs)</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value positive">4/5</div>
+        <div class="metric-label">Workouts</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value">7.2h</div>
+        <div class="metric-label">Avg Sleep</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mentor Nudge -->
+  <div class="mentor-nudge">
+    <span class="nudge-icon">💡</span>
+    <div class="nudge-text">
+      <strong>Your SPX put spreads win 68% on Tuesdays.</strong> Stay patient today — your edge is in the first 30 minutes after open. No revenge trades.
+    </div>
+  </div>
+</div>

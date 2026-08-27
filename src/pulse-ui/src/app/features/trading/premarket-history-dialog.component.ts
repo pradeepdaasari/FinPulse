@@ -3,16 +3,20 @@ import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TradingService } from '../../core/services/trading.service';
 import { PreMarketNote } from '../../core/models/trading.model';
 
 @Component({
   selector: 'app-premarket-history-dialog',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
   template: `
     <h2 mat-dialog-title>Pre-Market History</h2>
     <mat-dialog-content>
+      @if (loading()) {
+        <div class="loading-container"><mat-spinner diameter="28"></mat-spinner></div>
+      } @else {
       @if (notes().length === 0) {
         <p class="empty">No past notes found.</p>
       }
@@ -29,6 +33,7 @@ import { PreMarketNote } from '../../core/models/trading.model';
             <span>Max loss {{ note.maxLoss | currency:'USD':'symbol':'1.0-0' }}</span>
           </div>
         </div>
+      }
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
@@ -58,16 +63,18 @@ import { PreMarketNote } from '../../core/models/trading.model';
     .bias-no-trade { background: var(--color-border); color: var(--color-text-muted); }
     .history-plan { font-size: 0.85rem; margin: 0 0 8px; line-height: 1.4; }
     .history-footer { display: flex; gap: 12px; font-size: 0.75rem; color: var(--color-text-secondary); font-weight: 500; }
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
   `]
 })
 export class PremarketHistoryDialogComponent implements OnInit {
   private tradingService = inject(TradingService);
+  loading = signal(true);
   notes = signal<PreMarketNote[]>([]);
 
   ngOnInit(): void {
     this.tradingService.getPreMarketNotes().subscribe({
-      next: (data) => this.notes.set(data),
-      error: () => {}
+      next: (data) => { this.notes.set(data); this.loading.set(false); },
+      error: () => { this.loading.set(false); }
     });
   }
 }

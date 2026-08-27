@@ -17,7 +17,7 @@ import { TagSummary } from '../../core/models/daily-expense.model';
   imports: [CommonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, MatChipsModule, MatFormFieldModule, MatSelectModule, MatInputModule, MatButtonModule, CurrencyPipe, DatePipe],
   template: `
     @if (loading()) {
-      <mat-spinner></mat-spinner>
+      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
     } @else if (tags().length === 0) {
       <mat-card class="empty-state">
         <mat-icon>label_off</mat-icon>
@@ -106,6 +106,7 @@ import { TagSummary } from '../../core/models/daily-expense.model';
     }
   `,
   styles: [`
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .filters-row {
       display: flex;
       align-items: center;

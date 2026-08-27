@@ -3,15 +3,18 @@ import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { DebtFreeCountdown } from '../../core/models/dashboard.model';
 
 @Component({
   selector: 'app-debt-countdown',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressBarModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
   template: `
-    @if (countdown()) {
+    @if (loading()) {
+      <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
+    } @else if (countdown()) {
       <mat-card class="countdown-card">
         <mat-card-header>
           <mat-card-title>
@@ -45,6 +48,7 @@ import { DebtFreeCountdown } from '../../core/models/dashboard.model';
     }
   `,
   styles: [`
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
     .countdown-card { margin-top: var(--spacing-md); }
     .card-title-row {
       display: flex;
@@ -91,11 +95,13 @@ import { DebtFreeCountdown } from '../../core/models/dashboard.model';
 })
 export class DebtCountdownComponent implements OnInit {
   private dashboardService = inject(DashboardService);
+  loading = signal(true);
   countdown = signal<DebtFreeCountdown | null>(null);
 
   ngOnInit(): void {
     this.dashboardService.getCountdown().subscribe(data => {
       this.countdown.set(data);
+      this.loading.set(false);
     });
   }
 

@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { BankAccountService } from '../../core/services/bank-account.service';
 import { BankAccount } from '../../core/models/bank-account.model';
 import { SavingsGoal } from '../../core/models/savings-goal.model';
@@ -18,7 +19,7 @@ import { SavingsGoal } from '../../core/models/savings-goal.model';
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
-    MatInputModule, MatSelectModule, MatButtonModule, MatDatepickerModule, MatNativeDateModule, MatIconModule
+    MatInputModule, MatSelectModule, MatButtonModule, MatDatepickerModule, MatNativeDateModule, MatIconModule, MatProgressSpinnerModule
   ],
   template: `
     <div class="dialog-header">
@@ -31,6 +32,9 @@ import { SavingsGoal } from '../../core/models/savings-goal.model';
       </div>
     </div>
     <mat-dialog-content>
+      @if (loading()) {
+        <div class="loading-container"><mat-spinner diameter="28"></mat-spinner></div>
+      } @else {
       <form [formGroup]="form" class="form-grid">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Goal Name</mat-label>
@@ -72,10 +76,11 @@ import { SavingsGoal } from '../../core/models/savings-goal.model';
           <input matInput formControlName="icon" placeholder="🎯">
         </mat-form-field>
       </form>
+      }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>Cancel</button>
-      <button mat-raised-button color="primary" [disabled]="form.invalid" (click)="save()">
+      <button mat-raised-button color="primary" [disabled]="form.invalid || loading()" (click)="save()">
         {{ data ? 'Update' : 'Create' }}
       </button>
     </mat-dialog-actions>
@@ -95,6 +100,7 @@ import { SavingsGoal } from '../../core/models/savings-goal.model';
     .dialog-subtitle { font-size: 0.75rem; color: var(--color-text-secondary); }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; padding: 8px 0; }
     .full-width { grid-column: 1 / -1; }
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
     @media (max-width: 500px) { .form-grid { grid-template-columns: 1fr; } }
   `]
 })
@@ -104,6 +110,7 @@ export class GoalDialogComponent implements OnInit {
   private dialogRef = inject(MatDialogRef<GoalDialogComponent>);
   data: SavingsGoal | null = inject(MAT_DIALOG_DATA);
 
+  loading = signal(true);
   accounts = signal<BankAccount[]>([]);
 
   form: FormGroup = this.fb.group({
@@ -116,7 +123,10 @@ export class GoalDialogComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.accountService.getAll().subscribe(accounts => this.accounts.set(accounts));
+    this.accountService.getAll().subscribe(accounts => {
+      this.accounts.set(accounts);
+      this.loading.set(false);
+    });
 
     if (this.data) {
       this.form.patchValue({

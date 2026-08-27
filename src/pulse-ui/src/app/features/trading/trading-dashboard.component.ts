@@ -1,16 +1,21 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
-import { CommonModule, CurrencyPipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TradingService } from '../../core/services/trading.service';
+import { BankAccountService } from '../../core/services/bank-account.service';
+import { DailyExpenseService } from '../../core/services/daily-expense.service';
+import { DailyExpense } from '../../core/models/daily-expense.model';
+import { BankAccount } from '../../core/models/bank-account.model';
 import { TradingStats, TradingWisdom, WeeklyFocus, PreMarketNote } from '../../core/models/trading.model';
 
 @Component({
   selector: 'app-trading-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, CurrencyPipe],
+  imports: [CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
   template: `
     <div class="dashboard-banner">
       <div class="banner-pattern"></div>
@@ -21,6 +26,9 @@ import { TradingStats, TradingWisdom, WeeklyFocus, PreMarketNote } from '../../c
       </div>
     </div>
 
+    @if (loading()) {
+      <div class="loading-container"><mat-spinner></mat-spinner></div>
+    } @else {
     <!-- Daily Wisdom -->
     @if (wisdom()) {
       <div class="wisdom-card">
@@ -209,15 +217,32 @@ import { TradingStats, TradingWisdom, WeeklyFocus, PreMarketNote } from '../../c
           </mat-card-content>
         </mat-card>
 
-        <!-- Finance Sync -->
+        <!-- Brokerage Account -->
         <mat-card class="insight-card">
           <mat-card-content>
             <div class="insight-header">
-              <div class="insight-icon-wrap amber"><mat-icon>sync_alt</mat-icon></div>
-              <span class="insight-title">Finance Sync</span>
+              <div class="insight-icon-wrap amber"><mat-icon>trending_up</mat-icon></div>
+              <span class="insight-title">{{ brokerageAccount()?.accountName || 'Brokerage' }}</span>
             </div>
-            <p class="insight-desc">Trades auto-log to your brokerage account as transactions</p>
-            <div class="insight-badge amber">Connected to Finance</div>
+            @if (brokerageAccount()) {
+              <p class="insight-desc brokerage-balance">{{ brokerageBalance() | currency }}</p>
+              @if (recentTransactions().length > 0) {
+                <div class="recent-txns">
+                  @for (t of recentTransactions().slice(0, 3); track t.id) {
+                    <div class="mini-txn">
+                      <span class="mini-txn-desc">{{ t.description }}</span>
+                      <span class="mini-txn-amount" [class.income]="t.transactionType === 'Income'">
+                        {{ t.transactionType === 'Income' ? '+' : '-' }}{{ t.amount | currency }}
+                      </span>
+                    </div>
+                  }
+                </div>
+                <a class="view-all-link" [routerLink]="['/accounts', brokerageAccount()!.id]">View all →</a>
+              }
+            } @else {
+              <p class="insight-desc">No brokerage account linked</p>
+            }
+            <div class="insight-badge amber">Live balance</div>
           </mat-card-content>
         </mat-card>
       </div>
@@ -265,9 +290,11 @@ import { TradingStats, TradingWisdom, WeeklyFocus, PreMarketNote } from '../../c
         </div>
       </mat-card-content>
     </mat-card>
+    }
   `,
   styles: [`
     :host { display: block; }
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
 
     .dashboard-banner {
       position: relative;
@@ -422,6 +449,13 @@ import { TradingStats, TradingWisdom, WeeklyFocus, PreMarketNote } from '../../c
     .insight-icon-wrap.red { background: var(--color-danger); }
     .insight-title { font-weight: 700; font-size: 0.85rem; }
     .insight-desc { font-size: 0.8rem; color: var(--color-text-secondary); margin: 0 0 8px; line-height: 1.4; }
+    .insight-desc.brokerage-balance { font-size: 1.2rem; font-weight: 700; color: var(--color-success); }
+    .recent-txns { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+    .mini-txn { display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; padding: 3px 0; border-bottom: 1px solid rgba(0,0,0,0.04); }
+    .mini-txn-desc { color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
+    .mini-txn-amount { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--color-danger); }
+    .mini-txn-amount.income { color: var(--color-success); }
+    .view-all-link { font-size: 0.72rem; font-weight: 600; color: var(--color-primary); text-decoration: none; }
     .insight-badge {
       display: inline-block; font-size: 0.65rem; font-weight: 700; padding: 2px 8px;
       border-radius: var(--radius-full); text-transform: uppercase; letter-spacing: 0.03em;
@@ -465,7 +499,10 @@ import { TradingStats, TradingWisdom, WeeklyFocus, PreMarketNote } from '../../c
 })
 export class TradingDashboardComponent implements OnInit {
   private tradingService = inject(TradingService);
+  private accountService = inject(BankAccountService);
+  private expenseService = inject(DailyExpenseService);
 
+  loading = signal(true);
   stats = signal<TradingStats | null>(null);
   wisdom = signal<TradingWisdom | null>(null);
   weeklyFocus = signal<WeeklyFocus | null>(null);
@@ -475,7 +512,9 @@ export class TradingDashboardComponent implements OnInit {
   maxTrades = computed(() => this.todayNote()?.maxTrades ?? 3);
 
   riskPercent = signal(1);
-  brokerageBalance = signal(10000);
+  brokerageAccount = signal<BankAccount | null>(null);
+  brokerageBalance = signal(0);
+  recentTransactions = signal<DailyExpense[]>([]);
   maxRiskDollars = computed(() => Math.round(this.brokerageBalance() * this.riskPercent() / 100));
   cooldownActive = signal(false);
   cooldownMinutes = signal(0);
@@ -555,8 +594,8 @@ export class TradingDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.tradingService.getStats().subscribe({
-      next: (data) => this.stats.set(data),
-      error: () => {}
+      next: (data) => { this.stats.set(data); this.loading.set(false); },
+      error: () => { this.loading.set(false); }
     });
     this.tradingService.getDailyWisdom().subscribe({
       next: (data) => this.wisdom.set(data),
@@ -568,6 +607,20 @@ export class TradingDashboardComponent implements OnInit {
     });
     this.tradingService.getTodayNote().subscribe({
       next: (data) => this.todayNote.set(data),
+      error: () => {}
+    });
+    this.accountService.getAll().subscribe({
+      next: (accounts) => {
+        const brokerage = accounts.find(a => a.accountType === 'Brokerage');
+        if (brokerage) {
+          this.brokerageAccount.set(brokerage);
+          this.brokerageBalance.set(brokerage.currentBalance);
+          this.expenseService.getExpenses({ fundingSourceId: brokerage.id }).subscribe({
+            next: (txns) => this.recentTransactions.set(txns.slice(0, 5)),
+            error: () => {}
+          });
+        }
+      },
       error: () => {}
     });
   }

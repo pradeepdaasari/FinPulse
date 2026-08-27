@@ -133,30 +133,40 @@ public class LoansController : ControllerBase
         var loan = await _db.PersonalLoans.FirstOrDefaultAsync(l => l.Id == id && l.UserId == UserId);
         if (loan is null) return NotFound();
 
-        var payment = new PaymentHistory
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
         {
-            DebtType = DebtType.PersonalLoan,
-            DebtId = id,
-            AmountPaid = dto.AmountPaid,
-            PaymentDate = dto.PaymentDate,
-            Notes = dto.Notes,
-            UserId = UserId,
-            FromAccountId = dto.FromAccountId
-        };
+            var payment = new PaymentHistory
+            {
+                DebtType = DebtType.PersonalLoan,
+                DebtId = id,
+                AmountPaid = dto.AmountPaid,
+                PaymentDate = dto.PaymentDate,
+                Notes = dto.Notes,
+                UserId = UserId,
+                FromAccountId = dto.FromAccountId
+            };
 
-        loan.CurrentBalance = Math.Max(0, loan.CurrentBalance - dto.AmountPaid);
+            loan.CurrentBalance = Math.Max(0, loan.CurrentBalance - dto.AmountPaid);
 
-        if (dto.FromAccountId.HasValue)
-        {
-            var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == dto.FromAccountId && a.UserId == UserId);
-            if (account != null)
-                account.CurrentBalance -= dto.AmountPaid;
+            if (dto.FromAccountId.HasValue)
+            {
+                var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == dto.FromAccountId && a.UserId == UserId);
+                if (account != null)
+                    account.CurrentBalance -= dto.AmountPaid;
+            }
+
+            _db.PaymentHistories.Add(payment);
+            await _db.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+            return Ok(payment);
         }
-
-        _db.PaymentHistories.Add(payment);
-        await _db.SaveChangesAsync();
-
-        return Ok(payment);
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+        }
     }
 
     [HttpGet("{id}/payments")]

@@ -51,6 +51,7 @@ export interface MonthlyOverview {
   totalFixedExpenses: number;
   totalVariableBudgets: number;
   totalDebtPayments: number;
+  totalRecurring: number;
   totalExpenses: number;
   surplus: number;
   paychecksThisMonth: number;

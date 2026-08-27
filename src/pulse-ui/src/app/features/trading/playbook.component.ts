@@ -8,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TradingService } from '../../core/services/trading.service';
 import { TradingRule, RuleCategory, DailyLimits, TradingStats, WeeklyFocus, WisdomCategory } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
@@ -24,7 +25,7 @@ interface WisdomItem {
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatChipsModule, MatDialogModule, CurrencyPipe
+    MatFormFieldModule, MatInputModule, MatChipsModule, MatDialogModule, MatProgressSpinnerModule, CurrencyPipe
   ],
   template: `
     <div class="page-banner">
@@ -36,6 +37,9 @@ interface WisdomItem {
       </div>
     </div>
 
+    @if (loading()) {
+      <div class="loading-container"><mat-spinner></mat-spinner></div>
+    } @else {
     <!-- Streak Hero -->
     <mat-card class="streak-card">
       <mat-card-content>
@@ -169,9 +173,11 @@ interface WisdomItem {
         }
       </div>
     </div>
+    }
   `,
   styles: [`
     :host { display: block; }
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .page-banner {
       position: relative; margin: -24px -24px 24px; padding: 40px 24px 32px;
       background: var(--gradient-primary); border-radius: 0 0 var(--radius-lg) var(--radius-lg); overflow: hidden;
@@ -281,6 +287,7 @@ export class PlaybookComponent implements OnInit {
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
 
+  loading = signal(true);
   rules = signal<TradingRule[]>([]);
   stats = signal<TradingStats | null>(null);
   weeklyFocus = signal<WeeklyFocus | null>(null);
@@ -332,8 +339,8 @@ export class PlaybookComponent implements OnInit {
 
   ngOnInit(): void {
     this.tradingService.getRules().subscribe({
-      next: r => this.rules.set(r),
-      error: () => this.rules.set([])
+      next: r => { this.rules.set(r); this.loading.set(false); },
+      error: () => { this.rules.set([]); this.loading.set(false); }
     });
     this.tradingService.getStats().subscribe({
       next: s => this.stats.set(s),

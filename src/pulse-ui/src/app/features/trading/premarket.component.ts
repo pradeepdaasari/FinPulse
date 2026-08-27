@@ -277,7 +277,7 @@ import { NotificationService } from '../../core/services/notification.service';
     .mental-dot.dot-yellow { background: var(--color-warning); }
     .mental-dot.dot-red { background: var(--color-danger); }
 
-    .loading-center { display: flex; justify-content: center; padding: 40px; }
+    .loading-center { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
 
     .premarket-form { display: flex; flex-direction: column; gap: 8px; }
     .form-section { margin-bottom: var(--spacing-sm); }

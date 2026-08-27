@@ -22,7 +22,7 @@ import { NotificationService } from '../../core/services/notification.service';
     </div>
 
     @if (loading()) {
-      <mat-spinner></mat-spinner>
+      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
     } @else if (reports().length === 0) {
       <div class="empty-state">
         <div class="empty-icon-wrap red">
@@ -64,6 +64,7 @@ import { NotificationService } from '../../core/services/notification.service';
     }
   `,
   styles: [`
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .header-row {
       display: flex; justify-content: flex-end; align-items: center;
       margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);

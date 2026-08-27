@@ -20,6 +20,7 @@ export interface DailyExpense {
   splitGroupId: string | null;
   tag: string | null;
   tagType: string | null;
+  linkedToTrade: boolean;
   createdAt: string;
   updatedAt: string;
 }
