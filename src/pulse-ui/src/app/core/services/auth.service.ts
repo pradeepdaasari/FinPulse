@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 export interface AuthUser {
   email: string;
   role: string;
+  timezone?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -22,6 +23,7 @@ export class AuthService {
       const user = await firstValueFrom(this.http.get<AuthUser>('/api/auth/me'));
       this.currentUser.set(user);
       this.isAuthenticated.set(true);
+      if (user.timezone) localStorage.setItem('pulse_timezone', user.timezone);
       return true;
     } catch {
       this.currentUser.set(null);
@@ -35,16 +37,25 @@ export class AuthService {
       const user = await firstValueFrom(this.http.post<AuthUser>('/api/auth/login', { username, password }));
       this.currentUser.set(user);
       this.isAuthenticated.set(true);
+      if (user.timezone) localStorage.setItem('pulse_timezone', user.timezone);
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err.error?.error || 'Login failed' };
     }
   }
 
+  async updateTimezone(timezone: string): Promise<void> {
+    await firstValueFrom(this.http.put<{ timezone: string }>('/api/auth/timezone', { timezone }));
+    localStorage.setItem('pulse_timezone', timezone);
+    const current = this.currentUser();
+    if (current) this.currentUser.set({ ...current, timezone });
+  }
+
   async logout(): Promise<void> {
     await firstValueFrom(this.http.post('/api/auth/logout', {}));
     this.currentUser.set(null);
     this.isAuthenticated.set(false);
+    localStorage.removeItem('pulse_timezone');
     this.router.navigate(['/login']);
   }
 }

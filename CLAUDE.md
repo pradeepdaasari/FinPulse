@@ -33,7 +33,7 @@ cd ../Pulse.Api && dotnet run --urls "http://localhost:5000"
 cd src/Pulse.Api
 dotnet publish -c Release -o ../../publish
 cd ../../publish && zip -r ../deploy.zip .
-az webapp deploy --resource-group finpulse-rg --name finpulse-pd --src-path ../deploy.zip --type zip
+az webapp deploy --resource-group finpulse-rg --name mypulse --src-path ../deploy.zip --type zip
 ```
 
 ### EF Core migrations

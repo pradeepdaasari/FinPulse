@@ -103,7 +103,7 @@ export type RuleCategory = 'entry' | 'exit' | 'risk' | 'mindset' | 'general';
 export interface DailyReview {
   id: number;
   date: string;
-  grade: TradeGrade;
+  grade: TradeGrade | null;
   followedPlan: boolean;
   followedRules: boolean;
   totalTrades: number;
@@ -112,6 +112,9 @@ export interface DailyReview {
   lessonsLearned?: string;
   improvementNote?: string;
   emotionalSummary?: string;
+  isObservationOnly: boolean;
+  marketCondition?: string;
+  marketObservation?: string;
   createdAt?: string;
   updatedAt?: string;
 }

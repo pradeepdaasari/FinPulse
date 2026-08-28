@@ -249,9 +249,10 @@ export class SetupsComponent implements OnInit {
 
   deleteSetup(setup: TradingSetupSummary): void {
     if (confirm(`Delete setup "${setup.name}"?`)) {
+      this.loading.set(true);
       this.tradingService.deleteSetup(setup.id).subscribe({
         next: () => { this.notify.success('Setup deleted'); this.loadSetups(); },
-        error: () => this.notify.error('Failed to delete setup')
+        error: () => { this.loading.set(false); this.notify.error('Failed to delete setup'); }
       });
     }
   }

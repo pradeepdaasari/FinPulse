@@ -440,9 +440,10 @@ export class MetricsLogComponent implements OnInit {
   confirmDelete(metric: HealthMetric) {
     const confirmed = confirm(`Delete this ${this.getMetricLabel(metric.metricType)} entry?`);
     if (confirmed) {
+      this.loading.set(true);
       this.healthService.delete(metric.id).subscribe({
         next: () => { this.notify.success('Deleted'); this.loadMetrics(); this.loadTrend(); },
-        error: () => this.notify.error('Failed to delete')
+        error: () => { this.loading.set(false); this.notify.error('Failed to delete'); }
       });
     }
   }

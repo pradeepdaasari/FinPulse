@@ -39,7 +39,8 @@ import { NotificationService } from '../../core/services/notification.service';
       <button mat-icon-button (click)="nextDay()"><mat-icon>chevron_right</mat-icon></button>
     </div>
 
-    <!-- Auto Summary -->
+    @if (todayTrades().length > 0) {
+    <!-- Trade Day: Full Review -->
     <mat-card class="summary-card">
       <mat-card-content>
         <div class="summary-row">
@@ -157,15 +158,73 @@ import { NotificationService } from '../../core/services/notification.service';
       <mat-icon>save</mat-icon> Save Review
     </button>
 
+    } @else {
+    <!-- Observation Mode: No trades today -->
+    <mat-card class="observation-banner">
+      <mat-card-content>
+        <div class="obs-banner-content">
+          <mat-icon class="obs-icon">visibility</mat-icon>
+          <div>
+            <span class="obs-title">Observation Mode</span>
+            <span class="obs-subtitle">No trades today — log what you saw in the market</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Market Condition -->
+    <div class="condition-section">
+      <h3 class="section-title">Market Conditions</h3>
+      <div class="condition-buttons">
+        @for (c of marketConditions; track c.value) {
+          <button class="condition-btn" [class.selected]="selectedCondition() === c.value"
+                  (click)="selectedCondition.set(c.value)">
+            <mat-icon>{{ c.icon }}</mat-icon>
+            <span>{{ c.label }}</span>
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Observation Notes -->
+    <div class="text-fields">
+      <mat-form-field appearance="outline">
+        <mat-label>Market Observations</mat-label>
+        <textarea matInput [value]="marketObservation" (input)="marketObservation = $any($event.target).value" rows="4"
+                  placeholder="What patterns did you notice? Key levels? Sector rotations? Setups forming?"></textarea>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Setups Watched</mat-label>
+        <textarea matInput [value]="lessonsLearned" (input)="lessonsLearned = $any($event.target).value" rows="3"
+                  placeholder="Any setups you tracked but didn't take? Why not?"></textarea>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Tomorrow's Plan</mat-label>
+        <textarea matInput [value]="tomorrowFocus" (input)="tomorrowFocus = $any($event.target).value" rows="2"
+                  placeholder="What will you watch for tomorrow?"></textarea>
+      </mat-form-field>
+    </div>
+
+    <button mat-raised-button color="primary" class="save-btn" (click)="saveObservation()">
+      <mat-icon>save</mat-icon> Save Observation
+    </button>
+    }
+
     <!-- Grade History -->
     @if (recentReviews().length > 0) {
       <div class="grade-history">
         <h3 class="section-title">Last 30 Days</h3>
         <div class="history-grid">
           @for (r of recentReviews(); track r.id) {
-            <div class="history-dot" [class]="'dot-' + r.grade.toLowerCase()" [title]="r.date + ': ' + r.grade">
-              {{ r.grade }}
-            </div>
+            @if (r.isObservationOnly) {
+              <div class="history-dot dot-obs" [title]="r.date + ': Observation'">
+                <mat-icon>visibility</mat-icon>
+              </div>
+            } @else {
+              <div class="history-dot" [class]="'dot-' + (r.grade || 'c').toLowerCase()" [title]="r.date + ': ' + r.grade">
+                {{ r.grade }}
+              </div>
+            }
           }
         </div>
       </div>
@@ -261,6 +320,26 @@ import { NotificationService } from '../../core/services/notification.service';
     .dot-c { background: var(--color-stat-amber-bg); color: var(--color-warning); }
     .dot-d { background: rgba(255, 149, 0, 0.15); color: #e65100; }
     .dot-f { background: var(--color-stat-red-bg); color: var(--color-danger); }
+    .dot-obs { background: var(--color-surface-secondary); color: var(--color-text-secondary); }
+    .dot-obs mat-icon { font-size: 14px; width: 14px; height: 14px; }
+
+    .observation-banner { margin-bottom: var(--spacing-md); border-left: 4px solid var(--color-stat-blue); }
+    .obs-banner-content { display: flex; align-items: center; gap: 12px; }
+    .obs-icon { font-size: 28px; width: 28px; height: 28px; color: var(--color-stat-blue); }
+    .obs-title { display: block; font-size: 1rem; font-weight: 700; }
+    .obs-subtitle { display: block; font-size: 0.8rem; color: var(--color-text-secondary); margin-top: 2px; }
+
+    .condition-section { margin-bottom: var(--spacing-md); }
+    .condition-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .condition-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      padding: 16px 8px; border-radius: var(--radius-md); border: 2px solid var(--color-border);
+      cursor: pointer; background: var(--color-surface); transition: all 0.2s;
+      font-size: 0.8rem; font-weight: 600; color: var(--color-text-secondary);
+    }
+    .condition-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .condition-btn.selected { border-color: var(--color-primary); background: var(--color-stat-blue-bg); color: var(--color-primary); }
+    .condition-btn mat-icon { font-size: 24px; width: 24px; height: 24px; }
 
     @media (max-width: 599px) {
       .page-banner { margin: -16px -16px 20px; padding: 32px 16px 24px; }
@@ -269,6 +348,7 @@ import { NotificationService } from '../../core/services/notification.service';
       .grade-letter { font-size: 1.2rem; }
       .grade-desc { display: none; }
       .question-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .condition-buttons { grid-template-columns: repeat(2, 1fr); }
     }
   `]
 })
@@ -299,6 +379,15 @@ export class ReviewComponent implements OnInit {
   violatedRules = signal<number[]>([]);
   lessonsLearned = '';
   tomorrowFocus = '';
+  marketObservation = '';
+  selectedCondition = signal<string | null>(null);
+
+  marketConditions = [
+    { value: 'bullish', label: 'Bullish', icon: 'trending_up' },
+    { value: 'bearish', label: 'Bearish', icon: 'trending_down' },
+    { value: 'choppy', label: 'Choppy', icon: 'swap_vert' },
+    { value: 'flat', label: 'Flat', icon: 'horizontal_rule' }
+  ];
 
   grades: { value: TradeGrade; label: string }[] = [
     { value: 'A', label: 'Perfect' },
@@ -362,15 +451,41 @@ export class ReviewComponent implements OnInit {
       totalPnl: this.todayPnl(),
       rulesViolated: this.violatedRules(),
       lessonsLearned: this.lessonsLearned || undefined,
-      improvementNote: this.tomorrowFocus || undefined
+      improvementNote: this.tomorrowFocus || undefined,
+      isObservationOnly: false
     };
-
-    this.tradingService.createReview(payload).subscribe({
-      next: () => {
-        this.notify.success('Review saved!');
-        this.loadData();
-      },
+    const existing = this.existingReview();
+    const obs$ = existing
+      ? this.tradingService.updateReview(existing.id, payload)
+      : this.tradingService.createReview(payload);
+    obs$.subscribe({
+      next: () => { this.notify.success('Review saved!'); this.loadData(); },
       error: () => this.notify.error('Failed to save review')
+    });
+  }
+
+  saveObservation(): void {
+    const payload: Partial<DailyReview> = {
+      date: this.formatDate(this.currentDate()),
+      isObservationOnly: true,
+      marketCondition: this.selectedCondition() || undefined,
+      marketObservation: this.marketObservation || undefined,
+      lessonsLearned: this.lessonsLearned || undefined,
+      improvementNote: this.tomorrowFocus || undefined,
+      grade: null,
+      followedPlan: false,
+      followedRules: false,
+      totalTrades: 0,
+      totalPnl: 0,
+      rulesViolated: []
+    };
+    const existing = this.existingReview();
+    const obs$ = existing
+      ? this.tradingService.updateReview(existing.id, payload)
+      : this.tradingService.createReview(payload);
+    obs$.subscribe({
+      next: () => { this.notify.success('Observation saved!'); this.loadData(); },
+      error: () => this.notify.error('Failed to save observation')
     });
   }
 

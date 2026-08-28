@@ -33,7 +33,7 @@ public class AuthController : ControllerBase
 
         var user = await _userManager.FindByNameAsync(request.Username);
         var roles = await _userManager.GetRolesAsync(user!);
-        return Ok(new { email = user!.Email, role = roles.FirstOrDefault() ?? "User" });
+        return Ok(new { email = user!.Email, role = roles.FirstOrDefault() ?? "User", timezone = user.PreferredTimezone });
     }
 
     [HttpPost("logout")]
@@ -51,8 +51,31 @@ public class AuthController : ControllerBase
         if (user == null)
             return Unauthorized();
         var roles = await _userManager.GetRolesAsync(user);
-        return Ok(new { email = user.Email, role = roles.FirstOrDefault() ?? "User" });
+        return Ok(new { email = user.Email, role = roles.FirstOrDefault() ?? "User", timezone = user.PreferredTimezone });
+    }
+
+    [HttpPut("timezone")]
+    [Authorize]
+    public async Task<IActionResult> UpdateTimezone([FromBody] TimezoneRequest request)
+    {
+        try
+        {
+            TimeZoneInfo.FindSystemTimeZoneById(request.Timezone);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return BadRequest(new { error = "Invalid timezone identifier" });
+        }
+
+        var user = await _userManager.FindByNameAsync(User.Identity?.Name!);
+        if (user == null)
+            return Unauthorized();
+
+        user.PreferredTimezone = request.Timezone;
+        await _userManager.UpdateAsync(user);
+        return Ok(new { timezone = user.PreferredTimezone });
     }
 }
 
 public record LoginRequest(string Username, string Password);
+public record TimezoneRequest(string Timezone);

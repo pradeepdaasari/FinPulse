@@ -446,9 +446,13 @@ export class LoanListComponent implements OnInit {
 
   deleteLoan(loan: PersonalLoan): void {
     if (!this.notify.confirmDelete(loan.lenderName)) return;
-    this.loanService.delete(loan.id).subscribe(() => {
-      this.notify.success('Loan deleted successfully');
-      this.loadLoans();
+    this.loading.set(true);
+    this.loanService.delete(loan.id).subscribe({
+      next: () => {
+        this.notify.success('Loan deleted successfully');
+        this.loadLoans();
+      },
+      error: () => { this.loading.set(false); this.notify.error('Failed to delete loan'); }
     });
   }
 

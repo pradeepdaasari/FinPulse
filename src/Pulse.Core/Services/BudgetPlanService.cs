@@ -137,7 +137,8 @@ public class BudgetPlanService : IBudgetPlanService
                 CategoryId = g.Key.CategoryId,
                 CategoryName = g.First().Category?.Name ?? "Unknown",
                 Amount = g.Sum(e => e.Amount),
-                IsFixed = g.Key.IsFixed
+                IsFixed = g.Key.IsFixed,
+                Icon = g.First().Category?.Icon
             })
             .OrderByDescending(c => c.IsFixed)
             .ThenByDescending(c => c.Amount)
@@ -149,9 +150,11 @@ public class BudgetPlanService : IBudgetPlanService
             byCategory.Add(new CategorySummaryDto
             {
                 CategoryId = 0,
-                CategoryName = $"{debt.Name} (Debt)",
+                CategoryName = debt.Name,
                 Amount = debt.MinimumPayment,
-                IsFixed = true
+                IsFixed = true,
+                Icon = "credit_score",
+                IsDebt = true
             });
         }
 
@@ -161,9 +164,11 @@ public class BudgetPlanService : IBudgetPlanService
             byCategory.Add(new CategorySummaryDto
             {
                 CategoryId = rec.CategoryId,
-                CategoryName = (rec.Category?.Name ?? "Unknown") + " (Recurring)",
+                CategoryName = rec.Category?.Name ?? "Unknown",
                 Amount = rec.Amount,
-                IsFixed = true
+                IsFixed = true,
+                Icon = rec.Category?.Icon ?? "autorenew",
+                IsRecurring = true
             });
         }
 

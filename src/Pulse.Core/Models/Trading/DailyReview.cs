@@ -8,7 +8,7 @@ public class DailyReview
     public string? UserId { get; set; }
     public DateTime Date { get; set; }
     [MaxLength(2)]
-    public string Grade { get; set; } = "C";
+    public string? Grade { get; set; }
     public bool FollowedPlan { get; set; }
     public bool FollowedRules { get; set; }
     public int TotalTrades { get; set; }
@@ -17,6 +17,10 @@ public class DailyReview
     public string? LessonsLearned { get; set; }
     public string? ImprovementNote { get; set; }
     public string? EmotionalSummary { get; set; }
+    public bool IsObservationOnly { get; set; }
+    [MaxLength(20)]
+    public string? MarketCondition { get; set; }
+    public string? MarketObservation { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

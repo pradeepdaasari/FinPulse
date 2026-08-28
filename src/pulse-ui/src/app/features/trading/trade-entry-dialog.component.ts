@@ -46,13 +46,18 @@ export interface TradeEntryDialogData {
       } @else {
       <form [formGroup]="form" class="trade-form">
 
-        <!-- Row 1: Date, Setup, Instrument -->
+        <!-- Row 1: Date, Time, Setup, Instrument -->
         <div class="row-top">
           <mat-form-field appearance="outline">
             <mat-label>Date</mat-label>
             <input matInput [matDatepicker]="picker" formControlName="date">
             <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
             <mat-datepicker #picker></mat-datepicker>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="time-field">
+            <mat-label>Time</mat-label>
+            <input matInput type="time" formControlName="time">
+            <mat-icon matSuffix>schedule</mat-icon>
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Setup</mat-label>
@@ -336,7 +341,8 @@ export interface TradeEntryDialogData {
     .trade-form .row-4col { margin-bottom: 2px; }
 
     .row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: center; }
-    .row-top { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 10px; align-items: start; }
+    .row-top { display: grid; grid-template-columns: 1.2fr 0.8fr 1fr 1fr; gap: 10px; align-items: start; }
+    .time-field { min-width: 90px; }
     .row-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; align-items: start; }
     .row-4col { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
     .full-width { width: 100%; }
@@ -428,8 +434,14 @@ export class TradeEntryDialogComponent implements OnInit {
   netPnl = signal(0);
   balanceAfter = signal(0);
 
+  private getTimeStr(dateStr?: string): string {
+    const d = dateStr ? new Date(dateStr) : new Date();
+    return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+  }
+
   form = this.fb.group({
     date: [this.data?.trade?.date ? new Date(this.data.trade.date) : new Date(), Validators.required],
+    time: [this.getTimeStr(this.data?.trade?.date), Validators.required],
     setupId: [this.data?.trade?.setupId ?? null, Validators.required],
     instrument: [this.data?.trade?.instrument ?? 'SPX', Validators.required],
     direction: [this.data?.trade?.direction ?? 'short', Validators.required],
@@ -515,8 +527,11 @@ export class TradeEntryDialogComponent implements OnInit {
   save(): void {
     if (this.form.invalid) return;
     const val = this.form.value;
+    const d = val.date instanceof Date ? val.date : new Date(val.date!);
+    const [hh, mm] = (val.time || '00:00').split(':').map(Number);
+    d.setHours(hh, mm, 0, 0);
     const payload: Partial<TradeEntry> = {
-      date: val.date instanceof Date ? val.date.toISOString().split('T')[0] : String(val.date!),
+      date: d.toISOString(),
       setupId: val.setupId!,
       instrument: val.instrument!,
       direction: val.direction as any,

@@ -58,42 +58,48 @@ public class CommissionScheduleController : ControllerBase
         if (exists)
             return Conflict(new { message = "A commission schedule already exists for this date. Choose a different effective date." });
 
-        using var transaction = await _db.Database.BeginTransactionAsync();
+        var strategy = _db.Database.CreateExecutionStrategy();
+        CommissionSchedule schedule = null!;
+        int recalculated = 0;
         try
         {
-            var schedule = new CommissionSchedule
+            await strategy.ExecuteAsync(async () =>
             {
-                BankAccountId = accountId,
-                UserId = UserId,
-                OptionsCommissionPerContract = dto.OptionsCommissionPerContract,
-                FuturesCommissionPerContract = dto.FuturesCommissionPerContract,
-                OptionsRegFeePerContract = dto.OptionsRegFeePerContract,
-                FuturesRegFeePerContract = dto.FuturesRegFeePerContract,
-                EffectiveFrom = dto.EffectiveFrom.Date
-            };
+                using var transaction = await _db.Database.BeginTransactionAsync();
 
-            _db.CommissionSchedules.Add(schedule);
-            await _db.SaveChangesAsync();
+                schedule = new CommissionSchedule
+                {
+                    BankAccountId = accountId,
+                    UserId = UserId,
+                    OptionsCommissionPerContract = dto.OptionsCommissionPerContract,
+                    FuturesCommissionPerContract = dto.FuturesCommissionPerContract,
+                    OptionsRegFeePerContract = dto.OptionsRegFeePerContract,
+                    FuturesRegFeePerContract = dto.FuturesRegFeePerContract,
+                    EffectiveFrom = dto.EffectiveFrom.Date
+                };
 
-            // Update BankAccount's current fields if this is the latest schedule
-            var isLatest = !await _db.CommissionSchedules.AnyAsync(s =>
-                s.BankAccountId == accountId && s.EffectiveFrom > schedule.EffectiveFrom);
-            if (isLatest)
-            {
-                account.OptionsCommissionPerContract = dto.OptionsCommissionPerContract;
-                account.FuturesCommissionPerContract = dto.FuturesCommissionPerContract;
-                account.OptionsRegFeePerContract = dto.OptionsRegFeePerContract;
-                account.FuturesRegFeePerContract = dto.FuturesRegFeePerContract;
+                _db.CommissionSchedules.Add(schedule);
                 await _db.SaveChangesAsync();
-            }
 
-            int recalculated = 0;
-            if (dto.RecalculateTrades)
-            {
-                recalculated = await RecalculateTrades(accountId, schedule);
-            }
+                var isLatest = !await _db.CommissionSchedules.AnyAsync(s =>
+                    s.BankAccountId == accountId && s.EffectiveFrom > schedule.EffectiveFrom);
+                if (isLatest)
+                {
+                    account.OptionsCommissionPerContract = dto.OptionsCommissionPerContract;
+                    account.FuturesCommissionPerContract = dto.FuturesCommissionPerContract;
+                    account.OptionsRegFeePerContract = dto.OptionsRegFeePerContract;
+                    account.FuturesRegFeePerContract = dto.FuturesRegFeePerContract;
+                    await _db.SaveChangesAsync();
+                }
 
-            await transaction.CommitAsync();
+                recalculated = 0;
+                if (dto.RecalculateTrades)
+                {
+                    recalculated = await RecalculateTrades(accountId, schedule);
+                }
+
+                await transaction.CommitAsync();
+            });
             return Ok(new CommissionScheduleResultDto
             {
                 Schedule = new CommissionScheduleResponseDto
@@ -112,7 +118,6 @@ public class CommissionScheduleController : ControllerBase
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync();
             return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
         }
     }
@@ -127,35 +132,40 @@ public class CommissionScheduleController : ControllerBase
         var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == accountId && a.UserId == UserId);
         if (account == null) return NotFound();
 
-        using var transaction = await _db.Database.BeginTransactionAsync();
+        var strategy = _db.Database.CreateExecutionStrategy();
+        int recalculated = 0;
         try
         {
-            schedule.OptionsCommissionPerContract = dto.OptionsCommissionPerContract;
-            schedule.FuturesCommissionPerContract = dto.FuturesCommissionPerContract;
-            schedule.OptionsRegFeePerContract = dto.OptionsRegFeePerContract;
-            schedule.FuturesRegFeePerContract = dto.FuturesRegFeePerContract;
-
-            await _db.SaveChangesAsync();
-
-            // Update BankAccount's current fields if this is the latest schedule
-            var isLatest = !await _db.CommissionSchedules.AnyAsync(s =>
-                s.BankAccountId == accountId && s.EffectiveFrom > schedule.EffectiveFrom);
-            if (isLatest)
+            await strategy.ExecuteAsync(async () =>
             {
-                account.OptionsCommissionPerContract = dto.OptionsCommissionPerContract;
-                account.FuturesCommissionPerContract = dto.FuturesCommissionPerContract;
-                account.OptionsRegFeePerContract = dto.OptionsRegFeePerContract;
-                account.FuturesRegFeePerContract = dto.FuturesRegFeePerContract;
+                using var transaction = await _db.Database.BeginTransactionAsync();
+
+                schedule.OptionsCommissionPerContract = dto.OptionsCommissionPerContract;
+                schedule.FuturesCommissionPerContract = dto.FuturesCommissionPerContract;
+                schedule.OptionsRegFeePerContract = dto.OptionsRegFeePerContract;
+                schedule.FuturesRegFeePerContract = dto.FuturesRegFeePerContract;
+
                 await _db.SaveChangesAsync();
-            }
 
-            int recalculated = 0;
-            if (dto.RecalculateTrades)
-            {
-                recalculated = await RecalculateTrades(accountId, schedule);
-            }
+                var isLatest = !await _db.CommissionSchedules.AnyAsync(s =>
+                    s.BankAccountId == accountId && s.EffectiveFrom > schedule.EffectiveFrom);
+                if (isLatest)
+                {
+                    account.OptionsCommissionPerContract = dto.OptionsCommissionPerContract;
+                    account.FuturesCommissionPerContract = dto.FuturesCommissionPerContract;
+                    account.OptionsRegFeePerContract = dto.OptionsRegFeePerContract;
+                    account.FuturesRegFeePerContract = dto.FuturesRegFeePerContract;
+                    await _db.SaveChangesAsync();
+                }
 
-            await transaction.CommitAsync();
+                recalculated = 0;
+                if (dto.RecalculateTrades)
+                {
+                    recalculated = await RecalculateTrades(accountId, schedule);
+                }
+
+                await transaction.CommitAsync();
+            });
             return Ok(new CommissionScheduleResultDto
             {
                 Schedule = new CommissionScheduleResponseDto
@@ -174,7 +184,6 @@ public class CommissionScheduleController : ControllerBase
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync();
             return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
         }
     }

@@ -11,8 +11,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { RecurringService } from '../../core/services/recurring.service';
 import { RecurringTransaction } from '../../core/models/recurring.model';
+import { DailyExpense, DailyExpenseCreate, TransactionType, FundingSourceType } from '../../core/models/daily-expense.model';
 import { NotificationService } from '../../core/services/notification.service';
 import { RecurringDialogComponent } from './recurring-dialog.component';
+import { AddExpenseDialogComponent, ExpenseDialogData } from '../expenses/add-expense-dialog.component';
 
 @Component({
   selector: 'app-recurring-page',
@@ -159,9 +161,9 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
             <th mat-header-cell *matHeaderCellDef>Actions</th>
             <td mat-cell *matCellDef="let r">
               <div class="action-group">
-                @if (isDue(r)) {
-                  <button mat-icon-button class="action-btn action-pay" (click)="markPaid(r)" matTooltip="Mark Paid">
-                    <mat-icon>check_circle</mat-icon>
+                @if (isCurrentMonth(r)) {
+                  <button mat-icon-button class="action-btn action-pay" (click)="markPaid(r)" [matTooltip]="isDue(r) ? 'Mark Paid' : 'Pay Now'">
+                    <mat-icon>{{ isDue(r) ? 'check_circle' : 'payments' }}</mat-icon>
                   </button>
                 }
                 <button mat-icon-button class="action-btn action-edit" (click)="edit(r)">
@@ -200,9 +202,9 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
             <div class="rec-bottom">
               <span class="rec-next">Next: {{ r.nextRunDate | date:'MMM d' }}</span>
               <div class="rec-actions">
-                @if (isDue(r)) {
+                @if (isCurrentMonth(r)) {
                   <button mat-raised-button color="primary" class="pay-btn-sm" (click)="markPaid(r)">
-                    <mat-icon>check_circle</mat-icon> Pay
+                    <mat-icon>{{ isDue(r) ? 'check_circle' : 'payments' }}</mat-icon> {{ isDue(r) ? 'Pay' : 'Pay Now' }}
                   </button>
                 }
                 <mat-slide-toggle [checked]="r.isActive" (change)="toggleStatus(r)" color="primary"></mat-slide-toggle>
@@ -236,7 +238,7 @@ import { RecurringDialogComponent } from './recurring-dialog.component';
       border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-sm);
     }
     .stat-card mat-icon {
-      font-size: 28px; width: 28px; height: 28px; padding: 10px; border-radius: 12px;
+      font-size: 24px; width: 44px; height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px;
     }
     .stat-blue mat-icon { color: var(--color-stat-blue); background: var(--color-stat-blue-bg); }
     .stat-green mat-icon { color: var(--color-stat-green); background: var(--color-stat-green-bg); }
@@ -373,9 +375,9 @@ export class RecurringPageComponent implements OnInit {
   activeCount = computed(() => this.items().filter(i => i.isActive).length);
   pausedCount = computed(() => this.items().filter(i => !i.isActive).length);
   dueItems = computed(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return this.items().filter(i => i.isActive && new Date(i.nextRunDate) <= today);
+    const tz = localStorage.getItem('pulse_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
+    return this.items().filter(i => i.isActive && i.nextRunDate.slice(0, 10) <= todayStr);
   });
   monthlyTotal = computed(() => {
     return this.items()
@@ -468,17 +470,40 @@ export class RecurringPageComponent implements OnInit {
     return map[type] ?? 0;
   }
 
+  isCurrentMonth(item: RecurringTransaction): boolean {
+    if (!item.isActive) return false;
+    const tz = localStorage.getItem('pulse_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit' });
+    const currentYM = formatter.format(now).slice(0, 7);
+    return item.nextRunDate.slice(0, 7) === currentYM;
+  }
+
   isDue(item: RecurringTransaction): boolean {
     if (!item.isActive) return false;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return new Date(item.nextRunDate) <= today;
+    const tz = localStorage.getItem('pulse_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
+    return item.nextRunDate.slice(0, 10) <= todayStr;
   }
 
   markPaid(item: RecurringTransaction): void {
-    this.service.markPaid(item.id).subscribe({
-      next: () => { this.notify.success(`${item.description} marked as paid`); this.loadData(); },
-      error: (err) => this.notify.error(err.error?.message || 'Failed to mark paid')
+    const prefill: Partial<DailyExpense> = {
+      categoryId: item.categoryId,
+      amount: item.amount,
+      merchant: item.merchant,
+      description: item.description,
+      transactionType: item.transactionType as TransactionType,
+      fundingSourceType: item.fundingSourceType as FundingSourceType | null,
+      fundingSourceId: item.fundingSourceId
+    };
+    const data: ExpenseDialogData = { expense: null, prefill };
+    const ref = this.dialog.open(AddExpenseDialogComponent, { data, panelClass: 'expense-dialog-panel' });
+    ref.afterClosed().subscribe((result: DailyExpenseCreate | undefined) => {
+      if (!result) return;
+      this.service.pay(item.id, result).subscribe({
+        next: () => { this.notify.success(`${item.description} marked as paid`); this.loadData(); },
+        error: (err: any) => this.notify.error(err.error?.message || 'Failed to mark paid')
+      });
     });
   }
 

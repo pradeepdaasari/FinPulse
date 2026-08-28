@@ -75,12 +75,19 @@ export interface ExpenseDialogData {
           </div>
         </div>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Date</mat-label>
-          <input matInput [matDatepicker]="picker" formControlName="date">
-          <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-          <mat-datepicker #picker></mat-datepicker>
-        </mat-form-field>
+        <div class="date-time-row">
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Date</mat-label>
+            <input matInput [matDatepicker]="picker" formControlName="date">
+            <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+            <mat-datepicker #picker></mat-datepicker>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="time-field">
+            <mat-label>Time</mat-label>
+            <input matInput type="time" formControlName="time">
+            <mat-icon matSuffix>schedule</mat-icon>
+          </mat-form-field>
+        </div>
 
         @if (form.value.transactionType !== 'Transfer' && form.value.transactionType !== 'CardPayment') {
           <div class="category-row">
@@ -456,6 +463,8 @@ export interface ExpenseDialogData {
       align-items: center;
     }
     .flex-1 { flex: 1; }
+    .date-time-row { display: flex; gap: 10px; align-items: start; }
+    .time-field { width: 130px; min-width: 110px; }
     .cat-arrow { color: var(--color-text-muted); cursor: pointer; }
     ::ng-deep .category-autocomplete .mat-mdc-option .mdc-list-item__primary-text {
       width: 100%;
@@ -715,9 +724,27 @@ export class AddExpenseDialogComponent implements OnInit {
 
   private get source() { return this.data?.expense ?? this.data?.prefill ?? null; }
 
+  private getTimeInUserTz(d: Date): string {
+    const tz = localStorage.getItem('pulse_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d);
+    const hh = parts.find(p => p.type === 'hour')!.value.padStart(2, '0');
+    const mm = parts.find(p => p.type === 'minute')!.value.padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+
+  private getDateInUserTz(d: Date): Date {
+    const tz = localStorage.getItem('pulse_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d);
+    const year = +parts.find(p => p.type === 'year')!.value;
+    const month = +parts.find(p => p.type === 'month')!.value - 1;
+    const day = +parts.find(p => p.type === 'day')!.value;
+    return new Date(year, month, day);
+  }
+
   form = this.fb.group({
     transactionType: [(this.data?.preselectedType ?? this.source?.transactionType ?? 'Expense') as TransactionType, Validators.required],
-    date: [this.data?.expense ? new Date(this.data.expense.date) : new Date(), Validators.required],
+    date: [this.data?.expense ? this.getDateInUserTz(new Date(this.data.expense.date)) : this.getDateInUserTz(new Date()), Validators.required],
+    time: [this.data?.expense ? this.getTimeInUserTz(new Date(this.data.expense.date)) : this.getTimeInUserTz(new Date()), Validators.required],
     categoryId: [this.source?.categoryId ?? this.data?.prefilledCategoryId ?? null as number | null],
     amount: [this.source?.amount ?? null as number | null, [Validators.required, Validators.min(0.01)]],
     merchant: [this.source?.merchant ?? ''],
@@ -840,6 +867,34 @@ export class AddExpenseDialogComponent implements OnInit {
       });
   }
 
+  private buildDateTime(): Date {
+    const val = this.form.value;
+    const tz = localStorage.getItem('pulse_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const d = val.date instanceof Date ? val.date : new Date(val.date!);
+    const [hh, mm] = (val.time || '00:00').split(':').map(Number);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(hh).padStart(2, '0');
+    const minutes = String(mm).padStart(2, '0');
+    // Interpret entered date+time as wall-clock time in user's timezone
+    const naiveUtc = new Date(`${year}-${month}-${day}T${hours}:${minutes}:00Z`);
+    const tzParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+    }).formatToParts(naiveUtc);
+    const tzDate = new Date(Date.UTC(
+      +tzParts.find(p => p.type === 'year')!.value,
+      +tzParts.find(p => p.type === 'month')!.value - 1,
+      +tzParts.find(p => p.type === 'day')!.value,
+      +tzParts.find(p => p.type === 'hour')!.value,
+      +tzParts.find(p => p.type === 'minute')!.value,
+      +tzParts.find(p => p.type === 'second')!.value
+    ));
+    const offsetMs = naiveUtc.getTime() - tzDate.getTime();
+    return new Date(naiveUtc.getTime() + offsetMs);
+  }
+
   save(): void {
     const val = this.form.value;
     const isTransfer = val.transactionType === 'Transfer';
@@ -877,7 +932,7 @@ export class AddExpenseDialogComponent implements OnInit {
       const splits: DailyExpenseCreate[] = this.splitRows.controls.map(ctrl => {
         const row = (ctrl as FormGroup).value;
         return {
-          date: (val.date as Date).toISOString(),
+          date: this.buildDateTime().toISOString(),
           categoryId: row.categoryId!,
           amount: row.amount!,
           merchant: val.merchant || null,
@@ -895,7 +950,7 @@ export class AddExpenseDialogComponent implements OnInit {
     }
 
     const expense: DailyExpenseCreate = {
-      date: (val.date as Date).toISOString(),
+      date: this.buildDateTime().toISOString(),
       categoryId: val.categoryId || null,
       amount: val.amount!,
       merchant: (isTransfer || isCardPayment) ? null : (val.merchant || null),

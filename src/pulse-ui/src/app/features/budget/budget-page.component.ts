@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
@@ -80,19 +80,95 @@ import { RouterLink } from '@angular/router';
               </mat-card>
             </div>
 
-            @if (plan()!.monthlyOverview.byCategory.length > 0) {
+            @if (recurringCategories().length > 0) {
               <mat-card class="category-card">
-                <mat-card-header><mat-card-title>By Category</mat-card-title></mat-card-header>
+                <mat-card-header class="section-header">
+                  <mat-card-title><mat-icon class="section-icon recurring">autorenew</mat-icon> Recurring</mat-card-title>
+                  <span class="section-total recurring">{{ recurringTotal() | currency }}</span>
+                </mat-card-header>
                 <mat-card-content>
-                  <table mat-table [dataSource]="plan()!.monthlyOverview.byCategory" class="category-table">
+                  <table mat-table [dataSource]="recurringCategories()" class="category-table">
                     <ng-container matColumnDef="categoryName">
                       <th mat-header-cell *matHeaderCellDef>Category</th>
-                      <td mat-cell *matCellDef="let row">{{ row.categoryName }}</td>
+                      <td mat-cell *matCellDef="let row">
+                        <span class="category-name-cell">
+                          <mat-icon class="category-icon">{{ row.icon || 'autorenew' }}</mat-icon>
+                          {{ row.categoryName }}
+                        </span>
+                      </td>
                     </ng-container>
                     <ng-container matColumnDef="type">
                       <th mat-header-cell *matHeaderCellDef>Type</th>
                       <td mat-cell *matCellDef="let row">
                         <mat-chip [highlighted]="row.isFixed">{{ row.isFixed ? 'Fixed' : 'Variable' }}</mat-chip>
+                      </td>
+                    </ng-container>
+                    <ng-container matColumnDef="amount">
+                      <th mat-header-cell *matHeaderCellDef>Amount</th>
+                      <td mat-cell *matCellDef="let row">{{ row.amount | currency }}</td>
+                    </ng-container>
+                    <tr mat-header-row *matHeaderRowDef="categoryColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: categoryColumns;"></tr>
+                  </table>
+                </mat-card-content>
+              </mat-card>
+            }
+
+            @if (billCategories().length > 0) {
+              <mat-card class="category-card">
+                <mat-card-header class="section-header">
+                  <mat-card-title><mat-icon class="section-icon bills">receipt_long</mat-icon> Bills & Spending</mat-card-title>
+                  <span class="section-total bills">{{ billsTotal() | currency }}</span>
+                </mat-card-header>
+                <mat-card-content>
+                  <table mat-table [dataSource]="billCategories()" class="category-table">
+                    <ng-container matColumnDef="categoryName">
+                      <th mat-header-cell *matHeaderCellDef>Category</th>
+                      <td mat-cell *matCellDef="let row">
+                        <span class="category-name-cell">
+                          <mat-icon class="category-icon">{{ row.icon || (row.isFixed ? 'payments' : 'shopping_bag') }}</mat-icon>
+                          {{ row.categoryName }}
+                        </span>
+                      </td>
+                    </ng-container>
+                    <ng-container matColumnDef="type">
+                      <th mat-header-cell *matHeaderCellDef>Type</th>
+                      <td mat-cell *matCellDef="let row">
+                        <mat-chip [highlighted]="row.isFixed">{{ row.isFixed ? 'Fixed' : 'Variable' }}</mat-chip>
+                      </td>
+                    </ng-container>
+                    <ng-container matColumnDef="amount">
+                      <th mat-header-cell *matHeaderCellDef>Amount</th>
+                      <td mat-cell *matCellDef="let row">{{ row.amount | currency }}</td>
+                    </ng-container>
+                    <tr mat-header-row *matHeaderRowDef="categoryColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: categoryColumns;"></tr>
+                  </table>
+                </mat-card-content>
+              </mat-card>
+            }
+
+            @if (debtCategories().length > 0) {
+              <mat-card class="category-card">
+                <mat-card-header class="section-header">
+                  <mat-card-title><mat-icon class="section-icon debt">credit_score</mat-icon> Debt Payments</mat-card-title>
+                  <span class="section-total debt">{{ debtTotal() | currency }}</span>
+                </mat-card-header>
+                <mat-card-content>
+                  <table mat-table [dataSource]="debtCategories()" class="category-table">
+                    <ng-container matColumnDef="categoryName">
+                      <th mat-header-cell *matHeaderCellDef>Lender</th>
+                      <td mat-cell *matCellDef="let row">
+                        <span class="category-name-cell">
+                          <mat-icon class="category-icon debt">credit_score</mat-icon>
+                          {{ row.categoryName }}
+                        </span>
+                      </td>
+                    </ng-container>
+                    <ng-container matColumnDef="type">
+                      <th mat-header-cell *matHeaderCellDef>Type</th>
+                      <td mat-cell *matCellDef="let row">
+                        <mat-chip highlighted>Debt</mat-chip>
                       </td>
                     </ng-container>
                     <ng-container matColumnDef="amount">
@@ -278,7 +354,20 @@ import { RouterLink } from '@angular/router';
     .stat-card.deficit .stat-value { color: var(--color-danger); }
 
     .category-card { margin-top: var(--spacing-md); }
+    .section-header { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+    .category-card mat-card-title { display: flex; align-items: center; gap: 8px; font-size: 1.05rem; }
+    .section-total { font-size: 1.1rem; font-weight: 700; margin-right: var(--spacing-md); }
+    .section-total.recurring { color: var(--color-stat-purple); }
+    .section-total.bills { color: var(--color-primary); }
+    .section-total.debt { color: var(--color-danger); }
+    .section-icon { font-size: 20px; height: 20px; width: 20px; }
+    .section-icon.recurring { color: var(--color-stat-purple); }
+    .section-icon.bills { color: var(--color-primary); }
+    .section-icon.debt { color: var(--color-danger); }
     .category-table { width: 100%; }
+    .category-name-cell { display: flex; align-items: center; gap: 8px; }
+    .category-icon { font-size: 18px; height: 18px; width: 18px; opacity: 0.7; }
+    .category-icon.debt { color: var(--color-danger); opacity: 0.8; }
 
     .paycheck-card { margin-bottom: var(--spacing-md); }
     .paycheck-card mat-card-title { display: flex; align-items: center; gap: 8px; }
@@ -309,6 +398,13 @@ export class BudgetPageComponent implements OnInit {
   plan = signal<BudgetPlan | null>(null);
   expenses = signal<BudgetExpense[]>([]);
   loading = signal(true);
+
+  recurringCategories = computed(() => this.plan()?.monthlyOverview.byCategory.filter(c => c.isRecurring) ?? []);
+  billCategories = computed(() => this.plan()?.monthlyOverview.byCategory.filter(c => !c.isDebt && !c.isRecurring) ?? []);
+  debtCategories = computed(() => this.plan()?.monthlyOverview.byCategory.filter(c => c.isDebt) ?? []);
+  recurringTotal = computed(() => this.recurringCategories().reduce((sum, c) => sum + c.amount, 0));
+  debtTotal = computed(() => this.debtCategories().reduce((sum, c) => sum + c.amount, 0));
+  billsTotal = computed(() => this.billCategories().reduce((sum, c) => sum + c.amount, 0));
 
   currentYear = new Date().getFullYear();
   currentMonth = new Date().getMonth() + 1;

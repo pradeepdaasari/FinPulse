@@ -71,6 +71,9 @@ export interface CategorySummary {
   categoryName: string;
   amount: number;
   isFixed: boolean;
+  icon?: string;
+  isDebt: boolean;
+  isRecurring: boolean;
 }
 
 export interface PaycheckExpense {

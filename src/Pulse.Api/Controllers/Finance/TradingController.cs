@@ -475,6 +475,9 @@ public class TradingController : ControllerBase
         review.LessonsLearned = input.LessonsLearned;
         review.ImprovementNote = input.ImprovementNote;
         review.EmotionalSummary = input.EmotionalSummary;
+        review.IsObservationOnly = input.IsObservationOnly;
+        review.MarketCondition = input.MarketCondition;
+        review.MarketObservation = input.MarketObservation;
         await _db.SaveChangesAsync();
         return Ok(review);
     }

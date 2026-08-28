@@ -159,9 +159,10 @@ export class WorkoutPlansComponent implements OnInit {
 
   deletePlan(plan: WorkoutPlanSummary, event: Event) {
     event.stopPropagation();
+    this.loading.set(true);
     this.planService.delete(plan.id).subscribe({
       next: () => { this.notify.success('Plan deleted'); this.loadPlans(); },
-      error: () => this.notify.error('Failed to delete')
+      error: () => { this.loading.set(false); this.notify.error('Failed to delete'); }
     });
   }
 }

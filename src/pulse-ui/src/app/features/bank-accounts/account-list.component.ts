@@ -159,7 +159,7 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
       border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-sm);
     }
     .stat-card mat-icon {
-      font-size: 28px; width: 28px; height: 28px; padding: 10px; border-radius: 12px;
+      font-size: 24px; width: 44px; height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px;
     }
     .stat-green mat-icon { color: var(--color-stat-green); background: var(--color-stat-green-bg); }
     .stat-blue mat-icon { color: var(--color-stat-blue); background: var(--color-stat-blue-bg); }
@@ -312,12 +312,14 @@ export class AccountListComponent implements OnInit {
 
   deleteAccount(account: BankAccount): void {
     if (!this.notify.confirmDelete(account.accountName)) return;
+    this.loading.set(true);
     this.accountService.delete(account.id).subscribe({
       next: () => {
         this.notify.success('Account deleted successfully');
         this.loadAccounts();
       },
       error: (err) => {
+        this.loading.set(false);
         this.notify.error(err.error?.message || 'Failed to delete account');
       }
     });

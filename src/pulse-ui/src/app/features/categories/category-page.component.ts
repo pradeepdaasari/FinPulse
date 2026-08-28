@@ -326,7 +326,8 @@ const ICON_OPTIONS = [
       border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-sm);
     }
     .stat-card mat-icon {
-      font-size: 28px; width: 28px; height: 28px; padding: 10px; border-radius: 12px;
+      font-size: 24px; width: 44px; height: 44px; min-width: 44px;
+      display: flex; align-items: center; justify-content: center; border-radius: 12px;
     }
     .stat-blue mat-icon { color: var(--color-stat-blue); background: var(--color-stat-blue-bg); }
     .stat-green mat-icon { color: var(--color-stat-green); background: var(--color-stat-green-bg); }
@@ -443,7 +444,7 @@ const ICON_OPTIONS = [
     @media (max-width: 599px) {
       .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
       .stat-card { padding: 12px 10px; gap: 8px; }
-      .stat-card mat-icon { font-size: 22px; width: 22px; height: 22px; padding: 8px; border-radius: 10px; }
+      .stat-card mat-icon { font-size: 20px; width: 36px; height: 36px; min-width: 36px; border-radius: 10px; }
       .stat-value { font-size: 1rem; }
       .icon-grid { grid-template-columns: repeat(6, 1fr); }
     }

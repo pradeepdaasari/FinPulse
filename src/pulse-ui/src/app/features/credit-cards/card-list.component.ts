@@ -524,9 +524,13 @@ export class CardListComponent implements OnInit {
 
   deleteCard(card: CreditCard): void {
     if (!this.notify.confirmDelete(card.cardName)) return;
-    this.cardService.delete(card.id).subscribe(() => {
-      this.notify.success('Card deleted successfully');
-      this.loadCards();
+    this.loading.set(true);
+    this.cardService.delete(card.id).subscribe({
+      next: () => {
+        this.notify.success('Card deleted successfully');
+        this.loadCards();
+      },
+      error: () => { this.loading.set(false); this.notify.error('Failed to delete card'); }
     });
   }
 

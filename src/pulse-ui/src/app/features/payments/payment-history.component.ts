@@ -581,9 +581,13 @@ export class PaymentHistoryComponent implements OnInit {
 
   deletePayment(payment: PaymentHistory): void {
     if (!this.notify.confirmDelete(`payment of $${payment.amountPaid.toFixed(2)}`)) return;
-    this.paymentService.delete(payment.id).subscribe(() => {
-      this.notify.success('Payment deleted successfully');
-      this.loadPayments();
+    this.loading.set(true);
+    this.paymentService.delete(payment.id).subscribe({
+      next: () => {
+        this.notify.success('Payment deleted successfully');
+        this.loadPayments();
+      },
+      error: () => { this.loading.set(false); this.notify.error('Failed to delete payment'); }
     });
   }
 

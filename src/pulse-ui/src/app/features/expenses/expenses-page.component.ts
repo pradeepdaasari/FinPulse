@@ -26,6 +26,7 @@ import { ExpenseFilterBarComponent } from './expense-filter-bar.component';
 import { MonthComparisonComponent } from './month-comparison.component';
 import { TagSummaryComponent } from './tag-summary.component';
 import { NotificationService } from '../../core/services/notification.service';
+import { ConfirmDialogComponent } from '../../shared/confirm-dialog.component';
 
 function compare(a: number | string, b: number | string, isAsc: boolean): number {
   return (a < b ? -1 : 1) * (isAsc ? 1 : -1);
@@ -832,13 +833,22 @@ export class ExpensesPageComponent implements OnInit {
   }
 
   deleteExpense(expense: DailyExpense): void {
-    import('../../shared/confirm-dialog.component').then(m => {
-      this.dialog.open(m.ConfirmDialogComponent, {
-        width: '400px',
-        data: { title: 'Delete Transaction?', message: `"${expense.description}" will be permanently removed.`, confirmText: 'Delete', color: 'warn' }
-      }).afterClosed().subscribe(confirmed => {
-        if (!confirmed) return;
-        this.expenseService.delete(expense.id).subscribe(() => this.loadData());
+    this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: { title: 'Delete Transaction?', message: `"${expense.description}" will be permanently removed.`, confirmText: 'Delete', color: 'warn' }
+    }).afterClosed().subscribe(confirmed => {
+      if (!confirmed) return;
+      this.loading.set(true);
+      this.expenseService.delete(expense.id).subscribe({
+        next: () => {
+          this.notify.success('Transaction deleted');
+          this.loadData();
+        },
+        error: (err) => {
+          this.loading.set(false);
+          const msg = err?.error?.error || err?.message || 'Unknown error';
+          this.notify.error(`Delete failed: ${msg}`);
+        }
       });
     });
   }
