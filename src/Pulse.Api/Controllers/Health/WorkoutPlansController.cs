@@ -177,22 +177,26 @@ public class WorkoutPlansController : ControllerBase
     {
         plan.UserId = UserId;
 
-        using var transaction = await _db.Database.BeginTransactionAsync();
+        var strategy = _db.Database.CreateExecutionStrategy();
         try
         {
-            if (plan.IsActive)
+            await strategy.ExecuteAsync(async () =>
             {
-                await DeactivateAllPlans();
-            }
-            _db.WorkoutPlans.Add(plan);
-            await _db.SaveChangesAsync();
+                using var transaction = await _db.Database.BeginTransactionAsync();
 
-            await transaction.CommitAsync();
+                if (plan.IsActive)
+                {
+                    await DeactivateAllPlans();
+                }
+                _db.WorkoutPlans.Add(plan);
+                await _db.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+            });
             return Ok(plan);
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync();
             return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
         }
     }
@@ -206,33 +210,37 @@ public class WorkoutPlansController : ControllerBase
             .FirstOrDefaultAsync(p => p.Id == id && p.UserId == UserId);
         if (plan == null) return NotFound();
 
-        using var transaction = await _db.Database.BeginTransactionAsync();
+        var strategy = _db.Database.CreateExecutionStrategy();
         try
         {
-            plan.Name = updated.Name;
-            plan.IsActive = updated.IsActive;
-
-            if (plan.IsActive)
+            await strategy.ExecuteAsync(async () =>
             {
-                await DeactivateAllPlans(id);
-            }
+                using var transaction = await _db.Database.BeginTransactionAsync();
 
-            _db.PlannedExercises.RemoveRange(plan.Days.SelectMany(d => d.Exercises));
-            _db.WorkoutPlanDays.RemoveRange(plan.Days);
+                plan.Name = updated.Name;
+                plan.IsActive = updated.IsActive;
 
-            foreach (var day in updated.Days)
-            {
-                day.PlanId = id;
-                _db.WorkoutPlanDays.Add(day);
-            }
+                if (plan.IsActive)
+                {
+                    await DeactivateAllPlans(id);
+                }
 
-            await _db.SaveChangesAsync();
-            await transaction.CommitAsync();
+                _db.PlannedExercises.RemoveRange(plan.Days.SelectMany(d => d.Exercises));
+                _db.WorkoutPlanDays.RemoveRange(plan.Days);
+
+                foreach (var day in updated.Days)
+                {
+                    day.PlanId = id;
+                    _db.WorkoutPlanDays.Add(day);
+                }
+
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+            });
             return Ok(plan);
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync();
             return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
         }
     }
@@ -256,19 +264,23 @@ public class WorkoutPlansController : ControllerBase
         var plan = await _db.WorkoutPlans.FirstOrDefaultAsync(p => p.Id == id && p.UserId == UserId);
         if (plan == null) return NotFound();
 
-        using var transaction = await _db.Database.BeginTransactionAsync();
+        var strategy = _db.Database.CreateExecutionStrategy();
         try
         {
-            await DeactivateAllPlans();
-            plan.IsActive = true;
-            await _db.SaveChangesAsync();
+            await strategy.ExecuteAsync(async () =>
+            {
+                using var transaction = await _db.Database.BeginTransactionAsync();
 
-            await transaction.CommitAsync();
+                await DeactivateAllPlans();
+                plan.IsActive = true;
+                await _db.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+            });
             return Ok(plan);
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync();
             return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
         }
     }
@@ -276,9 +288,14 @@ public class WorkoutPlansController : ControllerBase
     [HttpPost("seed-fittr")]
     public async Task<ActionResult> SeedFittrPlan()
     {
-        using var transaction = await _db.Database.BeginTransactionAsync();
+        var strategy = _db.Database.CreateExecutionStrategy();
+        WorkoutPlan plan = null!;
         try
         {
+        await strategy.ExecuteAsync(async () =>
+        {
+            using var transaction = await _db.Database.BeginTransactionAsync();
+
         var existing = await _db.WorkoutPlans
             .Include(p => p.Days).ThenInclude(d => d.Exercises)
             .FirstOrDefaultAsync(p => p.UserId == UserId && p.Name == "FITTR Training Plan");
@@ -292,7 +309,7 @@ public class WorkoutPlansController : ControllerBase
 
         await DeactivateAllPlans();
 
-        var plan = new WorkoutPlan
+        plan = new WorkoutPlan
         {
             Name = "FITTR Training Plan",
             IsActive = true,
@@ -371,11 +388,11 @@ public class WorkoutPlansController : ControllerBase
         await _db.SaveChangesAsync();
 
         await transaction.CommitAsync();
+        });
         return Ok(plan);
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync();
             return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
         }
     }

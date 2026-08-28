@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { RecurringTransaction, RecurringTransactionCreate } from '../models/recurring.model';
+import { DailyExpenseCreate } from '../models/daily-expense.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -25,8 +26,8 @@ export class RecurringService {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
 
-  markPaid(id: number): Observable<{ expenseId: number; nextRunDate: string }> {
-    return this.http.post<{ expenseId: number; nextRunDate: string }>(`${this.baseUrl}/${id}/pay`, {});
+  pay(id: number, transaction: DailyExpenseCreate): Observable<{ expenseId: number; nextRunDate: string }> {
+    return this.http.post<{ expenseId: number; nextRunDate: string }>(`${this.baseUrl}/${id}/pay`, transaction);
   }
 
   generate(): Observable<{ generated: number }> {

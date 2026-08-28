@@ -25,6 +25,9 @@ public class CategorySummaryDto
     public string CategoryName { get; set; } = string.Empty;
     public decimal Amount { get; set; }
     public bool IsFixed { get; set; }
+    public string? Icon { get; set; }
+    public bool IsDebt { get; set; }
+    public bool IsRecurring { get; set; }
 }
 
 public class PaycheckBreakdownDto

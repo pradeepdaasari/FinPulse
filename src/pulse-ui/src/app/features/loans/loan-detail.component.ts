@@ -247,12 +247,13 @@ export class LoanDetailComponent implements OnInit {
       });
       dialogRef.afterClosed().subscribe(confirmed => {
         if (!confirmed) return;
+        this.loading.set(true);
         this.loanService.delete(this.loan()!.id).subscribe({
           next: () => {
             this.notify.success('Loan deleted');
             this.router.navigate(['/loans']);
           },
-          error: () => this.notify.error('Failed to delete loan')
+          error: () => { this.loading.set(false); this.notify.error('Failed to delete loan'); }
         });
       });
     });

@@ -498,12 +498,13 @@ export class AccountDetailComponent implements OnInit {
   deleteSchedule(schedule: CommissionSchedule): void {
     const confirmed = confirm('Delete this commission schedule? Trades will keep their current calculated fees.');
     if (confirmed) {
+      this.loading.set(true);
       this.accountService.deleteCommissionSchedule(this.account()!.id, schedule.id).subscribe({
         next: () => {
           this.notify.success('Schedule deleted');
           this.loadCommissionHistory(this.account()!.id);
         },
-        error: () => this.notify.error('Failed to delete schedule')
+        error: () => { this.loading.set(false); this.notify.error('Failed to delete schedule'); }
       });
     }
   }
@@ -529,9 +530,10 @@ export class AccountDetailComponent implements OnInit {
   deleteAccount(): void {
     const confirmed = confirm(`Delete "${this.account()!.accountName}"? This cannot be undone.`);
     if (confirmed) {
+      this.loading.set(true);
       this.accountService.delete(this.account()!.id).subscribe({
         next: () => { this.notify.success('Account deleted'); this.goBack(); },
-        error: () => this.notify.error('Failed to delete')
+        error: () => { this.loading.set(false); this.notify.error('Failed to delete'); }
       });
     }
   }

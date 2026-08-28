@@ -468,9 +468,10 @@ export class JournalComponent implements OnInit {
 
   deleteTrade(t: TradeEntry): void {
     if (!confirm('Delete this trade entry?')) return;
+    this.loading.set(true);
     this.tradingService.deleteTrade(t.id).subscribe({
       next: () => { this.notify.success('Trade deleted'); this.loadTrades(); },
-      error: () => this.notify.error('Failed to delete trade')
+      error: () => { this.loading.set(false); this.notify.error('Failed to delete trade'); }
     });
   }
 }

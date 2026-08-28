@@ -71,27 +71,31 @@ public class BloodWorkController : ControllerBase
             .FirstOrDefaultAsync(r => r.Id == id && r.UserId == UserId);
         if (report == null) return NotFound();
 
-        using var transaction = await _db.Database.BeginTransactionAsync();
+        var strategy = _db.Database.CreateExecutionStrategy();
         try
         {
-            report.ReportDate = updated.ReportDate;
-            report.LabName = updated.LabName;
-            report.Notes = updated.Notes;
-
-            _db.BloodWorkResults.RemoveRange(report.Results);
-            foreach (var result in updated.Results)
+            await strategy.ExecuteAsync(async () =>
             {
-                result.ReportId = id;
-                _db.BloodWorkResults.Add(result);
-            }
+                using var transaction = await _db.Database.BeginTransactionAsync();
 
-            await _db.SaveChangesAsync();
-            await transaction.CommitAsync();
+                report.ReportDate = updated.ReportDate;
+                report.LabName = updated.LabName;
+                report.Notes = updated.Notes;
+
+                _db.BloodWorkResults.RemoveRange(report.Results);
+                foreach (var result in updated.Results)
+                {
+                    result.ReportId = id;
+                    _db.BloodWorkResults.Add(result);
+                }
+
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+            });
             return Ok(report);
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync();
             return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
         }
     }

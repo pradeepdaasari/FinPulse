@@ -235,9 +235,10 @@ export class GoalsPageComponent implements OnInit {
   deleteGoal(goal: SavingsGoal): void {
     this.notify.confirmDeleteAsync(goal.name).subscribe(confirmed => {
       if (!confirmed) return;
+      this.loading.set(true);
       this.service.delete(goal.id).subscribe({
         next: () => { this.notify.success('Goal deleted'); this.loadData(); },
-        error: (err) => this.notify.error(err.error?.message || 'Failed to delete')
+        error: (err) => { this.loading.set(false); this.notify.error(err.error?.message || 'Failed to delete'); }
       });
     });
   }

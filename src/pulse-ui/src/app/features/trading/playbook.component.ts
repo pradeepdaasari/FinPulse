@@ -380,9 +380,10 @@ export class PlaybookComponent implements OnInit {
 
   deleteRule(rule: TradingRule): void {
     if (!confirm('Delete this rule?')) return;
+    this.loading.set(true);
     this.tradingService.deleteRule(rule.id).subscribe({
       next: () => { this.notify.success('Rule deleted'); this.loadRules(); },
-      error: () => this.notify.error('Failed to delete rule')
+      error: () => { this.loading.set(false); this.notify.error('Failed to delete rule'); }
     });
   }
 

@@ -56,6 +56,8 @@ export interface ExpenseFilter {
   categoryId?: number;
   transactionType?: number;
   fundingSourceId?: number;
+  fundingSourceType?: string;
+  allTime?: boolean;
   dateFrom?: string;
   dateTo?: string;
   minAmount?: number;

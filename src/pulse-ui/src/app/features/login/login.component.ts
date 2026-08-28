@@ -140,7 +140,8 @@ export class LoginComponent {
     const result = await this.authService.login(this.username, this.password);
     this.loading.set(false);
     if (result.success) {
-      this.router.navigate(['/dashboard']);
+      // Hard reload so DATE_PIPE_DEFAULT_OPTIONS re-initializes with the user's timezone
+      location.replace('/dashboard');
     } else {
       this.error.set(result.error || 'Login failed');
     }

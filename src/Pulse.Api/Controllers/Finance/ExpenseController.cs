@@ -29,9 +29,10 @@ public class ExpenseController : ControllerBase
         [FromQuery] int? year, [FromQuery] int? month,
         [FromQuery] string? search, [FromQuery] int? categoryId,
         [FromQuery] int? transactionType, [FromQuery] int? fundingSourceId,
+        [FromQuery] string? fundingSourceType,
         [FromQuery] DateTime? dateFrom, [FromQuery] DateTime? dateTo,
         [FromQuery] decimal? minAmount, [FromQuery] decimal? maxAmount,
-        [FromQuery] string? tag)
+        [FromQuery] string? tag, [FromQuery] bool allTime = false)
     {
         var query = _db.DailyExpenses
             .Include(e => e.Category!)
@@ -42,7 +43,7 @@ public class ExpenseController : ControllerBase
         {
             query = query.Where(e => e.Date >= dateFrom.Value && e.Date <= dateTo.Value);
         }
-        else
+        else if (!allTime)
         {
             var targetYear = year ?? DateTime.UtcNow.Year;
             var targetMonth = month ?? DateTime.UtcNow.Month;
@@ -62,6 +63,10 @@ public class ExpenseController : ControllerBase
 
         if (fundingSourceId.HasValue)
             query = query.Where(e => e.FundingSourceId == fundingSourceId.Value);
+
+        if (!string.IsNullOrWhiteSpace(fundingSourceType) &&
+            Enum.TryParse<FundingSourceType>(fundingSourceType, true, out var parsedFsType))
+            query = query.Where(e => e.FundingSourceType == parsedFsType);
 
         if (minAmount.HasValue)
             query = query.Where(e => e.Amount >= minAmount.Value);
@@ -459,38 +464,51 @@ public class ExpenseController : ControllerBase
     [HttpPost]
     public async Task<ActionResult> Create(DailyExpenseCreateDto dto)
     {
-        if (dto.FundingSourceType.HasValue && dto.FundingSourceId.HasValue)
+        switch (dto.TransactionType)
+        {
+            case TransactionType.Expense:
+                if (dto.FundingSourceId == null)
+                    return BadRequest(new { message = "Expense requires a payment source." });
+                break;
+            case TransactionType.Income:
+                if (dto.FundingSourceId == null)
+                    return BadRequest(new { message = "Income requires an account to receive into." });
+                if (dto.FundingSourceType == FundingSourceType.CreditCard)
+                    return BadRequest(new { message = "Income cannot be received into a credit card." });
+                break;
+            case TransactionType.Transfer:
+                if (dto.FundingSourceId == null)
+                    return BadRequest(new { message = "Transfer requires a source account." });
+                if (dto.ToFundingSourceId == null)
+                    return BadRequest(new { message = "Transfer requires a destination account." });
+                if (dto.FundingSourceType != FundingSourceType.BankAccount)
+                    return BadRequest(new { message = "Transfers are only between bank accounts." });
+                var destValid = await _db.BankAccounts.AnyAsync(a => a.Id == dto.ToFundingSourceId && a.UserId == UserId);
+                if (!destValid) return BadRequest(new { message = "Invalid destination account." });
+                break;
+            case TransactionType.Refund:
+                if (dto.FundingSourceId == null)
+                    return BadRequest(new { message = "Refund requires an account to refund into." });
+                break;
+            case TransactionType.CardPayment:
+                if (dto.FundingSourceId == null || dto.FundingSourceType != FundingSourceType.BankAccount)
+                    return BadRequest(new { message = "Card payment must come from a bank account." });
+                if (dto.ToFundingSourceId == null)
+                    return BadRequest(new { message = "Card payment requires a target credit card." });
+                var cardValid = await _db.CreditCards.AnyAsync(c => c.Id == dto.ToFundingSourceId && c.UserId == UserId);
+                if (!cardValid) return BadRequest(new { message = "Invalid target credit card." });
+                break;
+        }
+
+        if (dto.FundingSourceId.HasValue && dto.FundingSourceType.HasValue)
         {
             var valid = await ValidateFundingSource(dto.FundingSourceType.Value, dto.FundingSourceId.Value);
             if (!valid) return BadRequest(new { message = "Invalid funding source." });
         }
 
-        if (dto.TransactionType == TransactionType.Income && dto.FundingSourceType == FundingSourceType.CreditCard)
-            return BadRequest(new { message = "Income cannot be received into a credit card." });
-
-        if (dto.TransactionType == TransactionType.Transfer)
-        {
-            if (dto.FundingSourceId == null || dto.ToFundingSourceId == null)
-                return BadRequest(new { message = "Transfer requires both source and destination accounts." });
-            if (dto.FundingSourceType != FundingSourceType.BankAccount)
-                return BadRequest(new { message = "Transfers are only between bank accounts." });
-            var destValid = await _db.BankAccounts.AnyAsync(a => a.Id == dto.ToFundingSourceId && a.UserId == UserId);
-            if (!destValid) return BadRequest(new { message = "Invalid destination account." });
-        }
-
-        if (dto.TransactionType == TransactionType.CardPayment)
-        {
-            if (dto.FundingSourceType != FundingSourceType.BankAccount || dto.FundingSourceId == null)
-                return BadRequest(new { message = "Card payment must come from a bank account." });
-            if (dto.ToFundingSourceId == null)
-                return BadRequest(new { message = "Card payment requires a target credit card." });
-            var cardValid = await _db.CreditCards.AnyAsync(c => c.Id == dto.ToFundingSourceId && c.UserId == UserId);
-            if (!cardValid) return BadRequest(new { message = "Invalid target credit card." });
-        }
-
         var expense = new DailyExpense
         {
-            Date = dto.Date.Date + DateTime.UtcNow.TimeOfDay,
+            Date = dto.Date,
             CategoryId = dto.CategoryId,
             Amount = dto.Amount,
             Description = dto.Description,
@@ -504,20 +522,25 @@ public class ExpenseController : ControllerBase
             UserId = UserId
         };
 
-        using var transaction = await _db.Database.BeginTransactionAsync();
+        var strategy = _db.Database.CreateExecutionStrategy();
         try
         {
-            _db.DailyExpenses.Add(expense);
+            await strategy.ExecuteAsync(async () =>
+            {
+                using var transaction = await _db.Database.BeginTransactionAsync();
 
-            if (dto.TransactionType == TransactionType.Transfer)
-                await AdjustTransfer(dto.FundingSourceId!.Value, dto.ToFundingSourceId!.Value, dto.Amount);
-            else if (dto.TransactionType == TransactionType.CardPayment)
-                await AdjustCardPayment(dto.FundingSourceId!.Value, dto.ToFundingSourceId!.Value, dto.Amount);
-            else
-                await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
+                _db.DailyExpenses.Add(expense);
 
-            await _db.SaveChangesAsync();
-            await transaction.CommitAsync();
+                if (dto.TransactionType == TransactionType.Transfer)
+                    await AdjustTransfer(dto.FundingSourceId!.Value, dto.ToFundingSourceId!.Value, dto.Amount);
+                else if (dto.TransactionType == TransactionType.CardPayment)
+                    await AdjustCardPayment(dto.FundingSourceId!.Value, dto.ToFundingSourceId!.Value, dto.Amount);
+                else
+                    await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
+
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+            });
 
             var created = await _db.DailyExpenses
                 .Include(e => e.Category!).ThenInclude(c => c.Parent)
@@ -543,7 +566,6 @@ public class ExpenseController : ControllerBase
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync();
             return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
         }
     }
@@ -566,39 +588,43 @@ public class ExpenseController : ControllerBase
             }
         }
 
-        using var transaction = await _db.Database.BeginTransactionAsync();
+        var strategy = _db.Database.CreateExecutionStrategy();
         try
         {
-            foreach (var dto in splits)
+            await strategy.ExecuteAsync(async () =>
             {
-                var expense = new DailyExpense
-                {
-                    Date = dto.Date.Date + DateTime.UtcNow.TimeOfDay,
-                    CategoryId = dto.CategoryId,
-                    Amount = dto.Amount,
-                    Description = dto.Description,
-                    Merchant = dto.Merchant,
-                    TransactionType = dto.TransactionType,
-                    FundingSourceType = dto.FundingSourceType,
-                    FundingSourceId = dto.FundingSourceId,
-                    ToFundingSourceId = dto.ToFundingSourceId,
-                    SplitGroupId = groupId,
-                    Tag = dto.Tag,
-                    TagType = dto.TagType,
-                    UserId = UserId
-                };
-                _db.DailyExpenses.Add(expense);
-                await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
-                created.Add(expense.Id);
-            }
+                using var transaction = await _db.Database.BeginTransactionAsync();
 
-            await _db.SaveChangesAsync();
-            await transaction.CommitAsync();
+                foreach (var dto in splits)
+                {
+                    var expense = new DailyExpense
+                    {
+                        Date = dto.Date,
+                        CategoryId = dto.CategoryId,
+                        Amount = dto.Amount,
+                        Description = dto.Description,
+                        Merchant = dto.Merchant,
+                        TransactionType = dto.TransactionType,
+                        FundingSourceType = dto.FundingSourceType,
+                        FundingSourceId = dto.FundingSourceId,
+                        ToFundingSourceId = dto.ToFundingSourceId,
+                        SplitGroupId = groupId,
+                        Tag = dto.Tag,
+                        TagType = dto.TagType,
+                        UserId = UserId
+                    };
+                    _db.DailyExpenses.Add(expense);
+                    await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
+                    created.Add(expense.Id);
+                }
+
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+            });
             return Ok(new { splitGroupId = groupId, count = created.Count });
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync();
             return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
         }
     }
@@ -609,50 +635,72 @@ public class ExpenseController : ControllerBase
         var expense = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == id && e.UserId == UserId);
         if (expense is null) return NotFound();
 
+        switch (dto.TransactionType)
+        {
+            case TransactionType.Expense:
+                if (dto.FundingSourceId == null) return BadRequest(new { message = "Expense requires a payment source." });
+                break;
+            case TransactionType.Income:
+                if (dto.FundingSourceId == null) return BadRequest(new { message = "Income requires an account to receive into." });
+                if (dto.FundingSourceType == FundingSourceType.CreditCard) return BadRequest(new { message = "Income cannot be received into a credit card." });
+                break;
+            case TransactionType.Transfer:
+                if (dto.FundingSourceId == null) return BadRequest(new { message = "Transfer requires a source account." });
+                if (dto.ToFundingSourceId == null) return BadRequest(new { message = "Transfer requires a destination account." });
+                break;
+            case TransactionType.Refund:
+                if (dto.FundingSourceId == null) return BadRequest(new { message = "Refund requires an account to refund into." });
+                break;
+            case TransactionType.CardPayment:
+                if (dto.FundingSourceId == null || dto.FundingSourceType != FundingSourceType.BankAccount) return BadRequest(new { message = "Card payment must come from a bank account." });
+                if (dto.ToFundingSourceId == null) return BadRequest(new { message = "Card payment requires a target credit card." });
+                break;
+        }
+
         if (dto.FundingSourceType.HasValue && dto.FundingSourceId.HasValue)
         {
             var valid = await ValidateFundingSource(dto.FundingSourceType.Value, dto.FundingSourceId.Value);
             if (!valid) return BadRequest(new { message = "Invalid funding source." });
         }
 
-        if (dto.TransactionType == TransactionType.Income && dto.FundingSourceType == FundingSourceType.CreditCard)
-            return BadRequest(new { message = "Income cannot be received into a credit card." });
-
-        using var transaction = await _db.Database.BeginTransactionAsync();
+        var strategy = _db.Database.CreateExecutionStrategy();
         try
         {
-            // Reverse old balance adjustment
-            if (expense.TransactionType == TransactionType.Transfer && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
-                await ReverseTransfer(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
-            else if (expense.TransactionType == TransactionType.CardPayment && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
-                await ReverseCardPayment(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
-            else
-                await ReverseBalance(expense.TransactionType, expense.FundingSourceType, expense.FundingSourceId, expense.Amount);
+            await strategy.ExecuteAsync(async () =>
+            {
+                using var transaction = await _db.Database.BeginTransactionAsync();
 
-            expense.Date = dto.Date.Date == expense.Date.Date
-                ? expense.Date
-                : dto.Date.Date + DateTime.UtcNow.TimeOfDay;
-            expense.CategoryId = dto.CategoryId;
-            expense.Amount = dto.Amount;
-            expense.Description = dto.Description;
-            expense.Merchant = dto.Merchant;
-            expense.TransactionType = dto.TransactionType;
-            expense.FundingSourceType = dto.FundingSourceType;
-            expense.FundingSourceId = dto.FundingSourceId;
-            expense.ToFundingSourceId = dto.ToFundingSourceId;
-            expense.Tag = dto.Tag;
-            expense.TagType = dto.TagType;
+                // Reverse old balance adjustment
+                if (expense.TransactionType == TransactionType.Transfer && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
+                    await ReverseTransfer(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
+                else if (expense.TransactionType == TransactionType.CardPayment && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
+                    await ReverseCardPayment(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
+                else
+                    await ReverseBalance(expense.TransactionType, expense.FundingSourceType, expense.FundingSourceId, expense.Amount);
 
-            // Apply new balance adjustment
-            if (dto.TransactionType == TransactionType.Transfer && dto.FundingSourceId.HasValue && dto.ToFundingSourceId.HasValue)
-                await AdjustTransfer(dto.FundingSourceId.Value, dto.ToFundingSourceId.Value, dto.Amount);
-            else if (dto.TransactionType == TransactionType.CardPayment && dto.FundingSourceId.HasValue && dto.ToFundingSourceId.HasValue)
-                await AdjustCardPayment(dto.FundingSourceId.Value, dto.ToFundingSourceId.Value, dto.Amount);
-            else
-                await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
+                expense.Date = dto.Date;
+                expense.CategoryId = dto.CategoryId;
+                expense.Amount = dto.Amount;
+                expense.Description = dto.Description;
+                expense.Merchant = dto.Merchant;
+                expense.TransactionType = dto.TransactionType;
+                expense.FundingSourceType = dto.FundingSourceType;
+                expense.FundingSourceId = dto.FundingSourceId;
+                expense.ToFundingSourceId = dto.ToFundingSourceId;
+                expense.Tag = dto.Tag;
+                expense.TagType = dto.TagType;
 
-            await _db.SaveChangesAsync();
-            await transaction.CommitAsync();
+                // Apply new balance adjustment
+                if (dto.TransactionType == TransactionType.Transfer && dto.FundingSourceId.HasValue && dto.ToFundingSourceId.HasValue)
+                    await AdjustTransfer(dto.FundingSourceId.Value, dto.ToFundingSourceId.Value, dto.Amount);
+                else if (dto.TransactionType == TransactionType.CardPayment && dto.FundingSourceId.HasValue && dto.ToFundingSourceId.HasValue)
+                    await AdjustCardPayment(dto.FundingSourceId.Value, dto.ToFundingSourceId.Value, dto.Amount);
+                else
+                    await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
+
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+            });
 
             var updated = await _db.DailyExpenses
                 .Include(e => e.Category!).ThenInclude(c => c.Parent)
@@ -678,7 +726,6 @@ public class ExpenseController : ControllerBase
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync();
             return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
         }
     }
@@ -689,24 +736,28 @@ public class ExpenseController : ControllerBase
         var expense = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == id && e.UserId == UserId);
         if (expense is null) return NotFound();
 
-        using var transaction = await _db.Database.BeginTransactionAsync();
+        var strategy = _db.Database.CreateExecutionStrategy();
         try
         {
-            if (expense.TransactionType == TransactionType.Transfer && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
-                await ReverseTransfer(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
-            else if (expense.TransactionType == TransactionType.CardPayment && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
-                await ReverseCardPayment(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
-            else
-                await ReverseBalance(expense.TransactionType, expense.FundingSourceType, expense.FundingSourceId, expense.Amount);
+            await strategy.ExecuteAsync(async () =>
+            {
+                using var transaction = await _db.Database.BeginTransactionAsync();
 
-            _db.DailyExpenses.Remove(expense);
-            await _db.SaveChangesAsync();
-            await transaction.CommitAsync();
+                if (expense.TransactionType == TransactionType.Transfer && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
+                    await ReverseTransfer(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
+                else if (expense.TransactionType == TransactionType.CardPayment && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
+                    await ReverseCardPayment(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
+                else
+                    await ReverseBalance(expense.TransactionType, expense.FundingSourceType, expense.FundingSourceId, expense.Amount);
+
+                _db.DailyExpenses.Remove(expense);
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+            });
             return NoContent();
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync();
             return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
         }
     }

@@ -1,14 +1,17 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
+import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { forkJoin, of, catchError } from 'rxjs';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { DailyExpenseService } from '../../core/services/daily-expense.service';
 import { WorkoutLogService } from '../../core/services/workout-log.service';
+import { RecurringService } from '../../core/services/recurring.service';
 import { UpcomingPayment } from '../../core/models/dashboard.model';
 import { DailyExpense } from '../../core/models/daily-expense.model';
 import { WorkoutLog } from '../../core/models/workout-log.model';
+import { RecurringTransaction } from '../../core/models/recurring.model';
 
 @Component({
   selector: 'app-today-glance',
@@ -55,6 +58,16 @@ import { WorkoutLog } from '../../core/models/workout-log.model';
           </div>
         </div>
       </div>
+      @if (recurringDue().length > 0) {
+        <div class="due-banner" (click)="goToRecurring()">
+          <mat-icon class="due-icon">notifications_active</mat-icon>
+          <span class="due-text">
+            {{ recurringDue().length }} recurring bill{{ recurringDue().length > 1 ? 's' : '' }} due today &mdash;
+            {{ recurringDueTotal() | currency:'USD':'symbol':'1.0-0' }} total
+          </span>
+          <mat-icon class="due-arrow">chevron_right</mat-icon>
+        </div>
+      }
     }
   `,
   styles: [`
@@ -110,6 +123,22 @@ import { WorkoutLog } from '../../core/models/workout-log.model';
       font-weight: 500;
     }
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
+    .due-banner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      background: var(--color-stat-amber-bg);
+      border: 1px solid rgba(255, 149, 0, 0.25);
+      margin-bottom: var(--spacing-md);
+      cursor: pointer;
+      transition: filter var(--transition-fast);
+    }
+    .due-banner:hover { filter: brightness(0.96); }
+    .due-icon { color: var(--color-warning); font-size: 20px; width: 20px; height: 20px; flex-shrink: 0; }
+    .due-text { flex: 1; font-size: var(--text-sm); font-weight: 600; color: var(--color-warning); }
+    .due-arrow { color: var(--color-warning); font-size: 20px; width: 20px; height: 20px; }
     @media (max-width: 599px) {
       .glance-card {
         flex-direction: column;
@@ -131,6 +160,8 @@ export class TodayGlanceComponent implements OnInit {
   private dashboardService = inject(DashboardService);
   private expenseService = inject(DailyExpenseService);
   private workoutService = inject(WorkoutLogService);
+  private recurringService = inject(RecurringService);
+  private router = inject(Router);
 
   loading = signal(true);
   loaded = signal(false);
@@ -138,6 +169,10 @@ export class TodayGlanceComponent implements OnInit {
   paymentsTotalDue = signal<number>(0);
   todaySpending = signal<number>(0);
   workoutLabel = signal<string>('Rest day');
+  recurringDue = signal<RecurringTransaction[]>([]);
+  recurringDueTotal = signal<number>(0);
+
+  goToRecurring(): void { this.router.navigate(['/recurring']); }
 
   ngOnInit(): void {
     const today = new Date().toISOString().split('T')[0];
@@ -145,8 +180,9 @@ export class TodayGlanceComponent implements OnInit {
     forkJoin({
       summary: this.dashboardService.getSummary().pipe(catchError(() => of(null))),
       expenses: this.expenseService.getExpenses({ dateFrom: today, dateTo: today }).pipe(catchError(() => of(null))),
-      workout: this.workoutService.getToday().pipe(catchError(() => of(null)))
-    }).subscribe(({ summary, expenses, workout }) => {
+      workout: this.workoutService.getToday().pipe(catchError(() => of(null))),
+      recurring: this.recurringService.getAll().pipe(catchError(() => of([])))
+    }).subscribe(({ summary, expenses, workout, recurring }) => {
       // Payments due today
       if (summary && summary.upcomingPayments) {
         const todayPayments = summary.upcomingPayments.filter(p => {
@@ -173,6 +209,15 @@ export class TodayGlanceComponent implements OnInit {
         this.workoutLabel.set(workout.focusArea || 'Completed');
       } else {
         this.workoutLabel.set('Rest day');
+      }
+
+      // Recurring bills due today
+      if (recurring && recurring.length > 0) {
+        const tz = localStorage.getItem('pulse_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
+        const due = (recurring as RecurringTransaction[]).filter(r => r.isActive && r.nextRunDate.slice(0, 10) <= todayStr);
+        this.recurringDue.set(due);
+        this.recurringDueTotal.set(due.reduce((sum, r) => sum + r.amount, 0));
       }
 
       this.loaded.set(true);
