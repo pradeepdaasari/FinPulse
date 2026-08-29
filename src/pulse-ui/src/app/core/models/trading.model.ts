@@ -73,6 +73,7 @@ export interface TradeEntry {
   expirationDate?: string;
   entryPremium?: number;
   exitPremium?: number;
+  expiredWorthless?: boolean;
   bankAccountId?: number;
   totalFees?: number;
   netPnl?: number;

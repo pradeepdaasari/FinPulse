@@ -415,6 +415,30 @@ export class ReviewComponent implements OnInit {
       next: r => this.recentReviews.set(r.slice(0, 30)),
       error: () => this.recentReviews.set([])
     });
+    this.tradingService.getReviews(dateStr, dateStr).subscribe({
+      next: r => {
+        const review = r.length > 0 ? r[0] : null;
+        this.existingReview.set(review);
+        if (review) {
+          this.marketObservation = review.marketObservation ?? '';
+          this.lessonsLearned = review.lessonsLearned ?? '';
+          this.tomorrowFocus = review.improvementNote ?? '';
+          this.selectedCondition.set(review.marketCondition ?? null);
+          this.selectedGrade.set((review.grade as any) ?? null);
+          this.followedPlan.set(review.followedPlan ?? null);
+          this.followedRules.set(review.followedRules ?? null);
+        } else {
+          this.marketObservation = '';
+          this.lessonsLearned = '';
+          this.tomorrowFocus = '';
+          this.selectedCondition.set(null);
+          this.selectedGrade.set(null);
+          this.followedPlan.set(null);
+          this.followedRules.set(null);
+        }
+      },
+      error: () => this.existingReview.set(null)
+    });
   }
 
   prevDay(): void {
@@ -477,7 +501,7 @@ export class ReviewComponent implements OnInit {
       followedRules: false,
       totalTrades: 0,
       totalPnl: 0,
-      rulesViolated: []
+      rulesViolated: [],
     };
     const existing = this.existingReview();
     const obs$ = existing

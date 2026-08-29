@@ -155,33 +155,33 @@ export interface TradeEntryDialogData {
               <div class="row-2col">
                 <mat-form-field appearance="outline">
                   <mat-label>Short Strike</mat-label>
-                  <input matInput type="number" formControlName="strikePrice" step="1">
+                  <input matInput type="number" formControlName="strikePrice" step="1" (input)="calcPnl()">
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>Long Strike</mat-label>
-                  <input matInput type="number" formControlName="strikePrice2" step="1">
+                  <input matInput type="number" formControlName="strikePrice2" step="1" (input)="calcPnl()">
                 </mat-form-field>
               </div>
             } @else if (form.value.spreadType === 'IronCondor') {
               <div class="row-4col">
                 <mat-form-field appearance="outline">
                   <mat-label>SC</mat-label>
-                  <input matInput type="number" formControlName="strikePrice" step="1">
+                  <input matInput type="number" formControlName="strikePrice" step="1" (input)="calcPnl()">
                   <mat-hint>Short Call</mat-hint>
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>LC</mat-label>
-                  <input matInput type="number" formControlName="strikePrice2" step="1">
+                  <input matInput type="number" formControlName="strikePrice2" step="1" (input)="calcPnl()">
                   <mat-hint>Long Call</mat-hint>
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>SP</mat-label>
-                  <input matInput type="number" formControlName="strikePrice3" step="1">
+                  <input matInput type="number" formControlName="strikePrice3" step="1" (input)="calcPnl()">
                   <mat-hint>Short Put</mat-hint>
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>LP</mat-label>
-                  <input matInput type="number" formControlName="strikePrice4" step="1">
+                  <input matInput type="number" formControlName="strikePrice4" step="1" (input)="calcPnl()">
                   <mat-hint>Long Put</mat-hint>
                 </mat-form-field>
               </div>
@@ -211,10 +211,13 @@ export interface TradeEntryDialogData {
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Exit Premium</mat-label>
-                <input matInput type="number" formControlName="exitPremium" step="0.01" (input)="calcPnl()">
+                <input matInput type="number" formControlName="exitPremium" step="0.01" (input)="calcPnl()" [readonly]="!!form.value.expiredWorthless">
                 <span matTextPrefix>$</span>
               </mat-form-field>
             </div>
+            <mat-checkbox formControlName="expiredWorthless" color="primary" class="expired-check" (change)="onExpiredWorthlessChange($event.checked)">
+              Expired Worthless <span class="expired-hint">(no exit brokerage — option expired, not closed)</span>
+            </mat-checkbox>
           </div>
         } @else {
           <!-- Non-options: standard price fields -->
@@ -282,6 +285,12 @@ export interface TradeEntryDialogData {
                     <span [class.positive]="netPnl() >= 0" [class.negative]="netPnl() < 0">
                       {{ netPnl() >= 0 ? '+' : '' }}{{ netPnl() | currency }}
                     </span>
+                  </div>
+                }
+                @if (maxRisk() != null) {
+                  <div class="fee-line max-risk-line">
+                    <span>Max Risk</span>
+                    <span class="negative">−{{ maxRisk()! | currency }}</span>
                   </div>
                 }
               </div>
@@ -403,6 +412,9 @@ export interface TradeEntryDialogData {
     ::ng-deep .options-section .mat-mdc-form-field-subscript-wrapper { display: block; }
 
     .checklist-check { margin: 6px 0; }
+    .expired-check { margin: 4px 0 10px; display: block; }
+    .expired-hint { font-size: 0.72rem; color: var(--color-text-muted); margin-left: 4px; }
+    .max-risk-line { border-top: 1px dashed var(--color-border, #e0e0e0); padding-top: 4px; margin-top: 2px; }
 
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
     mat-dialog-content { position: relative; }
@@ -433,6 +445,7 @@ export class TradeEntryDialogComponent implements OnInit {
   estimatedFees = signal(0);
   netPnl = signal(0);
   balanceAfter = signal(0);
+  maxRisk = signal<number | null>(null);
 
   private getTimeStr(dateStr?: string): string {
     const d = dateStr ? new Date(dateStr) : new Date();
@@ -455,6 +468,7 @@ export class TradeEntryDialogComponent implements OnInit {
     expirationDate: [this.data?.trade?.expirationDate ? new Date(this.data.trade.expirationDate) : null],
     entryPremium: [this.data?.trade?.entryPremium ?? null as number | null],
     exitPremium: [this.data?.trade?.exitPremium ?? null as number | null],
+    expiredWorthless: [this.data?.trade?.expiredWorthless ?? false],
     entryPrice: [this.data?.trade?.entryPrice ?? null as number | null],
     exitPrice: [this.data?.trade?.exitPrice ?? null as number | null],
     quantity: [this.data?.trade?.quantity ?? 1, [Validators.required, Validators.min(1)]],
@@ -478,16 +492,39 @@ export class TradeEntryDialogComponent implements OnInit {
     });
   }
 
+  onExpiredWorthlessChange(checked: boolean): void {
+    if (checked) {
+      this.form.patchValue({ exitPremium: 0 }, { emitEvent: false });
+    } else {
+      this.form.patchValue({ exitPremium: null }, { emitEvent: false });
+    }
+    this.calcPnl();
+  }
+
   calcPnl(): void {
     const v = this.form.value;
     if (v.assetType === 'Options' && v.entryPremium != null && v.exitPremium != null && v.quantity && v.multiplier) {
       const dir = v.direction === 'short' ? 1 : -1;
       const pnl = dir * (v.entryPremium - v.exitPremium) * v.multiplier * v.quantity;
       this.form.patchValue({ pnl: Math.round(pnl * 100) / 100 }, { emitEvent: false });
+      // max risk for defined-risk spreads: (spread_width - net_premium) * qty * multiplier
+      if (v.spreadType === 'Vertical' && v.strikePrice != null && v.strikePrice2 != null) {
+        const width = Math.abs(v.strikePrice - v.strikePrice2);
+        const risk = (width - v.entryPremium) * v.quantity * v.multiplier;
+        this.maxRisk.set(Math.round(risk * 100) / 100);
+      } else if (v.spreadType === 'IronCondor' && v.strikePrice != null && v.strikePrice2 != null) {
+        const callWidth = Math.abs(v.strikePrice3 != null && v.strikePrice4 != null ? v.strikePrice4 - v.strikePrice3 : 0);
+        const putWidth = Math.abs(v.strikePrice2 - v.strikePrice);
+        const maxWidth = Math.max(callWidth, putWidth);
+        this.maxRisk.set(Math.round((maxWidth - v.entryPremium) * v.quantity * v.multiplier * 100) / 100);
+      } else {
+        this.maxRisk.set(null);
+      }
     } else if (v.assetType !== 'Options' && v.entryPrice != null && v.exitPrice != null && v.quantity && v.multiplier) {
       const dir = v.direction === 'long' ? 1 : -1;
       const pnl = dir * (v.exitPrice - v.entryPrice) * v.multiplier * v.quantity;
       this.form.patchValue({ pnl: Math.round(pnl * 100) / 100 }, { emitEvent: false });
+      this.maxRisk.set(null);
     }
     this.updateFeeEstimate();
   }
@@ -508,7 +545,7 @@ export class TradeEntryDialogComponent implements OnInit {
       ? (acct.futuresRegFeePerContract ?? 0)
       : (acct.optionsRegFeePerContract ?? 0);
     const legs = v.assetType === 'Options' ? this.getLegsForSpread(v.spreadType) : 1;
-    const fees = (commission + regFee) * v.quantity * legs * 2;
+    const fees = (commission + regFee) * v.quantity * legs * (v.expiredWorthless ? 1 : 2);
     const net = (v.pnl ?? 0) - fees;
     this.estimatedFees.set(Math.round(fees * 100) / 100);
     this.netPnl.set(Math.round(net * 100) / 100);
@@ -554,6 +591,7 @@ export class TradeEntryDialogComponent implements OnInit {
       expirationDate: val.expirationDate instanceof Date ? val.expirationDate.toISOString().split('T')[0] : val.expirationDate ?? undefined,
       entryPremium: val.entryPremium ?? undefined,
       exitPremium: val.exitPremium ?? undefined,
+      expiredWorthless: val.expiredWorthless ?? false,
       bankAccountId: val.bankAccountId ?? undefined
     };
 

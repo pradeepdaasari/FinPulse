@@ -186,7 +186,7 @@ public class TradingController : ControllerBase
                 t.IsRevengeTrading, t.EmotionAtEntry, t.CreatedAt,
                 t.AssetType, t.OptionType, t.SpreadType,
                 t.StrikePrice, t.StrikePrice2, t.StrikePrice3, t.StrikePrice4,
-                t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.BankAccountId,
+                t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.BankAccountId,
                 t.TotalFees, t.NetPnl
             })
             .ToListAsync();
@@ -208,7 +208,7 @@ public class TradingController : ControllerBase
                 t.Pnl, t.ChecklistCompleted, t.EntryTime, t.ExitTime,
                 t.AssetType, t.OptionType, t.SpreadType,
                 t.StrikePrice, t.StrikePrice2, t.StrikePrice3, t.StrikePrice4,
-                t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.BankAccountId,
+                t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.BankAccountId,
                 t.TotalFees, t.NetPnl, t.CreatedAt
             })
             .Take(20)
@@ -221,7 +221,7 @@ public class TradingController : ControllerBase
     {
         try
         {
-            var fees = await CalculateFees(input.BankAccountId, input.AssetType, input.Quantity, input.SpreadType, input.Date);
+            var fees = await CalculateFees(input.BankAccountId, input.AssetType, input.Quantity, input.SpreadType, input.Date, input.ExpiredWorthless);
 
             var trade = new TradeEntry
             {
@@ -253,6 +253,7 @@ public class TradingController : ControllerBase
                 ExpirationDate = input.ExpirationDate,
                 EntryPremium = input.EntryPremium,
                 ExitPremium = input.ExitPremium,
+                ExpiredWorthless = input.ExpiredWorthless,
                 BankAccountId = input.BankAccountId,
                 ChecklistResponses = (input.ChecklistResponses ?? new()).Select(r => new ChecklistResponse
                 {
@@ -286,7 +287,7 @@ public class TradingController : ControllerBase
 
         try
         {
-            var fees = await CalculateFees(input.BankAccountId, input.AssetType, input.Quantity, input.SpreadType, input.Date);
+            var fees = await CalculateFees(input.BankAccountId, input.AssetType, input.Quantity, input.SpreadType, input.Date, input.ExpiredWorthless);
 
             trade.Date = input.Date;
             trade.SetupId = input.SetupId;
@@ -315,6 +316,7 @@ public class TradingController : ControllerBase
             trade.ExpirationDate = input.ExpirationDate;
             trade.EntryPremium = input.EntryPremium;
             trade.ExitPremium = input.ExitPremium;
+            trade.ExpiredWorthless = input.ExpiredWorthless;
             trade.BankAccountId = input.BankAccountId;
 
             _db.ChecklistResponses.RemoveRange(trade.ChecklistResponses);
@@ -702,7 +704,7 @@ public class TradingController : ControllerBase
         return (decimal)Math.Round(grades.Average(g => g switch { "A" => 4, "B" => 3, "C" => 2, "D" => 1, _ => 0 }), 1);
     }
 
-    private async Task<decimal> CalculateFees(int? bankAccountId, string assetType, decimal quantity, string? spreadType = null, DateTime? tradeDate = null)
+    private async Task<decimal> CalculateFees(int? bankAccountId, string assetType, decimal quantity, string? spreadType = null, DateTime? tradeDate = null, bool expiredWorthless = false)
     {
         if (!bankAccountId.HasValue) return 0;
 
@@ -741,7 +743,7 @@ public class TradingController : ControllerBase
 
         var legs = assetType == "Options" ? GetLegsForSpread(spreadType) : 1;
 
-        return (commission + regFee) * quantity * legs * 2;
+        return (commission + regFee) * quantity * legs * (expiredWorthless ? 1 : 2);
     }
 
     private static int GetLegsForSpread(string? spreadType) => spreadType switch
@@ -925,6 +927,7 @@ public class TradeEntryCreateDto
     public DateTime? ExpirationDate { get; set; }
     public decimal? EntryPremium { get; set; }
     public decimal? ExitPremium { get; set; }
+    public bool ExpiredWorthless { get; set; }
     public int? BankAccountId { get; set; }
     public decimal? TotalFees { get; set; }
     public decimal? NetPnl { get; set; }

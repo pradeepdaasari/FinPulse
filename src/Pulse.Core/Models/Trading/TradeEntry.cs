@@ -43,6 +43,7 @@ public class TradeEntry
     public DateTime? ExpirationDate { get; set; }
     public decimal? EntryPremium { get; set; }
     public decimal? ExitPremium { get; set; }
+    public bool ExpiredWorthless { get; set; }
 
     // Fees & net P&L
     public decimal? TotalFees { get; set; }
