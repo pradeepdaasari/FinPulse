@@ -115,12 +115,16 @@ export class TradingService {
     return this.http.get<DailyReview>(`${this.baseUrl}/reviews/today`);
   }
 
+  private serializeReview(review: Partial<DailyReview>): any {
+    return { ...review, rulesViolated: JSON.stringify(review.rulesViolated ?? []) };
+  }
+
   createReview(review: Partial<DailyReview>): Observable<DailyReview> {
-    return this.http.post<DailyReview>(`${this.baseUrl}/reviews`, review);
+    return this.http.post<DailyReview>(`${this.baseUrl}/reviews`, this.serializeReview(review));
   }
 
   updateReview(id: number, review: Partial<DailyReview>): Observable<DailyReview> {
-    return this.http.put<DailyReview>(`${this.baseUrl}/reviews/${id}`, review);
+    return this.http.put<DailyReview>(`${this.baseUrl}/reviews/${id}`, this.serializeReview(review));
   }
 
   // --- Limits ---
