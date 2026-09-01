@@ -27,7 +27,7 @@ import { NotificationService } from '../../core/services/notification.service';
             @if (!paidSet().has(payment.debtId)) {
               <button mat-icon-button class="pay-btn" (click)="markAsPaid(payment)"
                       matTooltip="Record payment" [disabled]="paying()">
-                <mat-icon>check_circle_outline</mat-icon>
+                <mat-icon>payments</mat-icon>
               </button>
             } @else {
               <span class="paid-badge">

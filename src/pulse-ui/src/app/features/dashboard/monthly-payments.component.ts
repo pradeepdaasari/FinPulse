@@ -151,7 +151,7 @@ interface MonthlyPayment {
                       <mat-icon class="min-paid-check" matTooltip="Minimum paid">check_circle_outline</mat-icon>
                     }
                     <button mat-icon-button color="primary" (click)="recordPayment(p)" aria-label="Record Payment">
-                      <mat-icon>paid</mat-icon>
+                      <mat-icon>payments</mat-icon>
                     </button>
                   </div>
                 </td>
@@ -373,10 +373,9 @@ export class MonthlyPaymentsComponent implements OnInit {
     this.profileService.getProfile().subscribe({
       next: (profile) => {
         if (profile.nextPayDate) {
-          const nextPay = new Date(profile.nextPayDate);
-          const day = nextPay.getDate();
-          this.paycheckDay.set(day);
-          this.calculatePaycheckInfo(day);
+          const anchor = new Date(profile.nextPayDate);
+          this.paycheckDay.set(anchor.getDate());
+          this.calculatePaycheckInfo(anchor, profile.payFrequency);
         }
       },
       error: () => {}
@@ -495,20 +494,36 @@ export class MonthlyPaymentsComponent implements OnInit {
     return sumCurrency(matched);
   }
 
-  private calculatePaycheckInfo(day: number): void {
+  private calculatePaycheckInfo(anchor: Date, frequency: string): void {
     const now = new Date();
-    const today = now.getDate();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     let nextPaycheckDate: Date;
-    if (day > today) {
-      nextPaycheckDate = new Date(currentYear, currentMonth, day);
+
+    if (frequency === 'Biweekly' || frequency === 'Weekly') {
+      const intervalDays = frequency === 'Biweekly' ? 14 : 7;
+      nextPaycheckDate = new Date(anchor);
+      if (nextPaycheckDate > today) {
+        while (nextPaycheckDate.getTime() - intervalDays * 86400000 > today.getTime()) {
+          nextPaycheckDate = new Date(nextPaycheckDate.getTime() - intervalDays * 86400000);
+        }
+      } else {
+        while (nextPaycheckDate <= today) {
+          nextPaycheckDate = new Date(nextPaycheckDate.getTime() + intervalDays * 86400000);
+        }
+      }
     } else {
-      nextPaycheckDate = new Date(currentYear, currentMonth + 1, day);
+      const day = anchor.getDate();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      if (day > now.getDate()) {
+        nextPaycheckDate = new Date(currentYear, currentMonth, day);
+      } else {
+        nextPaycheckDate = new Date(currentYear, currentMonth + 1, day);
+      }
     }
 
-    const diffTime = nextPaycheckDate.getTime() - now.getTime();
+    const diffTime = nextPaycheckDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     this.daysUntilPaycheck.set(diffDays);

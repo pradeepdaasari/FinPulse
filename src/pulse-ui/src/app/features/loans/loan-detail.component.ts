@@ -231,7 +231,7 @@ export class LoanDetailComponent implements OnInit {
     import('./edit-loan-dialog.component').then(m => {
       const dialogRef = this.dialog.open(m.EditLoanDialogComponent, {
         width: '500px',
-        data: { loan: this.loan() }
+        data: this.loan()
       });
       dialogRef.afterClosed().subscribe(result => {
         if (result) this.loadLoan();

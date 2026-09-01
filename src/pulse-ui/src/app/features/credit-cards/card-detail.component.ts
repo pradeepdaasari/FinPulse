@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
+import { forkJoin } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -18,6 +19,16 @@ import { DailyExpense } from '../../core/models/daily-expense.model';
 import { PayoffEntry } from '../../core/models/dashboard.model';
 import { PaymentHistory } from '../../core/models/payment-history.model';
 import { sumCurrency } from '../../core/utils/currency';
+
+interface CardTransaction {
+  id: string | number;
+  date: string;
+  description: string;
+  merchant: string | null;
+  categoryName: string | null;
+  transactionType: string;
+  amount: number;
+}
 
 @Component({
   selector: 'app-card-detail',
@@ -113,6 +124,9 @@ import { sumCurrency } from '../../core/utils/currency';
         <mat-card class="txn-card">
           <div class="txn-summary">
             <span class="txn-total-charge">Charges: <strong>-{{ totalCharges() | currency }}</strong></span>
+            @if (totalPayments() > 0) {
+              <span class="txn-total-payment">Payments: <strong>+{{ totalPayments() | currency }}</strong></span>
+            }
             <span class="txn-count">{{ transactions().length }} transaction{{ transactions().length !== 1 ? 's' : '' }}</span>
           </div>
           <!-- Desktop table -->
@@ -139,18 +153,20 @@ import { sumCurrency } from '../../core/utils/currency';
                 <th mat-header-cell *matHeaderCellDef>Type</th>
                 <td mat-cell *matCellDef="let t">
                   <span class="type-badge"
-                    [class.type-expense]="t.transactionType === 'Expense' || !t.transactionType"
-                    [class.type-refund]="t.transactionType === 'Refund'">
-                    {{ t.transactionType || 'Expense' }}
+                    [class.type-expense]="t.transactionType === 'Expense'"
+                    [class.type-refund]="t.transactionType === 'Refund'"
+                    [class.type-payment]="t.transactionType === 'Payment'">
+                    {{ t.transactionType }}
                   </span>
                 </td>
               </ng-container>
               <ng-container matColumnDef="amount">
                 <th mat-header-cell *matHeaderCellDef>Amount</th>
                 <td mat-cell *matCellDef="let t"
-                  [class.txn-charge]="t.transactionType === 'Expense' || !t.transactionType"
-                  [class.txn-refund]="t.transactionType === 'Refund'">
-                  @if (t.transactionType === 'Refund') { +{{ t.amount | currency }} }
+                  [class.txn-charge]="t.transactionType === 'Expense'"
+                  [class.txn-refund]="t.transactionType === 'Refund'"
+                  [class.txn-payment]="t.transactionType === 'Payment'">
+                  @if (t.transactionType === 'Refund' || t.transactionType === 'Payment') { +{{ t.amount | currency }} }
                   @else { -{{ t.amount | currency }} }
                 </td>
               </ng-container>
@@ -163,14 +179,14 @@ import { sumCurrency } from '../../core/utils/currency';
             @for (t of transactions(); track t.id) {
               <div class="txn-row">
                 <div class="txn-row-left">
-                  <div class="txn-dot" [class.dot-refund]="t.transactionType === 'Refund'"></div>
+                  <div class="txn-dot" [class.dot-refund]="t.transactionType === 'Refund'" [class.dot-payment]="t.transactionType === 'Payment'"></div>
                   <div>
                     <div class="txn-name">{{ t.description }}</div>
-                    <div class="txn-meta">{{ t.date | date:'MMM d' }}{{ t.categoryName ? ' · ' + t.categoryName : '' }}</div>
+                    <div class="txn-meta">{{ t.date | date:'MMM d' }}{{ t.categoryName ? ' · ' + t.categoryName : '' }}{{ t.transactionType === 'Payment' ? ' · Payment' : '' }}</div>
                   </div>
                 </div>
-                <span [class.txn-charge]="t.transactionType !== 'Refund'" [class.txn-refund]="t.transactionType === 'Refund'">
-                  @if (t.transactionType === 'Refund') { +{{ t.amount | currency }} } @else { -{{ t.amount | currency }} }
+                <span [class.txn-charge]="t.transactionType === 'Expense'" [class.txn-refund]="t.transactionType === 'Refund'" [class.txn-payment]="t.transactionType === 'Payment'">
+                  @if (t.transactionType === 'Refund' || t.transactionType === 'Payment') { +{{ t.amount | currency }} } @else { -{{ t.amount | currency }} }
                 </span>
               </div>
             }
@@ -330,6 +346,10 @@ import { sumCurrency } from '../../core/utils/currency';
     .type-badge { font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-full); }
     .type-expense { background: #fce4ec; color: #c62828; }
     .type-refund { background: #e8f5e9; color: #2e7d32; }
+    .type-payment { background: #e3f2fd; color: #1565c0; }
+    .txn-payment { font-weight: 700; color: #1565c0; }
+    .txn-total-payment strong { color: var(--color-success); }
+    .dot-payment { background: #1565c0 !important; }
     .empty-txn { display: flex; align-items: center; gap: 10px; padding: 24px 0; color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: var(--spacing-lg); }
     .empty-txn mat-icon { font-size: 22px; width: 22px; height: 22px; }
     .desktop-only { display: block; }
@@ -366,22 +386,50 @@ export class CardDetailComponent implements OnInit {
   loading = signal(true);
   txnMonth = signal<string | null>(null); // 'YYYY-MM' or null for all
 
+  allCombined = computed(() => {
+    const expenses: CardTransaction[] = this.allTransactions().map(t => ({
+      id: t.id,
+      date: t.date,
+      description: t.description,
+      merchant: t.merchant,
+      categoryName: t.categoryName,
+      transactionType: t.transactionType === 'CardPayment' ? 'Payment' : (t.transactionType || 'Expense'),
+      amount: t.amount
+    }));
+    const payments: CardTransaction[] = this.paymentHistory().map(p => ({
+      id: `pay-${p.id}`,
+      date: typeof p.paymentDate === 'string' ? p.paymentDate.slice(0, 10) : new Date(p.paymentDate).toISOString().slice(0, 10),
+      description: p.notes || 'Card Payment',
+      merchant: null,
+      categoryName: null,
+      transactionType: 'Payment',
+      amount: p.amountPaid
+    }));
+    return [...expenses, ...payments].sort((a, b) => b.date.localeCompare(a.date));
+  });
+
   transactions = computed(() => {
     const month = this.txnMonth();
-    const all = this.allTransactions();
+    const all = this.allCombined();
     if (!month) return all;
     return all.filter(t => t.date.slice(0, 7) === month);
   });
 
   totalCharges = computed(() =>
     this.transactions()
-      .filter(t => t.transactionType !== 'Refund')
+      .filter(t => t.transactionType === 'Expense')
+      .reduce((s, t) => s + t.amount, 0)
+  );
+
+  totalPayments = computed(() =>
+    this.transactions()
+      .filter(t => t.transactionType === 'Payment')
       .reduce((s, t) => s + t.amount, 0)
   );
 
   availableMonths = computed(() => {
     const seen = new Set<string>();
-    return this.allTransactions()
+    return this.allCombined()
       .map(t => t.date.slice(0, 7))
       .filter(m => { if (seen.has(m)) return false; seen.add(m); return true; })
       .sort((a, b) => b.localeCompare(a))
@@ -429,11 +477,15 @@ export class CardDetailComponent implements OnInit {
         this.totalPaid.set(sumCurrency(payments.map(p => p.amountPaid)));
       }
     });
-    this.expenseService.getExpenses({ fundingSourceId: numId, fundingSourceType: 'CreditCard', allTime: true }).subscribe({
-      next: (txns) => {
-        const sorted = [...txns].sort((a, b) => b.date.localeCompare(a.date));
+    forkJoin({
+      purchases: this.expenseService.getExpenses({ fundingSourceId: numId, fundingSourceType: 'CreditCard', allTime: true }),
+      cardPayments: this.expenseService.getExpenses({ toFundingSourceId: numId, allTime: true })
+    }).subscribe({
+      next: ({ purchases, cardPayments }) => {
+        const seenIds = new Set(purchases.map(t => t.id));
+        const merged = [...purchases, ...cardPayments.filter(t => !seenIds.has(t.id))];
+        const sorted = merged.sort((a, b) => b.date.localeCompare(a.date));
         this.allTransactions.set(sorted);
-        // default to current month if it has transactions
         const tz = localStorage.getItem('pulse_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
         const curMonth = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit' }).format(new Date()).slice(0, 7);
         if (sorted.some(t => t.date.slice(0, 7) === curMonth)) {
@@ -467,7 +519,7 @@ export class CardDetailComponent implements OnInit {
     import('./update-balance-dialog.component').then(m => {
       const dialogRef = this.dialog.open(m.UpdateBalanceDialogComponent, {
         width: '440px',
-        data: { card: this.card() }
+        data: this.card()
       });
       dialogRef.afterClosed().subscribe(result => {
         if (result) this.loadCard();

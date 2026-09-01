@@ -114,7 +114,14 @@ public class FinancialCalculationService : IFinancialCalculationService
 
         decimal periodicRate = aprPercent / 100m / periodsPerYear;
 
-        for (int period = 1; period <= durationMonths && balance > 0; period++)
+        int totalPeriods = frequency switch
+        {
+            PaymentFrequency.Biweekly => (int)Math.Ceiling(durationMonths * 26.0 / 12.0),
+            PaymentFrequency.Weekly => (int)Math.Ceiling(durationMonths * 52.0 / 12.0),
+            _ => durationMonths
+        };
+
+        for (int period = 1; period <= totalPeriods && balance > 0; period++)
         {
             decimal interest = Math.Round(balance * periodicRate, 2);
             decimal payment = Math.Min(paymentAmount, balance + interest);
