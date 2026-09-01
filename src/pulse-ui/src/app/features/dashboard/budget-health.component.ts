@@ -137,10 +137,26 @@ export class BudgetHealthComponent implements OnInit {
     this.profileService.getProfile().subscribe({
       next: (profile) => {
         if (profile?.nextPayDate) {
-          const next = new Date(profile.nextPayDate);
+          const anchor = new Date(profile.nextPayDate);
           const today = new Date();
           today.setHours(0, 0, 0, 0);
-          next.setHours(0, 0, 0, 0);
+          anchor.setHours(0, 0, 0, 0);
+
+          let next = new Date(anchor);
+          const freq = profile.payFrequency;
+          if (freq === 'Biweekly' || freq === 'Weekly') {
+            const interval = freq === 'Biweekly' ? 14 : 7;
+            if (next > today) {
+              while (next.getTime() - interval * 86400000 > today.getTime()) {
+                next = new Date(next.getTime() - interval * 86400000);
+              }
+            } else {
+              while (next <= today) {
+                next = new Date(next.getTime() + interval * 86400000);
+              }
+            }
+          }
+
           const diff = Math.ceil((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
           this.daysUntilPay.set(diff >= 0 ? diff : null);
         }

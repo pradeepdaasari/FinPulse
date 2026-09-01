@@ -447,6 +447,36 @@ const ICON_OPTIONS = [
       .stat-card mat-icon { font-size: 20px; width: 36px; height: 36px; min-width: 36px; border-radius: 10px; }
       .stat-value { font-size: 1rem; }
       .icon-grid { grid-template-columns: repeat(6, 1fr); }
+
+      .child-count { display: none; }
+
+      .child-row {
+        flex-wrap: wrap;
+        padding: 8px 10px;
+        gap: 6px;
+      }
+      .child-name { min-width: 0; font-size: 0.875rem; }
+      .child-chip { font-size: 0.68rem !important; }
+
+      .panel-actions { flex-wrap: wrap; gap: 6px; }
+
+      .inline-form {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+      .inline-form mat-form-field { min-width: 0; width: 100%; }
+      .inline-form .type-toggle { align-self: flex-start; }
+      .inline-form > button, .inline-form > mat-slide-toggle {
+        align-self: flex-start;
+      }
+
+      .cat-icon-badge.parent-badge { width: 30px; height: 30px; margin-right: 8px; }
+      .parent-badge mat-icon { font-size: 18px; width: 18px; height: 18px; }
+      .cat-icon-badge.child-badge { width: 26px; height: 26px; margin-right: 6px; }
+      .child-badge mat-icon { font-size: 14px; width: 14px; height: 14px; }
+
+      .inline-edit { min-width: 120px; font-size: 0.875rem; padding: 5px 8px; }
     }
   `]
 })

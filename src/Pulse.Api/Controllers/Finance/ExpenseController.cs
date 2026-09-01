@@ -29,7 +29,7 @@ public class ExpenseController : ControllerBase
         [FromQuery] int? year, [FromQuery] int? month,
         [FromQuery] string? search, [FromQuery] int? categoryId,
         [FromQuery] int? transactionType, [FromQuery] int? fundingSourceId,
-        [FromQuery] string? fundingSourceType,
+        [FromQuery] string? fundingSourceType, [FromQuery] int? toFundingSourceId,
         [FromQuery] DateTime? dateFrom, [FromQuery] DateTime? dateTo,
         [FromQuery] decimal? minAmount, [FromQuery] decimal? maxAmount,
         [FromQuery] string? tag, [FromQuery] bool allTime = false)
@@ -67,6 +67,9 @@ public class ExpenseController : ControllerBase
         if (!string.IsNullOrWhiteSpace(fundingSourceType) &&
             Enum.TryParse<FundingSourceType>(fundingSourceType, true, out var parsedFsType))
             query = query.Where(e => e.FundingSourceType == parsedFsType);
+
+        if (toFundingSourceId.HasValue)
+            query = query.Where(e => e.ToFundingSourceId == toFundingSourceId.Value);
 
         if (minAmount.HasValue)
             query = query.Where(e => e.Amount >= minAmount.Value);
