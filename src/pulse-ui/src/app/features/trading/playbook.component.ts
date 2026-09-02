@@ -97,7 +97,7 @@ interface WisdomItem {
               @for (rule of rulesByCategory(cat); track rule.id) {
                 <div class="rule-item">
                   <mat-icon class="rule-check">rule</mat-icon>
-                  <span class="rule-text">{{ rule.text }}</span>
+                  <span class="rule-text" [innerHTML]="rule.text"></span>
                   <div class="rule-actions">
                     <button mat-icon-button (click)="editRule(rule)"><mat-icon>edit</mat-icon></button>
                     <button mat-icon-button color="warn" (click)="deleteRule(rule)"><mat-icon>delete</mat-icon></button>
@@ -162,7 +162,7 @@ interface WisdomItem {
         @for (w of filteredWisdom(); track w.text) {
           <div class="wisdom-card">
             <mat-icon class="wisdom-quote-icon">format_quote</mat-icon>
-            <p class="wisdom-text">{{ w.text }}</p>
+            <p class="wisdom-text" [innerHTML]="w.text"></p>
             <div class="wisdom-footer">
               @if (w.author) {
                 <span class="wisdom-author">— {{ w.author }}</span>

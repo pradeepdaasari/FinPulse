@@ -14,9 +14,9 @@ public class BudgetPlanService : IBudgetPlanService
         var fixedExpenses = expenses.Where(e => e.IsFixed).ToList();
         var variableExpenses = expenses.Where(e => !e.IsFixed).ToList();
 
-        // Determine which recurring transactions fall in this month
+        // All active recurring transactions are part of the budget regardless of next run date
         var recurringInMonth = recurring
-            .Where(r => r.IsActive && WillRunInMonth(r, year, month))
+            .Where(r => r.IsActive)
             .ToList();
 
         var breakdowns = payDates.Select(d => new PaycheckBreakdownDto
@@ -158,19 +158,19 @@ public class BudgetPlanService : IBudgetPlanService
             });
         }
 
-        // Add recurring to category breakdown
-        foreach (var rec in recurringInMonth)
-        {
-            byCategory.Add(new CategorySummaryDto
+        // Add recurring to category breakdown, grouped by category
+        var recurringByCategory = recurringInMonth
+            .GroupBy(r => r.CategoryId)
+            .Select(g => new CategorySummaryDto
             {
-                CategoryId = rec.CategoryId,
-                CategoryName = rec.Category?.Name ?? "Unknown",
-                Amount = rec.Amount,
+                CategoryId = g.Key,
+                CategoryName = g.First().Category?.Name ?? "Unknown",
+                Amount = g.Sum(r => r.Amount),
                 IsFixed = true,
-                Icon = rec.Category?.Icon ?? "autorenew",
+                Icon = g.First().Category?.Icon ?? "autorenew",
                 IsRecurring = true
             });
-        }
+        byCategory.AddRange(recurringByCategory);
 
         return new BudgetPlanDto
         {

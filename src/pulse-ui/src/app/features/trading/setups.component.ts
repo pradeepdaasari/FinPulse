@@ -62,7 +62,7 @@ import { NotificationService } from '../../core/services/notification.service';
               <div class="setup-info">
                 <span class="setup-name">{{ setup.name }}</span>
                 @if (setup.description) {
-                  <span class="setup-desc">{{ setup.description }}</span>
+                  <span class="setup-desc" [innerHTML]="setup.description"></span>
                 }
               </div>
               <span class="status-chip" [class.active-chip]="setup.isActive" [class.inactive-chip]="!setup.isActive">

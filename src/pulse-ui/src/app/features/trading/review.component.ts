@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule, FormBuilder } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,13 +12,15 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TradingService } from '../../core/services/trading.service';
 import { DailyReview, TradeGrade, TradingRule, TradeEntry } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
+import { RichTextEditorComponent } from '../../shared/rich-text-editor.component';
 
 @Component({
   selector: 'app-review',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatChipsModule, MatCheckboxModule, MatProgressSpinnerModule, CurrencyPipe
+    CommonModule, ReactiveFormsModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
+    MatFormFieldModule, MatInputModule, MatChipsModule, MatCheckboxModule, MatProgressSpinnerModule, CurrencyPipe,
+    RichTextEditorComponent
   ],
   template: `
     <div class="page-banner">
@@ -142,16 +144,10 @@ import { NotificationService } from '../../core/services/notification.service';
 
     <!-- Text Fields -->
     <div class="text-fields">
-      <mat-form-field appearance="outline">
-        <mat-label>Lessons Learned</mat-label>
-        <textarea matInput [value]="lessonsLearned" (input)="lessonsLearned = $any($event.target).value" rows="3"
-                  placeholder="What did today teach you?"></textarea>
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Tomorrow's Focus</mat-label>
-        <textarea matInput [value]="tomorrowFocus" (input)="tomorrowFocus = $any($event.target).value" rows="2"
-                  placeholder="What ONE thing will you improve tomorrow?"></textarea>
-      </mat-form-field>
+      <app-rich-text-editor label="Lessons Learned" placeholder="What did today teach you?" height="100px"
+        [ngModel]="lessonsLearned" (ngModelChange)="lessonsLearned = $event"></app-rich-text-editor>
+      <app-rich-text-editor label="Tomorrow's Focus" placeholder="What ONE thing will you improve tomorrow?" height="80px"
+        [ngModel]="tomorrowFocus" (ngModelChange)="tomorrowFocus = $event"></app-rich-text-editor>
     </div>
 
     <button mat-raised-button color="primary" class="save-btn" (click)="save()" [disabled]="!selectedGrade()">
@@ -188,21 +184,12 @@ import { NotificationService } from '../../core/services/notification.service';
 
     <!-- Observation Notes -->
     <div class="text-fields">
-      <mat-form-field appearance="outline">
-        <mat-label>Market Observations</mat-label>
-        <textarea matInput [value]="marketObservation" (input)="marketObservation = $any($event.target).value" rows="4"
-                  placeholder="What patterns did you notice? Key levels? Sector rotations? Setups forming?"></textarea>
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Setups Watched</mat-label>
-        <textarea matInput [value]="lessonsLearned" (input)="lessonsLearned = $any($event.target).value" rows="3"
-                  placeholder="Any setups you tracked but didn't take? Why not?"></textarea>
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Tomorrow's Plan</mat-label>
-        <textarea matInput [value]="tomorrowFocus" (input)="tomorrowFocus = $any($event.target).value" rows="2"
-                  placeholder="What will you watch for tomorrow?"></textarea>
-      </mat-form-field>
+      <app-rich-text-editor label="Market Observations" placeholder="What patterns did you notice? Key levels? Sector rotations? Setups forming?" height="120px"
+        [ngModel]="marketObservation" (ngModelChange)="marketObservation = $event"></app-rich-text-editor>
+      <app-rich-text-editor label="Setups Watched" placeholder="Any setups you tracked but didn't take? Why not?" height="100px"
+        [ngModel]="lessonsLearned" (ngModelChange)="lessonsLearned = $event"></app-rich-text-editor>
+      <app-rich-text-editor label="Tomorrow's Plan" placeholder="What will you watch for tomorrow?" height="80px"
+        [ngModel]="tomorrowFocus" (ngModelChange)="tomorrowFocus = $event"></app-rich-text-editor>
     </div>
 
     <button mat-raised-button color="primary" class="save-btn" (click)="saveObservation()">

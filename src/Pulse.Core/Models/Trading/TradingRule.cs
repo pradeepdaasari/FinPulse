@@ -7,7 +7,6 @@ public class TradingRule
     public int Id { get; set; }
     public string? UserId { get; set; }
     [Required]
-    [MaxLength(500)]
     public string Text { get; set; } = string.Empty;
     [MaxLength(20)]
     public string Category { get; set; } = "general";
