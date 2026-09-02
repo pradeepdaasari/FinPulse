@@ -13,13 +13,15 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TradingService } from '../../core/services/trading.service';
 import { TradingSetupSummary, TradingSetup, PreMarketNote, TradeEntry, DailyLimits, ChecklistResponse } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
+import { RichTextEditorComponent } from '../../shared/rich-text-editor.component';
 
 @Component({
   selector: 'app-checklist',
   standalone: true,
   imports: [
     CommonModule, FormsModule, ReactiveFormsModule, RouterModule, MatCardModule, MatButtonModule,
-    MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatCheckboxModule, MatProgressSpinnerModule, CurrencyPipe
+    MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatCheckboxModule, MatProgressSpinnerModule, CurrencyPipe,
+    RichTextEditorComponent
   ],
   template: `
     <!-- Banner -->
@@ -320,10 +322,8 @@ import { NotificationService } from '../../core/services/notification.service';
                     </mat-form-field>
                   </div>
 
-                  <mat-form-field appearance="outline" class="full-width">
-                    <mat-label>Notes (optional)</mat-label>
-                    <input matInput formControlName="notes" placeholder="Why are you taking this trade?">
-                  </mat-form-field>
+                  <app-rich-text-editor label="Notes (optional)" formControlName="notes" height="80px"
+                    placeholder="Why are you taking this trade?"></app-rich-text-editor>
 
                   <button mat-raised-button color="primary" class="log-btn" (click)="logTrade()" [disabled]="tradeForm.invalid">
                     <mat-icon>add_task</mat-icon> Log Trade

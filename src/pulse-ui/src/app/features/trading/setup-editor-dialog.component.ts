@@ -10,6 +10,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TradingService } from '../../core/services/trading.service';
 import { TradingSetup, ChecklistItem } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
+import { RichTextEditorComponent } from '../../shared/rich-text-editor.component';
 
 export interface SetupEditorData {
   setup: TradingSetup | null;
@@ -20,7 +21,8 @@ export interface SetupEditorData {
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
-    MatInputModule, MatButtonModule, MatIconModule, MatSlideToggleModule
+    MatInputModule, MatButtonModule, MatIconModule, MatSlideToggleModule,
+    RichTextEditorComponent
   ],
   template: `
     <h2 mat-dialog-title>
@@ -35,11 +37,8 @@ export interface SetupEditorData {
           <input matInput formControlName="name" placeholder="e.g., Morning Breakout, SPX Put Credit Spread">
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Description (optional)</mat-label>
-          <textarea matInput formControlName="description" rows="2"
-                    placeholder="Describe when and how you trade this setup"></textarea>
-        </mat-form-field>
+        <app-rich-text-editor label="Description (optional)" formControlName="description" height="80px"
+          placeholder="Describe when and how you trade this setup"></app-rich-text-editor>
 
         <mat-slide-toggle formControlName="isActive" color="primary">
           Active

@@ -64,23 +64,62 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from '../expenses/add-ex
             <span class="stat-label">Monthly Total</span>
           </div>
         </div>
-        <div class="stat-card stat-purple">
-          <mat-icon>pause_circle</mat-icon>
-          <div class="stat-content">
-            <span class="stat-value">{{ pausedCount() }}</span>
-            <span class="stat-label">Paused</span>
+        @if (overdueItems().length > 0) {
+          <div class="stat-card stat-red">
+            <mat-icon>warning</mat-icon>
+            <div class="stat-content">
+              <span class="stat-value">{{ overdueItems().length }}</span>
+              <span class="stat-label">Past Due</span>
+            </div>
           </div>
-        </div>
+        } @else {
+          <div class="stat-card stat-purple">
+            <mat-icon>pause_circle</mat-icon>
+            <div class="stat-content">
+              <span class="stat-value">{{ pausedCount() }}</span>
+              <span class="stat-label">Paused</span>
+            </div>
+          </div>
+        }
       </div>
 
-      <!-- Due Now Section -->
-      @if (dueItems().length > 0) {
+      <!-- Overdue Section -->
+      @if (overdueItems().length > 0) {
+        <div class="due-section overdue-section">
+          <div class="due-header overdue-header">
+            <mat-icon>warning</mat-icon>
+            <span>{{ overdueItems().length }} payment{{ overdueItems().length > 1 ? 's' : '' }} past due</span>
+          </div>
+          @for (r of overdueItems(); track r.id) {
+            <div class="due-card">
+              <div class="due-left">
+                <div class="cat-icon-wrap overdue-icon-wrap">
+                  <mat-icon class="cat-icon">{{ r.categoryIcon }}</mat-icon>
+                </div>
+                <div>
+                  <div class="desc-text">{{ r.description }}</div>
+                  <div class="overdue-date-text">{{ daysOverdue(r) }} day{{ daysOverdue(r) > 1 ? 's' : '' }} overdue &middot; Was due {{ r.nextRunDate | date:'MMM d' }}</div>
+                </div>
+              </div>
+              <div class="due-right">
+                <span class="due-amount overdue-amount">{{ r.amount | currency }}</span>
+                <button mat-raised-button color="warn" class="pay-btn" (click)="markPaid(r)">
+                  <mat-icon>check_circle</mat-icon> Mark Paid
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Due Today Section -->
+      @if (dueTodayItems().length > 0) {
         <div class="due-section">
           <div class="due-header">
             <mat-icon>notifications_active</mat-icon>
-            <span>{{ dueItems().length }} payment{{ dueItems().length > 1 ? 's' : '' }} due</span>
+            <span>{{ dueTodayItems().length }} payment{{ dueTodayItems().length > 1 ? 's' : '' }} due today</span>
           </div>
-          @for (r of dueItems(); track r.id) {
+          @for (r of dueTodayItems(); track r.id) {
             <div class="due-card">
               <div class="due-left">
                 <div class="cat-icon-wrap due-icon-wrap">
@@ -88,7 +127,7 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from '../expenses/add-ex
                 </div>
                 <div>
                   <div class="desc-text">{{ r.description }}</div>
-                  <div class="due-date-text">Due {{ r.nextRunDate | date:'MMM d' }}</div>
+                  <div class="due-date-text">Due today</div>
                 </div>
               </div>
               <div class="due-right">
@@ -140,7 +179,8 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from '../expenses/add-ex
           <ng-container matColumnDef="nextRunDate">
             <th mat-header-cell *matHeaderCellDef>Next Run</th>
             <td mat-cell *matCellDef="let r">
-              <span [class.due-highlight]="isDue(r)">{{ r.nextRunDate | date:'mediumDate' }}</span>
+              <span [class.due-highlight]="isDue(r) && !isOverdue(r)" [class.overdue-highlight]="isOverdue(r)">{{ r.nextRunDate | date:'mediumDate' }}</span>
+              @if (isOverdue(r)) { <span class="overdue-badge">{{ daysOverdue(r) }}d overdue</span> }
             </td>
           </ng-container>
 
@@ -185,7 +225,7 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from '../expenses/add-ex
       <!-- Mobile cards -->
       <div class="mobile-cards">
         @for (r of items(); track r.id) {
-          <div class="rec-card" [class.rec-paused]="!r.isActive" [class.rec-due]="isDue(r)">
+          <div class="rec-card" [class.rec-paused]="!r.isActive" [class.rec-due]="isDue(r) && !isOverdue(r)" [class.rec-overdue]="isOverdue(r)">
             <div class="rec-top">
               <div class="rec-icon-wrap">
                 <mat-icon>{{ r.categoryIcon }}</mat-icon>
@@ -195,12 +235,16 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from '../expenses/add-ex
                 @if (r.merchant) { <span class="rec-merchant">{{ r.merchant }}</span> }
               </div>
               <div class="rec-amount-col">
-                <span class="rec-amount">{{ r.amount | currency }}</span>
+                <span class="rec-amount" [class.overdue-amount]="isOverdue(r)">{{ r.amount | currency }}</span>
                 <span class="freq-badge" [class.freq-daily]="r.frequency === 'Daily'" [class.freq-weekly]="r.frequency === 'Weekly'" [class.freq-biweekly]="r.frequency === 'Biweekly'" [class.freq-monthly]="r.frequency === 'Monthly'" >{{ r.frequency }}</span>
               </div>
             </div>
             <div class="rec-bottom">
-              <span class="rec-next">Next: {{ r.nextRunDate | date:'MMM d' }}</span>
+              @if (isOverdue(r)) {
+                <span class="overdue-date-text">{{ daysOverdue(r) }}d overdue &middot; Due {{ r.nextRunDate | date:'MMM d' }}</span>
+              } @else {
+                <span class="rec-next">Next: {{ r.nextRunDate | date:'MMM d' }}</span>
+              }
               <div class="rec-actions">
                 @if (isCurrentMonth(r)) {
                   <button mat-raised-button color="primary" class="pay-btn-sm" (click)="markPaid(r)">
@@ -244,6 +288,7 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from '../expenses/add-ex
     .stat-green mat-icon { color: var(--color-stat-green); background: var(--color-stat-green-bg); }
     .stat-amber mat-icon { color: var(--color-stat-amber); background: var(--color-stat-amber-bg); }
     .stat-purple mat-icon { color: var(--color-stat-purple); background: var(--color-stat-purple-bg); }
+    .stat-red mat-icon { color: var(--color-danger); background: var(--color-danger-bg); }
     .stat-content { display: flex; flex-direction: column; }
     .stat-value { font-size: 1.2rem; font-weight: 700; color: var(--color-text); }
     .stat-label { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px; }
@@ -338,6 +383,17 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from '../expenses/add-ex
     .action-pay { color: var(--color-success) !important; }
     .action-pay:hover { background: var(--color-stat-green-bg) !important; }
     .rec-card.rec-due { border-left-color: var(--color-warning); }
+    .rec-card.rec-overdue { border-left-color: var(--color-danger); }
+
+    /* Overdue Section */
+    .overdue-section { border-left-color: var(--color-danger); }
+    .overdue-header { background: var(--color-danger-bg); color: var(--color-danger); }
+    .overdue-icon-wrap { background: var(--color-danger-bg) !important; }
+    .overdue-icon-wrap .cat-icon { color: var(--color-danger) !important; }
+    .overdue-date-text { font-size: 0.75rem; color: var(--color-danger); font-weight: 500; }
+    .overdue-amount { color: var(--color-danger) !important; }
+    .overdue-highlight { color: var(--color-danger); font-weight: 600; }
+    .overdue-badge { font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-full); background: var(--color-danger-bg); color: var(--color-danger); }
 
     /* Empty State */
     .empty-state { text-align: center; padding: 48px 24px; }
@@ -374,11 +430,13 @@ export class RecurringPageComponent implements OnInit {
 
   activeCount = computed(() => this.items().filter(i => i.isActive).length);
   pausedCount = computed(() => this.items().filter(i => !i.isActive).length);
-  dueItems = computed(() => {
+  private todayStr = computed(() => {
     const tz = localStorage.getItem('pulse_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
-    return this.items().filter(i => i.isActive && i.nextRunDate.slice(0, 10) <= todayStr);
+    return new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
   });
+  dueItems = computed(() => this.items().filter(i => i.isActive && i.nextRunDate.slice(0, 10) <= this.todayStr()));
+  overdueItems = computed(() => this.items().filter(i => i.isActive && i.nextRunDate.slice(0, 10) < this.todayStr()));
+  dueTodayItems = computed(() => this.items().filter(i => i.isActive && i.nextRunDate.slice(0, 10) === this.todayStr()));
   monthlyTotal = computed(() => {
     return this.items()
       .filter(i => i.isActive)
@@ -481,9 +539,18 @@ export class RecurringPageComponent implements OnInit {
 
   isDue(item: RecurringTransaction): boolean {
     if (!item.isActive) return false;
-    const tz = localStorage.getItem('pulse_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
-    return item.nextRunDate.slice(0, 10) <= todayStr;
+    return item.nextRunDate.slice(0, 10) <= this.todayStr();
+  }
+
+  isOverdue(item: RecurringTransaction): boolean {
+    if (!item.isActive) return false;
+    return item.nextRunDate.slice(0, 10) < this.todayStr();
+  }
+
+  daysOverdue(item: RecurringTransaction): number {
+    const due = new Date(item.nextRunDate.slice(0, 10) + 'T00:00:00');
+    const today = new Date(this.todayStr() + 'T00:00:00');
+    return Math.floor((today.getTime() - due.getTime()) / 86400000);
   }
 
   markPaid(item: RecurringTransaction): void {

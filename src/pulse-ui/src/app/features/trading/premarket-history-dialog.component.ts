@@ -27,7 +27,7 @@ import { PreMarketNote } from '../../core/models/trading.model';
             <span class="mental-badge" [class]="'mental-' + note.mentalState">{{ note.mentalState }}</span>
             <span class="bias-badge" [class]="'bias-' + note.marketBias">{{ note.marketBias }}</span>
           </div>
-          <p class="history-plan">{{ note.plan }}</p>
+          <p class="history-plan" [innerHTML]="note.plan"></p>
           <div class="history-footer">
             <span>Max {{ note.maxTrades }} trades</span>
             <span>Max loss {{ note.maxLoss | currency:'USD':'symbol':'1.0-0' }}</span>

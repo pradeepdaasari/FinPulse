@@ -31,6 +31,7 @@
             ],
             "serviceWorker": "ngsw-config.json",
             "styles": [
+              "node_modules/quill/dist/quill.snow.css",
               "src/styles.scss"
             ]
           },

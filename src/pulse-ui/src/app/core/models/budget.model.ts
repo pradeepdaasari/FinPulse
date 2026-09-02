@@ -16,31 +16,6 @@ export interface SuggestedAllocation {
 
 export type PayFrequency = 'Monthly' | 'Biweekly' | 'Weekly';
 
-export interface BudgetExpense {
-  id: number;
-  name: string;
-  categoryId: number;
-  categoryName: string;
-  parentCategoryName?: string | null;
-  amount: number;
-  isFixed: boolean;
-  dueDay: number | null;
-  frequency: PayFrequency;
-  isAutopay: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface BudgetExpenseCreate {
-  name: string;
-  categoryId: number;
-  amount: number;
-  isFixed: boolean;
-  dueDay: number | null;
-  frequency: PayFrequency;
-  isAutopay: boolean;
-}
-
 export interface BudgetPlan {
   monthlyOverview: MonthlyOverview;
   paycheckBreakdowns: PaycheckBreakdown[];
@@ -53,6 +28,8 @@ export interface MonthlyOverview {
   totalDebtPayments: number;
   totalRecurring: number;
   totalExpenses: number;
+  totalSpent: number;
+  totalRemaining: number;
   surplus: number;
   paychecksThisMonth: number;
   byCategory: CategorySummary[];
@@ -70,6 +47,9 @@ export interface CategorySummary {
   categoryId: number;
   categoryName: string;
   amount: number;
+  spent: number;
+  remaining: number;
+  percentUsed: number;
   isFixed: boolean;
   icon?: string;
   isDebt: boolean;

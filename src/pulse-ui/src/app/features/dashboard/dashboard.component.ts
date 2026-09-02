@@ -4,7 +4,6 @@ import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { DashboardService } from '../../core/services/dashboard.service';
-import { RecurringService } from '../../core/services/recurring.service';
 import { DashboardSummary } from '../../core/models/dashboard.model';
 import { MonthlyPaymentsComponent } from './monthly-payments.component';
 import { DebtTrendChartComponent } from './debt-trend-chart.component';
@@ -76,7 +75,6 @@ import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 })
 export class DashboardComponent implements OnInit {
   private dashboardService = inject(DashboardService);
-  private recurringService = inject(RecurringService);
   private router = inject(Router);
 
   summary = signal<DashboardSummary | null>(null);
@@ -91,7 +89,6 @@ export class DashboardComponent implements OnInit {
   }
 
   private loadData(): void {
-    this.recurringService.generate().subscribe();
     this.dashboardService.getSummary().subscribe({
       next: (data) => {
         const setupDismissed = localStorage.getItem('pulse_setup_dismissed');

@@ -12,6 +12,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TradingService } from '../../core/services/trading.service';
 import { PreMarketNote, MarketBias, MentalState } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
+import { RichTextEditorComponent } from '../../shared/rich-text-editor.component';
 
 @Component({
   selector: 'app-premarket',
@@ -19,7 +20,7 @@ import { NotificationService } from '../../core/services/notification.service';
   imports: [
     CommonModule, ReactiveFormsModule, MatCardModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatSliderModule, MatChipsModule,
-    MatProgressSpinnerModule, CurrencyPipe, DatePipe
+    MatProgressSpinnerModule, CurrencyPipe, DatePipe, RichTextEditorComponent
   ],
   template: `
     <div class="page-banner">
@@ -136,32 +137,20 @@ import { NotificationService } from '../../core/services/notification.service';
 
         <!-- Key Levels -->
         <div class="form-section">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Key Levels</mat-label>
-            <textarea matInput formControlName="keyLevels" rows="3"
-                      placeholder="e.g., SPX 5450 support, 5520 resistance, NQ 19800 pivot"></textarea>
-            <mat-icon matPrefix>show_chart</mat-icon>
-          </mat-form-field>
+          <app-rich-text-editor label="Key Levels" formControlName="keyLevels" height="100px"
+            placeholder="e.g., SPX 5450 support, 5520 resistance, NQ 19800 pivot"></app-rich-text-editor>
         </div>
 
         <!-- Catalysts -->
         <div class="form-section">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Catalysts & Events</mat-label>
-            <textarea matInput formControlName="catalysts" rows="2"
-                      placeholder="e.g., FOMC minutes at 2pm, NVDA earnings, CPI data"></textarea>
-            <mat-icon matPrefix>event_note</mat-icon>
-          </mat-form-field>
+          <app-rich-text-editor label="Catalysts & Events" formControlName="catalysts" height="80px"
+            placeholder="e.g., FOMC minutes at 2pm, NVDA earnings, CPI data"></app-rich-text-editor>
         </div>
 
         <!-- Today's Plan -->
         <div class="form-section">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Today's Plan</mat-label>
-            <textarea matInput formControlName="plan" rows="4"
-                      placeholder="What will you do today? What will you NOT do? Be specific."></textarea>
-            <mat-icon matPrefix>assignment</mat-icon>
-          </mat-form-field>
+          <app-rich-text-editor label="Today's Plan" formControlName="plan" height="120px"
+            placeholder="What will you do today? What will you NOT do? Be specific."></app-rich-text-editor>
         </div>
 
         <!-- Limits -->
@@ -207,7 +196,7 @@ import { NotificationService } from '../../core/services/notification.service';
                 <span class="mental-dot" [class]="'dot-' + note.mentalState"></span>
                 <span class="history-bias" [class]="'bias-' + note.marketBias">{{ note.marketBias }}</span>
               </div>
-              <p class="history-plan">{{ note.plan }}</p>
+              <p class="history-plan" [innerHTML]="note.plan"></p>
               <div class="history-footer">
                 <span class="history-limits">{{ note.maxTrades }} trades / {{ note.maxLoss | currency:'USD':'symbol':'1.0-0' }} max loss</span>
               </div>

@@ -57,6 +57,57 @@ public class BudgetController : ControllerBase
             .Where(r => r.UserId == UserId && r.IsActive)
             .ToListAsync();
         var plan = _budgetPlanService.GeneratePlan(profile, expenses, debts, recurring, targetYear, targetMonth);
+
+        // Enrich with actual spending
+        var startDate = new DateTime(targetYear, targetMonth, 1);
+        var endDate = startDate.AddMonths(1);
+        var dailyExpenses = await _db.DailyExpenses
+            .Where(e => e.UserId == UserId && e.Date >= startDate && e.Date < endDate
+                   && e.TransactionType == TransactionType.Expense && e.CategoryId != null)
+            .Select(e => new { e.CategoryId, e.Amount })
+            .ToListAsync();
+
+        var parentLookup = await _db.CustomCategories
+            .Where(c => c.UserId == UserId && c.ParentId != null)
+            .ToDictionaryAsync(c => c.Id, c => c.ParentId!.Value);
+
+        // Build set of children for each category in the plan
+        var planCategoryIds = plan.MonthlyOverview.ByCategory
+            .Where(c => !c.IsDebt)
+            .Select(c => c.CategoryId)
+            .ToHashSet();
+
+        var childrenOf = new Dictionary<int, HashSet<int>>();
+        foreach (var (childId, parentId) in parentLookup)
+        {
+            if (planCategoryIds.Contains(parentId))
+            {
+                if (!childrenOf.ContainsKey(parentId))
+                    childrenOf[parentId] = new HashSet<int> { parentId };
+                childrenOf[parentId].Add(childId);
+            }
+        }
+
+        foreach (var cat in plan.MonthlyOverview.ByCategory)
+        {
+            if (cat.IsDebt) continue;
+
+            var matchIds = childrenOf.GetValueOrDefault(cat.CategoryId) ?? new HashSet<int> { cat.CategoryId };
+            var spent = dailyExpenses
+                .Where(e => matchIds.Contains(e.CategoryId!.Value))
+                .Sum(e => e.Amount);
+
+            cat.Spent = spent;
+            cat.Remaining = cat.Amount - spent;
+            cat.PercentUsed = cat.Amount > 0
+                ? Math.Round(spent / cat.Amount * 100, 1)
+                : (spent > 0 ? 100 : 0);
+        }
+
+        var budgetable = plan.MonthlyOverview.ByCategory.Where(c => !c.IsDebt).ToList();
+        plan.MonthlyOverview.TotalSpent = budgetable.Sum(c => c.Spent);
+        plan.MonthlyOverview.TotalRemaining = budgetable.Sum(c => c.Remaining);
+
         return Ok(plan);
     }
 

@@ -14,6 +14,8 @@ public class MonthlyOverviewDto
     public decimal TotalDebtPayments { get; set; }
     public decimal TotalRecurring { get; set; }
     public decimal TotalExpenses { get; set; }
+    public decimal TotalSpent { get; set; }
+    public decimal TotalRemaining { get; set; }
     public decimal Surplus { get; set; }
     public int PaychecksThisMonth { get; set; }
     public List<CategorySummaryDto> ByCategory { get; set; } = new();
@@ -24,6 +26,9 @@ public class CategorySummaryDto
     public int CategoryId { get; set; }
     public string CategoryName { get; set; } = string.Empty;
     public decimal Amount { get; set; }
+    public decimal Spent { get; set; }
+    public decimal Remaining { get; set; }
+    public decimal PercentUsed { get; set; }
     public bool IsFixed { get; set; }
     public string? Icon { get; set; }
     public bool IsDebt { get; set; }

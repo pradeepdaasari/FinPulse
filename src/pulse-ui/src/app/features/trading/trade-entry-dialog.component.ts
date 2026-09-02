@@ -17,6 +17,7 @@ import { BankAccountService } from '../../core/services/bank-account.service';
 import { TradeEntry, TradingSetupSummary } from '../../core/models/trading.model';
 import { BankAccount } from '../../core/models/bank-account.model';
 import { NotificationService } from '../../core/services/notification.service';
+import { RichTextEditorComponent } from '../../shared/rich-text-editor.component';
 
 export interface TradeEntryDialogData {
   trade: TradeEntry | null;
@@ -29,7 +30,8 @@ export interface TradeEntryDialogData {
   imports: [
     CommonModule, CurrencyPipe, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatDatepickerModule,
-    MatButtonModule, MatIconModule, MatButtonToggleModule, MatCheckboxModule, MatProgressSpinnerModule
+    MatButtonModule, MatIconModule, MatButtonToggleModule, MatCheckboxModule, MatProgressSpinnerModule,
+    RichTextEditorComponent
   ],
   providers: [provideNativeDateAdapter()],
   template: `
@@ -303,10 +305,8 @@ export interface TradeEntryDialogData {
           Checklist completed
         </mat-checkbox>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Notes</mat-label>
-          <textarea matInput formControlName="notes" rows="2" placeholder="Quick notes..."></textarea>
-        </mat-form-field>
+        <app-rich-text-editor label="Notes" formControlName="notes" height="80px"
+          placeholder="Quick notes..."></app-rich-text-editor>
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Tags</mat-label>

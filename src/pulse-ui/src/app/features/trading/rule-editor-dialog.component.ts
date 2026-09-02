@@ -11,6 +11,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TradingService } from '../../core/services/trading.service';
 import { TradingRule, RuleCategory } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
+import { RichTextEditorComponent } from '../../shared/rich-text-editor.component';
 
 export interface RuleEditorDialogData {
   rule: TradingRule | null;
@@ -21,7 +22,8 @@ export interface RuleEditorDialogData {
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
-    MatInputModule, MatSelectModule, MatButtonModule, MatIconModule, MatSlideToggleModule
+    MatInputModule, MatSelectModule, MatButtonModule, MatIconModule, MatSlideToggleModule,
+    RichTextEditorComponent
   ],
   template: `
     <h2 mat-dialog-title>
@@ -30,11 +32,8 @@ export interface RuleEditorDialogData {
     </h2>
     <mat-dialog-content>
       <form [formGroup]="form" class="rule-form">
-        <mat-form-field appearance="outline">
-          <mat-label>Rule</mat-label>
-          <textarea matInput formControlName="text" rows="3"
-                    placeholder="e.g., Never enter without a defined stop loss"></textarea>
-        </mat-form-field>
+        <app-rich-text-editor label="Rule" formControlName="text" height="100px"
+          placeholder="e.g., Never enter without a defined stop loss"></app-rich-text-editor>
 
         <mat-form-field appearance="outline">
           <mat-label>Category</mat-label>
