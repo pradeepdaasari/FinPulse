@@ -78,6 +78,11 @@ public class WorkoutLogsController : ControllerBase
         log.UserId = UserId;
         if (log.Date == default)
             log.Date = DateTime.UtcNow;
+        else
+        {
+            var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+            log.Date = TimeZoneHelper.ToUtc(log.Date, tz);
+        }
 
         var strategy = _db.Database.CreateExecutionStrategy();
         try
@@ -126,7 +131,8 @@ public class WorkoutLogsController : ControllerBase
             {
                 using var transaction = await _db.Database.BeginTransactionAsync();
 
-                log.Date = updated.Date;
+                var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+                log.Date = TimeZoneHelper.ToUtc(updated.Date, tz);
                 log.FocusArea = updated.FocusArea;
                 log.DurationMinutes = updated.DurationMinutes;
                 log.Notes = updated.Notes;

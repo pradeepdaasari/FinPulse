@@ -123,8 +123,24 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
                   @if (t.spreadType) {
                     <span class="spread-badge">{{ t.spreadType }}</span>
                   }
+                  @if (t.optionType && t.spreadType !== 'IronCondor') {
+                    <span class="option-type-badge" [class.badge-call]="t.optionType === 'Call'" [class.badge-put]="t.optionType === 'Put'">{{ t.optionType }}</span>
+                  }
                   @if (t.expirationDate) {
                     <span class="expiry-label">{{ t.expirationDate | localDate:'M/d' }}</span>
+                  }
+                  @if (t.strikePrice) {
+                    <div class="strike-info">
+                      @if (t.spreadType === 'Vertical' && t.strikePrice2) {
+                        <span class="strike-label">{{ t.strikePrice }}s / {{ t.strikePrice2 }}l</span>
+                      } @else if (t.spreadType === 'IronCondor' && t.strikePrice2) {
+                        <span class="strike-label">{{ t.strikePrice }}sc {{ t.strikePrice2 }}lc · {{ t.strikePrice3 }}sp {{ t.strikePrice4 }}lp</span>
+                      } @else if (t.spreadType === 'Butterfly' && t.strikePrice2) {
+                        <span class="strike-label">{{ t.strikePrice }} / {{ t.strikePrice2 }} / {{ t.strikePrice3 }}</span>
+                      } @else {
+                        <span class="strike-label">{{ t.strikePrice }}</span>
+                      }
+                    </div>
                   }
                 </td>
               </ng-container>
@@ -193,10 +209,24 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
             <div class="trade-mid">
               <span class="trade-instrument">{{ t.instrument }}
                 @if (t.spreadType) { <span class="spread-badge-sm">{{ t.spreadType }}</span> }
+                @if (t.optionType && t.spreadType !== 'IronCondor') {
+                  <span class="option-type-badge-sm" [class.badge-call]="t.optionType === 'Call'" [class.badge-put]="t.optionType === 'Put'">{{ t.optionType }}</span>
+                }
                 <span class="setup-badge-sm">{{ t.setupName }}</span>
               </span>
               <span class="trade-meta">{{ t.date | date:'MMM d, h:mm a' }} · {{ t.quantity }} contracts
                 @if (t.expirationDate) { · exp {{ t.expirationDate | localDate:'M/d' }} }
+                @if (t.strikePrice) {
+                  @if (t.spreadType === 'Vertical' && t.strikePrice2) {
+                    · {{ t.strikePrice }}s/{{ t.strikePrice2 }}l
+                  } @else if (t.spreadType === 'IronCondor' && t.strikePrice2) {
+                    · {{ t.strikePrice }}sc {{ t.strikePrice2 }}lc · {{ t.strikePrice3 }}sp {{ t.strikePrice4 }}lp
+                  } @else if (t.spreadType === 'Butterfly' && t.strikePrice2) {
+                    · {{ t.strikePrice }}/{{ t.strikePrice2 }}/{{ t.strikePrice3 }}
+                  } @else {
+                    · {{ t.strikePrice }}
+                  }
+                }
               </span>
             </div>
             <div class="trade-right">
@@ -303,8 +333,17 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
       background: var(--color-stat-purple-bg); color: var(--color-stat-purple); font-weight: 600; margin-left: 4px;
     }
     .expiry-label {
-      font-size: 0.68rem; color: var(--color-text-muted); margin-left: 6px;
+      font-size: 0.75rem; color: var(--color-text); font-weight: 500; margin-left: 6px;
     }
+    .option-type-badge, .option-type-badge-sm {
+      display: inline-block; padding: 2px 6px; border-radius: var(--radius-full);
+      font-size: 0.65rem; font-weight: 600; margin-left: 4px; vertical-align: middle;
+    }
+    .option-type-badge-sm { font-size: 0.6rem; padding: 1px 5px; }
+    .badge-call { background: rgba(33,150,243,0.1); color: #1976d2; }
+    .badge-put { background: rgba(233,30,99,0.1); color: #c2185b; }
+    .strike-info { margin-top: 2px; }
+    .strike-label { font-size: 0.75rem; color: var(--color-text); font-weight: 500; }
     .dir-pill {
       display: inline-block; padding: 2px 8px; border-radius: var(--radius-full);
       font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
@@ -316,9 +355,9 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
     .pnl-negative { color: var(--color-danger); }
     .pnl-breakdown { display: flex; flex-direction: column; gap: 1px; }
     .pnl-gross { font-size: 0.8rem; font-weight: 600; }
-    .pnl-fees { font-size: 0.68rem; color: var(--color-text-muted); }
+    .pnl-fees { font-size: 0.75rem; color: var(--color-text); font-weight: 500; }
     .pnl-net { font-size: 0.78rem; font-weight: 700; }
-    .mobile-fees { font-size: 0.65rem; color: var(--color-text-muted); }
+    .mobile-fees { font-size: 0.75rem; color: var(--color-text); font-weight: 500; }
     .compliance-icon { font-size: 20px; width: 20px; height: 20px; }
     .compliance-icon.compliant { color: var(--color-success); }
     .compliance-icon.non-compliant { color: var(--color-danger); }

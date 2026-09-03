@@ -196,7 +196,7 @@ public class TradingController : ControllerBase
                 t.IsRevengeTrading, t.EmotionAtEntry, t.CreatedAt,
                 t.AssetType, t.OptionType, t.SpreadType,
                 t.StrikePrice, t.StrikePrice2, t.StrikePrice3, t.StrikePrice4,
-                t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.BankAccountId,
+                t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.Multiplier, t.BankAccountId,
                 t.CommissionFees, t.RegExchangeFees, t.TotalFees, t.NetPnl
             })
             .ToListAsync();
@@ -218,7 +218,7 @@ public class TradingController : ControllerBase
                 t.Pnl, t.ChecklistCompleted, t.EntryTime, t.ExitTime,
                 t.AssetType, t.OptionType, t.SpreadType,
                 t.StrikePrice, t.StrikePrice2, t.StrikePrice3, t.StrikePrice4,
-                t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.BankAccountId,
+                t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.Multiplier, t.BankAccountId,
                 t.CommissionFees, t.RegExchangeFees, t.TotalFees, t.NetPnl, t.CreatedAt
             })
             .Take(20)
@@ -231,15 +231,18 @@ public class TradingController : ControllerBase
     {
         try
         {
+            var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+            var tradeDate = TimeZoneHelper.ToUtc(input.Date, tz);
+
             var (commission, regExchange) = input.CommissionFees.HasValue || input.RegExchangeFees.HasValue
                 ? (input.CommissionFees ?? 0, input.RegExchangeFees ?? 0)
-                : await CalculateFeesBreakdown(input.BankAccountId, input.AssetType, input.Quantity, input.SpreadType, input.Date, input.ExpiredWorthless);
+                : await CalculateFeesBreakdown(input.BankAccountId, input.AssetType, input.Quantity, input.SpreadType, tradeDate, input.ExpiredWorthless);
             var fees = commission + regExchange;
 
             var trade = new TradeEntry
             {
                 UserId = UserId,
-                Date = input.Date,
+                Date = tradeDate,
                 SetupId = input.SetupId,
                 Instrument = input.Instrument,
                 Direction = input.Direction,
@@ -269,6 +272,7 @@ public class TradingController : ControllerBase
                 EntryPremium = input.EntryPremium,
                 ExitPremium = input.ExitPremium,
                 ExpiredWorthless = input.ExpiredWorthless,
+                Multiplier = input.Multiplier,
                 BankAccountId = input.BankAccountId,
                 ChecklistResponses = (input.ChecklistResponses ?? new()).Select(r => new ChecklistResponse
                 {
@@ -302,12 +306,15 @@ public class TradingController : ControllerBase
 
         try
         {
+            var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+            var tradeDate = TimeZoneHelper.ToUtc(input.Date, tz);
+
             var (commission, regExchange) = input.CommissionFees.HasValue || input.RegExchangeFees.HasValue
                 ? (input.CommissionFees ?? 0, input.RegExchangeFees ?? 0)
-                : await CalculateFeesBreakdown(input.BankAccountId, input.AssetType, input.Quantity, input.SpreadType, input.Date, input.ExpiredWorthless);
+                : await CalculateFeesBreakdown(input.BankAccountId, input.AssetType, input.Quantity, input.SpreadType, tradeDate, input.ExpiredWorthless);
             var fees = commission + regExchange;
 
-            trade.Date = input.Date;
+            trade.Date = tradeDate;
             trade.SetupId = input.SetupId;
             trade.Instrument = input.Instrument;
             trade.Direction = input.Direction;
@@ -337,6 +344,7 @@ public class TradingController : ControllerBase
             trade.EntryPremium = input.EntryPremium;
             trade.ExitPremium = input.ExitPremium;
             trade.ExpiredWorthless = input.ExpiredWorthless;
+            trade.Multiplier = input.Multiplier;
             trade.BankAccountId = input.BankAccountId;
 
             _db.ChecklistResponses.RemoveRange(trade.ChecklistResponses);
@@ -577,6 +585,159 @@ public class TradingController : ControllerBase
                 }).ToList()
         };
         return Ok(stats);
+    }
+
+    [HttpGet("dashboard")]
+    public async Task<ActionResult> GetDashboard([FromQuery] string? from, [FromQuery] string? to)
+    {
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        DateTime cutoff, endDate;
+        if (!string.IsNullOrEmpty(from) && DateTime.TryParse(from, out var fromDt))
+            cutoff = TimeZoneHelper.ToUtc(fromDt, tz);
+        else
+            cutoff = TimeZoneHelper.ToUtc(new DateTime(DateTime.UtcNow.Year, 1, 1), tz);
+        if (!string.IsNullOrEmpty(to) && DateTime.TryParse(to, out var toDt))
+            endDate = TimeZoneHelper.ToUtc(toDt.Date.AddDays(1), tz);
+        else
+            endDate = DateTime.UtcNow;
+        var trades = await _db.TradeEntries
+            .Include(t => t.Setup)
+            .Where(t => t.UserId == UserId && t.Date >= cutoff && t.Date < endDate)
+            .ToListAsync();
+
+        var closed = trades.Where(t => t.Pnl.HasValue).ToList();
+        var today = DateTime.UtcNow.Date;
+        var wins = closed.Where(t => t.Pnl > 0).ToList();
+        var losses = closed.Where(t => t.Pnl <= 0).ToList();
+        var avgWin = wins.Count > 0 ? wins.Average(t => t.NetPnl ?? t.Pnl!.Value) : 0m;
+        var avgLoss = losses.Count > 0 ? Math.Abs(losses.Average(t => t.NetPnl ?? t.Pnl!.Value)) : 0m;
+
+        // Consecutive wins/losses
+        int maxConsWins = 0, maxConsLosses = 0, curWins = 0, curLosses = 0;
+        foreach (var t in closed.OrderBy(t => t.Date))
+        {
+            if (t.Pnl > 0) { curWins++; curLosses = 0; maxConsWins = Math.Max(maxConsWins, curWins); }
+            else { curLosses++; curWins = 0; maxConsLosses = Math.Max(maxConsLosses, curLosses); }
+        }
+
+        // Daily P&L for best/worst day
+        var dailyPnl = closed.GroupBy(t => t.Date.Date)
+            .Select(g => new { Date = g.Key, Pnl = g.Sum(t => t.NetPnl ?? t.Pnl ?? 0) }).ToList();
+
+        // Monthly P&L
+        var monthlyPnl = closed.GroupBy(t => new { t.Date.Year, t.Date.Month })
+            .Select(g => new
+            {
+                g.Key.Year, g.Key.Month,
+                Pnl = g.Sum(t => t.Pnl ?? 0),
+                NetPnl = g.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+                Fees = g.Sum(t => t.TotalFees ?? 0),
+                Trades = g.Count(),
+                Wins = g.Count(t => t.Pnl > 0)
+            })
+            .OrderBy(m => m.Year).ThenBy(m => m.Month).ToList();
+
+        // Day of week (convert UTC trade date to user's local day)
+        var dayOfWeek = closed.GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).DayOfWeek)
+            .Where(g => g.Key != DayOfWeek.Saturday && g.Key != DayOfWeek.Sunday)
+            .Select(g => new
+            {
+                Day = g.Key.ToString(),
+                Pnl = g.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+                Trades = g.Count(),
+                Wins = g.Count(t => t.Pnl > 0),
+                WinRate = g.Count() == 0 ? 0m : Math.Round((decimal)g.Count(t => t.Pnl > 0) / g.Count() * 100, 1),
+                AvgPnl = Math.Round(g.Average(t => t.NetPnl ?? t.Pnl ?? 0), 2)
+            })
+            .ToList();
+
+        // By instrument
+        var byInstrument = closed.GroupBy(t => t.Instrument)
+            .Select(g => new
+            {
+                Instrument = g.Key,
+                Pnl = g.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+                Trades = g.Count(),
+                Wins = g.Count(t => t.Pnl > 0),
+                WinRate = g.Count() == 0 ? 0m : Math.Round((decimal)g.Count(t => t.Pnl > 0) / g.Count() * 100, 1),
+                AvgPnl = Math.Round(g.Average(t => t.NetPnl ?? t.Pnl ?? 0), 2)
+            }).ToList();
+
+        // By setup
+        var bySetup = closed.GroupBy(t => t.SetupId)
+            .Select(g => new
+            {
+                SetupId = g.Key,
+                SetupName = g.First().Setup?.Name ?? "Unknown",
+                Pnl = g.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+                Trades = g.Count(),
+                Wins = g.Count(t => t.Pnl > 0),
+                WinRate = g.Count() == 0 ? 0m : Math.Round((decimal)g.Count(t => t.Pnl > 0) / g.Count() * 100, 1),
+                AvgPnl = Math.Round(g.Average(t => t.NetPnl ?? t.Pnl ?? 0), 2)
+            }).ToList();
+
+        // By option type (Call vs Put)
+        var byOptionType = closed.Where(t => t.OptionType != null)
+            .GroupBy(t => t.OptionType!)
+            .Select(g => new
+            {
+                OptionType = g.Key,
+                Pnl = g.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+                Trades = g.Count(),
+                Wins = g.Count(t => t.Pnl > 0),
+                WinRate = g.Count() == 0 ? 0m : Math.Round((decimal)g.Count(t => t.Pnl > 0) / g.Count() * 100, 1),
+                AvgPnl = Math.Round(g.Average(t => t.NetPnl ?? t.Pnl ?? 0), 2)
+            }).ToList();
+
+        // Time of day buckets (user's local time)
+        var timeOfDay = closed.GroupBy(t =>
+            {
+                var localHour = TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Hour;
+                return localHour switch
+                {
+                    < 9 => "Pre-Market",
+                    < 11 => "Morning (9-11)",
+                    < 13 => "Midday (11-1)",
+                    < 15 => "Afternoon (1-3)",
+                    _ => "Power Hour (3+)"
+                };
+            })
+            .Select(g => new
+            {
+                Bucket = g.Key,
+                Pnl = g.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+                Trades = g.Count(),
+                Wins = g.Count(t => t.Pnl > 0),
+                WinRate = g.Count() == 0 ? 0m : Math.Round((decimal)g.Count(t => t.Pnl > 0) / g.Count() * 100, 1),
+                AvgPnl = Math.Round(g.Average(t => t.NetPnl ?? t.Pnl ?? 0), 2)
+            }).ToList();
+
+        return Ok(new
+        {
+            TotalPnl = closed.Sum(t => t.Pnl ?? 0),
+            TotalFees = closed.Sum(t => t.TotalFees ?? 0),
+            NetPnl = closed.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+            TotalTrades = closed.Count,
+            WinRate = closed.Count == 0 ? 0m : Math.Round((decimal)wins.Count / closed.Count * 100, 1),
+            AvgWin = Math.Round(avgWin, 2),
+            AvgLoss = Math.Round(avgLoss, 2),
+            ProfitFactor = avgLoss == 0 ? 0m : Math.Round(wins.Sum(t => t.NetPnl ?? t.Pnl ?? 0) / Math.Abs(losses.Sum(t => t.NetPnl ?? t.Pnl ?? 0) == 0 ? 1 : losses.Sum(t => t.NetPnl ?? t.Pnl ?? 0)), 2),
+            LargestWin = closed.Count == 0 ? 0m : closed.Max(t => t.NetPnl ?? t.Pnl ?? 0),
+            LargestLoss = closed.Count == 0 ? 0m : closed.Min(t => t.NetPnl ?? t.Pnl ?? 0),
+            BestDay = dailyPnl.Count == 0 ? 0m : dailyPnl.Max(d => d.Pnl),
+            WorstDay = dailyPnl.Count == 0 ? 0m : dailyPnl.Min(d => d.Pnl),
+            MaxConsecutiveWins = maxConsWins,
+            MaxConsecutiveLosses = maxConsLosses,
+            TradesToday = trades.Count(t => t.Date.Date == today),
+            PnlToday = trades.Where(t => t.Date.Date == today).Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+            ChecklistCompliance = trades.Count == 0 ? 0m : Math.Round((decimal)trades.Count(t => t.ChecklistCompleted) / trades.Count * 100, 1),
+            MonthlyPnl = monthlyPnl,
+            DayOfWeek = dayOfWeek,
+            ByInstrument = byInstrument,
+            BySetup = bySetup,
+            ByOptionType = byOptionType,
+            TimeOfDay = timeOfDay
+        });
     }
 
     [HttpGet("weekly-focus")]
@@ -953,6 +1114,7 @@ public class TradeEntryCreateDto
     public decimal? EntryPremium { get; set; }
     public decimal? ExitPremium { get; set; }
     public bool ExpiredWorthless { get; set; }
+    public int Multiplier { get; set; } = 100;
     public int? BankAccountId { get; set; }
     public decimal? CommissionFees { get; set; }
     public decimal? RegExchangeFees { get; set; }

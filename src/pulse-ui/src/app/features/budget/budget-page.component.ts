@@ -39,49 +39,61 @@ import { RouterLink } from '@angular/router';
           <div class="tab-content">
             <!-- Stat Cards -->
             <div class="stat-cards">
-              <mat-card class="stat-card income">
-                <mat-card-content>
-                  <div class="stat-value">{{ plan()!.monthlyOverview.totalIncome | currency }}</div>
-                  <div class="stat-label">Total Income ({{ plan()!.monthlyOverview.paychecksThisMonth }} paychecks)</div>
-                </mat-card-content>
-              </mat-card>
-              <mat-card class="stat-card budgeted">
-                <mat-card-content>
-                  <div class="stat-value">{{ plan()!.monthlyOverview.totalExpenses | currency }}</div>
-                  <div class="stat-label">Total Budgeted</div>
-                </mat-card-content>
-              </mat-card>
-              <mat-card class="stat-card spent">
-                <mat-card-content>
-                  <div class="stat-value">{{ plan()!.monthlyOverview.totalSpent | currency }}</div>
-                  <div class="stat-label">Total Spent</div>
-                </mat-card-content>
-              </mat-card>
-              <mat-card class="stat-card" [class.surplus]="plan()!.monthlyOverview.totalRemaining >= 0" [class.deficit]="plan()!.monthlyOverview.totalRemaining < 0">
-                <mat-card-content>
-                  <div class="stat-value">{{ plan()!.monthlyOverview.totalRemaining | currency }}</div>
-                  <div class="stat-label">{{ plan()!.monthlyOverview.totalRemaining >= 0 ? 'Remaining' : 'Over Budget' }}</div>
-                </mat-card-content>
-              </mat-card>
+              <div class="stat-card income">
+                <div class="stat-icon-wrap income-icon"><mat-icon>account_balance_wallet</mat-icon></div>
+                <div class="stat-info">
+                  <span class="stat-value">{{ plan()!.monthlyOverview.totalIncome | currency }}</span>
+                  <span class="stat-label">Income <span class="stat-sub">({{ plan()!.monthlyOverview.paychecksThisMonth }} paychecks)</span></span>
+                </div>
+              </div>
+              <div class="stat-card budgeted">
+                <div class="stat-icon-wrap budgeted-icon"><mat-icon>assignment</mat-icon></div>
+                <div class="stat-info">
+                  <span class="stat-value">{{ plan()!.monthlyOverview.totalExpenses | currency }}</span>
+                  <span class="stat-label">Budgeted</span>
+                </div>
+              </div>
+              <div class="stat-card spent">
+                <div class="stat-icon-wrap spent-icon"><mat-icon>shopping_cart</mat-icon></div>
+                <div class="stat-info">
+                  <span class="stat-value">{{ plan()!.monthlyOverview.totalSpent | currency }}</span>
+                  <span class="stat-label">Spent</span>
+                </div>
+              </div>
+              <div class="stat-card" [class.surplus]="plan()!.monthlyOverview.totalRemaining >= 0" [class.deficit]="plan()!.monthlyOverview.totalRemaining < 0">
+                <div class="stat-icon-wrap" [class.surplus-icon]="plan()!.monthlyOverview.totalRemaining >= 0" [class.deficit-icon]="plan()!.monthlyOverview.totalRemaining < 0">
+                  <mat-icon>{{ plan()!.monthlyOverview.totalRemaining >= 0 ? 'savings' : 'warning' }}</mat-icon>
+                </div>
+                <div class="stat-info">
+                  <span class="stat-value">{{ plan()!.monthlyOverview.totalRemaining | currency }}</span>
+                  <span class="stat-label">{{ plan()!.monthlyOverview.totalRemaining >= 0 ? 'Remaining' : 'Over Budget' }}</span>
+                </div>
+              </div>
             </div>
 
             <!-- Overall Progress -->
-            <div class="overall-progress-section">
+            <div class="overall-progress-section" [class.over]="overallPercent() > 100">
               <div class="overall-progress-header">
-                <span>Monthly Spending</span>
-                <span>{{ plan()!.monthlyOverview.totalSpent | currency }} / {{ plan()!.monthlyOverview.totalExpenses | currency }}</span>
+                <div class="progress-title-row">
+                  <mat-icon class="progress-icon">donut_large</mat-icon>
+                  <span class="progress-title">Monthly Spending</span>
+                </div>
+                <span class="progress-amounts">{{ plan()!.monthlyOverview.totalSpent | currency }} <span class="of-label">of</span> {{ plan()!.monthlyOverview.totalExpenses | currency }}</span>
               </div>
-              <mat-progress-bar mode="determinate"
-                [value]="overallPercent()"
-                [color]="overallPercent() > 100 ? 'warn' : overallPercent() > 80 ? 'accent' : 'primary'">
-              </mat-progress-bar>
+              <div class="progress-bar-wrap">
+                <mat-progress-bar mode="determinate"
+                  [value]="overallPercent()"
+                  [color]="overallPercent() > 100 ? 'warn' : overallPercent() > 80 ? 'accent' : 'primary'">
+                </mat-progress-bar>
+              </div>
               <div class="overall-progress-footer">
-                <span [class.over-budget]="plan()!.monthlyOverview.totalRemaining < 0">
+                <span class="remaining-badge" [class.over-budget]="plan()!.monthlyOverview.totalRemaining < 0" [class.under-budget]="plan()!.monthlyOverview.totalRemaining >= 0">
+                  <mat-icon class="remaining-icon">{{ plan()!.monthlyOverview.totalRemaining >= 0 ? 'check_circle' : 'error' }}</mat-icon>
                   {{ plan()!.monthlyOverview.totalRemaining >= 0
                     ? (plan()!.monthlyOverview.totalRemaining | currency) + ' remaining'
                     : ((-plan()!.monthlyOverview.totalRemaining) | currency) + ' over budget' }}
                 </span>
-                <span class="percent-label">{{ overallPercent() | number:'1.0-0' }}%</span>
+                <span class="percent-badge" [class.pct-danger]="overallPercent() > 100" [class.pct-warn]="overallPercent() > 80 && overallPercent() <= 100">{{ overallPercent() | number:'1.0-0' }}%</span>
               </div>
             </div>
 
@@ -89,7 +101,7 @@ import { RouterLink } from '@angular/router';
             @if (recurringCategories().length > 0) {
               <div class="section-block">
                 <div class="section-header">
-                  <div class="section-title"><mat-icon class="section-icon recurring">autorenew</mat-icon> Recurring</div>
+                  <div class="section-title"><span class="section-icon-wrap recurring-wrap"><mat-icon>autorenew</mat-icon></span> Recurring</div>
                   <span class="section-total recurring">{{ recurringTotal() | currency }}</span>
                 </div>
                 <!-- Desktop table -->
@@ -158,7 +170,7 @@ import { RouterLink } from '@angular/router';
             @if (billCategories().length > 0) {
               <div class="section-block">
                 <div class="section-header">
-                  <div class="section-title"><mat-icon class="section-icon bills">receipt_long</mat-icon> Bills & Spending</div>
+                  <div class="section-title"><span class="section-icon-wrap bills-wrap"><mat-icon>receipt_long</mat-icon></span> Bills & Spending</div>
                   <span class="section-total bills">{{ billsTotal() | currency }}</span>
                 </div>
                 <div class="desktop-only">
@@ -225,7 +237,7 @@ import { RouterLink } from '@angular/router';
             @if (debtCategories().length > 0) {
               <div class="section-block">
                 <div class="section-header">
-                  <div class="section-title"><mat-icon class="section-icon debt">credit_score</mat-icon> Debt Payments</div>
+                  <div class="section-title"><span class="section-icon-wrap debt-wrap"><mat-icon>credit_score</mat-icon></span> Debt Payments</div>
                   <span class="section-total debt">{{ debtTotal() | currency }}</span>
                 </div>
                 <div class="desktop-only">
@@ -349,70 +361,118 @@ import { RouterLink } from '@angular/router';
       flex-wrap: wrap; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm);
     }
     .month-nav { display: flex; align-items: center; gap: var(--spacing-xs); }
-    .month-label { font-size: 1.1rem; font-weight: 500; min-width: 140px; text-align: center; }
+    .month-label { font-size: 1.15rem; font-weight: 700; min-width: 160px; text-align: center; }
     .tab-content { padding: var(--spacing-sm) 0; }
 
     /* Stat Cards */
     .stat-cards {
       display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: var(--spacing-sm); margin-bottom: var(--spacing-md);
+      gap: 12px; margin-bottom: var(--spacing-md);
     }
-    .stat-card .stat-value { font-size: 1.2rem; font-weight: 700; }
-    .stat-card .stat-label { font-size: 0.85rem; opacity: 0.7; margin-top: 4px; }
-    .stat-card.income .stat-value { color: var(--color-primary); }
-    .stat-card.budgeted .stat-value { color: var(--color-stat-amber); }
-    .stat-card.spent .stat-value { color: var(--color-accent); }
+    .stat-card {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px; border-radius: var(--radius-md);
+      background: var(--color-surface); box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border);
+      transition: var(--transition-fast);
+    }
+    .stat-card:hover { box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08)); transform: translateY(-1px); }
+    .stat-icon-wrap {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .stat-icon-wrap mat-icon { font-size: 22px; width: 22px; height: 22px; }
+    .income-icon { background: rgba(33,150,243,0.12); color: #1976d2; }
+    .budgeted-icon { background: rgba(255,152,0,0.12); color: #f57c00; }
+    .spent-icon { background: rgba(156,39,176,0.12); color: #7b1fa2; }
+    .surplus-icon { background: rgba(76,175,80,0.12); color: #388e3c; }
+    .deficit-icon { background: rgba(244,67,54,0.12); color: #d32f2f; }
+    .stat-info { display: flex; flex-direction: column; min-width: 0; }
+    .stat-value { font-size: 1.15rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stat-label { font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.03em; font-weight: 500; margin-top: 2px; }
+    .stat-sub { text-transform: none; font-weight: 400; }
+    .stat-card.income .stat-value { color: #1976d2; }
+    .stat-card.budgeted .stat-value { color: #f57c00; }
+    .stat-card.spent .stat-value { color: #7b1fa2; }
     .stat-card.surplus .stat-value { color: var(--color-success); }
     .stat-card.deficit .stat-value { color: var(--color-danger); }
+    .stat-card.surplus { border-color: rgba(76,175,80,0.3); background: linear-gradient(135deg, rgba(76,175,80,0.04), transparent); }
+    .stat-card.deficit { border-color: rgba(244,67,54,0.3); background: linear-gradient(135deg, rgba(244,67,54,0.04), transparent); }
 
     /* Overall Progress */
     .overall-progress-section {
       background: var(--color-surface); border-radius: var(--radius-md);
-      padding: 16px; margin-bottom: var(--spacing-md); box-shadow: var(--shadow-sm);
+      padding: 18px 20px; margin-bottom: var(--spacing-md); box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border);
     }
+    .overall-progress-section.over { border-color: rgba(244,67,54,0.3); }
     .overall-progress-header {
-      display: flex; justify-content: space-between; margin-bottom: 8px;
-      font-weight: 500; font-size: 0.9rem;
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
     }
+    .progress-title-row { display: flex; align-items: center; gap: 8px; }
+    .progress-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); }
+    .progress-title { font-weight: 700; font-size: 0.95rem; }
+    .progress-amounts { font-size: 0.9rem; font-weight: 600; }
+    .of-label { font-weight: 400; opacity: 0.5; font-size: 0.8rem; }
+    .progress-bar-wrap { margin-bottom: 10px; }
+    .progress-bar-wrap ::ng-deep .mdc-linear-progress__bar-inner { border-radius: 4px; }
     .overall-progress-footer {
-      display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.82rem;
+      display: flex; justify-content: space-between; align-items: center;
     }
-    .percent-label { opacity: 0.6; font-weight: 600; }
-    .over-budget { color: var(--color-danger); font-weight: 600; }
-    .under-budget { color: var(--color-success); }
+    .remaining-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 0.82rem; font-weight: 600;
+      padding: 4px 10px; border-radius: var(--radius-full);
+    }
+    .remaining-icon { font-size: 16px; width: 16px; height: 16px; }
+    .remaining-badge.over-budget { color: var(--color-danger); background: rgba(244,67,54,0.08); }
+    .remaining-badge.under-budget { color: var(--color-success); background: rgba(76,175,80,0.08); }
+    .percent-badge {
+      font-size: 0.85rem; font-weight: 700; padding: 4px 12px;
+      border-radius: var(--radius-full); background: var(--color-surface-secondary);
+    }
+    .percent-badge.pct-danger { background: rgba(244,67,54,0.1); color: var(--color-danger); }
+    .percent-badge.pct-warn { background: rgba(255,152,0,0.1); color: #f57c00; }
 
     /* Section Blocks */
     .section-block {
       background: var(--color-surface); border-radius: var(--radius-md);
       box-shadow: var(--shadow-sm); margin-bottom: var(--spacing-md); overflow: hidden;
+      border: 1px solid var(--color-border);
     }
     .section-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 14px 16px; border-bottom: 1px solid var(--color-border);
     }
-    .section-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 1rem; }
-    .section-total { font-size: 1rem; font-weight: 700; }
-    .section-total.recurring { color: var(--color-stat-purple); }
-    .section-total.bills { color: var(--color-primary); }
-    .section-total.debt { color: var(--color-danger); }
-    .section-icon { font-size: 20px; height: 20px; width: 20px; }
-    .section-icon.recurring { color: var(--color-stat-purple); }
-    .section-icon.bills { color: var(--color-primary); }
-    .section-icon.debt { color: var(--color-danger); }
+    .section-title { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1rem; }
+    .section-icon-wrap {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .section-icon-wrap mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .recurring-wrap { background: rgba(156,39,176,0.1); color: #7b1fa2; }
+    .bills-wrap { background: rgba(33,150,243,0.1); color: #1976d2; }
+    .debt-wrap { background: rgba(244,67,54,0.1); color: #d32f2f; }
+    .section-total { font-size: 1rem; font-weight: 800; }
+    .section-total.recurring { color: #7b1fa2; }
+    .section-total.bills { color: #1976d2; }
+    .section-total.debt { color: #d32f2f; }
 
     /* Category Table */
     .category-table { width: 100%; }
     .category-name-cell { display: flex; align-items: center; gap: 8px; }
-    .category-icon { font-size: 18px; height: 18px; width: 18px; opacity: 0.7; }
+    .category-icon { font-size: 18px; height: 18px; width: 18px; opacity: 0.6; }
     .category-icon.debt { color: var(--color-danger); opacity: 0.8; }
 
     .progress-cell { display: flex; align-items: center; gap: 10px; min-width: 160px; }
     .progress-cell mat-progress-bar { flex: 1; }
-    .progress-percent { font-size: 0.8rem; font-weight: 600; opacity: 0.7; white-space: nowrap; }
+    .progress-percent { font-size: 0.78rem; font-weight: 700; opacity: 0.7; white-space: nowrap; }
 
     .amounts-cell { display: flex; flex-direction: column; gap: 2px; }
     .amounts-main { font-size: 0.85rem; font-weight: 500; }
     .amounts-remaining { font-size: 0.75rem; }
+    .over-budget { color: var(--color-danger); font-weight: 600; }
+    .under-budget { color: var(--color-success); }
 
     /* Mobile Budget Cards */
     .mobile-only { display: none; }
@@ -448,6 +508,10 @@ import { RouterLink } from '@angular/router';
     }
     @media (max-width: 599px) {
       .stat-cards { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .stat-card { padding: 12px; gap: 10px; }
+      .stat-icon-wrap { width: 36px; height: 36px; }
+      .stat-icon-wrap mat-icon { font-size: 18px; width: 18px; height: 18px; }
+      .stat-value { font-size: 1rem; }
       .desktop-only { display: none !important; }
       .mobile-only { display: block; }
     }

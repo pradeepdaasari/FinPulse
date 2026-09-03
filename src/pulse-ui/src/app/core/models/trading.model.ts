@@ -74,6 +74,7 @@ export interface TradeEntry {
   entryPremium?: number;
   exitPremium?: number;
   expiredWorthless?: boolean;
+  multiplier?: number;
   bankAccountId?: number;
   commissionFees?: number;
   regExchangeFees?: number;
@@ -220,4 +221,38 @@ export interface DayOfWeekPerformance {
   winRate: number;
   totalPnl: number;
   grade: 'strong' | 'neutral' | 'weak';
+}
+
+export interface BreakdownRow {
+  pnl: number;
+  trades: number;
+  wins: number;
+  winRate: number;
+  avgPnl: number;
+}
+
+export interface TradingDashboard {
+  totalPnl: number;
+  totalFees: number;
+  netPnl: number;
+  totalTrades: number;
+  winRate: number;
+  avgWin: number;
+  avgLoss: number;
+  profitFactor: number;
+  largestWin: number;
+  largestLoss: number;
+  bestDay: number;
+  worstDay: number;
+  maxConsecutiveWins: number;
+  maxConsecutiveLosses: number;
+  tradesToday: number;
+  pnlToday: number;
+  checklistCompliance: number;
+  monthlyPnl: { year: number; month: number; pnl: number; netPnl: number; fees: number; trades: number; wins: number }[];
+  dayOfWeek: (BreakdownRow & { day: string })[];
+  byInstrument: (BreakdownRow & { instrument: string })[];
+  bySetup: (BreakdownRow & { setupId: number; setupName: string })[];
+  byOptionType: (BreakdownRow & { optionType: string })[];
+  timeOfDay: (BreakdownRow & { bucket: string })[];
 }

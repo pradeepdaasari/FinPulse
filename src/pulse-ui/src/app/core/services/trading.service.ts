@@ -5,7 +5,7 @@ import { environment } from '../../../environments/environment';
 import {
   TradingSetup, TradingSetupSummary, PreMarketNote, TradeEntry,
   TradingRule, DailyReview, DailyLimits, TradingStats, TradingWisdom,
-  WisdomCategory, WeeklyFocus, WeeklySummary
+  WisdomCategory, WeeklyFocus, WeeklySummary, TradingDashboard
 } from '../models/trading.model';
 
 @Injectable({ providedIn: 'root' })
@@ -141,6 +141,13 @@ export class TradingService {
     let params = new HttpParams();
     if (days) params = params.set('days', days.toString());
     return this.http.get<TradingStats>(`${this.baseUrl}/stats`, { params });
+  }
+
+  getDashboard(from?: string, to?: string): Observable<TradingDashboard> {
+    let params = new HttpParams();
+    if (from) params = params.set('from', from);
+    if (to) params = params.set('to', to);
+    return this.http.get<TradingDashboard>(`${this.baseUrl}/dashboard`, { params });
   }
 
   getWeeklyFocus(): Observable<WeeklyFocus> {

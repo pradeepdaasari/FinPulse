@@ -8,6 +8,13 @@ import { TradingService } from '../../core/services/trading.service';
 import { TradeEntry, TradingSetupSummary } from '../../core/models/trading.model';
 import { TradeEntryDialogComponent, TradeEntryDialogData } from './trade-entry-dialog.component';
 
+function toLocalDateKey(utcDateStr: string): string {
+  const tz = localStorage.getItem('pulse_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const d = new Date(utcDateStr);
+  const parts = d.toLocaleDateString('en-CA', { timeZone: tz });
+  return parts;
+}
+
 interface CalendarDay {
   date: number;
   isCurrentMonth: boolean;
@@ -40,28 +47,77 @@ interface CalendarDay {
       </div>
 
       <!-- Monthly Summary -->
-      <div class="month-summary">
-        <div class="stat">
-          <span class="stat-value">{{ tradingDays() }}</span>
-          <span class="stat-label">Days Traded</span>
+      <div class="summary-grid">
+        <div class="summary-card hero-card" [class.hero-positive]="netPnl() >= 0" [class.hero-negative]="netPnl() < 0">
+          <div class="hero-icon-wrap">
+            <mat-icon>{{ netPnl() >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+          </div>
+          <div class="hero-content">
+            <span class="hero-value">{{ netPnl() >= 0 ? '+' : '' }}{{ netPnl() | currency }}</span>
+            <span class="summary-label">Net P&L</span>
+          </div>
         </div>
-        <div class="stat">
-          <span class="stat-value" [class.positive]="monthPnl() >= 0" [class.negative]="monthPnl() < 0">
-            {{ monthPnl() >= 0 ? '+' : '' }}{{ monthPnl() | currency }}
-          </span>
-          <span class="stat-label">Month P&L</span>
+
+        <div class="summary-card">
+          <div class="summary-icon-wrap blue"><mat-icon>bar_chart</mat-icon></div>
+          <div class="summary-content">
+            <span class="summary-value">{{ totalTrades() }}</span>
+            <span class="summary-label">Trades</span>
+          </div>
         </div>
-        <div class="stat">
-          <span class="stat-value">{{ winRate() }}%</span>
-          <span class="stat-label">Win Rate</span>
+
+        <div class="summary-card">
+          <div class="summary-icon-wrap purple"><mat-icon>emoji_events</mat-icon></div>
+          <div class="summary-content">
+            <div class="wl-row">
+              <span class="wl-win">{{ winningTrades() }}W</span>
+              <span class="wl-sep">/</span>
+              <span class="wl-loss">{{ losingTrades() }}L</span>
+            </div>
+            <span class="summary-label">{{ winRate() }}% Win Rate</span>
+          </div>
         </div>
-        <div class="stat desktop-only">
-          <span class="stat-value positive">{{ bestDay() | currency }}</span>
-          <span class="stat-label">Best Day</span>
+
+        <div class="summary-card">
+          <div class="summary-icon-wrap" [class.green]="avgPnl() >= 0" [class.red]="avgPnl() < 0">
+            <mat-icon>functions</mat-icon>
+          </div>
+          <div class="summary-content">
+            <span class="summary-value">{{ avgPnl() >= 0 ? '+' : '' }}{{ avgPnl() | currency }}</span>
+            <span class="summary-label">Avg Trade</span>
+          </div>
         </div>
-        <div class="stat desktop-only">
-          <span class="stat-value negative">{{ worstDay() | currency }}</span>
-          <span class="stat-label">Worst Day</span>
+
+        <div class="summary-card">
+          <div class="summary-icon-wrap amber"><mat-icon>receipt_long</mat-icon></div>
+          <div class="summary-content">
+            <span class="summary-value fee-val">-{{ totalFees() | currency }}</span>
+            <span class="summary-label">Fees</span>
+          </div>
+        </div>
+
+        <div class="summary-card desktop-only">
+          <div class="summary-icon-wrap teal"><mat-icon>checklist</mat-icon></div>
+          <div class="summary-content">
+            <span class="summary-value">{{ checklistRate() }}%</span>
+            <span class="summary-label">Checklist</span>
+          </div>
+        </div>
+
+        <div class="summary-card desktop-only">
+          <div class="summary-icon-wrap green"><mat-icon>arrow_circle_up</mat-icon></div>
+          <div class="summary-content">
+            <span class="summary-value positive">+{{ bestDay() | currency }}</span>
+            <span class="summary-label">Best Day</span>
+          </div>
+        </div>
+
+        <div class="summary-card desktop-only">
+          <div class="summary-icon-wrap red"><mat-icon>arrow_circle_down</mat-icon></div>
+          <div class="summary-content">
+            <span class="summary-value negative">{{ worstDay() | currency }}</span>
+            <span class="summary-label">Worst Day</span>
+          </div>
         </div>
       </div>
 
@@ -188,14 +244,62 @@ interface CalendarDay {
     .month-header h2 { margin: 0; font-size: 1.2rem; font-weight: 700; min-width: 160px; text-align: center; }
     .today-btn { margin-left: auto; font-size: 0.8rem; }
 
-    .month-summary {
-      display: flex; gap: 16px; margin-bottom: 16px;
-      padding: 12px 16px; border-radius: var(--radius-md);
-      background: var(--color-surface-secondary);
+    /* Summary Grid */
+    .summary-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 10px; margin-bottom: 16px;
     }
-    .stat { display: flex; flex-direction: column; align-items: center; flex: 1; }
-    .stat-value { font-size: 1rem; font-weight: 700; }
-    .stat-label { font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+    .summary-card {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px; border-radius: var(--radius-md);
+      background: var(--color-surface); box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border);
+    }
+    .summary-icon-wrap {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .summary-icon-wrap mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .summary-icon-wrap.blue { background: rgba(33,150,243,0.1); color: #1976d2; }
+    .summary-icon-wrap.purple { background: rgba(156,39,176,0.1); color: #7b1fa2; }
+    .summary-icon-wrap.green { background: rgba(76,175,80,0.1); color: #388e3c; }
+    .summary-icon-wrap.red { background: rgba(244,67,54,0.1); color: #d32f2f; }
+    .summary-icon-wrap.amber { background: rgba(255,152,0,0.1); color: #f57c00; }
+    .summary-icon-wrap.teal { background: rgba(0,150,136,0.1); color: #00897b; }
+
+    .summary-content { display: flex; flex-direction: column; min-width: 0; }
+    .summary-value { font-size: 0.95rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .summary-label { font-size: 0.68rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.03em; font-weight: 500; }
+    .fee-val { color: var(--color-stat-amber); }
+
+    .wl-row { display: flex; align-items: baseline; gap: 4px; }
+    .wl-win { font-size: 0.95rem; font-weight: 700; color: var(--color-success); }
+    .wl-loss { font-size: 0.95rem; font-weight: 700; color: var(--color-danger); }
+    .wl-sep { font-size: 0.8rem; color: var(--color-text-muted); }
+
+    /* Hero card (Net P&L) */
+    .hero-card {
+      grid-column: span 2; border: none;
+    }
+    .hero-card.hero-positive {
+      background: linear-gradient(135deg, rgba(76,175,80,0.08), rgba(76,175,80,0.02));
+      border: 1.5px solid rgba(76,175,80,0.25);
+    }
+    .hero-card.hero-negative {
+      background: linear-gradient(135deg, rgba(244,67,54,0.08), rgba(244,67,54,0.02));
+      border: 1.5px solid rgba(244,67,54,0.25);
+    }
+    .hero-icon-wrap {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .hero-icon-wrap mat-icon { font-size: 26px; width: 26px; height: 26px; }
+    .hero-positive .hero-icon-wrap { background: rgba(76,175,80,0.15); color: #388e3c; }
+    .hero-negative .hero-icon-wrap { background: rgba(244,67,54,0.15); color: #d32f2f; }
+    .hero-content { display: flex; flex-direction: column; }
+    .hero-value { font-size: 1.3rem; font-weight: 800; }
+    .hero-positive .hero-value { color: var(--color-success); }
+    .hero-negative .hero-value { color: var(--color-danger); }
 
     .positive { color: var(--color-success) !important; }
     .negative { color: var(--color-danger) !important; }
@@ -322,13 +426,20 @@ interface CalendarDay {
     .fee-item { color: var(--color-stat-amber); }
     .net-item { font-weight: 700; }
 
+    @media (max-width: 768px) {
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      .hero-card { grid-column: span 2; }
+    }
     @media (max-width: 599px) {
       .calendar-page { padding: 8px; }
       .day-cell { min-height: 48px; padding: 4px; }
       .day-pnl { font-size: 0.6rem; }
       .day-count { display: none; }
-      .month-summary { gap: 8px; padding: 10px 12px; }
-      .stat-value { font-size: 0.85rem; }
+      .summary-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .hero-card { grid-column: span 2; }
+      .summary-card { padding: 10px 12px; }
+      .summary-value { font-size: 0.85rem; }
+      .hero-value { font-size: 1.1rem; }
       .desktop-only { display: none; }
     }
   `]
@@ -353,6 +464,13 @@ export class TradingCalendarComponent implements OnInit {
   winRate = signal(0);
   bestDay = signal(0);
   worstDay = signal(0);
+  totalTrades = signal(0);
+  winningTrades = signal(0);
+  losingTrades = signal(0);
+  totalFees = signal(0);
+  netPnl = signal(0);
+  avgPnl = signal(0);
+  checklistRate = signal(0);
 
   ngOnInit(): void {
     this.tradingService.getSetups().subscribe(s => this.setups.set(s));
@@ -454,7 +572,7 @@ export class TradingCalendarComponent implements OnInit {
 
     const tradesByDate = new Map<string, TradeEntry[]>();
     trades.forEach(t => {
-      const dateKey = t.date.split('T')[0];
+      const dateKey = toLocalDateKey(t.date);
       if (!tradesByDate.has(dateKey)) tradesByDate.set(dateKey, []);
       tradesByDate.get(dateKey)!.push(t);
     });
@@ -495,15 +613,23 @@ export class TradingCalendarComponent implements OnInit {
   private computeStats(trades: TradeEntry[]): void {
     const byDate = new Map<string, number>();
     trades.forEach(t => {
-      const key = t.date.split('T')[0];
+      const key = toLocalDateKey(t.date);
       byDate.set(key, (byDate.get(key) ?? 0) + (t.pnl ?? 0));
     });
 
     const dayPnls = [...byDate.values()];
+    const closed = trades.filter(t => t.pnl != null);
     this.tradingDays.set(byDate.size);
     this.monthPnl.set(Math.round(dayPnls.reduce((a, b) => a + b, 0) * 100) / 100);
     this.winRate.set(dayPnls.length > 0 ? Math.round((dayPnls.filter(p => p > 0).length / dayPnls.length) * 100) : 0);
     this.bestDay.set(dayPnls.length > 0 ? Math.max(...dayPnls) : 0);
     this.worstDay.set(dayPnls.length > 0 ? Math.min(...dayPnls) : 0);
+    this.totalTrades.set(trades.length);
+    this.winningTrades.set(closed.filter(t => (t.pnl ?? 0) > 0).length);
+    this.losingTrades.set(closed.filter(t => (t.pnl ?? 0) <= 0).length);
+    this.totalFees.set(Math.round(trades.reduce((s, t) => s + (t.totalFees ?? 0), 0) * 100) / 100);
+    this.netPnl.set(Math.round(trades.reduce((s, t) => s + (t.netPnl ?? t.pnl ?? 0), 0) * 100) / 100);
+    this.avgPnl.set(closed.length > 0 ? Math.round(closed.reduce((s, t) => s + (t.netPnl ?? t.pnl ?? 0), 0) / closed.length * 100) / 100 : 0);
+    this.checklistRate.set(trades.length > 0 ? Math.round(trades.filter(t => t.checklistCompleted).length / trades.length * 100) : 0);
   }
 }
