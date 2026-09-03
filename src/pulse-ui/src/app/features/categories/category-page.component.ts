@@ -147,9 +147,13 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
             <button mat-icon-button [matMenuTriggerFor]="newParentIconMenu" class="icon-picker-btn" matTooltip="Pick icon">
               <mat-icon>{{ newParentIcon || 'category' }}</mat-icon>
             </button>
-            <mat-menu #newParentIconMenu="matMenu" class="icon-menu">
+            <mat-menu #newParentIconMenu="matMenu" class="icon-menu" (closed)="iconSearch.set('')">
               <div class="icon-groups-picker" (click)="$event.stopPropagation()">
-                @for (group of iconGroups; track group.label) {
+                <div class="icon-search-box">
+                  <mat-icon>search</mat-icon>
+                  <input placeholder="Search icons..." [value]="iconSearch()" (input)="iconSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+                </div>
+                @for (group of filteredIconGroups(); track group.label) {
                   <div class="icon-group-section">
                     <div class="icon-group-label" [style.color]="group.color">{{ group.label }}</div>
                     <div class="icon-grid">
@@ -160,6 +164,9 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
                       }
                     </div>
                   </div>
+                }
+                @if (filteredIconGroups().length === 0) {
+                  <div class="icon-no-results">No icons found</div>
                 }
               </div>
             </mat-menu>
@@ -197,7 +204,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
         @for (result of searchResults(); track result.child?.id || result.parent.id) {
           <div class="search-result-row">
             <span class="cat-icon-badge child-badge" [style.background]="getCatBg(result.child?.name || result.parent.name)" [style.border-color]="getCatColor(result.child?.name || result.parent.name)">
-              <mat-icon [style.color]="getCatColor(result.child?.name || result.parent.name)">{{ (result.child?.icon || result.parent.icon) || 'category' }}</mat-icon>
+              <mat-icon [style.color]="getCatColor(result.child?.name || result.parent.name)">{{ inferIcon(result.child?.name || result.parent.name, result.child?.icon || result.parent.icon, 'category') }}</mat-icon>
             </span>
             <span class="search-result-name">
               @if (result.child) {
@@ -238,7 +245,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
               <mat-expansion-panel-header>
                 <mat-panel-title>
                   <span class="cat-icon-badge parent-badge" [style.background]="getCatBg(parent.name)" [style.border-color]="getCatColor(parent.name)">
-                    <mat-icon [style.color]="getCatColor(parent.name)">{{ parent.icon || 'category' }}</mat-icon>
+                    <mat-icon [style.color]="getCatColor(parent.name)">{{ inferIcon(parent.name, parent.icon, 'category') }}</mat-icon>
                   </span>
                   @if (editingId() === parent.id) {
                     <input class="inline-edit" [(ngModel)]="editName" (keyup.enter)="saveEdit(parent)" (click)="$event.stopPropagation()">
@@ -257,9 +264,13 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
                   <button mat-icon-button [matMenuTriggerFor]="editIconMenu" class="icon-picker-btn" matTooltip="Change icon">
                     <mat-icon>{{ editIcon || 'category' }}</mat-icon>
                   </button>
-                  <mat-menu #editIconMenu="matMenu" class="icon-menu">
+                  <mat-menu #editIconMenu="matMenu" class="icon-menu" (closed)="iconSearch.set('')">
                     <div class="icon-groups-picker" (click)="$event.stopPropagation()">
-                      @for (group of iconGroups; track group.label) {
+                      <div class="icon-search-box">
+                        <mat-icon>search</mat-icon>
+                        <input placeholder="Search icons..." [value]="iconSearch()" (input)="iconSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+                      </div>
+                      @for (group of filteredIconGroups(); track group.label) {
                         <div class="icon-group-section">
                           <div class="icon-group-label" [style.color]="group.color">{{ group.label }}</div>
                           <div class="icon-grid">
@@ -270,6 +281,9 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
                             }
                           </div>
                         </div>
+                      }
+                      @if (filteredIconGroups().length === 0) {
+                        <div class="icon-no-results">No icons found</div>
                       }
                     </div>
                   </mat-menu>
@@ -298,9 +312,13 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
                   <button mat-icon-button [matMenuTriggerFor]="newChildIconMenu" class="icon-picker-btn" matTooltip="Pick icon">
                     <mat-icon>{{ newChildIcon || 'label' }}</mat-icon>
                   </button>
-                  <mat-menu #newChildIconMenu="matMenu" class="icon-menu">
+                  <mat-menu #newChildIconMenu="matMenu" class="icon-menu" (closed)="iconSearch.set('')">
                     <div class="icon-groups-picker" (click)="$event.stopPropagation()">
-                      @for (group of iconGroups; track group.label) {
+                      <div class="icon-search-box">
+                        <mat-icon>search</mat-icon>
+                        <input placeholder="Search icons..." [value]="iconSearch()" (input)="iconSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+                      </div>
+                      @for (group of filteredIconGroups(); track group.label) {
                         <div class="icon-group-section">
                           <div class="icon-group-label" [style.color]="group.color">{{ group.label }}</div>
                           <div class="icon-grid">
@@ -311,6 +329,9 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
                             }
                           </div>
                         </div>
+                      }
+                      @if (filteredIconGroups().length === 0) {
+                        <div class="icon-no-results">No icons found</div>
                       }
                     </div>
                   </mat-menu>
@@ -333,15 +354,19 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
                   @for (child of parent.children; track child.id) {
                     <div class="child-row">
                       <span class="cat-icon-badge child-badge" [style.background]="getCatBg(child.name)" [style.border-color]="getCatColor(child.name)">
-                        <mat-icon [style.color]="getCatColor(child.name)">{{ child.icon || 'label' }}</mat-icon>
+                        <mat-icon [style.color]="getCatColor(child.name)">{{ inferIcon(child.name, child.icon, 'label') }}</mat-icon>
                       </span>
                       @if (editingId() === child.id) {
                         <button mat-icon-button [matMenuTriggerFor]="editChildIconMenu" class="icon-picker-btn" matTooltip="Change icon">
                           <mat-icon>{{ editIcon || 'label' }}</mat-icon>
                         </button>
-                        <mat-menu #editChildIconMenu="matMenu" class="icon-menu">
+                        <mat-menu #editChildIconMenu="matMenu" class="icon-menu" (closed)="iconSearch.set('')">
                           <div class="icon-groups-picker" (click)="$event.stopPropagation()">
-                            @for (group of iconGroups; track group.label) {
+                            <div class="icon-search-box">
+                              <mat-icon>search</mat-icon>
+                              <input placeholder="Search icons..." [value]="iconSearch()" (input)="iconSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+                            </div>
+                            @for (group of filteredIconGroups(); track group.label) {
                               <div class="icon-group-section">
                                 <div class="icon-group-label" [style.color]="group.color">{{ group.label }}</div>
                                 <div class="icon-grid">
@@ -352,6 +377,9 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
                                   }
                                 </div>
                               </div>
+                            }
+                            @if (filteredIconGroups().length === 0) {
+                              <div class="icon-no-results">No icons found</div>
                             }
                           </div>
                         </mat-menu>
@@ -470,6 +498,36 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
       overflow-y: auto;
       padding: 4px 8px 8px;
       max-width: 380px;
+    }
+    .icon-search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 8px 6px;
+      position: sticky;
+      top: 0;
+      background: var(--color-surface);
+      z-index: 10;
+      border-bottom: 1px solid var(--color-border);
+      margin-bottom: 4px;
+    }
+    .icon-search-box mat-icon {
+      font-size: 18px; width: 18px; height: 18px;
+      color: var(--color-text-muted);
+      flex-shrink: 0;
+    }
+    .icon-search-box input {
+      border: none; outline: none;
+      flex: 1; font-size: 0.85rem;
+      background: transparent;
+      color: var(--color-text);
+      min-width: 0;
+    }
+    .icon-no-results {
+      text-align: center;
+      padding: 20px 8px;
+      color: var(--color-text-muted);
+      font-size: 0.82rem;
     }
     .icon-group-section { margin-bottom: 4px; }
     .icon-group-label {
@@ -627,6 +685,18 @@ export class CategoryPageComponent implements OnInit {
 
   iconOptions = ICON_OPTIONS;
   iconGroups = ICON_GROUPS;
+  iconSearch = signal('');
+
+  filteredIconGroups = computed(() => {
+    const q = this.iconSearch().toLowerCase().replace(/[_\s]+/g, '');
+    if (!q) return ICON_GROUPS;
+    return ICON_GROUPS
+      .map(g => ({
+        ...g,
+        icons: g.icons.filter(icon => icon.replace(/_/g, '').includes(q) || g.label.toLowerCase().replace(/\s+/g, '').includes(q))
+      }))
+      .filter(g => g.icons.length > 0);
+  });
 
   ngOnInit(): void {
     this.loadCategories();
@@ -757,6 +827,92 @@ export class CategoryPageComponent implements OnInit {
   private showError(err: any): void {
     const msg = err?.error?.message || err?.error || 'An error occurred';
     this.snackBar.open(msg, 'Dismiss', { duration: 5000 });
+  }
+
+  private static readonly ICON_MAP: Record<string, string> = {
+    // Housing
+    rent: 'home', mortgage: 'house', housing: 'home', apartment: 'apartment', maintenance: 'build',
+    furniture: 'weekend', appliances: 'kitchen', cleaning: 'cleaning_services', hoa: 'apartment',
+    // Transport
+    gas: 'local_gas_station', fuel: 'local_gas_station', parking: 'local_parking', car: 'directions_car',
+    auto: 'directions_car', uber: 'local_taxi', lyft: 'local_taxi', taxi: 'local_taxi',
+    bus: 'directions_bus', train: 'train', transit: 'directions_bus', tolls: 'toll', toll: 'toll',
+    'car insurance': 'shield', 'car wash': 'local_car_wash', ev: 'ev_station', bike: 'pedal_bike',
+    // Food & Drink
+    groceries: 'local_grocery_store', grocery: 'local_grocery_store', restaurant: 'restaurant',
+    'dining out': 'restaurant', 'eating out': 'restaurant', coffee: 'coffee', cafe: 'local_cafe',
+    pizza: 'local_pizza', 'fast food': 'lunch_dining', delivery: 'delivery_dining',
+    snacks: 'icecream', alcohol: 'liquor', beer: 'local_bar', bar: 'local_bar', wine: 'liquor',
+    bakery: 'bakery_dining', brunch: 'brunch_dining', lunch: 'lunch_dining', dinner: 'dinner_dining',
+    food: 'restaurant', takeout: 'takeout_dining',
+    // Shopping
+    clothing: 'checkroom', clothes: 'checkroom', shoes: 'checkroom', fashion: 'checkroom',
+    amazon: 'shopping_cart', online: 'shopping_cart', shopping: 'shopping_bag',
+    electronics: 'devices', gifts: 'redeem', jewelry: 'diamond',
+    // Bills & Utilities
+    electric: 'bolt', electricity: 'bolt', power: 'bolt', water: 'water_drop',
+    internet: 'wifi', phone: 'phone_android', mobile: 'phone_android', cable: 'live_tv',
+    utilities: 'bolt', utility: 'bolt', sewer: 'water_drop', trash: 'delete',
+    // Entertainment
+    netflix: 'live_tv', hulu: 'live_tv', disney: 'live_tv', streaming: 'live_tv',
+    spotify: 'headphones', music: 'music_note', movies: 'movie', movie: 'movie', games: 'videogame_asset',
+    gaming: 'sports_esports', concerts: 'celebration', entertainment: 'celebration', hobbies: 'palette',
+    books: 'menu_book', subscriptions: 'subscriptions', subscription: 'subscriptions',
+    // Health & Fitness
+    gym: 'fitness_center', fitness: 'fitness_center', workout: 'fitness_center',
+    doctor: 'local_hospital', medical: 'medical_services', dental: 'medical_services',
+    pharmacy: 'medication', medicine: 'medication', therapy: 'psychology', mental: 'psychology',
+    vision: 'visibility', health: 'favorite', hospital: 'local_hospital', spa: 'spa',
+    yoga: 'self_improvement', swimming: 'pool', supplements: 'medication',
+    // Education
+    tuition: 'school', school: 'school', college: 'school', university: 'school',
+    courses: 'menu_book', textbooks: 'auto_stories', training: 'school', certification: 'verified',
+    'class room': 'school', classroom: 'school', education: 'school', learning: 'menu_book',
+    webinars: 'laptop', webinar: 'laptop', tutorials: 'play_circle',
+    // Finance
+    savings: 'savings', investment: 'trending_up', investing: 'trending_up', stocks: 'candlestick_chart',
+    retirement: 'elderly', '401k': 'savings', ira: 'savings', 'credit card': 'credit_card',
+    bank: 'account_balance', fees: 'receipt', 'bank fees': 'account_balance', taxes: 'receipt_long',
+    tax: 'receipt_long', interest: 'percent', loan: 'payments', debt: 'payments',
+    // Work & Business
+    office: 'business_center', supplies: 'inventory_2', tools: 'handyman',
+    software: 'laptop', coworking: 'meeting_room', business: 'business_center',
+    professional: 'work', freelance: 'laptop',
+    // Family & Personal
+    kids: 'child_care', children: 'child_care', childcare: 'child_care', daycare: 'child_care',
+    baby: 'child_friendly', pets: 'pets', pet: 'pets', dog: 'pets', cat: 'pets', vet: 'pets',
+    family: 'diversity_3', personal: 'face', grooming: 'face', haircut: 'face',
+    // Insurance & Legal
+    insurance: 'shield', 'home insurance': 'shield', 'health insurance': 'health_and_safety',
+    'life insurance': 'shield', legal: 'gavel', lawyer: 'gavel',
+    // Travel
+    vacation: 'flight', travel: 'flight', hotel: 'hotel', airfare: 'flight', flights: 'flight',
+    lodging: 'hotel', camping: 'hiking', beach: 'beach_access',
+    // Sports
+    soccer: 'sports_soccer', football: 'sports_football', basketball: 'sports_basketball',
+    tennis: 'sports_tennis', golf: 'sports_golf', baseball: 'sports_baseball',
+    cricket: 'sports_cricket', hockey: 'sports_hockey', rugby: 'sports_rugby',
+    volleyball: 'sports_volleyball', martial: 'sports_martial_arts', boxing: 'sports_mma',
+    skiing: 'downhill_skiing', snowboard: 'snowboarding', surf: 'surfing', skateboard: 'skateboarding',
+    // Income
+    salary: 'payments', paycheck: 'payments', wage: 'payments', bonus: 'card_giftcard',
+    dividend: 'trending_up', dividends: 'trending_up',
+    'side hustle': 'work', refund: 'replay', cashback: 'replay',
+    rental: 'real_estate_agent', 'rental income': 'real_estate_agent',
+    // General
+    miscellaneous: 'more_horiz', other: 'more_horiz', misc: 'more_horiz',
+    charity: 'volunteer_activism', donation: 'volunteer_activism', donations: 'volunteer_activism',
+    church: 'volunteer_activism', tithe: 'volunteer_activism', tithing: 'volunteer_activism',
+  };
+
+  inferIcon(name: string, fallbackIcon: string | null, defaultIcon: string): string {
+    if (fallbackIcon && fallbackIcon !== 'category' && fallbackIcon !== 'label') return fallbackIcon;
+    const key = name.toLowerCase().trim();
+    if (CategoryPageComponent.ICON_MAP[key]) return CategoryPageComponent.ICON_MAP[key];
+    for (const [keyword, icon] of Object.entries(CategoryPageComponent.ICON_MAP)) {
+      if (key.includes(keyword) || keyword.includes(key)) return icon;
+    }
+    return fallbackIcon || defaultIcon;
   }
 
   getCatColor(name: string): string {
