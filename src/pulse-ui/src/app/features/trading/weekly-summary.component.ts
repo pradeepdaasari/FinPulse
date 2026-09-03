@@ -7,6 +7,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TradingService } from '../../core/services/trading.service';
 import { WeeklySummary } from '../../core/models/trading.model';
+import { toLocalDateString } from '../../core/utils/date-utils';
 
 @Component({
   selector: 'app-weekly-summary',
@@ -517,6 +518,6 @@ export class WeeklySummaryComponent implements OnInit {
   }
 
   private formatDate(d: Date): string {
-    return d.toISOString().split('T')[0];
+    return toLocalDateString(d);
   }
 }

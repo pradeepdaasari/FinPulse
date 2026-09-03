@@ -13,6 +13,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { CreditCardService } from '../../core/services/credit-card.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { toLocalDateString } from '../../core/utils/date-utils';
 import { DailyExpenseService } from '../../core/services/daily-expense.service';
 import { CreditCard } from '../../core/models/credit-card.model';
 import { DailyExpense } from '../../core/models/daily-expense.model';
@@ -398,7 +399,7 @@ export class CardDetailComponent implements OnInit {
     }));
     const payments: CardTransaction[] = this.paymentHistory().map(p => ({
       id: `pay-${p.id}`,
-      date: typeof p.paymentDate === 'string' ? p.paymentDate.slice(0, 10) : new Date(p.paymentDate).toISOString().slice(0, 10),
+      date: typeof p.paymentDate === 'string' ? p.paymentDate.slice(0, 10) : toLocalDateString(new Date(p.paymentDate)),
       description: p.notes || 'Card Payment',
       merchant: null,
       categoryName: null,

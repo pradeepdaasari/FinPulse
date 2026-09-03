@@ -28,10 +28,11 @@ public class WorkoutLogsController : ControllerBase
     {
         var query = _db.WorkoutLogs.Where(l => l.UserId == UserId);
 
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         if (fromDate.HasValue)
-            query = query.Where(l => l.Date >= fromDate.Value);
+            query = query.Where(l => l.Date >= TimeZoneHelper.ToUtc(fromDate.Value, tz));
         if (toDate.HasValue)
-            query = query.Where(l => l.Date <= toDate.Value);
+            query = query.Where(l => l.Date < TimeZoneHelper.ToUtc(toDate.Value.Date.AddDays(1), tz));
 
         var logs = await query
             .OrderByDescending(l => l.Date)

@@ -12,6 +12,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DailyExpense, DailyExpenseCreate, TransactionType, FundingSourceType } from '../../core/models/daily-expense.model';
+import { toLocalISOString } from '../../core/utils/date-utils';
 import { Category } from '../../core/models/category.model';
 import { CategoryService } from '../../core/services/category.service';
 import { DailyExpenseService } from '../../core/services/daily-expense.service';
@@ -938,7 +939,7 @@ export class AddExpenseDialogComponent implements OnInit {
       const splits: DailyExpenseCreate[] = this.splitRows.controls.map(ctrl => {
         const row = (ctrl as FormGroup).value;
         return {
-          date: this.buildDateTime().toISOString(),
+          date: toLocalISOString(this.buildDateTime()),
           categoryId: row.categoryId!,
           amount: row.amount!,
           merchant: val.merchant || null,
@@ -956,7 +957,7 @@ export class AddExpenseDialogComponent implements OnInit {
     }
 
     const expense: DailyExpenseCreate = {
-      date: this.buildDateTime().toISOString(),
+      date: toLocalISOString(this.buildDateTime()),
       categoryId: val.categoryId || null,
       amount: val.amount!,
       merchant: (isTransfer || isCardPayment) ? null : (val.merchant || null),

@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
+import { toLocalDateString } from '../../core/utils/date-utils';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { BankAccountService } from '../../core/services/bank-account.service';
@@ -234,8 +235,8 @@ export class CommissionChangeDialogComponent {
     this.errorMsg.set('');
 
     const effectiveFrom = this.mode() === 'custom' && this.effectiveDate()
-      ? this.effectiveDate()!.toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0];
+      ? toLocalDateString(this.effectiveDate()!)
+      : toLocalDateString(new Date());
 
     const payload = {
       optionsCommissionPerContract: this.data.newRates.optionsCommission ?? undefined,

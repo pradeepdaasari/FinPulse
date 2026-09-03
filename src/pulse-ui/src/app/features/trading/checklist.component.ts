@@ -13,6 +13,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TradingService } from '../../core/services/trading.service';
 import { TradingSetupSummary, TradingSetup, PreMarketNote, TradeEntry, DailyLimits, ChecklistResponse } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
+import { toLocalDateString } from '../../core/utils/date-utils';
 import { RichTextEditorComponent } from '../../shared/rich-text-editor.component';
 
 @Component({
@@ -617,7 +618,7 @@ export class ChecklistComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString(new Date());
 
     this.tradingService.getTodayNote().subscribe({
       next: (note) => { this.todayNote.set(note); this.hasPreMarketNote.set(true); },
@@ -670,7 +671,7 @@ export class ChecklistComponent implements OnInit {
     }));
 
     this.tradingService.createTrade({
-      date: new Date().toISOString().split('T')[0],
+      date: toLocalDateString(new Date()),
       setupId: setup.id,
       instrument: val.instrument!,
       direction: val.direction!,

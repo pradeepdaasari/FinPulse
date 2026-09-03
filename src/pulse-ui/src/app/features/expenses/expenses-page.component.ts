@@ -13,6 +13,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSort, MatSortModule, Sort } from '@angular/material/sort';
 import { MatFabButton } from '@angular/material/button';
+import { toLocalDateString } from '../../core/utils/date-utils';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
@@ -617,8 +618,8 @@ export class ExpensesPageComponent implements OnInit {
       filter.year = this.currentYear;
       filter.month = this.currentMonth;
     } else {
-      if (this.rangeStartDate) filter.dateFrom = this.rangeStartDate.toISOString().split('T')[0];
-      if (this.rangeEndDate) filter.dateTo = this.rangeEndDate.toISOString().split('T')[0];
+      if (this.rangeStartDate) filter.dateFrom = toLocalDateString(this.rangeStartDate);
+      if (this.rangeEndDate) filter.dateTo = toLocalDateString(this.rangeEndDate);
     }
 
     if (this.viewMode() === 'month') {

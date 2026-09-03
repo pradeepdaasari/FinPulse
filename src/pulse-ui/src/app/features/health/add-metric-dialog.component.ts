@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { FormsModule } from '@angular/forms';
 import { HealthMetric } from '../../core/models/health-metric.model';
+import { toLocalISOString } from '../../core/utils/date-utils';
 
 interface MetricConfig {
   type: string;
@@ -204,7 +205,7 @@ export class AddMetricDialogComponent implements OnInit {
       metricType: this.selectedType,
       value: this.value,
       unit: this.getUnit(),
-      measuredAt: new Date(this.measuredAt).toISOString(),
+      measuredAt: toLocalISOString(new Date(this.measuredAt)),
       notes: this.notes || undefined
     });
   }

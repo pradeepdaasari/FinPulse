@@ -8,6 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { toLocalISOString } from '../../core/utils/date-utils';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { BankAccountService } from '../../core/services/bank-account.service';
@@ -147,7 +148,7 @@ export class GoalDialogComponent implements OnInit {
       name: val.name,
       targetAmount: val.targetAmount,
       currentAmount: val.currentAmount ?? 0,
-      targetDate: val.targetDate ? new Date(val.targetDate).toISOString() : undefined,
+      targetDate: val.targetDate ? toLocalISOString(new Date(val.targetDate)) : undefined,
       linkedAccountId: val.linkedAccountId || undefined,
       icon: val.icon || undefined
     };

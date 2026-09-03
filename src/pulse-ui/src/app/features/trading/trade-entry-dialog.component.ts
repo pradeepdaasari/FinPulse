@@ -13,6 +13,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TradingService } from '../../core/services/trading.service';
+import { toLocalISOString } from '../../core/utils/date-utils';
 import { BankAccountService } from '../../core/services/bank-account.service';
 import { TradeEntry, TradingSetupSummary } from '../../core/models/trading.model';
 import { BankAccount } from '../../core/models/bank-account.model';
@@ -491,6 +492,11 @@ export class TradeEntryDialogComponent implements OnInit {
     return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
   }
 
+  private parseLocalDate(dateStr: string): Date {
+    const parts = dateStr.split('T')[0].split('-');
+    return new Date(+parts[0], +parts[1] - 1, +parts[2]);
+  }
+
   form = this.fb.group({
     date: [this.data?.trade?.date ? new Date(this.data.trade.date) : new Date(), Validators.required],
     time: [this.getTimeStr(this.data?.trade?.date), Validators.required],
@@ -504,7 +510,7 @@ export class TradeEntryDialogComponent implements OnInit {
     strikePrice2: [this.data?.trade?.strikePrice2 ?? null as number | null],
     strikePrice3: [this.data?.trade?.strikePrice3 ?? null as number | null],
     strikePrice4: [this.data?.trade?.strikePrice4 ?? null as number | null],
-    expirationDate: [this.data?.trade?.expirationDate ? new Date(this.data.trade.expirationDate) : null],
+    expirationDate: [this.data?.trade?.expirationDate ? this.parseLocalDate(this.data.trade.expirationDate) : null],
     entryPremium: [this.data?.trade?.entryPremium ?? null as number | null],
     exitPremium: [this.data?.trade?.exitPremium ?? null as number | null],
     expiredWorthless: [this.data?.trade?.expiredWorthless ?? false],
@@ -634,7 +640,7 @@ export class TradeEntryDialogComponent implements OnInit {
     const [hh, mm] = (val.time || '00:00').split(':').map(Number);
     d.setHours(hh, mm, 0, 0);
     const payload: Partial<TradeEntry> = {
-      date: d.toISOString(),
+      date: toLocalISOString(d),
       setupId: val.setupId!,
       instrument: val.instrument!,
       direction: val.direction as any,
@@ -654,7 +660,9 @@ export class TradeEntryDialogComponent implements OnInit {
       strikePrice2: val.strikePrice2 ?? undefined,
       strikePrice3: val.strikePrice3 ?? undefined,
       strikePrice4: val.strikePrice4 ?? undefined,
-      expirationDate: val.expirationDate instanceof Date ? val.expirationDate.toISOString().split('T')[0] : val.expirationDate ?? undefined,
+      expirationDate: val.expirationDate instanceof Date
+        ? `${val.expirationDate.getFullYear()}-${String(val.expirationDate.getMonth() + 1).padStart(2, '0')}-${String(val.expirationDate.getDate()).padStart(2, '0')}`
+        : val.expirationDate ?? undefined,
       entryPremium: val.entryPremium ?? undefined,
       exitPremium: val.exitPremium ?? undefined,
       expiredWorthless: val.expiredWorthless ?? false,

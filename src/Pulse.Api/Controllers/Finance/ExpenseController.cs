@@ -39,17 +39,20 @@ public class ExpenseController : ControllerBase
             .ThenInclude(c => c.Parent)
             .Where(e => e.UserId == UserId);
 
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         if (dateFrom.HasValue && dateTo.HasValue)
         {
-            query = query.Where(e => e.Date >= dateFrom.Value && e.Date <= dateTo.Value);
+            var fromUtc = TimeZoneHelper.ToUtc(dateFrom.Value, tz);
+            var toUtc = TimeZoneHelper.ToUtc(dateTo.Value.Date.AddDays(1), tz);
+            query = query.Where(e => e.Date >= fromUtc && e.Date < toUtc);
         }
         else if (!allTime)
         {
-            var targetYear = year ?? DateTime.UtcNow.Year;
-            var targetMonth = month ?? DateTime.UtcNow.Month;
-            var startDate = new DateTime(targetYear, targetMonth, 1);
-            var endDate = startDate.AddMonths(1);
-            query = query.Where(e => e.Date >= startDate && e.Date < endDate);
+            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+            var targetYear = year ?? now.Year;
+            var targetMonth = month ?? now.Month;
+            var (startUtc, endUtc) = TimeZoneHelper.MonthRangeUtc(targetYear, targetMonth, tz);
+            query = query.Where(e => e.Date >= startUtc && e.Date < endUtc);
         }
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -151,10 +154,11 @@ public class ExpenseController : ControllerBase
     [HttpGet("summary")]
     public async Task<ActionResult<List<SpendingSummaryDto>>> GetSummary([FromQuery] int? year, [FromQuery] int? month)
     {
-        var targetYear = year ?? DateTime.UtcNow.Year;
-        var targetMonth = month ?? DateTime.UtcNow.Month;
-        var startDate = new DateTime(targetYear, targetMonth, 1);
-        var endDate = startDate.AddMonths(1);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var targetYear = year ?? now.Year;
+        var targetMonth = month ?? now.Month;
+        var (startDate, endDate) = TimeZoneHelper.MonthRangeUtc(targetYear, targetMonth, tz);
 
         var dailyExpenses = await _db.DailyExpenses
             .Include(e => e.Category)
