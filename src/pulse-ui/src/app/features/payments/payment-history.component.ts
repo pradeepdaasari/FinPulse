@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
@@ -19,7 +20,7 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
 @Component({
   selector: 'app-payment-history',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatCardModule, MatTableModule, MatChipsModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, RouterLink, MatCardModule, MatTableModule, MatChipsModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, LocalDatePipe],
   template: `
     <div class="filter-row">
       <mat-chip-set>
@@ -122,7 +123,7 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
             <table mat-table [dataSource]="filteredPayments()">
               <ng-container matColumnDef="paymentDate">
                 <th mat-header-cell *matHeaderCellDef>Date</th>
-                <td mat-cell *matCellDef="let p">{{ p.paymentDate | date:'mediumDate' }}</td>
+                <td mat-cell *matCellDef="let p">{{ p.paymentDate | localDate:'mediumDate' }}</td>
               </ng-container>
 
               <ng-container matColumnDef="debtName">
@@ -182,7 +183,7 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
                 </div>
                 <div class="payment-card-info">
                   <span class="payment-card-name">{{ getDebtName(p) }}</span>
-                  <span class="payment-card-date">{{ p.paymentDate | date:'mediumDate' }}</span>
+                  <span class="payment-card-date">{{ p.paymentDate | localDate:'mediumDate' }}</span>
                   <span class="type-badge" [class]="'type-' + p.debtType">
                     {{ p.debtType === 'PersonalLoan' ? getLoanType(p) : 'Credit Card' }}
                   </span>

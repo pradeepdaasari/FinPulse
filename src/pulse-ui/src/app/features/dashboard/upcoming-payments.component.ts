@@ -1,5 +1,6 @@
 import { Component, Input, inject, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatListModule } from '@angular/material/list';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,7 +13,7 @@ import { NotificationService } from '../../core/services/notification.service';
 @Component({
   selector: 'app-upcoming-payments',
   standalone: true,
-  imports: [CommonModule, MatListModule, MatChipsModule, MatIconModule, MatButtonModule, MatTooltipModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatListModule, MatChipsModule, MatIconModule, MatButtonModule, MatTooltipModule, CurrencyPipe, DatePipe, LocalDatePipe],
   template: `
     <h3><mat-icon class="section-title-icon">schedule</mat-icon> Upcoming Payments</h3>
     <mat-list>
@@ -21,7 +22,7 @@ import { NotificationService } from '../../core/services/notification.service';
           <mat-icon matListItemIcon>event</mat-icon>
           <span matListItemTitle>{{ payment.debtName }}</span>
           <span matListItemLine>
-            {{ payment.amount | currency }} &mdash; Due {{ payment.dueDate | date:'mediumDate' }}
+            {{ payment.amount | currency }} &mdash; Due {{ payment.dueDate | localDate:'mediumDate' }}
           </span>
           <span matListItemMeta class="meta-actions">
             @if (!paidSet().has(payment.debtId)) {

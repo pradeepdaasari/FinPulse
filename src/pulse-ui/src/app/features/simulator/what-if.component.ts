@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -24,7 +25,7 @@ interface DebtSlider {
 @Component({
   selector: 'app-what-if',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatSliderModule, MatProgressSpinnerModule, MatTableModule, SkeletonLoaderComponent, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatSliderModule, MatProgressSpinnerModule, MatTableModule, SkeletonLoaderComponent, CurrencyPipe, DatePipe, LocalDatePipe],
   template: `
     <p class="page-subtitle">Use the sliders below to see how extra payments affect your payoff timeline.</p>
 
@@ -87,7 +88,7 @@ interface DebtSlider {
                 <span class="stat-icon-pill stat-icon-pill--purple">
                   <mat-icon>event_available</mat-icon>
                 </span>
-                <span class="stat-value">{{ result()!.newDebtFreeDate | date:'mediumDate' }}</span>
+                <span class="stat-value">{{ result()!.newDebtFreeDate | localDate:'mediumDate' }}</span>
                 <span class="stat-label">New Debt-Free Date</span>
               </div>
             </div>
@@ -108,7 +109,7 @@ interface DebtSlider {
                 </ng-container>
                 <ng-container matColumnDef="newPayoffDate">
                   <th mat-header-cell *matHeaderCellDef>New Payoff Date</th>
-                  <td mat-cell *matCellDef="let p">{{ p.newPayoffDate | date:'mediumDate' }}</td>
+                  <td mat-cell *matCellDef="let p">{{ p.newPayoffDate | localDate:'mediumDate' }}</td>
                 </ng-container>
 
                 <tr mat-header-row *matHeaderRowDef="projectionColumns"></tr>

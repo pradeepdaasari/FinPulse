@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,7 +13,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
 @Component({
   selector: 'app-weekly-summary',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, LocalDatePipe],
   template: `
     <div class="page-banner">
       <div class="banner-pattern"></div>
@@ -30,7 +31,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     <div class="week-nav">
       <button mat-icon-button (click)="prevWeek()"><mat-icon>chevron_left</mat-icon></button>
       <span class="week-label">
-        {{ summary()?.weekStart | date:'MMM d' }} — {{ summary()?.weekEnd | date:'MMM d, y' }}
+        {{ summary()?.weekStart | localDate:'MMM d' }} — {{ summary()?.weekEnd | localDate:'MMM d, y' }}
       </span>
       <button mat-icon-button (click)="nextWeek()" [disabled]="isCurrentWeek()"><mat-icon>chevron_right</mat-icon></button>
     </div>
@@ -248,7 +249,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
           <div class="trend-grid">
             @for (week of pastWeeks(); track week.weekStart) {
               <div class="trend-card" [class.current]="week.weekStart === summary()!.weekStart">
-                <span class="trend-date">{{ week.weekStart | date:'M/d' }}</span>
+                <span class="trend-date">{{ week.weekStart | localDate:'M/d' }}</span>
                 <span class="trend-pnl" [class.positive]="week.totalPnl >= 0" [class.negative]="week.totalPnl < 0">
                   {{ week.totalPnl | currency:'USD':'symbol':'1.0-0' }}
                 </span>

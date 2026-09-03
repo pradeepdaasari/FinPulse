@@ -6,6 +6,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DatePipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { BloodWorkService } from '../../core/services/blood-work.service';
 import { BloodWorkReportSummary } from '../../core/models/blood-work.model';
 import { NotificationService } from '../../core/services/notification.service';
@@ -13,7 +14,7 @@ import { NotificationService } from '../../core/services/notification.service';
 @Component({
   selector: 'app-blood-work-page',
   standalone: true,
-  imports: [MatCardModule, MatIconModule, MatButtonModule, MatChipsModule, MatProgressSpinnerModule, DatePipe],
+  imports: [MatCardModule, MatIconModule, MatButtonModule, MatChipsModule, MatProgressSpinnerModule, DatePipe, LocalDatePipe],
   template: `
     <div class="header-row">
       <button mat-raised-button color="primary" (click)="openAddDialog()">
@@ -42,7 +43,7 @@ import { NotificationService } from '../../core/services/notification.service';
               <mat-icon>science</mat-icon>
             </div>
             <div class="rc-mid">
-              <span class="rc-date">{{ report.reportDate | date:'MMM d, yyyy' }}</span>
+              <span class="rc-date">{{ report.reportDate | localDate:'MMM d, yyyy' }}</span>
               <span class="rc-meta">
                 @if (report.labName) { {{ report.labName }} · }
                 {{ report.resultCount }} tests

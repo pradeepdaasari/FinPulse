@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { forkJoin } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -34,7 +35,7 @@ interface CardTransaction {
 @Component({
   selector: 'app-card-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatPaginatorModule, MatProgressSpinnerModule, MatTooltipModule, MatChipsModule, CurrencyPipe, DatePipe, DecimalPipe],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatPaginatorModule, MatProgressSpinnerModule, MatTooltipModule, MatChipsModule, CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe],
   template: `
     @if (loading()) {
       <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
@@ -104,7 +105,7 @@ interface CardTransaction {
               </div>
               <div class="detail-item">
                 <span class="label">Promo End Date</span>
-                <span class="value">{{ card()!.promoEndDate | date:'mediumDate' }}</span>
+                <span class="value">{{ card()!.promoEndDate | localDate:'mediumDate' }}</span>
               </div>
             }
           </div>
@@ -208,7 +209,7 @@ interface CardTransaction {
             <table mat-table [dataSource]="paymentHistory()">
               <ng-container matColumnDef="paymentDate">
                 <th mat-header-cell *matHeaderCellDef>Date</th>
-                <td mat-cell *matCellDef="let p">{{ p.paymentDate | date:'mediumDate' }}</td>
+                <td mat-cell *matCellDef="let p">{{ p.paymentDate | localDate:'mediumDate' }}</td>
               </ng-container>
               <ng-container matColumnDef="amountPaid">
                 <th mat-header-cell *matHeaderCellDef>Amount</th>

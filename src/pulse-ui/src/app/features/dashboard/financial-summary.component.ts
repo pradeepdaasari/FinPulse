@@ -1,5 +1,6 @@
 import { Component, OnInit, Input, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -11,7 +12,7 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
 @Component({
   selector: 'app-financial-summary',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, LocalDatePipe],
   template: `
     @if (loading()) {
       <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
@@ -82,7 +83,7 @@ import { FinancialSummary } from '../../core/models/dashboard.model';
                 </div>
                 <div class="metric">
                   <span class="metric-label">Debt-Free Date</span>
-                  <span class="metric-value purple">{{ debtSummary.estimatedDebtFreeDate | date:'MMM yyyy' }}</span>
+                  <span class="metric-value purple">{{ debtSummary.estimatedDebtFreeDate | localDate:'MMM yyyy' }}</span>
                 </div>
                 <div class="metric">
                   <span class="metric-label">Active Debts</span>
