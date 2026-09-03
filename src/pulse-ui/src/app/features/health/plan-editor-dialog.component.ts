@@ -255,9 +255,11 @@ import { NotificationService } from '../../core/services/notification.service';
     }
 
     @media (max-width: 599px) {
-      .day-chip { width: 32px; height: 32px; font-size: 0.65rem; }
+      .dialog-banner { margin: -16px -16px 16px; }
+      .day-chip { width: 40px; height: 40px; font-size: 0.7rem; }
       .ex-card-details { flex-wrap: wrap; }
-      .ex-field { min-width: calc(33% - 6px); }
+      .ex-field { min-width: calc(50% - 6px); }
+      .ex-card-header button { min-width: 44px; min-height: 44px; }
     }
   `]
 })

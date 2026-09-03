@@ -347,10 +347,15 @@ interface MonthlyPayment {
       .mat-column-balance,
       .mat-column-dueDate,
       .mat-column-daysLeft,
-      .mat-column-paid { display: none; }
+      .mat-column-paid,
+      .mat-column-status { display: none; }
       .account-name { font-size: 0.8125rem; }
       .account-icon { display: none; }
       .account-cell { gap: 0; }
+      .card-title-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+      .payment-count { font-size: 0.75rem; }
+      .paycheck-info { flex-wrap: wrap; font-size: 0.8rem; }
+      .total-row { padding: var(--spacing-sm) 0 0; font-size: 0.9rem; }
     }
   `]
 })

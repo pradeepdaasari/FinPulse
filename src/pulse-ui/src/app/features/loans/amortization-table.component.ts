@@ -122,6 +122,11 @@ import { AmortizationSchedule } from '../../core/models/dashboard.model';
       .summary-card.extra { background: rgba(244, 67, 54, 0.12); }
       .row-paid { background: rgba(76, 175, 80, 0.08); }
     }
+    @media (max-width: 599px) {
+      .summary-cards { grid-template-columns: 1fr; gap: 8px; }
+      .table-container { -webkit-overflow-scrolling: touch; }
+      table { font-size: 0.8rem; }
+    }
   `]
 })
 export class AmortizationTableComponent {

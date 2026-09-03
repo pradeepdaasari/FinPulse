@@ -258,6 +258,9 @@ interface DebtSlider {
       .results-summary { grid-template-columns: 1fr; }
       .stat-card { flex-direction: row; justify-content: flex-start; gap: 12px; text-align: left; }
     }
+    @media (max-width: 599px) {
+      table { font-size: 0.8rem; }
+    }
 
   `]
 })

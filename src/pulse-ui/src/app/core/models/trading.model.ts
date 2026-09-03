@@ -75,6 +75,8 @@ export interface TradeEntry {
   exitPremium?: number;
   expiredWorthless?: boolean;
   bankAccountId?: number;
+  commissionFees?: number;
+  regExchangeFees?: number;
   totalFees?: number;
   netPnl?: number;
 }

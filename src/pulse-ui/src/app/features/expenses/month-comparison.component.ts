@@ -145,6 +145,19 @@ import { MultiMonthComparison, MultiMonthTotal, MultiMonthCategory } from '../..
     .total-col { font-weight: 600; background: rgba(0,0,0,0.02); }
     .zero { opacity: 0.3; }
     .totals-footer td { border-top: 2px solid rgba(0,0,0,0.1); }
+
+    @media (max-width: 599px) {
+      .controls { flex-wrap: wrap; }
+      .months-input { width: 120px; }
+      .totals-row { gap: 8px; }
+      .month-col { min-width: 70px; }
+      .month-total { font-size: 1rem; }
+      .trend-summary { flex-wrap: wrap; justify-content: center; font-size: 0.8rem; gap: 4px; }
+      .compare-table { min-width: 0; }
+      .compare-table th, .compare-table td { padding: 6px 8px; font-size: 0.78rem; }
+      .amt-col { min-width: 65px; }
+      .cat-col { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
+    }
   `]
 })
 export class MonthComparisonComponent implements OnChanges {

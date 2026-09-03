@@ -109,6 +109,7 @@ export class TxnTypeSheetComponent {
     { value: 'Transfer', label: 'Transfer', icon: 'swap_horiz', color: '#1565c0', bg: 'rgba(0,122,255,0.1)' },
     { value: 'Refund', label: 'Refund', icon: 'undo', color: '#e65100', bg: 'rgba(255,159,10,0.1)' },
     { value: 'CardPayment', label: 'Card Payment', icon: 'credit_card', color: '#7b1fa2', bg: 'rgba(191,90,242,0.1)' },
+    { value: 'LogTrade', label: 'Log Trade', icon: 'candlestick_chart', color: '#1565c0', bg: 'rgba(0,122,255,0.1)' },
     { value: 'LogMetric', label: 'Log Metric', icon: 'monitor_heart', color: '#d32f2f', bg: 'rgba(211,47,47,0.1)' },
   ];
 

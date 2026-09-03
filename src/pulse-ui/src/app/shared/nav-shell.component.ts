@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal, ViewChild } from '@angular/core';
+import { Component, computed, inject, signal, ViewChild, OnInit, OnDestroy } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd, ChildrenOutletContexts } from '@angular/router';
 import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { MatBottomSheet } from '@angular/material/bottom-sheet';
+import { MatMenuModule } from '@angular/material/menu';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { filter } from 'rxjs/operators';
 import { AuthService } from '../core/services/auth.service';
@@ -15,6 +16,7 @@ import { DailyExpenseService } from '../core/services/daily-expense.service';
 import { NotificationService } from '../core/services/notification.service';
 import { ThemeService } from '../core/services/theme.service';
 import { HealthMetricService } from '../core/services/health-metric.service';
+import { TradingService } from '../core/services/trading.service';
 import { CommandPaletteComponent } from './command-palette.component';
 import { routeFadeAnimation } from './route-animations';
 
@@ -31,6 +33,7 @@ import { routeFadeAnimation } from './route-animations';
     MatIconModule,
     MatButtonModule,
     MatTooltipModule,
+    MatMenuModule,
     CommandPaletteComponent
   ],
   animations: [routeFadeAnimation],
@@ -270,12 +273,29 @@ import { routeFadeAnimation } from './route-animations';
       </mat-sidenav-content>
 
     </mat-sidenav-container>
-    <button mat-fab class="global-fab" (click)="openQuickExpense()" aria-label="Log expense">
+    <button mat-fab class="global-fab" [class.kb-hidden]="keyboardOpen()"
+      [matMenuTriggerFor]="isPhone() ? null : fabMenu"
+      (click)="isPhone() && openQuickExpense()"
+      aria-label="Quick actions">
       <mat-icon>add</mat-icon>
     </button>
+    <mat-menu #fabMenu="matMenu" class="fab-menu" yPosition="above" xPosition="before">
+      <button mat-menu-item (click)="openExpenseDialog()">
+        <mat-icon class="menu-icon txn">swap_horiz</mat-icon>
+        <span>Add Transaction</span>
+      </button>
+      <button mat-menu-item (click)="openTradeDialog()">
+        <mat-icon class="menu-icon trade">candlestick_chart</mat-icon>
+        <span>Log Trade</span>
+      </button>
+      <button mat-menu-item (click)="openMetricDialog()">
+        <mat-icon class="menu-icon metric">monitor_heart</mat-icon>
+        <span>Log Metric</span>
+      </button>
+    </mat-menu>
 
     @if (isPhone()) {
-      <nav class="bottom-tabs" role="navigation" aria-label="Main navigation">
+      <nav class="bottom-tabs" [class.kb-hidden]="keyboardOpen()" role="navigation" aria-label="Main navigation">
         <a class="tab-item" routerLink="/dashboard" routerLinkActive="tab-active" [routerLinkActiveOptions]="{exact: true}">
           <mat-icon>dashboard</mat-icon>
           <span>Home</span>
@@ -540,6 +560,9 @@ import { routeFadeAnimation } from './route-animations';
     }
 
     @media (max-width: 599px) {
+      .shell-container, :host ::ng-deep .mat-sidenav-content {
+        overflow-x: hidden;
+      }
       .mobile-brand {
         display: flex;
         align-items: center;
@@ -624,6 +647,17 @@ import { routeFadeAnimation } from './route-animations';
       border: 1px solid var(--color-border);
     }
 
+    .menu-icon.txn { color: #1565c0; }
+    .menu-icon.trade { color: #5856D6; }
+    .menu-icon.metric { color: #d32f2f; }
+
+    .kb-hidden {
+      transform: translateY(100%);
+      pointer-events: none;
+      opacity: 0;
+      transition: transform 0.2s ease, opacity 0.15s ease;
+    }
+
     .bottom-tabs {
       position: fixed;
       bottom: 0;
@@ -695,7 +729,7 @@ import { routeFadeAnimation } from './route-animations';
     }
   `]
 })
-export class NavShellComponent {
+export class NavShellComponent implements OnInit, OnDestroy {
   @ViewChild('sidenav') sidenav!: MatSidenav;
   @ViewChild(CommandPaletteComponent) commandPalette!: CommandPaletteComponent;
 
@@ -709,9 +743,13 @@ export class NavShellComponent {
   private dialog = inject(MatDialog);
   private bottomSheet = inject(MatBottomSheet);
   private healthMetricService = inject(HealthMetricService);
+  private tradingService = inject(TradingService);
 
   isMobile = signal(false);
   isPhone = signal(false);
+  keyboardOpen = signal(false);
+  private initialViewportHeight = 0;
+  private viewportHandler = () => this.checkKeyboard();
   pageTitle = signal('Dashboard');
   expandedSections = signal<string[]>(['finance', 'trading', 'health']);
   userEmail = computed(() => this.authService.currentUser()?.email ?? '');
@@ -774,6 +812,21 @@ export class NavShellComponent {
     });
   }
 
+  ngOnInit(): void {
+    this.initialViewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    window.visualViewport?.addEventListener('resize', this.viewportHandler);
+  }
+
+  ngOnDestroy(): void {
+    window.visualViewport?.removeEventListener('resize', this.viewportHandler);
+  }
+
+  private checkKeyboard(): void {
+    if (!window.visualViewport) return;
+    const shrink = this.initialViewportHeight - window.visualViewport.height;
+    this.keyboardOpen.set(shrink > 150);
+  }
+
   onNavClick(): void {
     if (this.isMobile()) {
       this.sidenav.close();
@@ -810,7 +863,9 @@ export class NavShellComponent {
       import('./txn-type-sheet.component').then(m => {
         const sheetRef = this.bottomSheet.open(m.TxnTypeSheetComponent);
         sheetRef.afterDismissed().subscribe((type: string | undefined) => {
-          if (type === 'LogMetric') {
+          if (type === 'LogTrade') {
+            this.openTradeDialog();
+          } else if (type === 'LogMetric') {
             this.openMetricDialog();
           } else if (type) {
             this.openExpenseDialog(type);
@@ -822,7 +877,7 @@ export class NavShellComponent {
     }
   }
 
-  private openExpenseDialog(preselectedType?: string): void {
+  openExpenseDialog(preselectedType?: string): void {
     import('../features/expenses/add-expense-dialog.component').then(m => {
       const ref = this.dialog.open(m.AddExpenseDialogComponent, {
         width: '480px',
@@ -846,7 +901,7 @@ export class NavShellComponent {
     });
   }
 
-  private openMetricDialog(): void {
+  openMetricDialog(): void {
     import('../features/health/add-metric-dialog.component').then(m => {
       const ref = this.dialog.open(m.AddMetricDialogComponent, {
         width: '420px',
@@ -860,6 +915,24 @@ export class NavShellComponent {
           });
         }
       });
+    });
+  }
+
+  openTradeDialog(): void {
+    this.tradingService.getSetups().subscribe({
+      next: (setups) => {
+        import('../features/trading/trade-entry-dialog.component').then(m => {
+          const ref = this.dialog.open(m.TradeEntryDialogComponent, {
+            width: '600px',
+            maxWidth: '95vw',
+            data: { trade: null, setups }
+          });
+          ref.afterClosed().subscribe((result: any) => {
+            if (result) this.notify.success('Trade logged');
+          });
+        });
+      },
+      error: () => this.notify.error('Failed to load setups')
     });
   }
 

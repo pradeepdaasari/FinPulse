@@ -222,6 +222,9 @@ import { RecurringTransaction } from '../../core/models/recurring.model';
     }
     .save-btn mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
+    @media (max-width: 599px) {
+      .dialog-banner { margin: -16px -16px 12px; padding: 14px 16px 12px; }
+    }
   `]
 })
 export class RecurringDialogComponent implements OnInit {

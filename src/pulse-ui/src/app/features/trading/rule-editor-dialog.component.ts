@@ -58,7 +58,7 @@ export interface RuleEditorDialogData {
   `,
   styles: [`
     .title-icon { vertical-align: middle; margin-right: 8px; color: var(--color-primary); }
-    .rule-form { display: flex; flex-direction: column; gap: 8px; min-width: 320px; }
+    .rule-form { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
     mat-slide-toggle { margin-top: 8px; }
   `]
 })

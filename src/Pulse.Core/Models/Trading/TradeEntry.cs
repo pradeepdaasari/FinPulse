@@ -46,6 +46,8 @@ public class TradeEntry
     public bool ExpiredWorthless { get; set; }
 
     // Fees & net P&L
+    public decimal? CommissionFees { get; set; }
+    public decimal? RegExchangeFees { get; set; }
     public decimal? TotalFees { get; set; }
     public decimal? NetPnl { get; set; }
 

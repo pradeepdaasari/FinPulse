@@ -48,19 +48,23 @@ export interface TradeEntryDialogData {
       } @else {
       <form [formGroup]="form" class="trade-form">
 
-        <!-- Row 1: Date, Time, Setup, Instrument -->
-        <div class="row-top">
+        <!-- Row 1: Date + Time -->
+        <div class="row-2col">
           <mat-form-field appearance="outline">
             <mat-label>Date</mat-label>
             <input matInput [matDatepicker]="picker" formControlName="date">
             <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
             <mat-datepicker #picker></mat-datepicker>
           </mat-form-field>
-          <mat-form-field appearance="outline" class="time-field">
+          <mat-form-field appearance="outline">
             <mat-label>Time</mat-label>
             <input matInput type="time" formControlName="time">
             <mat-icon matSuffix>schedule</mat-icon>
           </mat-form-field>
+        </div>
+
+        <!-- Row 2: Setup + Instrument -->
+        <div class="row-2col">
           <mat-form-field appearance="outline">
             <mat-label>Setup</mat-label>
             <mat-select formControlName="setupId">
@@ -256,48 +260,61 @@ export interface TradeEntryDialogData {
 
         <!-- Brokerage + Fees -->
         @if (brokerageAccounts().length > 0) {
-          <div class="row-2col">
-            <mat-form-field appearance="outline">
-              <mat-label>Account</mat-label>
-              <mat-select formControlName="bankAccountId" (selectionChange)="calcPnl()">
-                <mat-option [value]="null">— None —</mat-option>
-                @for (acct of brokerageAccounts(); track acct.id) {
-                  <mat-option [value]="acct.id">{{ acct.accountName }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-            @if (selectedAccount()) {
-              <div class="fee-compact">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Account</mat-label>
+            <mat-select formControlName="bankAccountId" (selectionChange)="calcPnl()">
+              <mat-option [value]="null">— None —</mat-option>
+              @for (acct of brokerageAccounts(); track acct.id) {
+                <mat-option [value]="acct.id">{{ acct.accountName }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          @if (selectedAccount()) {
+            <div class="fees-section">
+              <div class="fees-inputs">
+                <mat-form-field appearance="outline">
+                  <mat-label>Commission</mat-label>
+                  <input matInput type="number" formControlName="commissionFees" step="0.01" (input)="onFeesChanged()">
+                  <span matTextPrefix>$</span>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Reg + Exchange</mat-label>
+                  <input matInput type="number" formControlName="regExchangeFees" step="0.01" (input)="onFeesChanged()">
+                  <span matTextPrefix>$</span>
+                </mat-form-field>
+              </div>
+              <div class="fee-summary-bar">
                 @if (form.value.pnl != null) {
-                  <div class="fee-line">
-                    <span>Gross P&L</span>
+                  <div class="fee-chip">
+                    <span class="fee-chip-label">Gross</span>
                     <span [class.positive]="(form.value.pnl ?? 0) >= 0" [class.negative]="(form.value.pnl ?? 0) < 0">
                       {{ (form.value.pnl ?? 0) >= 0 ? '+' : '' }}{{ form.value.pnl | currency }}
                     </span>
                   </div>
                 }
                 @if (estimatedFees() > 0) {
-                  <div class="fee-line">
-                    <span>Fees</span><span>{{ estimatedFees() | currency }}</span>
+                  <div class="fee-chip">
+                    <span class="fee-chip-label">Fees</span>
+                    <span>−{{ estimatedFees() | currency }}</span>
                   </div>
                 }
                 @if (form.value.pnl != null && estimatedFees() > 0) {
-                  <div class="fee-line">
-                    <span>Net P&L</span>
+                  <div class="fee-chip net-chip">
+                    <span class="fee-chip-label">Net</span>
                     <span [class.positive]="netPnl() >= 0" [class.negative]="netPnl() < 0">
                       {{ netPnl() >= 0 ? '+' : '' }}{{ netPnl() | currency }}
                     </span>
                   </div>
                 }
                 @if (maxRisk() != null) {
-                  <div class="fee-line max-risk-line">
-                    <span>Max Risk</span>
+                  <div class="fee-chip risk-chip">
+                    <span class="fee-chip-label">Risk</span>
                     <span class="negative">−{{ maxRisk()! | currency }}</span>
                   </div>
                 }
               </div>
-            }
-          </div>
+            </div>
+          }
         }
 
         <!-- Bottom row: checklist + notes + tags -->
@@ -344,14 +361,9 @@ export interface TradeEntryDialogData {
     .header-icon.edit-mode { background: rgba(255,255,255,0.25); }
     .dialog-header h2 { margin: 0; color: #fff; font-size: 1.1rem; font-weight: 700; }
 
-    .trade-form { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-top: 12px; }
-    .trade-form .row-2col,
-    .trade-form .row-3col,
-    .trade-form .row-4col { margin-bottom: 2px; }
+    .trade-form { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding-top: 12px; }
 
     .row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: center; }
-    .row-top { display: grid; grid-template-columns: 1.2fr 0.8fr 1fr 1fr; gap: 10px; align-items: start; }
-    .time-field { min-width: 90px; }
     .row-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; align-items: start; }
     .row-4col { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
     .full-width { width: 100%; }
@@ -394,18 +406,35 @@ export interface TradeEntryDialogData {
     .options-section .row-3col,
     .options-section .row-4col { margin-bottom: 0; }
 
-    .fee-compact {
-      display: flex; flex-direction: column; justify-content: center;
-      background: var(--color-surface-secondary); border-radius: var(--radius-sm);
-      padding: 8px 12px; border-left: 3px solid var(--color-stat-amber);
+    .fees-section {
+      border: 1.5px solid var(--color-stat-amber);
+      border-radius: var(--radius-md);
+      padding: 12px 12px 8px;
+      margin: 2px 0 10px;
+      background: color-mix(in srgb, var(--color-stat-amber) 5%, transparent);
     }
-    .fee-line {
-      display: flex; justify-content: space-between;
-      font-size: 0.75rem; font-weight: 600; color: var(--color-text-secondary);
+    .fees-inputs {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
     }
-    .fee-line.balance-line { border-top: 1px solid var(--color-border); margin-top: 3px; padding-top: 3px; font-weight: 700; }
-    .fee-line .positive { color: var(--color-success); }
-    .fee-line .negative { color: var(--color-danger); }
+    .fee-summary-bar {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px;
+    }
+    .fee-chip {
+      display: flex; align-items: center; gap: 4px;
+      background: var(--color-surface-secondary); border-radius: 20px;
+      padding: 4px 10px; font-size: 0.72rem; font-weight: 600;
+      color: var(--color-text-secondary);
+    }
+    .fee-chip-label { opacity: 0.7; font-weight: 500; }
+    .fee-chip.net-chip {
+      background: var(--color-surface); border: 1.5px solid var(--color-border);
+      font-weight: 700;
+    }
+    .fee-chip.risk-chip {
+      border: 1.5px dashed var(--color-danger); background: transparent;
+    }
+    .fee-chip .positive { color: var(--color-success); }
+    .fee-chip .negative { color: var(--color-danger); }
 
     ::ng-deep .trade-form .mat-mdc-form-field-subscript-wrapper { display: none; }
     ::ng-deep .trade-form .mat-mdc-form-field-hint-wrapper { display: none; }
@@ -423,10 +452,19 @@ export interface TradeEntryDialogData {
       background: rgba(255,255,255,0.7); border-radius: inherit; z-index: 10;
     }
     @media (max-width: 599px) {
+      :host { max-width: 100%; overflow: hidden; }
+      .dialog-header { padding: 14px 16px 8px; margin: -16px -16px 0; }
+      .trade-form { max-width: 100%; overflow: hidden; box-sizing: border-box; }
       .row-3col { grid-template-columns: 1fr 1fr; }
       .row-4col { grid-template-columns: 1fr 1fr; }
       .row-2col { grid-template-columns: 1fr; }
-      .dialog-header { padding: 14px 16px 8px; }
+      .compact-toggle { height: 44px; }
+      .fees-section { margin-left: 0; margin-right: 0; overflow: hidden; max-width: 100%; box-sizing: border-box; padding: 10px 8px 8px; }
+      .fees-inputs { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .fee-summary-bar { gap: 4px; flex-wrap: wrap; }
+      .fee-chip { font-size: 0.7rem; padding: 4px 8px; }
+      .options-section { padding: 10px 8px 6px; overflow: hidden; max-width: 100%; box-sizing: border-box; }
+      .expired-hint { display: block; margin-left: 0; margin-top: 2px; }
     }
   `]
 })
@@ -440,6 +478,7 @@ export class TradeEntryDialogComponent implements OnInit {
 
   loading = signal(true);
   saving = signal(false);
+  feesManuallyEdited = false;
   brokerageAccounts = signal<BankAccount[]>([]);
   selectedAccount = signal<BankAccount | null>(null);
   estimatedFees = signal(0);
@@ -475,19 +514,24 @@ export class TradeEntryDialogComponent implements OnInit {
     multiplier: [100],
     pnl: [this.data?.trade?.pnl ?? null as number | null],
     bankAccountId: [this.data?.trade?.bankAccountId ?? null as number | null],
+    commissionFees: [this.data?.trade?.commissionFees ?? null as number | null],
+    regExchangeFees: [this.data?.trade?.regExchangeFees ?? null as number | null],
     checklistCompleted: [this.data?.trade?.checklistCompleted ?? false],
     notes: [this.data?.trade?.notes ?? ''],
     tags: [this.data?.trade?.tags?.join(', ') ?? '']
   });
 
   ngOnInit(): void {
+    if (this.data?.trade?.commissionFees != null || this.data?.trade?.regExchangeFees != null) {
+      this.feesManuallyEdited = true;
+    }
     this.accountService.getAll().subscribe(accounts => {
       const brokerages = accounts.filter(a => a.accountType === 'Brokerage');
       this.brokerageAccounts.set(brokerages);
       if (!this.data?.trade && brokerages.length === 1) {
         this.form.patchValue({ bankAccountId: brokerages[0].id });
-        this.updateFeeEstimate();
       }
+      this.updateFeeEstimate();
       this.loading.set(false);
     });
   }
@@ -529,6 +573,19 @@ export class TradeEntryDialogComponent implements OnInit {
     this.updateFeeEstimate();
   }
 
+  onFeesChanged(): void {
+    this.feesManuallyEdited = true;
+    const v = this.form.value;
+    const commission = v.commissionFees ?? 0;
+    const regExchange = v.regExchangeFees ?? 0;
+    const fees = commission + regExchange;
+    const net = (v.pnl ?? 0) - fees;
+    this.estimatedFees.set(Math.round(fees * 100) / 100);
+    this.netPnl.set(Math.round(net * 100) / 100);
+    const acct = this.selectedAccount();
+    if (acct) this.balanceAfter.set(Math.round((acct.currentBalance + net) * 100) / 100);
+  }
+
   private updateFeeEstimate(): void {
     const v = this.form.value;
     const acct = this.brokerageAccounts().find(a => a.id === v.bankAccountId) ?? null;
@@ -536,16 +593,25 @@ export class TradeEntryDialogComponent implements OnInit {
     if (!acct || !v.quantity) {
       this.estimatedFees.set(0);
       this.netPnl.set(v.pnl ?? 0);
+      if (!acct) this.feesManuallyEdited = false;
       return;
     }
-    const commission = v.assetType === 'Futures'
-      ? (acct.futuresCommissionPerContract ?? 0)
-      : (acct.optionsCommissionPerContract ?? 0);
-    const regFee = v.assetType === 'Futures'
-      ? (acct.futuresRegFeePerContract ?? 0)
-      : (acct.optionsRegFeePerContract ?? 0);
-    const legs = v.assetType === 'Options' ? this.getLegsForSpread(v.spreadType) : 1;
-    const fees = (commission + regFee) * v.quantity * legs * (v.expiredWorthless ? 1 : 2);
+    if (!this.feesManuallyEdited) {
+      const commissionRate = v.assetType === 'Futures'
+        ? (acct.futuresCommissionPerContract ?? 0)
+        : (acct.optionsCommissionPerContract ?? 0);
+      const regFeeRate = v.assetType === 'Futures'
+        ? (acct.futuresRegFeePerContract ?? 0)
+        : (acct.optionsRegFeePerContract ?? 0);
+      const legs = v.assetType === 'Options' ? this.getLegsForSpread(v.spreadType) : 1;
+      const multiplier = v.quantity * legs * (v.expiredWorthless ? 1 : 2);
+      const commission = Math.round(commissionRate * multiplier * 100) / 100;
+      const regExchange = Math.round(regFeeRate * multiplier * 100) / 100;
+      this.form.patchValue({ commissionFees: commission, regExchangeFees: regExchange }, { emitEvent: false });
+    }
+    const commission = this.form.value.commissionFees ?? 0;
+    const regExchange = this.form.value.regExchangeFees ?? 0;
+    const fees = commission + regExchange;
     const net = (v.pnl ?? 0) - fees;
     this.estimatedFees.set(Math.round(fees * 100) / 100);
     this.netPnl.set(Math.round(net * 100) / 100);
@@ -592,7 +658,9 @@ export class TradeEntryDialogComponent implements OnInit {
       entryPremium: val.entryPremium ?? undefined,
       exitPremium: val.exitPremium ?? undefined,
       expiredWorthless: val.expiredWorthless ?? false,
-      bankAccountId: val.bankAccountId ?? undefined
+      bankAccountId: val.bankAccountId ?? undefined,
+      commissionFees: val.commissionFees ?? undefined,
+      regExchangeFees: val.regExchangeFees ?? undefined
     };
 
     this.saving.set(true);

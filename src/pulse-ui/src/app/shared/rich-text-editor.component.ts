@@ -24,9 +24,9 @@ import { QuillModule } from 'ngx-quill';
     </quill-editor>
   `,
   styles: [`
-    :host { display: block; margin-bottom: 12px; width: 100%; }
-    :host ::ng-deep quill-editor { display: block; width: 100%; }
-    :host ::ng-deep .ql-toolbar.ql-snow + .ql-container.ql-snow { width: 100%; }
+    :host { display: block; margin-bottom: 12px; width: 100%; max-width: 100%; overflow: hidden; }
+    :host ::ng-deep quill-editor { display: block; width: 100%; max-width: 100%; overflow: hidden; }
+    :host ::ng-deep .ql-toolbar.ql-snow + .ql-container.ql-snow { width: 100%; max-width: 100%; }
     .rte-label {
       display: block; font-size: 0.82rem; font-weight: 500;
       color: var(--color-text-muted); margin-bottom: 6px;
@@ -72,12 +72,29 @@ import { QuillModule } from 'ngx-quill';
     @media (max-width: 599px) {
       :host ::ng-deep .ql-toolbar.ql-snow {
         padding: 3px 4px;
+        overflow: hidden;
+        max-width: 100%;
       }
       :host ::ng-deep .ql-toolbar.ql-snow .ql-formats {
         margin-right: 4px;
       }
       :host ::ng-deep .ql-snow .ql-picker-label {
         padding: 0 4px;
+      }
+      :host ::ng-deep .ql-snow .ql-color-picker .ql-picker-options,
+      :host ::ng-deep .ql-snow .ql-background .ql-picker-options {
+        width: 152px;
+        left: auto;
+        right: 0;
+      }
+      :host ::ng-deep .ql-container.ql-snow {
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+      :host ::ng-deep .ql-editor {
+        max-width: 100%;
+        overflow-x: hidden;
+        word-break: break-word;
       }
     }
   `]
