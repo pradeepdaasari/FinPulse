@@ -187,7 +187,7 @@ public class TradingController : ControllerBase
                 t.AssetType, t.OptionType, t.SpreadType,
                 t.StrikePrice, t.StrikePrice2, t.StrikePrice3, t.StrikePrice4,
                 t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.BankAccountId,
-                t.TotalFees, t.NetPnl
+                t.CommissionFees, t.RegExchangeFees, t.TotalFees, t.NetPnl
             })
             .ToListAsync();
         return Ok(trades);
@@ -209,7 +209,7 @@ public class TradingController : ControllerBase
                 t.AssetType, t.OptionType, t.SpreadType,
                 t.StrikePrice, t.StrikePrice2, t.StrikePrice3, t.StrikePrice4,
                 t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.BankAccountId,
-                t.TotalFees, t.NetPnl, t.CreatedAt
+                t.CommissionFees, t.RegExchangeFees, t.TotalFees, t.NetPnl, t.CreatedAt
             })
             .Take(20)
             .ToListAsync();
@@ -221,7 +221,10 @@ public class TradingController : ControllerBase
     {
         try
         {
-            var fees = await CalculateFees(input.BankAccountId, input.AssetType, input.Quantity, input.SpreadType, input.Date, input.ExpiredWorthless);
+            var (commission, regExchange) = input.CommissionFees.HasValue || input.RegExchangeFees.HasValue
+                ? (input.CommissionFees ?? 0, input.RegExchangeFees ?? 0)
+                : await CalculateFeesBreakdown(input.BankAccountId, input.AssetType, input.Quantity, input.SpreadType, input.Date, input.ExpiredWorthless);
+            var fees = commission + regExchange;
 
             var trade = new TradeEntry
             {
@@ -234,6 +237,8 @@ public class TradingController : ControllerBase
                 ExitPrice = input.ExitPrice,
                 Quantity = input.Quantity,
                 Pnl = input.Pnl,
+                CommissionFees = commission,
+                RegExchangeFees = regExchange,
                 TotalFees = fees,
                 NetPnl = input.Pnl.HasValue ? input.Pnl.Value - fees : null,
                 ChecklistCompleted = input.ChecklistCompleted,
@@ -287,7 +292,10 @@ public class TradingController : ControllerBase
 
         try
         {
-            var fees = await CalculateFees(input.BankAccountId, input.AssetType, input.Quantity, input.SpreadType, input.Date, input.ExpiredWorthless);
+            var (commission, regExchange) = input.CommissionFees.HasValue || input.RegExchangeFees.HasValue
+                ? (input.CommissionFees ?? 0, input.RegExchangeFees ?? 0)
+                : await CalculateFeesBreakdown(input.BankAccountId, input.AssetType, input.Quantity, input.SpreadType, input.Date, input.ExpiredWorthless);
+            var fees = commission + regExchange;
 
             trade.Date = input.Date;
             trade.SetupId = input.SetupId;
@@ -297,6 +305,8 @@ public class TradingController : ControllerBase
             trade.ExitPrice = input.ExitPrice;
             trade.Quantity = input.Quantity;
             trade.Pnl = input.Pnl;
+            trade.CommissionFees = commission;
+            trade.RegExchangeFees = regExchange;
             trade.TotalFees = fees;
             trade.NetPnl = input.Pnl.HasValue ? input.Pnl.Value - fees : null;
             trade.ChecklistCompleted = input.ChecklistCompleted;
@@ -704,13 +714,12 @@ public class TradingController : ControllerBase
         return (decimal)Math.Round(grades.Average(g => g switch { "A" => 4, "B" => 3, "C" => 2, "D" => 1, _ => 0 }), 1);
     }
 
-    private async Task<decimal> CalculateFees(int? bankAccountId, string assetType, decimal quantity, string? spreadType = null, DateTime? tradeDate = null, bool expiredWorthless = false)
+    private async Task<(decimal commission, decimal regExchange)> CalculateFeesBreakdown(int? bankAccountId, string assetType, decimal quantity, string? spreadType = null, DateTime? tradeDate = null, bool expiredWorthless = false)
     {
-        if (!bankAccountId.HasValue) return 0;
+        if (!bankAccountId.HasValue) return (0, 0);
 
-        decimal commission, regFee;
+        decimal commissionRate, regFeeRate;
 
-        // Look up commission schedule effective on the trade date
         var effectiveDate = tradeDate?.Date ?? DateTime.UtcNow.Date;
         var schedule = await _db.CommissionSchedules
             .Where(s => s.BankAccountId == bankAccountId.Value
@@ -721,29 +730,35 @@ public class TradingController : ControllerBase
 
         if (schedule != null)
         {
-            commission = assetType == "Futures"
+            commissionRate = assetType == "Futures"
                 ? (schedule.FuturesCommissionPerContract ?? 0)
                 : (schedule.OptionsCommissionPerContract ?? 0);
-            regFee = assetType == "Futures"
+            regFeeRate = assetType == "Futures"
                 ? (schedule.FuturesRegFeePerContract ?? 0)
                 : (schedule.OptionsRegFeePerContract ?? 0);
         }
         else
         {
-            // Fallback to BankAccount fields for backward compatibility
             var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == bankAccountId.Value && a.UserId == UserId);
-            if (account == null) return 0;
-            commission = assetType == "Futures"
+            if (account == null) return (0, 0);
+            commissionRate = assetType == "Futures"
                 ? (account.FuturesCommissionPerContract ?? 0)
                 : (account.OptionsCommissionPerContract ?? 0);
-            regFee = assetType == "Futures"
+            regFeeRate = assetType == "Futures"
                 ? (account.FuturesRegFeePerContract ?? 0)
                 : (account.OptionsRegFeePerContract ?? 0);
         }
 
         var legs = assetType == "Options" ? GetLegsForSpread(spreadType) : 1;
+        var multiplier = quantity * legs * (expiredWorthless ? 1 : 2);
 
-        return (commission + regFee) * quantity * legs * (expiredWorthless ? 1 : 2);
+        return (commissionRate * multiplier, regFeeRate * multiplier);
+    }
+
+    private async Task<decimal> CalculateFees(int? bankAccountId, string assetType, decimal quantity, string? spreadType = null, DateTime? tradeDate = null, bool expiredWorthless = false)
+    {
+        var (commission, regExchange) = await CalculateFeesBreakdown(bankAccountId, assetType, quantity, spreadType, tradeDate, expiredWorthless);
+        return commission + regExchange;
     }
 
     private static int GetLegsForSpread(string? spreadType) => spreadType switch
@@ -929,6 +944,8 @@ public class TradeEntryCreateDto
     public decimal? ExitPremium { get; set; }
     public bool ExpiredWorthless { get; set; }
     public int? BankAccountId { get; set; }
+    public decimal? CommissionFees { get; set; }
+    public decimal? RegExchangeFees { get; set; }
     public decimal? TotalFees { get; set; }
     public decimal? NetPnl { get; set; }
 }

@@ -20,19 +20,74 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CategoryService } from '../../core/services/category.service';
 import { Category, CategoryCreate, CategoryType } from '../../core/models/category.model';
 
-const ICON_OPTIONS = [
-  'home', 'apartment', 'house', 'directions_car', 'local_gas_station', 'local_parking',
-  'build', 'hail', 'car_rental', 'car_crash', 'shield', 'health_and_safety', 'security',
-  'bolt', 'electrical_services', 'water_drop', 'gas_meter', 'phone_android', 'wifi',
-  'subscriptions', 'live_tv', 'headphones', 'cloud', 'fitness_center', 'apps',
-  'restaurant', 'dinner_dining', 'coffee', 'delivery_dining', 'shopping_cart',
-  'celebration', 'movie', 'shopping_bag', 'flight', 'palette', 'redeem',
-  'favorite', 'local_hospital', 'spa', 'checkroom', 'school', 'pets',
-  'savings', 'emergency', 'elderly', 'trending_up', 'percent', 'pie_chart',
-  'work', 'payments', 'card_giftcard', 'schedule', 'monetization_on',
-  'laptop', 'handyman', 'storefront', 'account_balance', 'real_estate_agent',
-  'category', 'label', 'receipt', 'attach_money', 'toll', 'local_offer'
+interface IconGroup {
+  label: string;
+  color: string;
+  bg: string;
+  icons: string[];
+}
+
+const ICON_GROUPS: IconGroup[] = [
+  { label: 'Housing', color: '#1565c0', bg: 'rgba(21,101,192,0.1)', icons: [
+    'home', 'apartment', 'house', 'cottage', 'villa', 'real_estate_agent', 'door_front', 'bed', 'chair', 'weekend',
+    'kitchen', 'bathtub', 'yard', 'roofing', 'foundation', 'fence'
+  ]},
+  { label: 'Transport', color: '#00838f', bg: 'rgba(0,131,143,0.1)', icons: [
+    'directions_car', 'local_gas_station', 'local_parking', 'electric_car', 'car_rental', 'car_crash',
+    'directions_bus', 'train', 'flight', 'local_taxi', 'two_wheeler', 'pedal_bike', 'sailing', 'hail', 'toll', 'ev_station'
+  ]},
+  { label: 'Food & Drink', color: '#d84315', bg: 'rgba(216,67,21,0.1)', icons: [
+    'restaurant', 'dinner_dining', 'coffee', 'local_cafe', 'local_bar', 'local_pizza', 'bakery_dining',
+    'lunch_dining', 'brunch_dining', 'ramen_dining', 'delivery_dining', 'takeout_dining',
+    'icecream', 'liquor', 'local_grocery_store', 'egg'
+  ]},
+  { label: 'Shopping', color: '#7b1fa2', bg: 'rgba(123,31,162,0.1)', icons: [
+    'shopping_cart', 'shopping_bag', 'storefront', 'local_mall', 'checkroom', 'diamond', 'watch',
+    'redeem', 'card_giftcard', 'local_offer', 'sell', 'style'
+  ]},
+  { label: 'Bills & Utilities', color: '#f57f17', bg: 'rgba(245,127,23,0.1)', icons: [
+    'bolt', 'electrical_services', 'water_drop', 'gas_meter', 'thermostat', 'phone_android', 'wifi',
+    'router', 'cell_tower', 'mail', 'local_post_office', 'receipt', 'receipt_long', 'description'
+  ]},
+  { label: 'Entertainment', color: '#e91e63', bg: 'rgba(233,30,99,0.1)', icons: [
+    'movie', 'live_tv', 'subscriptions', 'headphones', 'music_note', 'videogame_asset', 'sports_esports',
+    'celebration', 'nightlife', 'casino', 'theater_comedy', 'stadium', 'attractions', 'park', 'apps', 'cloud'
+  ]},
+  { label: 'Health & Fitness', color: '#c62828', bg: 'rgba(198,40,40,0.1)', icons: [
+    'favorite', 'local_hospital', 'medication', 'vaccines', 'spa', 'fitness_center', 'self_improvement',
+    'monitor_heart', 'psychology', 'health_and_safety', 'emergency', 'medical_services', 'bloodtype', 'hearing'
+  ]},
+  { label: 'Education', color: '#0277bd', bg: 'rgba(2,119,189,0.1)', icons: [
+    'school', 'menu_book', 'auto_stories', 'history_edu', 'science', 'biotech', 'calculate',
+    'architecture', 'draw', 'palette', 'translate', 'library_books'
+  ]},
+  { label: 'Finance', color: '#2e7d32', bg: 'rgba(46,125,50,0.1)', icons: [
+    'savings', 'account_balance', 'payments', 'attach_money', 'monetization_on', 'trending_up', 'trending_down',
+    'pie_chart', 'percent', 'currency_exchange', 'credit_card', 'price_check', 'request_quote', 'paid'
+  ]},
+  { label: 'Work & Business', color: '#455a64', bg: 'rgba(69,90,100,0.1)', icons: [
+    'work', 'laptop', 'business_center', 'meeting_room', 'badge', 'handyman', 'engineering',
+    'construction', 'precision_manufacturing', 'build', 'plumbing', 'carpenter'
+  ]},
+  { label: 'Family & Personal', color: '#6a1b9a', bg: 'rgba(106,27,154,0.1)', icons: [
+    'child_care', 'child_friendly', 'baby_changing_station', 'stroller', 'pets', 'elderly', 'elderly_woman',
+    'face', 'diversity_3', 'volunteer_activism', 'loyalty', 'favorite_border'
+  ]},
+  { label: 'Insurance & Legal', color: '#37474f', bg: 'rgba(55,71,79,0.1)', icons: [
+    'shield', 'security', 'verified_user', 'gavel', 'policy', 'assured_workload',
+    'admin_panel_settings', 'lock', 'privacy_tip'
+  ]},
+  { label: 'Travel', color: '#00897b', bg: 'rgba(0,137,123,0.1)', icons: [
+    'luggage', 'hotel', 'beach_access', 'pool', 'hiking', 'snowboarding', 'surfing',
+    'kayaking', 'paragliding', 'map', 'explore', 'public', 'language'
+  ]},
+  { label: 'General', color: '#546e7a', bg: 'rgba(84,110,122,0.1)', icons: [
+    'category', 'label', 'bookmark', 'schedule', 'event', 'star', 'flag',
+    'push_pin', 'lightbulb', 'info', 'help', 'more_horiz'
+  ]},
 ];
+
+const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
 
 @Component({
   selector: 'app-category-page',
@@ -93,11 +148,18 @@ const ICON_OPTIONS = [
               <mat-icon>{{ newParentIcon || 'category' }}</mat-icon>
             </button>
             <mat-menu #newParentIconMenu="matMenu" class="icon-menu">
-              <div class="icon-grid" (click)="$event.stopPropagation()">
-                @for (icon of iconOptions; track icon) {
-                  <button mat-icon-button (click)="newParentIcon = icon" [class.selected]="newParentIcon === icon">
-                    <mat-icon>{{ icon }}</mat-icon>
-                  </button>
+              <div class="icon-groups-picker" (click)="$event.stopPropagation()">
+                @for (group of iconGroups; track group.label) {
+                  <div class="icon-group-section">
+                    <div class="icon-group-label" [style.color]="group.color">{{ group.label }}</div>
+                    <div class="icon-grid">
+                      @for (icon of group.icons; track icon) {
+                        <button mat-icon-button (click)="newParentIcon = icon" [class.selected]="newParentIcon === icon">
+                          <mat-icon [style.color]="newParentIcon === icon ? '#fff' : group.color">{{ icon }}</mat-icon>
+                        </button>
+                      }
+                    </div>
+                  </div>
                 }
               </div>
             </mat-menu>
@@ -196,11 +258,18 @@ const ICON_OPTIONS = [
                     <mat-icon>{{ editIcon || 'category' }}</mat-icon>
                   </button>
                   <mat-menu #editIconMenu="matMenu" class="icon-menu">
-                    <div class="icon-grid" (click)="$event.stopPropagation()">
-                      @for (icon of iconOptions; track icon) {
-                        <button mat-icon-button (click)="editIcon = icon" [class.selected]="editIcon === icon">
-                          <mat-icon>{{ icon }}</mat-icon>
-                        </button>
+                    <div class="icon-groups-picker" (click)="$event.stopPropagation()">
+                      @for (group of iconGroups; track group.label) {
+                        <div class="icon-group-section">
+                          <div class="icon-group-label" [style.color]="group.color">{{ group.label }}</div>
+                          <div class="icon-grid">
+                            @for (icon of group.icons; track icon) {
+                              <button mat-icon-button (click)="editIcon = icon" [class.selected]="editIcon === icon">
+                                <mat-icon [style.color]="editIcon === icon ? '#fff' : group.color">{{ icon }}</mat-icon>
+                              </button>
+                            }
+                          </div>
+                        </div>
                       }
                     </div>
                   </mat-menu>
@@ -230,11 +299,18 @@ const ICON_OPTIONS = [
                     <mat-icon>{{ newChildIcon || 'label' }}</mat-icon>
                   </button>
                   <mat-menu #newChildIconMenu="matMenu" class="icon-menu">
-                    <div class="icon-grid" (click)="$event.stopPropagation()">
-                      @for (icon of iconOptions; track icon) {
-                        <button mat-icon-button (click)="newChildIcon = icon" [class.selected]="newChildIcon === icon">
-                          <mat-icon>{{ icon }}</mat-icon>
-                        </button>
+                    <div class="icon-groups-picker" (click)="$event.stopPropagation()">
+                      @for (group of iconGroups; track group.label) {
+                        <div class="icon-group-section">
+                          <div class="icon-group-label" [style.color]="group.color">{{ group.label }}</div>
+                          <div class="icon-grid">
+                            @for (icon of group.icons; track icon) {
+                              <button mat-icon-button (click)="newChildIcon = icon" [class.selected]="newChildIcon === icon">
+                                <mat-icon [style.color]="newChildIcon === icon ? '#fff' : group.color">{{ icon }}</mat-icon>
+                              </button>
+                            }
+                          </div>
+                        </div>
                       }
                     </div>
                   </mat-menu>
@@ -264,11 +340,18 @@ const ICON_OPTIONS = [
                           <mat-icon>{{ editIcon || 'label' }}</mat-icon>
                         </button>
                         <mat-menu #editChildIconMenu="matMenu" class="icon-menu">
-                          <div class="icon-grid" (click)="$event.stopPropagation()">
-                            @for (icon of iconOptions; track icon) {
-                              <button mat-icon-button (click)="editIcon = icon" [class.selected]="editIcon === icon">
-                                <mat-icon>{{ icon }}</mat-icon>
-                              </button>
+                          <div class="icon-groups-picker" (click)="$event.stopPropagation()">
+                            @for (group of iconGroups; track group.label) {
+                              <div class="icon-group-section">
+                                <div class="icon-group-label" [style.color]="group.color">{{ group.label }}</div>
+                                <div class="icon-grid">
+                                  @for (icon of group.icons; track icon) {
+                                    <button mat-icon-button (click)="editIcon = icon" [class.selected]="editIcon === icon">
+                                      <mat-icon [style.color]="editIcon === icon ? '#fff' : group.color">{{ icon }}</mat-icon>
+                                    </button>
+                                  }
+                                </div>
+                              </div>
                             }
                           </div>
                         </mat-menu>
@@ -382,17 +465,29 @@ const ICON_OPTIONS = [
       border: 1px dashed var(--color-border);
       border-radius: 8px;
     }
+    .icon-groups-picker {
+      max-height: 400px;
+      overflow-y: auto;
+      padding: 4px 8px 8px;
+      max-width: 380px;
+    }
+    .icon-group-section { margin-bottom: 4px; }
+    .icon-group-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 6px 4px 2px;
+    }
     .icon-grid {
       display: grid;
       grid-template-columns: repeat(8, 1fr);
       gap: 2px;
-      padding: 8px;
-      max-width: 360px;
     }
-    .icon-grid button { width: 40px; height: 40px; }
+    .icon-grid button { width: 36px; height: 36px; }
+    .icon-grid button mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .icon-grid button.selected {
       background: var(--color-primary);
-      color: white;
       border-radius: 8px;
     }
 
@@ -531,6 +626,7 @@ export class CategoryPageComponent implements OnInit {
   editIcon = '';
 
   iconOptions = ICON_OPTIONS;
+  iconGroups = ICON_GROUPS;
 
   ngOnInit(): void {
     this.loadCategories();

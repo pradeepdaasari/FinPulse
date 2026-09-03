@@ -454,14 +454,14 @@ export class JournalComponent implements OnInit {
 
   openAddTrade(): void {
     const ref = this.dialog.open(TradeEntryDialogComponent, {
-      width: '500px', data: { trade: null, setups: this.setups() }
+      width: '600px', maxWidth: '95vw', data: { trade: null, setups: this.setups() }
     });
     ref.afterClosed().subscribe(r => { if (r) this.loadTrades(); });
   }
 
   editTrade(t: TradeEntry): void {
     const ref = this.dialog.open(TradeEntryDialogComponent, {
-      width: '500px', data: { trade: t, setups: this.setups() }
+      width: '600px', maxWidth: '95vw', data: { trade: t, setups: this.setups() }
     });
     ref.afterClosed().subscribe(r => { if (r) this.loadTrades(); });
   }

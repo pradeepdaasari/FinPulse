@@ -105,6 +105,12 @@ export interface SetupEditorData {
     .add-item-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
 
     mat-dialog-actions button mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
+
+    @media (max-width: 599px) {
+      .checklist-item { gap: 2px; }
+      .drag-icon { display: none; }
+      .checklist-item button { min-width: 44px; min-height: 44px; }
+    }
   `]
 })
 export class SetupEditorDialogComponent implements OnInit {

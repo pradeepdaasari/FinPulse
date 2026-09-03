@@ -64,6 +64,12 @@ import { PreMarketNote } from '../../core/models/trading.model';
     .history-plan { font-size: 0.85rem; margin: 0 0 8px; line-height: 1.4; }
     .history-footer { display: flex; gap: 12px; font-size: 0.75rem; color: var(--color-text-secondary); font-weight: 500; }
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
+
+    @media (max-width: 599px) {
+      .history-card { padding: 12px; }
+      .history-date { font-size: 0.85rem; }
+      .history-plan { white-space: normal; }
+    }
   `]
 })
 export class PremarketHistoryDialogComponent implements OnInit {

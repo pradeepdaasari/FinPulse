@@ -278,7 +278,10 @@ interface WisdomItem {
       .page-banner { margin: -16px -16px 20px; padding: 32px 16px 24px; }
       .streak-value { font-size: 3rem; }
       .limits-grid { grid-template-columns: 1fr; }
-      .grade-buttons { grid-template-columns: repeat(3, 1fr); }
+      .rule-actions button { width: 44px; height: 44px; }
+      .rule-actions mat-icon { font-size: 20px; width: 20px; height: 20px; }
+      .wisdom-filters button { min-height: 36px; font-size: 0.8rem; padding: 0 12px; }
+      .focus-dot { width: 38px; height: 38px; font-size: 0.75rem; }
     }
   `]
 })

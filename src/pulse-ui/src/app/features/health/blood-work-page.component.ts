@@ -116,7 +116,7 @@ import { NotificationService } from '../../core/services/notification.service';
     .report-card:hover .rc-delete { opacity: 0.7; }
 
     @media (max-width: 599px) {
-      .rc-delete { opacity: 0.5; }
+      .rc-delete { opacity: 0.6; min-width: 44px; min-height: 44px; top: 2px; right: 2px; }
     }
   `]
 })

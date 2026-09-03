@@ -151,6 +151,12 @@ interface MetricConfig {
       letter-spacing: 0.02em;
     }
     .save-btn mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
+
+    @media (max-width: 599px) {
+      .dialog-banner { margin: -16px -16px 16px; padding: 14px 16px 12px; }
+      .value-row { flex-wrap: wrap; }
+      .value-field { min-width: 100%; }
+    }
   `]
 })
 export class AddMetricDialogComponent implements OnInit {
