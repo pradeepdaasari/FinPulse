@@ -13,6 +13,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CategoryService } from '../../core/services/category.service';
+import { toLocalISOString } from '../../core/utils/date-utils';
 import { RecurringTransaction } from '../../core/models/recurring.model';
 
 @Component({
@@ -339,8 +340,8 @@ export class RecurringDialogComponent implements OnInit {
       categoryId: val.categoryId,
       transactionType: val.transactionType,
       frequency: val.frequency,
-      nextRunDate: new Date(val.nextRunDate).toISOString(),
-      endDate: val.endDate ? new Date(val.endDate).toISOString() : undefined,
+      nextRunDate: toLocalISOString(new Date(val.nextRunDate)),
+      endDate: val.endDate ? toLocalISOString(new Date(val.endDate)) : undefined,
       isActive: val.isActive
     };
     this.dialogRef.close(result);

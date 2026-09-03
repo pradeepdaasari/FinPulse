@@ -7,6 +7,7 @@ using Pulse.Core.Data;
 using Pulse.Core.Models;
 using Pulse.Core.Models.Enums;
 using Pulse.Core.Models.Trading;
+using Pulse.Api;
 
 namespace Pulse.Api.Controllers.Finance;
 
@@ -171,8 +172,17 @@ public class TradingController : ControllerBase
             .Where(t => t.UserId == UserId)
             .Include(t => t.ChecklistResponses);
 
-        if (DateTime.TryParse(fromDate, out var from)) query = query.Where(t => t.Date >= from);
-        if (DateTime.TryParse(toDate, out var to)) query = query.Where(t => t.Date <= to);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        if (DateTime.TryParse(fromDate, out var from))
+        {
+            var fromUtc = TimeZoneHelper.ToUtc(from, tz);
+            query = query.Where(t => t.Date >= fromUtc);
+        }
+        if (DateTime.TryParse(toDate, out var to))
+        {
+            var toUtc = TimeZoneHelper.ToUtc(to.Date.AddDays(1), tz);
+            query = query.Where(t => t.Date < toUtc);
+        }
 
         var trades = await query.OrderByDescending(t => t.Date).ThenByDescending(t => t.CreatedAt)
             .Select(t => new

@@ -12,6 +12,7 @@ import { UpcomingPayment } from '../../core/models/dashboard.model';
 import { DailyExpense } from '../../core/models/daily-expense.model';
 import { WorkoutLog } from '../../core/models/workout-log.model';
 import { RecurringTransaction } from '../../core/models/recurring.model';
+import { toLocalDateString } from '../../core/utils/date-utils';
 
 @Component({
   selector: 'app-today-glance',
@@ -175,7 +176,7 @@ export class TodayGlanceComponent implements OnInit {
   goToRecurring(): void { this.router.navigate(['/recurring']); }
 
   ngOnInit(): void {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString(new Date());
 
     forkJoin({
       summary: this.dashboardService.getSummary().pipe(catchError(() => of(null))),

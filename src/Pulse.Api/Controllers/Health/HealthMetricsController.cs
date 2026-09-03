@@ -31,10 +31,11 @@ public class HealthMetricsController : ControllerBase
 
         if (!string.IsNullOrEmpty(type))
             query = query.Where(m => m.MetricType == type);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         if (fromDate.HasValue)
-            query = query.Where(m => m.MeasuredAt >= fromDate.Value);
+            query = query.Where(m => m.MeasuredAt >= TimeZoneHelper.ToUtc(fromDate.Value, tz));
         if (toDate.HasValue)
-            query = query.Where(m => m.MeasuredAt <= toDate.Value);
+            query = query.Where(m => m.MeasuredAt < TimeZoneHelper.ToUtc(toDate.Value.Date.AddDays(1), tz));
 
         return Ok(await query.OrderByDescending(m => m.MeasuredAt).ToListAsync());
     }

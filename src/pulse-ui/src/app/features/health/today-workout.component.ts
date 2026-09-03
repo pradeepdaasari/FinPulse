@@ -13,6 +13,7 @@ import { WorkoutPlanService } from '../../core/services/workout-plan.service';
 import { WorkoutLogService } from '../../core/services/workout-log.service';
 import { ExerciseSet } from '../../core/models/workout-log.model';
 import { NotificationService } from '../../core/services/notification.service';
+import { toLocalISOString } from '../../core/utils/date-utils';
 import { VideoPlayerDialogComponent } from './video-player-dialog.component';
 
 interface ActiveExercise {
@@ -539,7 +540,7 @@ export class TodayWorkoutComponent implements OnInit {
     const planDayId = idx >= 0 && idx < days.length ? days[idx].id : undefined;
 
     this.logService.create({
-      date: new Date().toISOString(),
+      date: toLocalISOString(new Date()),
       focusArea: this.currentFocusArea() || 'Workout',
       planDayId,
       sets: []
@@ -605,7 +606,7 @@ export class TodayWorkoutComponent implements OnInit {
     const planDayId = idx >= 0 && idx < days.length ? days[idx].id : undefined;
 
     this.logService.create({
-      date: new Date().toISOString(),
+      date: toLocalISOString(new Date()),
       focusArea: this.currentFocusArea() || 'Custom',
       durationMinutes: this.duration || undefined,
       notes: this.workoutNotes || undefined,

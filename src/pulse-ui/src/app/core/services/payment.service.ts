@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { PaymentHistory, PaymentListResponse } from '../models/payment-history.model';
 import { environment } from '../../../environments/environment';
+import { toLocalISOString } from '../utils/date-utils';
 
 @Injectable({ providedIn: 'root' })
 export class PaymentService {
@@ -13,7 +14,7 @@ export class PaymentService {
     const endpoint = debtType === 'PersonalLoan' ? 'loans' : 'cards';
     return this.http.post(`${environment.apiUrl}/${endpoint}/${debtId}/payments`, {
       amountPaid: amount,
-      paymentDate: new Date().toISOString(),
+      paymentDate: toLocalISOString(new Date()),
       notes: notes || null
     });
   }

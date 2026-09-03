@@ -10,6 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { PaymentService } from '../core/services/payment.service';
 import { PaymentHistory } from '../core/models/payment-history.model';
+import { toLocalISOString } from '../core/utils/date-utils';
 
 @Component({
   selector: 'app-edit-payment-dialog',
@@ -113,7 +114,7 @@ export class EditPaymentDialogComponent {
     const value = this.form.getRawValue();
     const payload = {
       amountPaid: value.amountPaid!,
-      paymentDate: value.paymentDate!.toISOString(),
+      paymentDate: toLocalISOString(value.paymentDate!),
       notes: value.notes || undefined
     };
 

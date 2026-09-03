@@ -8,6 +8,7 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
 import { BloodWorkService } from '../../core/services/blood-work.service';
+import { toLocalISOString } from '../../core/utils/date-utils';
 import { BloodWorkResult } from '../../core/models/blood-work.model';
 
 @Component({
@@ -150,7 +151,7 @@ export class AddBloodWorkDialogComponent {
   save() {
     const validResults = this.results.filter(r => r.testName && r.value);
     this.dialogRef.close({
-      reportDate: new Date(this.reportDate).toISOString(),
+      reportDate: toLocalISOString(new Date(this.reportDate)),
       labName: this.labName || undefined,
       notes: this.notes || undefined,
       results: validResults

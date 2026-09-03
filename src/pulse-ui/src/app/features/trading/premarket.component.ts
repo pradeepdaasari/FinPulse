@@ -13,6 +13,7 @@ import { TradingService } from '../../core/services/trading.service';
 import { PreMarketNote, MarketBias, MentalState } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
 import { RichTextEditorComponent } from '../../shared/rich-text-editor.component';
+import { toLocalDateString } from '../../core/utils/date-utils';
 
 @Component({
   selector: 'app-premarket',
@@ -535,6 +536,6 @@ export class PremarketComponent implements OnInit {
   }
 
   private formatDate(d: Date): string {
-    return d.toISOString().split('T')[0];
+    return toLocalDateString(d);
   }
 }

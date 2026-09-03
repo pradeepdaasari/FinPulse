@@ -13,6 +13,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { CreditCardService } from '../core/services/credit-card.service';
 import { LoanService } from '../core/services/loan.service';
 import { FundingSourceService } from '../core/services/funding-source.service';
+import { toLocalISOString } from '../core/utils/date-utils';
 import { FundingSource } from '../core/models/funding-source.model';
 
 export interface RecordPaymentData {
@@ -223,7 +224,7 @@ export class RecordPaymentDialogComponent {
     const value = this.form.getRawValue();
     const payload = {
       amountPaid: value.amountPaid!,
-      paymentDate: value.paymentDate!.toISOString(),
+      paymentDate: toLocalISOString(value.paymentDate!),
       notes: value.notes || undefined,
       fromAccountId: value.fromAccountId || undefined
     };

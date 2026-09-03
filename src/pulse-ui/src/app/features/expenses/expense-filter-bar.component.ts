@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { toLocalDateString } from '../../core/utils/date-utils';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
@@ -206,8 +207,8 @@ export class ExpenseFilterBarComponent implements OnInit {
     if (this.search) filter.search = this.search;
     if (this.categoryId) filter.categoryId = this.categoryId;
     if (this.transactionType !== null) filter.transactionType = this.transactionType;
-    if (this.dateFrom) filter.dateFrom = this.dateFrom.toISOString().split('T')[0];
-    if (this.dateTo) filter.dateTo = this.dateTo.toISOString().split('T')[0];
+    if (this.dateFrom) filter.dateFrom = toLocalDateString(this.dateFrom);
+    if (this.dateTo) filter.dateTo = toLocalDateString(this.dateTo);
     if (this.minAmount) filter.minAmount = this.minAmount;
     if (this.maxAmount) filter.maxAmount = this.maxAmount;
     if (this.tag) filter.tag = this.tag;
