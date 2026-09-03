@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,7 +20,7 @@ import { AmortizationTableComponent } from './amortization-table.component';
 @Component({
   selector: 'app-loan-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTableModule, MatTooltipModule, CurrencyPipe, DatePipe, AmortizationTableComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTableModule, MatTooltipModule, CurrencyPipe, DatePipe, LocalDatePipe, AmortizationTableComponent],
   template: `
     @if (loading()) {
       <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
@@ -65,7 +66,7 @@ import { AmortizationTableComponent } from './amortization-table.component';
             </div>
             <div class="detail-item">
               <span class="label">Start Date</span>
-              <span class="value">{{ loan()!.startDate | date:'mediumDate' }}</span>
+              <span class="value">{{ loan()!.startDate | localDate:'mediumDate' }}</span>
             </div>
             <div class="detail-item">
               <span class="label">Monthly Payment</span>
@@ -94,7 +95,7 @@ import { AmortizationTableComponent } from './amortization-table.component';
             <table mat-table [dataSource]="paymentHistory()">
               <ng-container matColumnDef="paymentDate">
                 <th mat-header-cell *matHeaderCellDef>Date</th>
-                <td mat-cell *matCellDef="let p">{{ p.paymentDate | date:'mediumDate' }}</td>
+                <td mat-cell *matCellDef="let p">{{ p.paymentDate | localDate:'mediumDate' }}</td>
               </ng-container>
               <ng-container matColumnDef="amountPaid">
                 <th mat-header-cell *matHeaderCellDef>Amount</th>

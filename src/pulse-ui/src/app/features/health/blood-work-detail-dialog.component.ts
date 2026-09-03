@@ -4,17 +4,18 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DatePipe, DecimalPipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { BloodWorkService } from '../../core/services/blood-work.service';
 import { BloodWorkReport, BloodWorkResult } from '../../core/models/blood-work.model';
 
 @Component({
   selector: 'app-blood-work-detail-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule, DatePipe, DecimalPipe],
+  imports: [MatDialogModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule, DatePipe, DecimalPipe, LocalDatePipe],
   template: `
     <h2 mat-dialog-title>
       @if (report()) {
-        Blood Work — {{ report()!.reportDate | date:'MMM d, yyyy' }}
+        Blood Work — {{ report()!.reportDate | localDate:'MMM d, yyyy' }}
       } @else {
         Blood Work Details
       }

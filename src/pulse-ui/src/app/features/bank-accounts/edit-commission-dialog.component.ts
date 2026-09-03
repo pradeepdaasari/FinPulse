@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { FormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -30,7 +31,8 @@ export interface EditCommissionDialogData {
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatCheckboxModule
+    MatCheckboxModule,
+    LocalDatePipe
   ],
   template: `
     <div class="dialog-header">
@@ -39,7 +41,7 @@ export interface EditCommissionDialogData {
       </div>
       <div class="header-text">
         <h2 mat-dialog-title>Edit Commission Rates</h2>
-        <span class="dialog-subtitle">{{ data.accountName }} · Effective {{ data.schedule.effectiveFrom | date:'MMM d, yyyy' }}</span>
+        <span class="dialog-subtitle">{{ data.accountName }} · Effective {{ data.schedule.effectiveFrom | localDate:'MMM d, yyyy' }}</span>
       </div>
     </div>
     <mat-dialog-content>
@@ -75,7 +77,7 @@ export interface EditCommissionDialogData {
       @if (recalculate()) {
         <div class="recalc-warning">
           <mat-icon>info</mat-icon>
-          Trades from {{ data.schedule.effectiveFrom | date:'MMM d, yyyy' }} onward (until the next rate change) will be recalculated
+          Trades from {{ data.schedule.effectiveFrom | localDate:'MMM d, yyyy' }} onward (until the next rate change) will be recalculated
         </div>
       }
 

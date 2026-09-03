@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -14,7 +15,7 @@ import { TagSummary } from '../../core/models/daily-expense.model';
 @Component({
   selector: 'app-tag-summary',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, MatChipsModule, MatFormFieldModule, MatSelectModule, MatInputModule, MatButtonModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, MatChipsModule, MatFormFieldModule, MatSelectModule, MatInputModule, MatButtonModule, CurrencyPipe, DatePipe, LocalDatePipe],
   template: `
     @if (loading()) {
       <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
@@ -91,9 +92,9 @@ import { TagSummary } from '../../core/models/daily-expense.model';
                 <div class="tag-details">
                   <span class="tag-dates">
                     <mat-icon>date_range</mat-icon>
-                    {{ tag.firstDate | date:'MMM d, yyyy' }}
+                    {{ tag.firstDate | localDate:'MMM d, yyyy' }}
                     @if (tag.firstDate !== tag.lastDate) {
-                      — {{ tag.lastDate | date:'MMM d, yyyy' }}
+                      — {{ tag.lastDate | localDate:'MMM d, yyyy' }}
                     }
                   </span>
                   <span class="tag-count">{{ tag.transactionCount }} transactions</span>

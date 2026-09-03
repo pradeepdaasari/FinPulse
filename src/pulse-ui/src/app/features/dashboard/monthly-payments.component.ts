@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
@@ -36,7 +37,7 @@ interface MonthlyPayment {
 @Component({
   selector: 'app-monthly-payments',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatTableModule, MatIconModule, MatButtonModule, MatChipsModule, MatTooltipModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatCardModule, MatTableModule, MatIconModule, MatButtonModule, MatChipsModule, MatTooltipModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, LocalDatePipe],
   template: `
     @if (loading()) {
       <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
@@ -101,7 +102,7 @@ interface MonthlyPayment {
               <ng-container matColumnDef="dueDate">
                 <th mat-header-cell *matHeaderCellDef>Due Date</th>
                 <td mat-cell *matCellDef="let p" class="due-date-cell">
-                  {{ p.dueDate | date:'MMM d, y' }}
+                  {{ p.dueDate | localDate:'MMM d, y' }}
                 </td>
               </ng-container>
 

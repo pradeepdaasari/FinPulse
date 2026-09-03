@@ -8,6 +8,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { CurrencyPipe, DatePipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { BankAccountService } from '../../core/services/bank-account.service';
 import { DailyExpenseService } from '../../core/services/daily-expense.service';
 import { BankAccount, CommissionSchedule } from '../../core/models/bank-account.model';
@@ -17,7 +18,7 @@ import { NotificationService } from '../../core/services/notification.service';
 @Component({
   selector: 'app-account-detail',
   standalone: true,
-  imports: [MatCardModule, MatIconModule, MatButtonModule, MatTableModule, MatProgressSpinnerModule, MatTooltipModule, CurrencyPipe, DatePipe],
+  imports: [MatCardModule, MatIconModule, MatButtonModule, MatTableModule, MatProgressSpinnerModule, MatTooltipModule, CurrencyPipe, DatePipe, LocalDatePipe],
   template: `
     @if (loading()) {
       <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
@@ -79,7 +80,7 @@ import { NotificationService } from '../../core/services/notification.service';
             @for (schedule of commissionHistory(); track schedule.id; let i = $index) {
               <div class="commission-entry" [class.current]="i === 0">
                 <div class="commission-date">
-                  <span class="date-badge">{{ schedule.effectiveFrom | date:'MMM d, yyyy' }}</span>
+                  <span class="date-badge">{{ schedule.effectiveFrom | localDate:'MMM d, yyyy' }}</span>
                   @if (i === 0) {
                     <span class="current-badge">Current</span>
                   }

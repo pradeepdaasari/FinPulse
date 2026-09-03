@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,7 +20,7 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
   imports: [
     CommonModule, MatCardModule, MatButtonModule, MatIconModule,
     MatTableModule, MatChipsModule, MatDialogModule, MatTooltipModule,
-    MatProgressSpinnerModule, CurrencyPipe, DatePipe, DecimalPipe
+    MatProgressSpinnerModule, CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe
   ],
   template: `
     <div class="page-banner">
@@ -123,7 +124,7 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
                     <span class="spread-badge">{{ t.spreadType }}</span>
                   }
                   @if (t.expirationDate) {
-                    <span class="expiry-label">{{ t.expirationDate | date:'M/d' }}</span>
+                    <span class="expiry-label">{{ t.expirationDate | localDate:'M/d' }}</span>
                   }
                 </td>
               </ng-container>
@@ -195,7 +196,7 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
                 <span class="setup-badge-sm">{{ t.setupName }}</span>
               </span>
               <span class="trade-meta">{{ t.date | date:'MMM d, h:mm a' }} · {{ t.quantity }} contracts
-                @if (t.expirationDate) { · exp {{ t.expirationDate | date:'M/d' }} }
+                @if (t.expirationDate) { · exp {{ t.expirationDate | localDate:'M/d' }} }
               </span>
             </div>
             <div class="trade-right">

@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { Router } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,7 +20,7 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
 @Component({
   selector: 'app-card-list',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatTooltipModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, DecimalPipe],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatTooltipModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe],
   template: `
     <div class="header-row">
       <button mat-raised-button color="primary" (click)="openAddCard()">
@@ -136,7 +137,7 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
             <th mat-header-cell *matHeaderCellDef>Promo Ends</th>
             <td mat-cell *matCellDef="let card">
               @if (isPromoActive(card)) {
-                <span class="promo-date">{{ card.promoEndDate | date:'MMM d, y' }}</span>
+                <span class="promo-date">{{ card.promoEndDate | localDate:'MMM d, y' }}</span>
               } @else {
                 <span class="no-promo">—</span>
               }

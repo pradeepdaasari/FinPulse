@@ -1,5 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { DashboardSummary } from '../../core/models/dashboard.model';
@@ -7,7 +8,7 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
 @Component({
   selector: 'app-summary-cards',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatCardModule, MatIconModule, CurrencyPipe, DatePipe, LocalDatePipe],
   template: `
     <div class="summary-grid">
       <mat-card>
@@ -46,7 +47,7 @@ import { DashboardSummary } from '../../core/models/dashboard.model';
             </div>
             <div class="stat-info">
               <span class="stat-label">Debt-Free Date</span>
-              <span class="stat-value">{{ summary.estimatedDebtFreeDate | date:'mediumDate' }}</span>
+              <span class="stat-value">{{ summary.estimatedDebtFreeDate | localDate:'mediumDate' }}</span>
             </div>
           </div>
         </mat-card-content>

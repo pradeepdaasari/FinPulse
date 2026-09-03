@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -16,7 +17,7 @@ import { GoalDialogComponent } from './goal-dialog.component';
 @Component({
   selector: 'app-goals-page',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatProgressBarModule, MatProgressSpinnerModule, MatFormFieldModule, MatInputModule, MatDialogModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatProgressBarModule, MatProgressSpinnerModule, MatFormFieldModule, MatInputModule, MatDialogModule, CurrencyPipe, DatePipe, LocalDatePipe],
   template: `
     <div class="header-row">
       <button mat-raised-button color="primary" (click)="openAdd()">
@@ -73,7 +74,7 @@ import { GoalDialogComponent } from './goal-dialog.component';
             <div class="goal-footer">
               <span class="percent">{{ getProgress(goal) | number:'1.0-0' }}%</span>
               @if (goal.targetDate) {
-                <span class="target-date">Target: {{ goal.targetDate | date:'mediumDate' }}</span>
+                <span class="target-date">Target: {{ goal.targetDate | localDate:'mediumDate' }}</span>
               }
             </div>
 

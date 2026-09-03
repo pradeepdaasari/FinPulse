@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -10,7 +11,7 @@ import { DebtFreeCountdown } from '../../core/models/dashboard.model';
 @Component({
   selector: 'app-debt-countdown',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, LocalDatePipe],
   template: `
     @if (loading()) {
       <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
@@ -22,7 +23,7 @@ import { DebtFreeCountdown } from '../../core/models/dashboard.model';
               <span class="title-with-icon"><mat-icon class="card-title-icon">timer</mat-icon> Debt-Free Countdown</span>
               <span class="overall-date">
                 <mat-icon>flag</mat-icon>
-                {{ countdown()!.overallDebtFreeDate | date:'MMM yyyy' }}
+                {{ countdown()!.overallDebtFreeDate | localDate:'MMM yyyy' }}
                 ({{ countdown()!.overallRemainingMonths }} months)
               </span>
             </div>
@@ -39,7 +40,7 @@ import { DebtFreeCountdown } from '../../core/models/dashboard.model';
                 <div class="projection-bar">
                   <mat-progress-bar mode="determinate" [value]="p.progressPercent" [color]="getBarColor(p.remainingMonths)"></mat-progress-bar>
                 </div>
-                <span class="payoff-date">{{ p.projectedPayoffDate | date:'MMM yyyy' }}</span>
+                <span class="payoff-date">{{ p.projectedPayoffDate | localDate:'MMM yyyy' }}</span>
               </div>
             }
           </div>

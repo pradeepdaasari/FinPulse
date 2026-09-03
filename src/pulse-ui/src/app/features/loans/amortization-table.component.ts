@@ -1,5 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatCardModule } from '@angular/material/card';
@@ -9,7 +10,7 @@ import { AmortizationSchedule } from '../../core/models/dashboard.model';
 @Component({
   selector: 'app-amortization-table',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatPaginatorModule, MatCardModule, MatIconModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatTableModule, MatPaginatorModule, MatCardModule, MatIconModule, CurrencyPipe, DatePipe, LocalDatePipe],
   template: `
     <div class="summary-cards">
       <div class="summary-card paid">
@@ -47,7 +48,7 @@ import { AmortizationSchedule } from '../../core/models/dashboard.model';
 
         <ng-container matColumnDef="date">
           <th mat-header-cell *matHeaderCellDef>Date</th>
-          <td mat-cell *matCellDef="let entry">{{ entry.paymentDate | date:'mediumDate' }}</td>
+          <td mat-cell *matCellDef="let entry">{{ entry.paymentDate | localDate:'mediumDate' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="payment">
