@@ -134,7 +134,7 @@ import { routeFadeAnimation } from './route-animations';
               <a mat-list-item routerLink="/trading" routerLinkActive="active-link"
                  [routerLinkActiveOptions]="{exact: true}" (click)="onNavClick()">
                 <mat-icon matListItemIcon>candlestick_chart</mat-icon>
-                <span matListItemTitle>Trading Hub</span>
+                <span matListItemTitle>Dashboard</span>
               </a>
               <a mat-list-item routerLink="/trading/premarket" routerLinkActive="active-link"
                  (click)="onNavClick()">
@@ -774,7 +774,7 @@ export class NavShellComponent implements OnInit, OnDestroy {
     '/health/plans': 'Workout Plans',
     '/health/workout': "Today's Workout",
     '/health/progress': 'Progress & PRs',
-    '/trading': 'Trading Hub',
+    '/trading': 'Dashboard',
     '/trading/premarket': 'Pre-Market Plan',
     '/trading/checklist': 'Trade Checklist',
     '/trading/journal': 'Trade Journal',

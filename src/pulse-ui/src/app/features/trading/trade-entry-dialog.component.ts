@@ -112,7 +112,7 @@ export interface TradeEntryDialogData {
         <!-- Options Section -->
         @if (form.value.assetType === 'Options') {
           <div class="options-section">
-            <!-- Spread + Option Type -->
+            <!-- Spread + Expiration -->
             <div class="row-2col">
               <mat-form-field appearance="outline">
                 <mat-label>Spread</mat-label>
@@ -124,35 +124,28 @@ export interface TradeEntryDialogData {
                   <mat-option value="Calendar">Calendar</mat-option>
                 </mat-select>
               </mat-form-field>
-              @if (form.value.spreadType === 'Single') {
-                <mat-button-toggle-group formControlName="optionType" class="opt-toggle compact-toggle">
-                  <mat-button-toggle value="Call" class="toggle-call">Call</mat-button-toggle>
-                  <mat-button-toggle value="Put" class="toggle-put">Put</mat-button-toggle>
-                </mat-button-toggle-group>
-              } @else {
-                <mat-form-field appearance="outline">
-                  <mat-label>Expiration</mat-label>
-                  <input matInput [matDatepicker]="expPicker" formControlName="expirationDate">
-                  <mat-datepicker-toggle matIconSuffix [for]="expPicker"></mat-datepicker-toggle>
-                  <mat-datepicker #expPicker></mat-datepicker>
-                </mat-form-field>
-              }
+              <mat-form-field appearance="outline">
+                <mat-label>Expiration</mat-label>
+                <input matInput [matDatepicker]="expPicker" formControlName="expirationDate">
+                <mat-datepicker-toggle matIconSuffix [for]="expPicker"></mat-datepicker-toggle>
+                <mat-datepicker #expPicker></mat-datepicker>
+              </mat-form-field>
             </div>
 
-            <!-- Expiration for Single -->
+            <!-- Call/Put toggle (not for Iron Condor which uses both) -->
+            @if (form.value.spreadType !== 'IronCondor') {
+              <mat-button-toggle-group formControlName="optionType" class="opt-toggle compact-toggle">
+                <mat-button-toggle value="Call" class="toggle-call">Call</mat-button-toggle>
+                <mat-button-toggle value="Put" class="toggle-put">Put</mat-button-toggle>
+              </mat-button-toggle-group>
+            }
+
+            <!-- Strike fields per spread type -->
             @if (form.value.spreadType === 'Single') {
-              <div class="row-2col">
-                <mat-form-field appearance="outline">
-                  <mat-label>Strike</mat-label>
-                  <input matInput type="number" formControlName="strikePrice" step="1">
-                </mat-form-field>
-                <mat-form-field appearance="outline">
-                  <mat-label>Expiration</mat-label>
-                  <input matInput [matDatepicker]="expPicker2" formControlName="expirationDate">
-                  <mat-datepicker-toggle matIconSuffix [for]="expPicker2"></mat-datepicker-toggle>
-                  <mat-datepicker #expPicker2></mat-datepicker>
-                </mat-form-field>
-              </div>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Strike</mat-label>
+                <input matInput type="number" formControlName="strikePrice" step="1">
+              </mat-form-field>
             } @else if (form.value.spreadType === 'Calendar') {
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Strike</mat-label>
@@ -372,7 +365,7 @@ export interface TradeEntryDialogData {
     .toggle-field { display: flex; align-items: center; padding: 4px 0; }
     .dir-toggle, .opt-toggle, .asset-toggle { width: 100%; }
     .dir-toggle .mat-button-toggle, .opt-toggle .mat-button-toggle, .asset-toggle .mat-button-toggle { flex: 1; }
-    .compact-toggle { align-self: center; height: 40px; }
+    .compact-toggle { align-self: center; height: 40px; margin-bottom: 8px; }
 
     ::ng-deep .dir-toggle .mat-button-toggle-checked.toggle-long {
       background: var(--color-stat-green-bg) !important; color: var(--color-success) !important;
@@ -517,7 +510,7 @@ export class TradeEntryDialogComponent implements OnInit {
     entryPrice: [this.data?.trade?.entryPrice ?? null as number | null],
     exitPrice: [this.data?.trade?.exitPrice ?? null as number | null],
     quantity: [this.data?.trade?.quantity ?? 1, [Validators.required, Validators.min(1)]],
-    multiplier: [100],
+    multiplier: [this.data?.trade?.multiplier ?? 100],
     pnl: [this.data?.trade?.pnl ?? null as number | null],
     bankAccountId: [this.data?.trade?.bankAccountId ?? null as number | null],
     commissionFees: [this.data?.trade?.commissionFees ?? null as number | null],
@@ -654,7 +647,7 @@ export class TradeEntryDialogComponent implements OnInit {
       isRevengeTrading: false,
       checklistResponses: [],
       assetType: val.assetType ?? 'Options',
-      optionType: val.assetType === 'Options' && val.spreadType === 'Single' ? val.optionType ?? undefined : undefined,
+      optionType: val.assetType === 'Options' && val.spreadType !== 'IronCondor' ? val.optionType ?? undefined : undefined,
       spreadType: val.assetType === 'Options' ? val.spreadType ?? undefined : undefined,
       strikePrice: val.strikePrice ?? undefined,
       strikePrice2: val.strikePrice2 ?? undefined,
@@ -668,7 +661,8 @@ export class TradeEntryDialogComponent implements OnInit {
       expiredWorthless: val.expiredWorthless ?? false,
       bankAccountId: val.bankAccountId ?? undefined,
       commissionFees: val.commissionFees ?? undefined,
-      regExchangeFees: val.regExchangeFees ?? undefined
+      regExchangeFees: val.regExchangeFees ?? undefined,
+      multiplier: val.multiplier ?? 100
     };
 
     this.saving.set(true);

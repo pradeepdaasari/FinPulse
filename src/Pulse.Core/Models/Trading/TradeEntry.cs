@@ -44,6 +44,7 @@ public class TradeEntry
     public decimal? EntryPremium { get; set; }
     public decimal? ExitPremium { get; set; }
     public bool ExpiredWorthless { get; set; }
+    public int Multiplier { get; set; } = 100;
 
     // Fees & net P&L
     public decimal? CommissionFees { get; set; }

@@ -81,6 +81,11 @@ public class HealthMetricsController : ControllerBase
         metric.UserId = UserId;
         if (metric.MeasuredAt == default)
             metric.MeasuredAt = DateTime.UtcNow;
+        else
+        {
+            var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+            metric.MeasuredAt = TimeZoneHelper.ToUtc(metric.MeasuredAt, tz);
+        }
         _db.HealthMetrics.Add(metric);
         await _db.SaveChangesAsync();
         return Ok(metric);
@@ -92,10 +97,12 @@ public class HealthMetricsController : ControllerBase
         var existing = await _db.HealthMetrics.FirstOrDefaultAsync(m => m.Id == id && m.UserId == UserId);
         if (existing == null) return NotFound();
 
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+
         existing.MetricType = metric.MetricType;
         existing.Value = metric.Value;
         existing.Unit = metric.Unit;
-        existing.MeasuredAt = metric.MeasuredAt;
+        existing.MeasuredAt = TimeZoneHelper.ToUtc(metric.MeasuredAt, tz);
         existing.Notes = metric.Notes;
         await _db.SaveChangesAsync();
         return Ok(existing);

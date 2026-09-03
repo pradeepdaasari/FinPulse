@@ -1,11 +1,16 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTableModule } from '@angular/material/table';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatDialog } from '@angular/material/dialog';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
@@ -14,11 +19,17 @@ import { DailyExpenseService } from '../../core/services/daily-expense.service';
 import { BankAccount, CommissionSchedule } from '../../core/models/bank-account.model';
 import { DailyExpense } from '../../core/models/daily-expense.model';
 import { NotificationService } from '../../core/services/notification.service';
+import { toLocalDateString } from '../../core/utils/date-utils';
 
 @Component({
   selector: 'app-account-detail',
   standalone: true,
-  imports: [MatCardModule, MatIconModule, MatButtonModule, MatTableModule, MatProgressSpinnerModule, MatTooltipModule, CurrencyPipe, DatePipe, LocalDatePipe],
+  imports: [
+    FormsModule, MatCardModule, MatIconModule, MatButtonModule, MatButtonToggleModule,
+    MatTableModule, MatProgressSpinnerModule, MatTooltipModule,
+    MatDatepickerModule, MatFormFieldModule, MatInputModule,
+    CurrencyPipe, DatePipe, LocalDatePipe
+  ],
   template: `
     @if (loading()) {
       <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
@@ -62,7 +73,7 @@ import { NotificationService } from '../../core/services/notification.service';
             </div>
             <div class="detail-item">
               <span class="label">Transactions</span>
-              <span class="value">{{ transactions().length }}</span>
+              <span class="value">{{ allTransactions().length }}</span>
             </div>
             <div class="detail-item">
               <span class="label">Added On</span>
@@ -116,8 +127,36 @@ import { NotificationService } from '../../core/services/notification.service';
       }
 
       <!-- Transaction History -->
-      @if (transactions().length > 0) {
-        <h3 class="section-title">Transaction History</h3>
+      @if (allTransactions().length > 0) {
+        <div class="txn-header-row">
+          <h3 class="section-title">Transaction History</h3>
+          <div class="period-controls">
+            <mat-button-toggle-group [value]="period()" (change)="onPeriodChange($event.value)" hideSingleSelectionIndicator>
+              <mat-button-toggle value="1m">1M</mat-button-toggle>
+              <mat-button-toggle value="3m">3M</mat-button-toggle>
+              <mat-button-toggle value="6m">6M</mat-button-toggle>
+              <mat-button-toggle value="ytd">YTD</mat-button-toggle>
+              <mat-button-toggle value="1y">1Y</mat-button-toggle>
+              <mat-button-toggle value="all">All</mat-button-toggle>
+            </mat-button-toggle-group>
+            <div class="custom-range">
+              <mat-form-field appearance="outline" class="date-field">
+                <mat-label>From</mat-label>
+                <input matInput [matDatepicker]="fromPicker" [(ngModel)]="customFrom">
+                <mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
+                <mat-datepicker #fromPicker></mat-datepicker>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="date-field">
+                <mat-label>To</mat-label>
+                <input matInput [matDatepicker]="toPicker" [(ngModel)]="customTo">
+                <mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
+                <mat-datepicker #toPicker></mat-datepicker>
+              </mat-form-field>
+              <button mat-flat-button color="primary" class="go-btn" (click)="onCustomRange()">Go</button>
+            </div>
+          </div>
+        </div>
+
         <mat-card class="history-card">
           <div class="history-summary">
             <div class="summary-stats">
@@ -296,7 +335,20 @@ import { NotificationService } from '../../core/services/notification.service';
     .acct-brokerage { background: var(--color-stat-purple-bg); color: var(--color-stat-purple); }
 
     /* Section Title */
-    .section-title { font-size: 1rem; font-weight: 700; margin-bottom: 12px; }
+    .section-title { font-size: 1rem; font-weight: 700; margin: 0; }
+    .txn-header-row {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px; margin-bottom: 12px;
+    }
+    .period-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .period-controls mat-button-toggle-group { height: 36px; }
+    .period-controls ::ng-deep .mat-button-toggle-label-content { padding: 0 12px; line-height: 36px; font-size: 0.8rem; }
+    .custom-range { display: flex; align-items: center; gap: 8px; }
+    .date-field { width: 130px; }
+    .date-field ::ng-deep .mat-mdc-form-field-infix { padding-top: 8px !important; padding-bottom: 8px !important; min-height: 36px; }
+    .date-field ::ng-deep .mat-mdc-text-field-wrapper { max-height: 40px; }
+    .date-field ::ng-deep .mat-mdc-floating-label { top: 18px; }
+    .go-btn { height: 36px; min-width: 48px; font-size: 0.8rem; }
 
     /* History Card */
     .history-card { overflow: hidden; }
@@ -415,6 +467,12 @@ import { NotificationService } from '../../core/services/notification.service';
       .summary-stats { gap: 10px; }
       .commission-entry { flex-direction: column; align-items: flex-start; gap: 6px; }
       .commission-date { min-width: unset; }
+      .txn-header-row { flex-direction: column; align-items: flex-start; }
+      .period-controls { width: 100%; }
+      .period-controls mat-button-toggle-group { width: 100%; }
+      .period-controls ::ng-deep .mat-button-toggle { flex: 1; }
+      .custom-range { width: 100%; }
+      .date-field { flex: 1; width: auto; }
     }
   `]
 })
@@ -427,14 +485,47 @@ export class AccountDetailComponent implements OnInit {
   private notify = inject(NotificationService);
 
   account = signal<BankAccount | null>(null);
-  transactions = signal<DailyExpense[]>([]);
+  allTransactions = signal<DailyExpense[]>([]);
   commissionHistory = signal<CommissionSchedule[]>([]);
   loading = signal(true);
   displayedColumns = ['date', 'description', 'type', 'source', 'category', 'amount', 'actions'];
 
-  totalIncome = signal(0);
-  totalExpense = signal(0);
-  totalTransfer = signal(0);
+  period = signal<string>('3m');
+  customFrom: Date | null = null;
+  customTo: Date | null = null;
+  private customRange = signal<{ from: Date; to: Date } | null>(null);
+
+  private dateRange = computed<{ from: Date; to: Date } | null>(() => {
+    const p = this.period();
+    if (p === 'all') return null;
+    if (p === 'custom') return this.customRange();
+    const now = new Date();
+    const to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    let from: Date;
+    switch (p) {
+      case '1m': from = new Date(now.getFullYear(), now.getMonth(), 1); break;
+      case '3m': from = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()); break;
+      case '6m': from = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()); break;
+      case 'ytd': from = new Date(now.getFullYear(), 0, 1); break;
+      case '1y': from = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()); break;
+      default: from = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()); break;
+    }
+    return { from, to };
+  });
+
+  transactions = computed(() => {
+    const all = this.allTransactions();
+    const range = this.dateRange();
+    if (!range) return all;
+    return all.filter(t => {
+      const d = new Date(t.date);
+      return d >= range.from && d <= range.to;
+    });
+  });
+
+  totalIncome = computed(() => this.transactions().filter(t => t.transactionType === 'Income' || t.transactionType === 'Refund').reduce((s, t) => s + t.amount, 0));
+  totalExpense = computed(() => this.transactions().filter(t => t.transactionType === 'Expense' || !t.transactionType).reduce((s, t) => s + t.amount, 0));
+  totalTransfer = computed(() => this.transactions().filter(t => t.transactionType === 'Transfer').reduce((s, t) => s + t.amount, 0));
 
   ngOnInit(): void {
     this.loadAccount();
@@ -458,16 +549,27 @@ export class AccountDetailComponent implements OnInit {
   }
 
   private loadTransactions(accountId: number): void {
-    this.expenseService.getExpenses({ fundingSourceId: accountId }).subscribe({
+    this.expenseService.getExpenses({ fundingSourceId: accountId, allTime: true }).subscribe({
       next: (txns) => {
-        this.transactions.set(txns);
-        this.totalIncome.set(txns.filter(t => t.transactionType === 'Income' || t.transactionType === 'Refund').reduce((s, t) => s + t.amount, 0));
-        this.totalExpense.set(txns.filter(t => t.transactionType === 'Expense' || !t.transactionType).reduce((s, t) => s + t.amount, 0));
-        this.totalTransfer.set(txns.filter(t => t.transactionType === 'Transfer').reduce((s, t) => s + t.amount, 0));
+        this.allTransactions.set(txns);
         this.loading.set(false);
       },
       error: () => this.loading.set(false)
     });
+  }
+
+  onPeriodChange(value: string): void {
+    this.period.set(value);
+  }
+
+  onCustomRange(): void {
+    if (this.customFrom && this.customTo) {
+      this.customRange.set({
+        from: this.customFrom,
+        to: new Date(this.customTo.getFullYear(), this.customTo.getMonth(), this.customTo.getDate(), 23, 59, 59)
+      });
+      this.period.set('custom');
+    }
   }
 
   private loadCommissionHistory(accountId: number): void {
