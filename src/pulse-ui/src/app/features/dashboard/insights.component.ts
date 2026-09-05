@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -57,7 +57,7 @@ interface Insight {
       font-size: 18px;
       width: 18px;
       height: 18px;
-      color: var(--color-primary);
+      color: #FFCC00;
     }
     .header-text {
       font-size: var(--text-sm);
@@ -114,6 +114,7 @@ interface Insight {
 export class InsightsComponent implements OnInit {
   private expenseService = inject(DailyExpenseService);
   private dashboardService = inject(DashboardService);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   insights = signal<Insight[]>([]);
@@ -121,7 +122,7 @@ export class InsightsComponent implements OnInit {
   ngOnInit(): void {
     this.expenseService.getComparison().subscribe({
       next: (data) => this.generateInsights(data),
-      error: () => { this.loading.set(false); }
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 
@@ -129,7 +130,7 @@ export class InsightsComponent implements OnInit {
     const results: Insight[] = [];
 
     // If no previous data, skip
-    if (data.previousTotal === 0 && data.currentTotal === 0) { this.loading.set(false); return; }
+    if (data.previousTotal === 0 && data.currentTotal === 0) { this.loading.set(false); this.cdr.detectChanges(); return; }
 
     // Overall spending trend
     if (data.previousTotal > 0) {
@@ -179,15 +180,18 @@ export class InsightsComponent implements OnInit {
           }
           this.insights.set(results.slice(0, 3));
           this.loading.set(false);
+          this.cdr.detectChanges();
         },
         error: () => {
           this.insights.set(results.slice(0, 3));
           this.loading.set(false);
+          this.cdr.detectChanges();
         }
       });
     } else {
       this.insights.set(results.slice(0, 3));
       this.loading.set(false);
+      this.cdr.detectChanges();
     }
   }
 }

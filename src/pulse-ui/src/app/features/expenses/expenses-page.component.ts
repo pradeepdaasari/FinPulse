@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { Component, OnInit, ViewChild, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -7,7 +7,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -28,6 +27,8 @@ import { MonthComparisonComponent } from './month-comparison.component';
 import { TagSummaryComponent } from './tag-summary.component';
 import { NotificationService } from '../../core/services/notification.service';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog.component';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 
 function compare(a: number | string, b: number | string, isAsc: boolean): number {
   return (a < b ? -1 : 1) * (isAsc ? 1 : -1);
@@ -38,13 +39,15 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatTabsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatTableModule, MatProgressBarModule, MatProgressSpinnerModule, MatChipsModule,
+    MatTableModule, MatProgressBarModule, MatChipsModule,
     MatDialogModule, MatTooltipModule, MatSortModule, MatButtonToggleModule,
     MatDatepickerModule, MatNativeDateModule, MatFormFieldModule, MatInputModule,
     CurrencyPipe, DatePipe,
-    ExpenseFilterBarComponent, MonthComparisonComponent, TagSummaryComponent
+    ExpenseFilterBarComponent, MonthComparisonComponent, TagSummaryComponent,
+    SkeletonLoaderComponent, PullToRefreshDirective
   ],
   template: `
+    <div appPullToRefresh (refresh)="loadData()">
     <div class="expenses-header">
       <mat-button-toggle-group [value]="viewMode()" (change)="setViewMode($event.value)" class="view-toggle">
         <mat-button-toggle value="month">Month</mat-button-toggle>
@@ -76,7 +79,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     </div>
 
     @if (loading()) {
-      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+      <app-skeleton type="table"></app-skeleton>
     } @else {
       <mat-tab-group animationDuration="200ms">
         <!-- Transaction Log Tab -->
@@ -357,9 +360,9 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
         </mat-tab>
       </mat-tab-group>
     }
+    </div>
   `,
   styles: [`
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .expenses-header {
       display: flex;
       align-items: center;
@@ -493,25 +496,31 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     /* Mobile card feed */
     .mobile-feed { display: none; }
     .desktop-only { display: block; }
-    .date-group { margin-bottom: 12px; }
+    .date-group { margin-bottom: 4px; }
     .date-header {
-      font-size: 0.75rem;
-      font-weight: 600;
+      font-size: 0.8rem;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--color-text-muted);
-      padding: 8px 0 4px;
-      border-bottom: 1px solid var(--color-border);
-      margin-bottom: 4px;
+      letter-spacing: 0.05em;
+      color: var(--color-text-secondary);
+      padding: 14px 4px 8px;
+      position: sticky;
+      top: 0;
+      background: var(--color-bg);
+      z-index: 2;
     }
     .txn-card {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 12px 4px;
-      border-bottom: 1px solid rgba(0,0,0,0.04);
+      gap: 12px;
+      padding: 14px 4px;
       cursor: pointer;
       transition: background var(--transition-fast);
+      -webkit-tap-highlight-color: transparent;
+      border-bottom: none;
+    }
+    .txn-card + .txn-card {
+      border-top: 1px solid var(--color-border);
     }
     .txn-card:active { background: var(--color-surface-hover); }
     .txn-card.auto-trade-card { cursor: default; opacity: 0.7; }
@@ -519,16 +528,16 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     .auto-trade-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--color-primary); font-weight: 500; white-space: nowrap; }
     .auto-trade-icon { font-size: 16px; width: 16px; height: 16px; }
     .txn-cat-dot {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
       background: var(--color-stat-red-bg);
       flex-shrink: 0;
     }
-    .txn-cat-dot mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--color-danger); }
+    .txn-cat-dot mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-danger); }
     .txn-cat-dot.dot-income { background: var(--color-stat-green-bg); }
     .txn-cat-dot.dot-income mat-icon { color: var(--color-success); }
     .txn-cat-dot.dot-transfer { background: var(--color-stat-blue-bg); }
@@ -538,21 +547,22 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     .txn-cat-dot.dot-card { background: var(--color-stat-purple-bg); }
     .txn-cat-dot.dot-card mat-icon { color: var(--color-stat-purple); }
     .txn-mid { flex: 1; min-width: 0; }
-    .txn-desc { display: block; font-weight: 500; font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .txn-meta { display: block; font-size: 0.7rem; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .txn-type-label { font-weight: 600; font-size: 0.6rem; padding: 1px 5px; border-radius: var(--radius-full); }
+    .txn-desc { display: block; font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+    .txn-meta { display: block; font-size: 0.8rem; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .txn-type-label { font-weight: 600; font-size: 0.6875rem; padding: 2px 6px; border-radius: var(--radius-full); }
     .txn-right { flex-shrink: 0; text-align: right; }
-    .txn-amount { font-weight: 700; font-size: 0.9rem; }
+    .txn-amount { font-weight: 700; font-size: 1.1rem; letter-spacing: -0.01em; }
 
     @media (max-width: 768px) {
       .stats-row { grid-template-columns: repeat(2, 1fr); }
     }
     @media (max-width: 599px) {
-      .expenses-header { flex-direction: column; align-items: stretch; }
+      .expenses-header { flex-direction: column; align-items: stretch; gap: 6px; }
       .view-toggle { margin-right: 0; align-self: center; }
       .range-nav { justify-content: center; }
       .range-field { width: 130px; }
-      .month-label { font-size: var(--text-sm); min-width: 110px; }
+      .month-nav { background: transparent; padding: 0; justify-content: center; }
+      .month-label { font-size: 1.05rem; font-weight: 700; min-width: 110px; }
       .mobile-feed { display: block; }
       .desktop-only { display: none !important; }
       .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -560,7 +570,9 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
       .stat-card > mat-icon { font-size: 22px; width: 22px; height: 22px; }
       .stat-value { font-size: 1rem; }
       .log-header { justify-content: center; }
-      .expense-count { width: 100%; text-align: center; }
+      .log-header button[mat-raised-button] { display: none; }
+      .expense-count { width: 100%; text-align: center; font-size: 0.8rem; }
+      .tab-content { padding: 4px 0; }
     }
   `]
 })
@@ -569,6 +581,7 @@ export class ExpensesPageComponent implements OnInit {
   private accountService = inject(BankAccountService);
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
+  private cdr = inject(ChangeDetectorRef);
 
   private accountIconMap = new Map<number, string>();
 
@@ -630,8 +643,9 @@ export class ExpensesPageComponent implements OnInit {
           this.totalSpent.set(data.reduce((sum, d) => sum + d.spent, 0));
           this.totalRemaining.set(this.totalBudgeted() - this.totalSpent());
           this.loading.set(false);
+          this.cdr.detectChanges();
         },
-        error: () => { this.loading.set(false); }
+        error: () => { this.loading.set(false); this.cdr.detectChanges(); }
       });
     } else {
       this.loading.set(false);
@@ -642,11 +656,13 @@ export class ExpensesPageComponent implements OnInit {
         this.expenses.set(data);
         this.filteredExpenses.set(data);
         this.buildGroupedExpenses(data);
+        this.cdr.detectChanges();
       },
       error: () => {
         this.expenses.set([]);
         this.filteredExpenses.set([]);
         this.groupedExpenses.set([]);
+        this.cdr.detectChanges();
       }
     });
   }
@@ -849,6 +865,7 @@ export class ExpensesPageComponent implements OnInit {
           this.loading.set(false);
           const msg = err?.error?.error || err?.message || 'Unknown error';
           this.notify.error(`Delete failed: ${msg}`);
+          this.cdr.detectChanges();
         }
       });
     });

@@ -1,10 +1,10 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TradingService } from '../../core/services/trading.service';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
 import { TradeEntry, TradingSetupSummary } from '../../core/models/trading.model';
 import { TradeEntryDialogComponent, TradeEntryDialogData } from './trade-entry-dialog.component';
 
@@ -28,11 +28,11 @@ interface CalendarDay {
 @Component({
   selector: 'app-trading-calendar',
   standalone: true,
-  imports: [CommonModule, CurrencyPipe, MatButtonModule, MatIconModule, MatDialogModule, MatProgressSpinnerModule],
+  imports: [CommonModule, CurrencyPipe, MatButtonModule, MatIconModule, MatDialogModule, SkeletonLoaderComponent],
   template: `
     <div class="calendar-page">
       @if (loading()) {
-        <div class="loading-container"><mat-spinner></mat-spinner></div>
+        <app-skeleton type="dashboard"></app-skeleton>
       } @else {
       <!-- Month Navigation -->
       <div class="month-header">
@@ -235,7 +235,7 @@ interface CalendarDay {
     </div>
   `,
   styles: [`
-    .calendar-page { padding: 16px; max-width: 900px; margin: 0 auto; }
+    .calendar-page { padding: 16px; max-width: 1100px; margin: 0 auto; }
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
 
     .month-header {
@@ -316,15 +316,15 @@ interface CalendarDay {
       border-bottom: 1px solid var(--color-border);
     }
     .weekday {
-      padding: 8px 4px; text-align: center;
-      font-size: 0.7rem; font-weight: 700; color: var(--color-text-muted);
+      padding: 10px 4px; text-align: center;
+      font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted);
       text-transform: uppercase; letter-spacing: 0.05em;
     }
 
     .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
 
     .day-cell {
-      min-height: 72px; padding: 6px;
+      min-height: 90px; padding: 8px;
       border-right: 1px solid var(--color-border);
       border-bottom: 1px solid var(--color-border);
       display: flex; flex-direction: column;
@@ -351,19 +351,19 @@ interface CalendarDay {
     }
 
     .day-number {
-      font-size: 0.8rem; font-weight: 600; color: var(--color-text-secondary);
+      font-size: 0.95rem; font-weight: 600; color: var(--color-text-secondary);
     }
     .day-cell.green-day .day-number { color: var(--color-success); }
     .day-cell.red-day .day-number { color: var(--color-danger); }
 
     .day-pnl {
-      font-size: 0.7rem; font-weight: 700; margin-top: auto;
+      font-size: 0.85rem; font-weight: 700; margin-top: auto;
     }
     .green-day .day-pnl { color: var(--color-success); }
     .red-day .day-pnl { color: var(--color-danger); }
 
     .day-count {
-      font-size: 0.6rem; color: var(--color-text-muted);
+      font-size: 0.75rem; color: var(--color-text-muted);
     }
 
     .day-detail {
@@ -432,8 +432,9 @@ interface CalendarDay {
     }
     @media (max-width: 599px) {
       .calendar-page { padding: 8px; }
-      .day-cell { min-height: 48px; padding: 4px; }
-      .day-pnl { font-size: 0.6rem; }
+      .day-cell { min-height: 56px; padding: 5px; }
+      .day-number { font-size: 0.8rem; }
+      .day-pnl { font-size: 0.7rem; }
       .day-count { display: none; }
       .summary-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
       .hero-card { grid-column: span 2; }
@@ -447,6 +448,7 @@ interface CalendarDay {
 export class TradingCalendarComponent implements OnInit {
   private tradingService = inject(TradingService);
   private dialog = inject(MatDialog);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   currentYear = signal(new Date().getFullYear());
@@ -473,7 +475,7 @@ export class TradingCalendarComponent implements OnInit {
   checklistRate = signal(0);
 
   ngOnInit(): void {
-    this.tradingService.getSetups().subscribe(s => this.setups.set(s));
+    this.tradingService.getSetups().subscribe(s => { this.setups.set(s); this.cdr.detectChanges(); });
     this.loadMonth();
   }
 
@@ -557,8 +559,9 @@ export class TradingCalendarComponent implements OnInit {
         this.buildCalendar(trades, year, month);
         this.computeStats(trades);
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
-      error: () => { this.loading.set(false); }
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 

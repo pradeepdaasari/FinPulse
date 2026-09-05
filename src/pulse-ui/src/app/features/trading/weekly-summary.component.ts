@@ -1,11 +1,12 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { TradingService } from '../../core/services/trading.service';
 import { WeeklySummary } from '../../core/models/trading.model';
 import { toLocalDateString } from '../../core/utils/date-utils';
@@ -13,8 +14,9 @@ import { toLocalDateString } from '../../core/utils/date-utils';
 @Component({
   selector: 'app-weekly-summary',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, LocalDatePipe],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule, CurrencyPipe, DatePipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
+    <div appPullToRefresh (refresh)="loadWeek()">
     <div class="page-banner">
       <div class="banner-pattern"></div>
       <div class="banner-content">
@@ -25,7 +27,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     </div>
 
     @if (loading()) {
-      <div class="loading-container"><mat-spinner></mat-spinner></div>
+      <app-skeleton type="card"></app-skeleton>
     } @else {
     <!-- Week Navigator -->
     <div class="week-nav">
@@ -262,10 +264,10 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       }
     }
     }
+    </div>
   `,
   styles: [`
     :host { display: block; }
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
 
     .page-banner {
       position: relative;
@@ -463,6 +465,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
 })
 export class WeeklySummaryComponent implements OnInit {
   private tradingService = inject(TradingService);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   summary = signal<WeeklySummary | null>(null);
@@ -484,15 +487,15 @@ export class WeeklySummaryComponent implements OnInit {
   ngOnInit(): void {
     this.loadWeek();
     this.tradingService.getWeeklySummaries(8).subscribe({
-      next: (data) => this.pastWeeks.set(data),
+      next: (data) => { this.pastWeeks.set(data); this.cdr.detectChanges(); },
       error: () => {}
     });
   }
 
   loadWeek(): void {
     this.tradingService.getWeeklySummary(this.selectedWeekStart()).subscribe({
-      next: (data) => { this.summary.set(data); this.loading.set(false); },
-      error: () => { this.summary.set(null); this.loading.set(false); }
+      next: (data) => { this.summary.set(data); this.loading.set(false); this.cdr.detectChanges(); },
+      error: () => { this.summary.set(null); this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 

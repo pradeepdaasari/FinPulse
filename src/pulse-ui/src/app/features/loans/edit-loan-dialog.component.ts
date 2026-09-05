@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, ChangeDetectorRef, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -179,6 +179,7 @@ export class EditLoanDialogComponent {
   private loanService = inject(LoanService);
   private dialogRef = inject(MatDialogRef<EditLoanDialogComponent>);
   private data: PersonalLoan = inject(MAT_DIALOG_DATA);
+  private cdr = inject(ChangeDetectorRef);
 
   dueDays = Array.from({ length: 28 }, (_, i) => i + 1);
   saving = signal(false);
@@ -222,6 +223,7 @@ export class EditLoanDialogComponent {
       },
       error: () => {
         this.saving.set(false);
+        this.cdr.detectChanges();
       }
     });
   }

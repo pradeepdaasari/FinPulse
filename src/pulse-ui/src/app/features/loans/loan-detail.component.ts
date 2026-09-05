@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -6,24 +6,25 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LoanService } from '../../core/services/loan.service';
+import { PaymentService } from '../../core/services/payment.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { PersonalLoan } from '../../core/models/personal-loan.model';
 import { AmortizationSchedule } from '../../core/models/dashboard.model';
 import { PaymentHistory } from '../../core/models/payment-history.model';
 import { sumCurrency } from '../../core/utils/currency';
 import { AmortizationTableComponent } from './amortization-table.component';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
 
 @Component({
   selector: 'app-loan-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTableModule, MatTooltipModule, CurrencyPipe, DatePipe, LocalDatePipe, AmortizationTableComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatTooltipModule, CurrencyPipe, DatePipe, LocalDatePipe, AmortizationTableComponent, SkeletonLoaderComponent],
   template: `
     @if (loading()) {
-      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+      <app-skeleton type="card"></app-skeleton>
     } @else if (loan()) {
       <div class="header-row">
         <div class="header-left">
@@ -105,6 +106,14 @@ import { AmortizationTableComponent } from './amortization-table.component';
                 <th mat-header-cell *matHeaderCellDef>Notes</th>
                 <td mat-cell *matCellDef="let p">{{ p.notes || '—' }}</td>
               </ng-container>
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let p">
+                  <button mat-icon-button color="warn" (click)="deletePayment(p)" matTooltip="Delete payment" aria-label="Delete payment">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
 
               <tr mat-header-row *matHeaderRowDef="paymentColumns"></tr>
               <tr mat-row *matRowDef="let row; columns: paymentColumns;"></tr>
@@ -120,7 +129,6 @@ import { AmortizationTableComponent } from './amortization-table.component';
     }
   `,
   styles: [`
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .header-row {
       display: flex;
       justify-content: space-between;
@@ -180,13 +188,15 @@ export class LoanDetailComponent implements OnInit {
   private loanService = inject(LoanService);
   private dialog = inject(MatDialog);
   private notify = inject(NotificationService);
+  private paymentService = inject(PaymentService);
+  private cdr = inject(ChangeDetectorRef);
 
   loan = signal<PersonalLoan | null>(null);
   amortizationSchedule = signal<AmortizationSchedule | null>(null);
   paymentHistory = signal<PaymentHistory[]>([]);
   totalPaid = signal(0);
   loading = signal(true);
-  paymentColumns = ['paymentDate', 'amountPaid', 'notes'];
+  paymentColumns = ['paymentDate', 'amountPaid', 'notes', 'actions'];
 
   ngOnInit(): void {
     this.loadLoan();
@@ -198,16 +208,18 @@ export class LoanDetailComponent implements OnInit {
       next: (loan) => {
         this.loan.set(loan);
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
-      error: () => { this.loading.set(false); }
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
     this.loanService.getAmortization(id).subscribe({
-      next: (schedule) => { this.amortizationSchedule.set(schedule); }
+      next: (schedule) => { this.amortizationSchedule.set(schedule); this.cdr.detectChanges(); }
     });
     this.loanService.getPayments(id).subscribe({
       next: (payments) => {
         this.paymentHistory.set(payments);
         this.totalPaid.set(sumCurrency(payments.map(p => p.amountPaid)));
+        this.cdr.detectChanges();
       }
     });
   }
@@ -254,7 +266,31 @@ export class LoanDetailComponent implements OnInit {
             this.notify.success('Loan deleted');
             this.router.navigate(['/loans']);
           },
-          error: () => { this.loading.set(false); this.notify.error('Failed to delete loan'); }
+          error: () => { this.loading.set(false); this.notify.error('Failed to delete loan'); this.cdr.detectChanges(); }
+        });
+      });
+    });
+  }
+
+  deletePayment(payment: PaymentHistory): void {
+    import('../../shared/confirm-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.ConfirmDialogComponent, {
+        width: '400px',
+        data: {
+          title: 'Delete Payment?',
+          message: `This will remove the $${payment.amountPaid.toFixed(2)} payment and add it back to the loan balance.`,
+          confirmText: 'Delete',
+          color: 'warn'
+        }
+      });
+      dialogRef.afterClosed().subscribe(confirmed => {
+        if (!confirmed) return;
+        this.paymentService.delete(payment.id).subscribe({
+          next: () => {
+            this.notify.success('Payment deleted — balance restored');
+            this.loadLoan();
+          },
+          error: () => this.notify.error('Failed to delete payment')
         });
       });
     });

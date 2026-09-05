@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectorRef } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -93,14 +93,15 @@ import { BloodWorkReport, BloodWorkResult } from '../../core/models/blood-work.m
 export class BloodWorkDetailDialogComponent implements OnInit {
   private bloodWorkService = inject(BloodWorkService);
   private data: { reportId: number } = inject(MAT_DIALOG_DATA);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   report = signal<BloodWorkReport | null>(null);
 
   ngOnInit() {
     this.bloodWorkService.getById(this.data.reportId).subscribe({
-      next: r => { this.report.set(r); this.loading.set(false); },
-      error: () => this.loading.set(false)
+      next: r => { this.report.set(r); this.loading.set(false); this.cdr.detectChanges(); },
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, ChangeDetectorRef, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -110,6 +110,7 @@ export class GoalDialogComponent implements OnInit {
   private accountService = inject(BankAccountService);
   private dialogRef = inject(MatDialogRef<GoalDialogComponent>);
   data: SavingsGoal | null = inject(MAT_DIALOG_DATA);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   accounts = signal<BankAccount[]>([]);
@@ -127,6 +128,7 @@ export class GoalDialogComponent implements OnInit {
     this.accountService.getAll().subscribe(accounts => {
       this.accounts.set(accounts);
       this.loading.set(false);
+      this.cdr.detectChanges();
     });
 
     if (this.data) {

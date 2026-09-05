@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, ChangeDetectorRef } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -379,6 +379,7 @@ export class TodayWorkoutComponent implements OnInit {
   private logService = inject(WorkoutLogService);
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   noPlan = signal(false);
@@ -436,17 +437,19 @@ export class TodayWorkoutComponent implements OnInit {
 
         this.checkIfLoggedToday();
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
       error: () => {
         this.noPlan.set(true);
         this.loading.set(false);
+        this.cdr.detectChanges();
       }
     });
   }
 
   private checkIfLoggedToday() {
     this.logService.getToday().subscribe({
-      next: () => this.alreadyLogged.set(true),
+      next: () => { this.alreadyLogged.set(true); this.cdr.detectChanges(); },
       error: () => {}
     });
   }
@@ -549,8 +552,9 @@ export class TodayWorkoutComponent implements OnInit {
         this.notify.success('Workout completed!');
         this.alreadyLogged.set(true);
         this.saving.set(false);
+        this.cdr.detectChanges();
       },
-      error: () => { this.notify.error('Failed to save workout'); this.saving.set(false); }
+      error: () => { this.notify.error('Failed to save workout'); this.saving.set(false); this.cdr.detectChanges(); }
     });
   }
 
@@ -617,8 +621,9 @@ export class TodayWorkoutComponent implements OnInit {
         this.notify.success('Workout logged!');
         this.alreadyLogged.set(true);
         this.saving.set(false);
+        this.cdr.detectChanges();
       },
-      error: () => { this.notify.error('Failed to save workout'); this.saving.set(false); }
+      error: () => { this.notify.error('Failed to save workout'); this.saving.set(false); this.cdr.detectChanges(); }
     });
   }
 }

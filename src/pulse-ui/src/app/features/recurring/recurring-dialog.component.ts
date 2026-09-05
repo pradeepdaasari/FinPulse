@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, ChangeDetectorRef, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -233,6 +233,7 @@ export class RecurringDialogComponent implements OnInit {
   private categoryService = inject(CategoryService);
   private dialogRef = inject(MatDialogRef<RecurringDialogComponent>);
   data: RecurringTransaction | null = inject(MAT_DIALOG_DATA);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   categories = signal<any[]>([]);
@@ -315,6 +316,7 @@ export class RecurringDialogComponent implements OnInit {
         }
       }
       this.loading.set(false);
+      this.cdr.detectChanges();
     });
   }
 

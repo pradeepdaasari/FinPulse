@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormArray, FormGroup, FormControl, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -226,8 +226,11 @@ export interface ExpenseDialogData {
 
         @if (form.value.transactionType !== 'Transfer' && form.value.transactionType !== 'CardPayment') {
           <mat-form-field appearance="outline">
-            <mat-label>Merchant (optional)</mat-label>
-            <input matInput formControlName="merchant" [matAutocomplete]="merchantAuto" (input)="filterMerchants($event)" placeholder="e.g. Walmart, Shell, Chipotle">
+            <mat-label>Merchant</mat-label>
+            <input matInput formControlName="merchant" [matAutocomplete]="merchantAuto"
+                   (input)="filterMerchants($event)" (focus)="onMerchantFocus()"
+                   placeholder="e.g. Walmart, Shell, Chipotle">
+            <mat-icon matSuffix class="merchant-search-icon">search</mat-icon>
             <mat-autocomplete #merchantAuto="matAutocomplete">
               @for (merchant of filteredMerchants(); track merchant) {
                 <mat-option [value]="merchant">{{ merchant }}</mat-option>
@@ -467,6 +470,7 @@ export interface ExpenseDialogData {
     .date-time-row { display: flex; gap: 10px; align-items: start; }
     .time-field { width: 130px; min-width: 110px; }
     .cat-arrow { color: var(--color-text-muted); cursor: pointer; }
+    .merchant-search-icon { color: var(--color-text-muted); font-size: 20px; width: 20px; height: 20px; }
     ::ng-deep .category-autocomplete .mat-mdc-option .mdc-list-item__primary-text {
       width: 100%;
     }
@@ -582,6 +586,7 @@ export class AddExpenseDialogComponent implements OnInit {
   private fundingSourceService = inject(FundingSourceService);
   private merchantService = inject(MerchantService);
   data = inject<ExpenseDialogData>(MAT_DIALOG_DATA);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   private loadCount = 0;
@@ -696,6 +701,11 @@ export class AddExpenseDialogComponent implements OnInit {
     this.filteredMerchants.set(this.merchantService.filter(value));
   }
 
+  onMerchantFocus(): void {
+    const current = this.form.value.merchant || '';
+    this.filteredMerchants.set(this.merchantService.filter(current));
+  }
+
   onDescriptionInput(): void {
     const q = (this.form.value.description || '').toLowerCase();
     if (!q) {
@@ -754,7 +764,7 @@ export class AddExpenseDialogComponent implements OnInit {
     time: [this.data?.expense ? this.getTimeInUserTz(new Date(this.data.expense.date)) : this.getTimeInUserTz(new Date()), Validators.required],
     categoryId: [this.source?.categoryId ?? this.data?.prefilledCategoryId ?? null as number | null],
     amount: [this.source?.amount ?? null as number | null, [Validators.required, Validators.min(0.01)]],
-    merchant: [this.source?.merchant ?? ''],
+    merchant: [this.source?.merchant ?? '', Validators.required],
     description: [this.source?.description ?? '', [Validators.required, Validators.maxLength(500)]],
     fundingSourceKey: [this.buildSourceKey(this.source as DailyExpense | null) as string | null, Validators.required],
     toFundingSourceKey: [this.buildToSourceKey(this.source as DailyExpense | null) as string | null],
@@ -784,26 +794,37 @@ export class AddExpenseDialogComponent implements OnInit {
       this.allSources.set(sources);
       this.filterSources();
       this.checkLoaded();
+      this.cdr.detectChanges();
     });
     this.expenseService.getTags().subscribe(tags => {
       this.allTagOptions.set(tags);
       this.filteredTagOptions.set(tags);
       this.checkLoaded();
+      this.cdr.detectChanges();
     });
-    this.expenseService.getTagTypes().subscribe(types => { this.tagTypes.set(types); this.checkLoaded(); });
+    this.expenseService.getTagTypes().subscribe(types => { this.tagTypes.set(types); this.checkLoaded(); this.cdr.detectChanges(); });
     this.merchantService.getMerchants().subscribe(merchants => {
       this.filteredMerchants.set(merchants.slice(0, 10));
+      this.cdr.detectChanges();
     });
     this.expenseService.getDescriptions().subscribe(descs => {
       this.allDescriptions.set(descs);
       this.filteredDescriptions.set(descs.slice(0, 10));
+      this.cdr.detectChanges();
     });
 
-    this.form.get('transactionType')!.valueChanges.subscribe(() => {
+    this.form.get('transactionType')!.valueChanges.subscribe((type) => {
       this.form.patchValue({ categoryId: null });
       this.categoryInputCtrl.setValue('', { emitEvent: false });
       this.loadCategories();
       this.filterSources();
+      const merchantCtrl = this.form.get('merchant')!;
+      if (type === 'Transfer' || type === 'CardPayment') {
+        merchantCtrl.clearValidators();
+      } else {
+        merchantCtrl.setValidators(Validators.required);
+      }
+      merchantCtrl.updateValueAndValidity();
     });
 
     this.form.get('fundingSourceKey')!.valueChanges.subscribe(() => {
@@ -821,6 +842,7 @@ export class AddExpenseDialogComponent implements OnInit {
       if (currentId) {
         this.categoryInputCtrl.setValue(currentId as any, { emitEvent: false });
       }
+      this.cdr.detectChanges();
     });
   }
 
@@ -871,6 +893,7 @@ export class AddExpenseDialogComponent implements OnInit {
         this.form.patchValue({ categoryId: created.id, newCategoryName: '' });
         this.categoryInputCtrl.setValue(created.id as any, { emitEvent: false });
         this.showNewCategory.set(false);
+        this.cdr.detectChanges();
       });
   }
 

@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -469,6 +469,7 @@ export class TradeEntryDialogComponent implements OnInit {
   private dialogRef = inject(MatDialogRef<TradeEntryDialogComponent>);
   private notify = inject(NotificationService);
   data: TradeEntryDialogData = inject(MAT_DIALOG_DATA);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   saving = signal(false);
@@ -532,6 +533,7 @@ export class TradeEntryDialogComponent implements OnInit {
       }
       this.updateFeeEstimate();
       this.loading.set(false);
+      this.cdr.detectChanges();
     });
   }
 
@@ -671,8 +673,8 @@ export class TradeEntryDialogComponent implements OnInit {
       : this.tradingService.createTrade(payload);
 
     obs.subscribe({
-      next: () => { this.saving.set(false); this.notify.success('Trade saved'); this.dialogRef.close(true); },
-      error: (err) => { this.saving.set(false); const msg = err?.error?.error || err?.error?.title || 'Failed to save trade'; this.notify.error(msg); console.error('Trade save error:', err); }
+      next: () => { this.saving.set(false); this.notify.success('Trade saved'); this.cdr.detectChanges(); this.dialogRef.close(true); },
+      error: (err) => { this.saving.set(false); const msg = err?.error?.error || err?.error?.title || 'Failed to save trade'; this.notify.error(msg); console.error('Trade save error:', err); this.cdr.detectChanges(); }
     });
   }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
@@ -69,7 +69,7 @@ import { DebtFreeCountdown } from '../../core/models/dashboard.model';
       border-radius: 16px;
     }
     .title-with-icon { display: flex; align-items: center; }
-    .card-title-icon { font-size: 20px; width: 20px; height: 20px; margin-right: 8px; color: var(--color-primary); }
+    .card-title-icon { font-size: 20px; width: 20px; height: 20px; margin-right: 8px; color: #FF3B30; }
     .overall-date mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .projections { display: flex; flex-direction: column; gap: 14px; }
     .projection-row {
@@ -79,10 +79,10 @@ import { DebtFreeCountdown } from '../../core/models/dashboard.model';
       gap: 16px;
     }
     .projection-info { display: flex; flex-direction: column; }
-    .debt-name { font-weight: 600; font-size: 0.875rem; }
-    .debt-meta { font-size: 0.6875rem; color: var(--color-text-muted); }
+    .debt-name { font-weight: 600; font-size: 0.9375rem; }
+    .debt-meta { font-size: 0.8125rem; color: var(--color-text-muted); }
     .projection-bar { min-width: 120px; }
-    .payoff-date { font-size: 0.75rem; font-weight: 500; color: var(--color-text-secondary); white-space: nowrap; }
+    .payoff-date { font-size: 0.875rem; font-weight: 500; color: var(--color-text-secondary); white-space: nowrap; }
     @media (max-width: 599px) {
       .card-title-row { flex-direction: column; align-items: flex-start; gap: 6px; }
       .overall-date { font-size: 0.75rem; }
@@ -96,6 +96,7 @@ import { DebtFreeCountdown } from '../../core/models/dashboard.model';
 })
 export class DebtCountdownComponent implements OnInit {
   private dashboardService = inject(DashboardService);
+  private cdr = inject(ChangeDetectorRef);
   loading = signal(true);
   countdown = signal<DebtFreeCountdown | null>(null);
 
@@ -103,6 +104,7 @@ export class DebtCountdownComponent implements OnInit {
     this.dashboardService.getCountdown().subscribe(data => {
       this.countdown.set(data);
       this.loading.set(false);
+      this.cdr.detectChanges();
     });
   }
 

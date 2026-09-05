@@ -54,6 +54,8 @@ export interface CategorySummary {
   icon?: string;
   isDebt: boolean;
   isRecurring: boolean;
+  debtId?: number;
+  debtType?: string;
 }
 
 export interface PaycheckExpense {

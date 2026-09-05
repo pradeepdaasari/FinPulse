@@ -1,11 +1,10 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
@@ -13,12 +12,15 @@ import { SavingsGoalService } from '../../core/services/savings-goal.service';
 import { SavingsGoal } from '../../core/models/savings-goal.model';
 import { NotificationService } from '../../core/services/notification.service';
 import { GoalDialogComponent } from './goal-dialog.component';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 
 @Component({
   selector: 'app-goals-page',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatProgressBarModule, MatProgressSpinnerModule, MatFormFieldModule, MatInputModule, MatDialogModule, CurrencyPipe, DatePipe, LocalDatePipe],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatProgressBarModule, MatFormFieldModule, MatInputModule, MatDialogModule, CurrencyPipe, DatePipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
+    <div appPullToRefresh (refresh)="loadData()">
     <div class="header-row">
       <button mat-raised-button color="primary" (click)="openAdd()">
         <mat-icon>add</mat-icon> Add Goal
@@ -26,7 +28,7 @@ import { GoalDialogComponent } from './goal-dialog.component';
     </div>
 
     @if (loading()) {
-      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+      <app-skeleton type="card"></app-skeleton>
     } @else if (goals().length === 0) {
       <div class="empty-state">
         <div class="empty-icon-wrap green">
@@ -91,9 +93,9 @@ import { GoalDialogComponent } from './goal-dialog.component';
         }
       </div>
     }
+    </div>
   `,
   styles: [`
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .header-row {
       display: flex; justify-content: flex-end; align-items: center;
       margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);
@@ -162,6 +164,7 @@ export class GoalsPageComponent implements OnInit {
   private service = inject(SavingsGoalService);
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
+  private cdr = inject(ChangeDetectorRef);
 
   goals = signal<SavingsGoal[]>([]);
   loading = signal(true);
@@ -172,8 +175,8 @@ export class GoalsPageComponent implements OnInit {
 
   loadData(): void {
     this.service.getAll().subscribe({
-      next: (goals) => { this.goals.set(goals); this.loading.set(false); },
-      error: () => this.loading.set(false)
+      next: (goals) => { this.goals.set(goals); this.loading.set(false); this.cdr.detectChanges(); },
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 
@@ -239,7 +242,7 @@ export class GoalsPageComponent implements OnInit {
       this.loading.set(true);
       this.service.delete(goal.id).subscribe({
         next: () => { this.notify.success('Goal deleted'); this.loadData(); },
-        error: (err) => { this.loading.set(false); this.notify.error(err.error?.message || 'Failed to delete'); }
+        error: (err) => { this.loading.set(false); this.notify.error(err.error?.message || 'Failed to delete'); this.cdr.detectChanges(); }
       });
     });
   }

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -116,6 +116,7 @@ import { BloodWorkResult } from '../../core/models/blood-work.model';
 export class AddBloodWorkDialogComponent {
   private dialogRef = inject(MatDialogRef<AddBloodWorkDialogComponent>);
   private bloodWorkService = inject(BloodWorkService);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   reportDate = this.formatDate(new Date());
@@ -130,6 +131,7 @@ export class AddBloodWorkDialogComponent {
     this.bloodWorkService.getTestNames().subscribe(names => {
       this.allTestNames.set(names);
       this.loading.set(false);
+      this.cdr.detectChanges();
     });
   }
 

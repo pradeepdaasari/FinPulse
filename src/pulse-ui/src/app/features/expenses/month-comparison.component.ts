@@ -1,4 +1,4 @@
-import { Component, inject, input, OnChanges, signal } from '@angular/core';
+import { Component, inject, input, OnChanges, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -7,6 +7,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { DailyExpenseService } from '../../core/services/daily-expense.service';
 import { MultiMonthComparison, MultiMonthTotal, MultiMonthCategory } from '../../core/models/daily-expense.model';
 
@@ -15,9 +16,11 @@ import { MultiMonthComparison, MultiMonthTotal, MultiMonthCategory } from '../..
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatIconModule,
-    MatProgressSpinnerModule, MatFormFieldModule, MatInputModule, MatButtonModule, CurrencyPipe
+    MatProgressSpinnerModule, MatFormFieldModule, MatInputModule, MatButtonModule, CurrencyPipe,
+    PullToRefreshDirective
   ],
   template: `
+    <div appPullToRefresh (refresh)="loadData()">
     <div class="controls">
       <mat-form-field class="months-input">
         <mat-label>Months to compare</mat-label>
@@ -111,6 +114,7 @@ import { MultiMonthComparison, MultiMonthTotal, MultiMonthCategory } from '../..
         }
       </div>
     }
+    </div>
   `,
   styles: [`
     .controls { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
@@ -162,6 +166,7 @@ import { MultiMonthComparison, MultiMonthTotal, MultiMonthCategory } from '../..
 })
 export class MonthComparisonComponent implements OnChanges {
   private expenseService = inject(DailyExpenseService);
+  private cdr = inject(ChangeDetectorRef);
 
   year = input<number>();
   month = input<number>();
@@ -187,8 +192,9 @@ export class MonthComparisonComponent implements OnChanges {
         this.grandTotal.set(total);
         this.avgMonthly.set(result.months.length > 0 ? total / result.months.length : 0);
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
-      error: () => this.loading.set(false)
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 }

@@ -104,6 +104,25 @@ public class BudgetController : ControllerBase
                 : (spent > 0 ? 100 : 0);
         }
 
+        // Enrich debt categories with actual payments this month
+        var payments = await _db.PaymentHistories
+            .Where(p => p.UserId == UserId && p.PaymentDate >= startDate && p.PaymentDate < endDate)
+            .Select(p => new { p.DebtId, p.DebtType, p.AmountPaid })
+            .ToListAsync();
+
+        foreach (var cat in plan.MonthlyOverview.ByCategory.Where(c => c.IsDebt && c.DebtId.HasValue))
+        {
+            var paid = payments
+                .Where(p => p.DebtId == cat.DebtId!.Value && p.DebtType == cat.DebtType!.Value)
+                .Sum(p => p.AmountPaid);
+
+            cat.Spent = paid;
+            cat.Remaining = cat.Amount - paid;
+            cat.PercentUsed = cat.Amount > 0
+                ? Math.Round(paid / cat.Amount * 100, 1)
+                : (paid > 0 ? 100 : 0);
+        }
+
         var budgetable = plan.MonthlyOverview.ByCategory.Where(c => !c.IsDebt).ToList();
         plan.MonthlyOverview.TotalSpent = budgetable.Sum(c => c.Spent);
         plan.MonthlyOverview.TotalRemaining = budgetable.Sum(c => c.Remaining);

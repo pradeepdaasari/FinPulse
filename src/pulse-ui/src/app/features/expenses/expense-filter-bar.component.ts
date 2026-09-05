@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, output, signal } from '@angular/core';
+import { Component, inject, OnInit, output, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -156,6 +156,7 @@ import { ExpenseFilter } from '../../core/models/daily-expense.model';
 export class ExpenseFilterBarComponent implements OnInit {
   private categoryService = inject(CategoryService);
   private expenseService = inject(DailyExpenseService);
+  private cdr = inject(ChangeDetectorRef);
 
   filterChange = output<Partial<ExpenseFilter>>();
 
@@ -184,11 +185,13 @@ export class ExpenseFilterBarComponent implements OnInit {
     this.categoryService.getAll('Expense').subscribe(cats => {
       this.categories.set(cats);
       this.checkLoaded();
+      this.cdr.detectChanges();
     });
     this.expenseService.getTags().subscribe(tags => {
       this.allTags.set(tags);
       this.filteredTags.set(tags);
       this.checkLoaded();
+      this.cdr.detectChanges();
     });
   }
 

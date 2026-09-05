@@ -117,12 +117,7 @@ import { AmortizationSchedule } from '../../core/models/dashboard.model';
     }
     .row-paid td { color: var(--color-text-secondary, #888); }
     .row-pending { background: transparent; }
-    @media (prefers-color-scheme: dark) {
-      .summary-card.paid { background: rgba(76, 175, 80, 0.12); }
-      .summary-card.pending { background: rgba(255, 152, 0, 0.12); }
-      .summary-card.extra { background: rgba(244, 67, 54, 0.12); }
-      .row-paid { background: rgba(76, 175, 80, 0.08); }
-    }
+
     @media (max-width: 599px) {
       .summary-cards { grid-template-columns: 1fr; gap: 8px; }
       .table-container { -webkit-overflow-scrolling: touch; }

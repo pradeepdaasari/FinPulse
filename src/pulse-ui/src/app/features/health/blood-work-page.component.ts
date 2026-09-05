@@ -1,10 +1,11 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectorRef } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { BloodWorkService } from '../../core/services/blood-work.service';
@@ -14,8 +15,9 @@ import { NotificationService } from '../../core/services/notification.service';
 @Component({
   selector: 'app-blood-work-page',
   standalone: true,
-  imports: [MatCardModule, MatIconModule, MatButtonModule, MatChipsModule, MatProgressSpinnerModule, DatePipe, LocalDatePipe],
+  imports: [MatCardModule, MatIconModule, MatButtonModule, MatChipsModule, DatePipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
+    <div appPullToRefresh (refresh)="loadReports()">
     <div class="header-row">
       <button mat-raised-button color="primary" (click)="openAddDialog()">
         <mat-icon>add</mat-icon> Add Report
@@ -23,7 +25,7 @@ import { NotificationService } from '../../core/services/notification.service';
     </div>
 
     @if (loading()) {
-      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+      <app-skeleton type="card"></app-skeleton>
     } @else if (reports().length === 0) {
       <div class="empty-state">
         <div class="empty-icon-wrap red">
@@ -63,9 +65,9 @@ import { NotificationService } from '../../core/services/notification.service';
         }
       </div>
     }
+    </div>
   `,
   styles: [`
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .header-row {
       display: flex; justify-content: flex-end; align-items: center;
       margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);
@@ -125,6 +127,7 @@ export class BloodWorkPageComponent implements OnInit {
   private bloodWorkService = inject(BloodWorkService);
   private dialog = inject(MatDialog);
   private notify = inject(NotificationService);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   reports = signal<BloodWorkReportSummary[]>([]);
@@ -136,8 +139,8 @@ export class BloodWorkPageComponent implements OnInit {
   loadReports() {
     this.loading.set(true);
     this.bloodWorkService.getAll().subscribe({
-      next: r => { this.reports.set(r); this.loading.set(false); },
-      error: () => this.loading.set(false)
+      next: r => { this.reports.set(r); this.loading.set(false); this.cdr.detectChanges(); },
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 
@@ -169,7 +172,7 @@ export class BloodWorkPageComponent implements OnInit {
     this.loading.set(true);
     this.bloodWorkService.delete(report.id).subscribe({
       next: () => { this.notify.success('Report deleted'); this.loadReports(); },
-      error: () => { this.loading.set(false); this.notify.error('Failed to delete'); }
+      error: () => { this.loading.set(false); this.notify.error('Failed to delete'); this.cdr.detectChanges(); }
     });
   }
 }

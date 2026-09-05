@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { FormsModule } from '@angular/forms';
@@ -178,6 +178,7 @@ export class EditCommissionDialogComponent {
   private accountService = inject(BankAccountService);
   data = inject<EditCommissionDialogData>(MAT_DIALOG_DATA);
   dialogRef = inject(MatDialogRef<EditCommissionDialogComponent>);
+  private cdr = inject(ChangeDetectorRef);
 
   optionsCommission = signal<number | null>(this.data.schedule.optionsCommissionPerContract ?? null);
   optionsRegFee = signal<number | null>(this.data.schedule.optionsRegFeePerContract ?? null);
@@ -206,10 +207,12 @@ export class EditCommissionDialogComponent {
       next: (res) => {
         this.saving.set(false);
         this.result.set({ tradesRecalculated: res.tradesRecalculated });
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.saving.set(false);
         this.errorMsg.set(err?.error?.message || 'Failed to update. Please try again.');
+        this.cdr.detectChanges();
       }
     });
   }

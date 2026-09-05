@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -104,6 +104,7 @@ import { PaymentStreak } from '../../core/models/dashboard.model';
 })
 export class PaymentStreakComponent implements OnInit {
   private dashboardService = inject(DashboardService);
+  private cdr = inject(ChangeDetectorRef);
   loading = signal(true);
   streak = signal<PaymentStreak | null>(null);
 
@@ -111,6 +112,7 @@ export class PaymentStreakComponent implements OnInit {
     this.dashboardService.getStreak().subscribe(data => {
       this.streak.set(data);
       this.loading.set(false);
+      this.cdr.detectChanges();
     });
   }
 }

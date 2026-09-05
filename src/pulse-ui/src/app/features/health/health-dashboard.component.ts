@@ -1,10 +1,11 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectorRef } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { MatDialog } from '@angular/material/dialog';
 import { HealthMetricService } from '../../core/services/health-metric.service';
 import { WorkoutLogService } from '../../core/services/workout-log.service';
@@ -15,8 +16,9 @@ import { NotificationService } from '../../core/services/notification.service';
 @Component({
   selector: 'app-health-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatCardModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule, DatePipe, DecimalPipe],
+  imports: [CommonModule, RouterLink, MatCardModule, MatIconModule, MatButtonModule, DatePipe, DecimalPipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
+    <div appPullToRefresh (refresh)="loadData()">
     <div class="header-row">
       <button mat-raised-button color="primary" (click)="openQuickLog()">
         <mat-icon>add</mat-icon> Log Metric
@@ -24,7 +26,7 @@ import { NotificationService } from '../../core/services/notification.service';
     </div>
 
     @if (loading()) {
-      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+      <app-skeleton type="dashboard"></app-skeleton>
     } @else if (latestMetrics().length === 0 && !workoutStats()) {
       <div class="empty-state">
         <div class="empty-icon-wrap green">
@@ -122,7 +124,7 @@ import { NotificationService } from '../../core/services/notification.service';
           <mat-icon class="lc-arrow">chevron_right</mat-icon>
         </div>
         <div class="link-card" routerLink="/health/plans">
-          <div class="lc-icon"><mat-icon>fitness_center</mat-icon></div>
+          <div class="lc-icon blue"><mat-icon>fitness_center</mat-icon></div>
           <div class="lc-mid">
             <span class="lc-name">Workout Plans</span>
             <span class="lc-desc">Your training schedule</span>
@@ -130,7 +132,7 @@ import { NotificationService } from '../../core/services/notification.service';
           <mat-icon class="lc-arrow">chevron_right</mat-icon>
         </div>
         <div class="link-card" routerLink="/health/workout">
-          <div class="lc-icon"><mat-icon>exercise</mat-icon></div>
+          <div class="lc-icon purple"><mat-icon>exercise</mat-icon></div>
           <div class="lc-mid">
             <span class="lc-name">Today's Workout</span>
             <span class="lc-desc">Log your session</span>
@@ -138,7 +140,7 @@ import { NotificationService } from '../../core/services/notification.service';
           <mat-icon class="lc-arrow">chevron_right</mat-icon>
         </div>
         <div class="link-card" routerLink="/health/progress">
-          <div class="lc-icon"><mat-icon>emoji_events</mat-icon></div>
+          <div class="lc-icon amber"><mat-icon>emoji_events</mat-icon></div>
           <div class="lc-mid">
             <span class="lc-name">Progress & PRs</span>
             <span class="lc-desc">Personal records</span>
@@ -147,9 +149,9 @@ import { NotificationService } from '../../core/services/notification.service';
         </div>
       </div>
     }
+    </div>
   `,
   styles: [`
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .header-row {
       display: flex; justify-content: flex-end; align-items: center;
       margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);
@@ -223,6 +225,12 @@ import { NotificationService } from '../../core/services/notification.service';
     .lc-icon.red mat-icon { color: #d32f2f; }
     .lc-icon.teal { background: rgba(0,121,107,0.1); }
     .lc-icon.teal mat-icon { color: #00796b; }
+    .lc-icon.blue { background: rgba(0,122,255,0.1); }
+    .lc-icon.blue mat-icon { color: #007AFF; }
+    .lc-icon.purple { background: rgba(175,82,222,0.1); }
+    .lc-icon.purple mat-icon { color: #AF52DE; }
+    .lc-icon.amber { background: rgba(255,204,0,0.12); }
+    .lc-icon.amber mat-icon { color: #F5A623; }
     .lc-mid { flex: 1; min-width: 0; }
     .lc-name { display: block; font-weight: 600; font-size: 0.9rem; }
     .lc-desc { display: block; font-size: 0.75rem; color: var(--color-text-muted); }
@@ -251,20 +259,25 @@ export class HealthDashboardComponent implements OnInit {
   private workoutService = inject(WorkoutLogService);
   private dialog = inject(MatDialog);
   private notify = inject(NotificationService);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   latestMetrics = signal<HealthMetric[]>([]);
   workoutStats = signal<WorkoutStats | null>(null);
 
   ngOnInit() {
+    this.loadData();
+  }
+
+  loadData(): void {
     this.healthService.getLatest().subscribe({
-      next: metrics => this.latestMetrics.set(metrics),
-      complete: () => this.loading.set(false),
-      error: () => this.loading.set(false)
+      next: metrics => { this.latestMetrics.set(metrics); this.cdr.detectChanges(); },
+      complete: () => { this.loading.set(false); this.cdr.detectChanges(); },
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
 
     this.workoutService.getStats().subscribe({
-      next: stats => this.workoutStats.set(stats),
+      next: stats => { this.workoutStats.set(stats); this.cdr.detectChanges(); },
       error: () => {}
     });
   }
@@ -275,7 +288,7 @@ export class HealthDashboardComponent implements OnInit {
       ref.afterClosed().subscribe(result => {
         if (result) {
           this.healthService.create(result).subscribe({
-            next: () => { this.notify.success('Metric logged'); this.healthService.getLatest().subscribe(m => this.latestMetrics.set(m)); },
+            next: () => { this.notify.success('Metric logged'); this.healthService.getLatest().subscribe(m => { this.latestMetrics.set(m); this.cdr.detectChanges(); }); },
             error: () => this.notify.error('Failed to save')
           });
         }

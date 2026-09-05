@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, ChangeDetectorRef } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,7 +6,8 @@ import { MatTableModule } from '@angular/material/table';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDialog } from '@angular/material/dialog';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -19,8 +20,9 @@ import { NotificationService } from '../../core/services/notification.service';
 @Component({
   selector: 'app-metrics-log',
   standalone: true,
-  imports: [MatCardModule, MatIconModule, MatButtonModule, MatTableModule, MatSelectModule, MatFormFieldModule, MatProgressSpinnerModule, MatTooltipModule, DatePipe, DecimalPipe, FormsModule, BaseChartDirective],
+  imports: [MatCardModule, MatIconModule, MatButtonModule, MatTableModule, MatSelectModule, MatFormFieldModule, MatTooltipModule, DatePipe, DecimalPipe, FormsModule, BaseChartDirective, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
+    <div appPullToRefresh (refresh)="loadMetrics()">
     <!-- Header -->
     <div class="page-header">
       <div class="header-left">
@@ -40,7 +42,7 @@ import { NotificationService } from '../../core/services/notification.service';
     </div>
 
     @if (loading()) {
-      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+      <app-skeleton type="table"></app-skeleton>
     } @else if (metrics().length === 0) {
       <div class="empty-state">
         <div class="empty-icon-wrap">
@@ -175,9 +177,9 @@ import { NotificationService } from '../../core/services/notification.service';
         }
       </div>
     }
+    </div>
   `,
   styles: [`
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     /* Header */
     .page-header {
       display: flex; align-items: center; justify-content: space-between;
@@ -255,13 +257,14 @@ import { NotificationService } from '../../core/services/notification.service';
     /* Mobile Cards */
     .mobile-cards { display: none; }
     .metric-card {
-      display: flex; align-items: center; gap: 12px;
-      padding: 14px 12px; background: var(--color-surface);
-      border-radius: var(--radius-sm); margin-bottom: 8px;
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px; background: var(--color-surface);
+      border-radius: var(--radius-lg); margin-bottom: 10px;
       box-shadow: var(--shadow-sm); cursor: pointer;
-      transition: box-shadow var(--transition-fast);
+      transition: box-shadow var(--transition-fast), transform 0.1s ease;
+      -webkit-tap-highlight-color: transparent;
     }
-    .metric-card:active { box-shadow: var(--shadow-md); }
+    .metric-card:active { box-shadow: var(--shadow-md); transform: scale(0.98); }
     .mc-icon {
       width: 40px; height: 40px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
@@ -298,6 +301,7 @@ export class MetricsLogComponent implements OnInit {
   private healthService = inject(HealthMetricService);
   private dialog = inject(MatDialog);
   private notify = inject(NotificationService);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   metrics = signal<HealthMetric[]>([]);
@@ -348,7 +352,7 @@ export class MetricsLogComponent implements OnInit {
   });
 
   ngOnInit() {
-    this.healthService.getTypes().subscribe(t => this.types.set(t));
+    this.healthService.getTypes().subscribe(t => { this.types.set(t); this.cdr.detectChanges(); });
     this.loadMetrics();
   }
 
@@ -360,8 +364,8 @@ export class MetricsLogComponent implements OnInit {
   loadMetrics() {
     this.loading.set(true);
     this.healthService.getAll(this.selectedType || undefined).subscribe({
-      next: m => { this.metrics.set(m); this.loading.set(false); },
-      error: () => this.loading.set(false)
+      next: m => { this.metrics.set(m); this.loading.set(false); this.cdr.detectChanges(); },
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 
@@ -389,8 +393,9 @@ export class MetricsLogComponent implements OnInit {
           } else {
             this.chartData.set(null);
           }
+          this.cdr.detectChanges();
         },
-        error: () => { this.trendData.set([]); this.chartData.set(null); }
+        error: () => { this.trendData.set([]); this.chartData.set(null); this.cdr.detectChanges(); }
       });
     } else {
       this.trendData.set([]);
@@ -408,7 +413,7 @@ export class MetricsLogComponent implements OnInit {
               this.notify.success('Metric logged');
               this.loadMetrics();
               this.loadTrend();
-              this.healthService.getTypes().subscribe(t => this.types.set(t));
+              this.healthService.getTypes().subscribe(t => { this.types.set(t); this.cdr.detectChanges(); });
             },
             error: () => this.notify.error('Failed to save metric')
           });
@@ -443,7 +448,7 @@ export class MetricsLogComponent implements OnInit {
       this.loading.set(true);
       this.healthService.delete(metric.id).subscribe({
         next: () => { this.notify.success('Deleted'); this.loadMetrics(); this.loadTrend(); },
-        error: () => { this.loading.set(false); this.notify.error('Failed to delete'); }
+        error: () => { this.loading.set(false); this.notify.error('Failed to delete'); this.cdr.detectChanges(); }
       });
     }
   }

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
@@ -171,6 +171,7 @@ import { TagSummary } from '../../core/models/daily-expense.model';
 })
 export class TagSummaryComponent implements OnInit {
   private expenseService = inject(DailyExpenseService);
+  private cdr = inject(ChangeDetectorRef);
 
   tags = signal<TagSummary[]>([]);
   loading = signal(true);
@@ -237,9 +238,10 @@ export class TagSummaryComponent implements OnInit {
       next: (tags) => {
         this.tags.set(tags);
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
-      error: () => this.loading.set(false)
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
-    this.expenseService.getTagTypes().subscribe(types => this.availableTagTypes.set(types));
+    this.expenseService.getTagTypes().subscribe(types => { this.availableTagTypes.set(types); this.cdr.detectChanges(); });
   }
 }

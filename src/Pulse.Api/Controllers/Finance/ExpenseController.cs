@@ -167,7 +167,7 @@ public class ExpenseController : ControllerBase
 
         var budgets = await _db.BudgetExpenses
             .Include(e => e.Category)
-            .Where(e => e.UserId == UserId && !e.IsFixed)
+            .Where(e => e.UserId == UserId)
             .ToListAsync();
 
         var summaries = new List<SpendingSummaryDto>();

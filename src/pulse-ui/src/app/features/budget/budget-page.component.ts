@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
@@ -6,22 +6,25 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BudgetService } from '../../core/services/budget.service';
 import { BudgetPlan, PaycheckBreakdown } from '../../core/models/budget.model';
 import { RouterLink } from '@angular/router';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 
 @Component({
   selector: 'app-budget-page',
   standalone: true,
   imports: [
     CommonModule, MatTabsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatTableModule, MatProgressBarModule, MatProgressSpinnerModule, MatChipsModule,
-    MatTooltipModule, CurrencyPipe, DatePipe, DecimalPipe
+    MatTableModule, MatProgressBarModule, MatChipsModule,
+    MatTooltipModule, CurrencyPipe, DatePipe, DecimalPipe,
+    SkeletonLoaderComponent, PullToRefreshDirective
   ],
   template: `
+    <div appPullToRefresh (refresh)="loadData()">
     <div class="budget-header">
       <div class="month-nav">
         <button mat-icon-button (click)="prevMonth()"><mat-icon>chevron_left</mat-icon></button>
@@ -31,7 +34,7 @@ import { RouterLink } from '@angular/router';
     </div>
 
     @if (loading()) {
-      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+      <app-skeleton type="card"></app-skeleton>
     } @else if (plan()) {
       <mat-tab-group animationDuration="200ms">
         <!-- Monthly Overview Tab -->
@@ -252,13 +255,26 @@ import { RouterLink } from '@angular/router';
                       </td>
                     </ng-container>
                     <ng-container matColumnDef="progress">
-                      <th mat-header-cell *matHeaderCellDef></th>
-                      <td mat-cell *matCellDef></td>
+                      <th mat-header-cell *matHeaderCellDef>Progress</th>
+                      <td mat-cell *matCellDef="let row">
+                        <div class="progress-cell">
+                          <mat-progress-bar mode="determinate"
+                            [value]="Math.min(row.percentUsed, 100)"
+                            [color]="row.percentUsed >= 100 ? 'primary' : row.percentUsed > 0 ? 'accent' : 'warn'">
+                          </mat-progress-bar>
+                          <span class="progress-percent">{{ row.percentUsed | number:'1.0-0' }}%</span>
+                        </div>
+                      </td>
                     </ng-container>
                     <ng-container matColumnDef="amounts">
-                      <th mat-header-cell *matHeaderCellDef>Min. Payment</th>
+                      <th mat-header-cell *matHeaderCellDef>Paid / Min. Payment</th>
                       <td mat-cell *matCellDef="let row">
-                        <span class="amounts-main">{{ row.amount | currency }}</span>
+                        <div class="amounts-cell">
+                          <span class="amounts-main">{{ row.spent | currency }} / {{ row.amount | currency }}</span>
+                          <span class="amounts-remaining" [class.debt-paid]="row.spent >= row.amount" [class.debt-pending]="row.spent < row.amount">
+                            {{ row.spent >= row.amount ? 'Paid' : (row.amount - row.spent | currency) + ' pending' }}
+                          </span>
+                        </div>
                       </td>
                     </ng-container>
                     <tr mat-header-row *matHeaderRowDef="categoryColumns"></tr>
@@ -267,10 +283,19 @@ import { RouterLink } from '@angular/router';
                 </div>
                 <div class="mobile-only">
                   @for (row of debtCategories(); track row.categoryName) {
-                    <div class="budget-card debt-card">
+                    <div class="budget-card" [class.debt-done]="row.spent >= row.amount">
                       <div class="budget-card-top">
                         <span class="category-name-cell"><mat-icon class="category-icon debt">credit_score</mat-icon> {{ row.categoryName }}</span>
-                        <span class="budget-card-amount">{{ row.amount | currency }}</span>
+                        <span class="budget-card-amount">{{ row.spent | currency }} / {{ row.amount | currency }}</span>
+                      </div>
+                      <mat-progress-bar mode="determinate" [value]="Math.min(row.percentUsed, 100)"
+                        [color]="row.percentUsed >= 100 ? 'primary' : row.percentUsed > 0 ? 'accent' : 'warn'">
+                      </mat-progress-bar>
+                      <div class="budget-card-bottom">
+                        <span class="amounts-remaining" [class.debt-paid]="row.spent >= row.amount" [class.debt-pending]="row.spent < row.amount">
+                          {{ row.spent >= row.amount ? 'Paid' : (row.amount - row.spent | currency) + ' pending' }}
+                        </span>
+                        <span class="progress-percent">{{ row.percentUsed | number:'1.0-0' }}%</span>
                       </div>
                     </div>
                   }
@@ -353,9 +378,9 @@ import { RouterLink } from '@angular/router';
         </mat-card-content>
       </mat-card>
     }
+    </div>
   `,
   styles: [`
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .budget-header {
       display: flex; align-items: center; justify-content: flex-end;
       flex-wrap: wrap; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm);
@@ -489,7 +514,9 @@ import { RouterLink } from '@angular/router';
     .budget-card-bottom {
       display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.78rem;
     }
-    .debt-card { padding: 12px 16px; }
+    .debt-paid { color: var(--color-success); font-weight: 600; }
+    .debt-pending { color: var(--color-warning); font-weight: 500; }
+    .budget-card.debt-done { background: color-mix(in srgb, var(--color-success) 5%, transparent); }
 
     /* Paycheck Breakdown */
     .paycheck-card { margin-bottom: var(--spacing-md); }
@@ -520,6 +547,7 @@ import { RouterLink } from '@angular/router';
 export class BudgetPageComponent implements OnInit {
   protected Math = Math;
   private budgetService = inject(BudgetService);
+  private cdr = inject(ChangeDetectorRef);
 
   plan = signal<BudgetPlan | null>(null);
   loading = signal(true);
@@ -555,10 +583,12 @@ export class BudgetPageComponent implements OnInit {
       next: (plan) => {
         this.plan.set(plan);
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
       error: () => {
         this.plan.set(null);
         this.loading.set(false);
+        this.cdr.detectChanges();
       }
     });
   }

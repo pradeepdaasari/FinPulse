@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -8,8 +8,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TradingService } from '../../core/services/trading.service';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
 import { TradingRule, RuleCategory, DailyLimits, TradingStats, WeeklyFocus, WisdomCategory } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
 import { RuleEditorDialogComponent } from './rule-editor-dialog.component';
@@ -25,7 +25,7 @@ interface WisdomItem {
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatChipsModule, MatDialogModule, MatProgressSpinnerModule, CurrencyPipe
+    MatFormFieldModule, MatInputModule, MatChipsModule, MatDialogModule, CurrencyPipe, SkeletonLoaderComponent
   ],
   template: `
     <div class="page-banner">
@@ -38,7 +38,7 @@ interface WisdomItem {
     </div>
 
     @if (loading()) {
-      <div class="loading-container"><mat-spinner></mat-spinner></div>
+      <app-skeleton type="table"></app-skeleton>
     } @else {
     <!-- Streak Hero -->
     <mat-card class="streak-card">
@@ -289,6 +289,7 @@ export class PlaybookComponent implements OnInit {
   private tradingService = inject(TradingService);
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   rules = signal<TradingRule[]>([]);
@@ -342,15 +343,15 @@ export class PlaybookComponent implements OnInit {
 
   ngOnInit(): void {
     this.tradingService.getRules().subscribe({
-      next: r => { this.rules.set(r); this.loading.set(false); },
-      error: () => { this.rules.set([]); this.loading.set(false); }
+      next: r => { this.rules.set(r); this.loading.set(false); this.cdr.detectChanges(); },
+      error: () => { this.rules.set([]); this.loading.set(false); this.cdr.detectChanges(); }
     });
     this.tradingService.getStats().subscribe({
-      next: s => this.stats.set(s),
+      next: s => { this.stats.set(s); this.cdr.detectChanges(); },
       error: () => {}
     });
     this.tradingService.getWeeklyFocus().subscribe({
-      next: f => this.weeklyFocus.set(f),
+      next: f => { this.weeklyFocus.set(f); this.cdr.detectChanges(); },
       error: () => {}
     });
     this.tradingService.getLimits().subscribe({
@@ -386,7 +387,7 @@ export class PlaybookComponent implements OnInit {
     this.loading.set(true);
     this.tradingService.deleteRule(rule.id).subscribe({
       next: () => { this.notify.success('Rule deleted'); this.loadRules(); },
-      error: () => { this.loading.set(false); this.notify.error('Failed to delete rule'); }
+      error: () => { this.loading.set(false); this.notify.error('Failed to delete rule'); this.cdr.detectChanges(); }
     });
   }
 
@@ -402,6 +403,6 @@ export class PlaybookComponent implements OnInit {
   }
 
   private loadRules(): void {
-    this.tradingService.getRules().subscribe(r => this.rules.set(r));
+    this.tradingService.getRules().subscribe(r => { this.rules.set(r); this.cdr.detectChanges(); });
   }
 }

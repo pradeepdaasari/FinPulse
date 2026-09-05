@@ -154,7 +154,9 @@ public class BudgetPlanService : IBudgetPlanService
                 Amount = debt.MinimumPayment,
                 IsFixed = true,
                 Icon = "credit_score",
-                IsDebt = true
+                IsDebt = true,
+                DebtId = debt.Id,
+                DebtType = debt.DebtType
             });
         }
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -16,7 +16,8 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { CategoryService } from '../../core/services/category.service';
 import { Category, CategoryCreate, CategoryType } from '../../core/models/category.model';
 
@@ -96,11 +97,12 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
     CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule,
     MatExpansionModule, MatFormFieldModule, MatInputModule, MatSlideToggleModule,
     MatSnackBarModule, MatTooltipModule, MatChipsModule, MatTabsModule, MatButtonToggleModule,
-    MatMenuModule, MatProgressSpinnerModule
+    MatMenuModule, SkeletonLoaderComponent, PullToRefreshDirective
   ],
   template: `
+    <div appPullToRefresh (refresh)="loadCategories()">
     @if (loading()) {
-      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+      <app-skeleton type="list"></app-skeleton>
     } @else {
     <div class="page-header">
       <button mat-raised-button color="primary" (click)="showAddParent.set(true)" [disabled]="showAddParent()">
@@ -419,9 +421,9 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
       }
     </ng-template>
     }
+    </div>
   `,
   styles: [`
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .page-header {
       display: flex; align-items: center; justify-content: flex-end;
       margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);
@@ -638,6 +640,7 @@ export class CategoryPageComponent implements OnInit {
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   allCategories = signal<Category[]>([]);
@@ -711,6 +714,7 @@ export class CategoryPageComponent implements OnInit {
     this.categoryService.getAll().subscribe(data => {
       this.allCategories.set(data);
       this.loading.set(false);
+      this.cdr.detectChanges();
     });
   }
 
