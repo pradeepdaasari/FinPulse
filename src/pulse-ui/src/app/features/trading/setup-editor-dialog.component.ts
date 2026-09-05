@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormArray, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -119,6 +119,7 @@ export class SetupEditorDialogComponent implements OnInit {
   private dialogRef = inject(MatDialogRef<SetupEditorDialogComponent>);
   private notify = inject(NotificationService);
   data = inject<SetupEditorData>(MAT_DIALOG_DATA);
+  private cdr = inject(ChangeDetectorRef);
 
   saving = signal(false);
 
@@ -177,6 +178,7 @@ export class SetupEditorDialogComponent implements OnInit {
       error: () => {
         this.notify.error('Failed to save setup');
         this.saving.set(false);
+        this.cdr.detectChanges();
       }
     });
   }

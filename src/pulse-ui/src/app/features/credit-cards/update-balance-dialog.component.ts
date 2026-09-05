@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, ChangeDetectorRef, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -271,6 +271,7 @@ export class UpdateBalanceDialogComponent {
   private cardService = inject(CreditCardService);
   private dialogRef = inject(MatDialogRef<UpdateBalanceDialogComponent>);
   data: CreditCard = inject(MAT_DIALOG_DATA);
+  private cdr = inject(ChangeDetectorRef);
 
   saving = signal(false);
 
@@ -312,6 +313,7 @@ export class UpdateBalanceDialogComponent {
       },
       error: () => {
         this.saving.set(false);
+        this.cdr.detectChanges();
       }
     });
   }

@@ -241,6 +241,18 @@ public class DashboardController : ControllerBase
                 Type = a.AccountType.ToString(),
                 Balance = a.CurrentBalance
             }),
+            CreditCards = creditCards.Select(c => new
+            {
+                c.Id,
+                Name = c.CardName,
+                Balance = c.CurrentBalance
+            }),
+            Loans = loans.Select(l => new
+            {
+                l.Id,
+                Name = l.LenderName,
+                Balance = l.CurrentBalance
+            }),
             TotalBankBalance = totalBankBalance,
             TotalCreditCardDebt = totalCreditCardDebt,
             TotalLoanDebt = totalLoanDebt,

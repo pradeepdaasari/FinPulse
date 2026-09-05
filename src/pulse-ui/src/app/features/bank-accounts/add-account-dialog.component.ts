@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA, MatDialog } from '@angular/material/dialog';
@@ -171,6 +171,7 @@ export class AddAccountDialogComponent implements OnInit {
   private dialogRef = inject(MatDialogRef<AddAccountDialogComponent>);
   private dialog = inject(MatDialog);
   private data: BankAccount | null = inject(MAT_DIALOG_DATA, { optional: true });
+  private cdr = inject(ChangeDetectorRef);
 
   editMode = !!this.data;
   saving = signal(false);
@@ -226,7 +227,7 @@ export class AddAccountDialogComponent implements OnInit {
           this.dialogRef.close(result);
         }
       },
-      error: () => this.saving.set(false)
+      error: () => { this.saving.set(false); this.cdr.detectChanges(); }
     });
   }
 

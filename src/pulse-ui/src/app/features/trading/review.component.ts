@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { ReactiveFormsModule, FormsModule, FormBuilder } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -8,7 +8,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { TradingService } from '../../core/services/trading.service';
 import { DailyReview, TradeGrade, TradingRule, TradeEntry } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
@@ -19,10 +20,11 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatChipsModule, MatCheckboxModule, MatProgressSpinnerModule, CurrencyPipe,
-    RichTextEditorComponent
+    MatFormFieldModule, MatInputModule, MatChipsModule, MatCheckboxModule, CurrencyPipe,
+    RichTextEditorComponent, SkeletonLoaderComponent, PullToRefreshDirective
   ],
   template: `
+    <div appPullToRefresh (refresh)="loadData()">
     <div class="page-banner">
       <div class="banner-pattern"></div>
       <div class="banner-content">
@@ -33,7 +35,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     </div>
 
     @if (loading()) {
-      <div class="loading-container"><mat-spinner></mat-spinner></div>
+      <app-skeleton type="card"></app-skeleton>
     } @else {
     <div class="date-nav">
       <button mat-icon-button (click)="prevDay()"><mat-icon>chevron_left</mat-icon></button>
@@ -217,10 +219,10 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
       </div>
     }
     }
+    </div>
   `,
   styles: [`
     :host { display: block; }
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .page-banner {
       position: relative; margin: -24px -24px 24px; padding: 40px 24px 32px;
       background: var(--gradient-primary); border-radius: 0 0 var(--radius-lg) var(--radius-lg); overflow: hidden;
@@ -342,6 +344,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
 export class ReviewComponent implements OnInit {
   private tradingService = inject(TradingService);
   private notify = inject(NotificationService);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   currentDate = signal(new Date());
@@ -391,16 +394,16 @@ export class ReviewComponent implements OnInit {
   loadData(): void {
     const dateStr = this.formatDate(this.currentDate());
     this.tradingService.getTrades(dateStr, dateStr).subscribe({
-      next: t => { this.todayTrades.set(t); this.loading.set(false); },
-      error: () => { this.todayTrades.set([]); this.loading.set(false); }
+      next: t => { this.todayTrades.set(t); this.loading.set(false); this.cdr.detectChanges(); },
+      error: () => { this.todayTrades.set([]); this.loading.set(false); this.cdr.detectChanges(); }
     });
     this.tradingService.getRules().subscribe({
-      next: r => this.rules.set(r),
-      error: () => this.rules.set([])
+      next: r => { this.rules.set(r); this.cdr.detectChanges(); },
+      error: () => { this.rules.set([]); this.cdr.detectChanges(); }
     });
     this.tradingService.getReviews().subscribe({
-      next: r => this.recentReviews.set(r.slice(0, 30)),
-      error: () => this.recentReviews.set([])
+      next: r => { this.recentReviews.set(r.slice(0, 30)); this.cdr.detectChanges(); },
+      error: () => { this.recentReviews.set([]); this.cdr.detectChanges(); }
     });
     this.tradingService.getReviews(dateStr, dateStr).subscribe({
       next: r => {
@@ -423,8 +426,9 @@ export class ReviewComponent implements OnInit {
           this.followedPlan.set(null);
           this.followedRules.set(null);
         }
+        this.cdr.detectChanges();
       },
-      error: () => this.existingReview.set(null)
+      error: () => { this.existingReview.set(null); this.cdr.detectChanges(); }
     });
   }
 

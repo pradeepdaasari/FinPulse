@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -6,7 +6,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTableModule } from '@angular/material/table';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -20,19 +19,20 @@ import { BankAccount, CommissionSchedule } from '../../core/models/bank-account.
 import { DailyExpense } from '../../core/models/daily-expense.model';
 import { NotificationService } from '../../core/services/notification.service';
 import { toLocalDateString } from '../../core/utils/date-utils';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
 
 @Component({
   selector: 'app-account-detail',
   standalone: true,
   imports: [
     FormsModule, MatCardModule, MatIconModule, MatButtonModule, MatButtonToggleModule,
-    MatTableModule, MatProgressSpinnerModule, MatTooltipModule,
+    MatTableModule, MatTooltipModule,
     MatDatepickerModule, MatFormFieldModule, MatInputModule,
-    CurrencyPipe, DatePipe, LocalDatePipe
+    CurrencyPipe, DatePipe, LocalDatePipe, SkeletonLoaderComponent
   ],
   template: `
     @if (loading()) {
-      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+      <app-skeleton type="card"></app-skeleton>
     } @else if (account()) {
       <!-- Header -->
       <div class="header-row">
@@ -304,7 +304,6 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     }
   `,
   styles: [`
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     /* Header */
     .header-row {
       display: flex; justify-content: space-between; align-items: center;
@@ -483,6 +482,7 @@ export class AccountDetailComponent implements OnInit {
   private expenseService = inject(DailyExpenseService);
   private dialog = inject(MatDialog);
   private notify = inject(NotificationService);
+  private cdr = inject(ChangeDetectorRef);
 
   account = signal<BankAccount | null>(null);
   allTransactions = signal<DailyExpense[]>([]);
@@ -540,6 +540,7 @@ export class AccountDetailComponent implements OnInit {
         if (account.accountType === 'Brokerage') {
           this.loadCommissionHistory(id);
         }
+        this.cdr.detectChanges();
       },
       error: () => {
         this.notify.error('Account not found');
@@ -553,8 +554,9 @@ export class AccountDetailComponent implements OnInit {
       next: (txns) => {
         this.allTransactions.set(txns);
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
-      error: () => this.loading.set(false)
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 
@@ -574,7 +576,7 @@ export class AccountDetailComponent implements OnInit {
 
   private loadCommissionHistory(accountId: number): void {
     this.accountService.getCommissionHistory(accountId).subscribe({
-      next: (history) => this.commissionHistory.set(history)
+      next: (history) => { this.commissionHistory.set(history); this.cdr.detectChanges(); }
     });
   }
 
@@ -607,7 +609,7 @@ export class AccountDetailComponent implements OnInit {
           this.notify.success('Schedule deleted');
           this.loadCommissionHistory(this.account()!.id);
         },
-        error: () => { this.loading.set(false); this.notify.error('Failed to delete schedule'); }
+        error: () => { this.loading.set(false); this.notify.error('Failed to delete schedule'); this.cdr.detectChanges(); }
       });
     }
   }
@@ -636,7 +638,7 @@ export class AccountDetailComponent implements OnInit {
       this.loading.set(true);
       this.accountService.delete(this.account()!.id).subscribe({
         next: () => { this.notify.success('Account deleted'); this.goBack(); },
-        error: () => { this.loading.set(false); this.notify.error('Failed to delete'); }
+        error: () => { this.loading.set(false); this.notify.error('Failed to delete'); this.cdr.detectChanges(); }
       });
     }
   }

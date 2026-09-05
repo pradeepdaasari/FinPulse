@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
@@ -6,7 +6,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { LoanService } from '../../core/services/loan.service';
 import { PersonalLoan } from '../../core/models/personal-loan.model';
@@ -14,12 +13,15 @@ import { NotificationService } from '../../core/services/notification.service';
 import { AddLoanDialogComponent } from './add-loan-dialog.component';
 import { EditLoanDialogComponent } from './edit-loan-dialog.component';
 import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog.component';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 
 @Component({
   selector: 'app-loan-list',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatTooltipModule, MatProgressSpinnerModule, CurrencyPipe],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatTooltipModule, CurrencyPipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
+    <div appPullToRefresh (refresh)="loadLoans()">
     <div class="header-row">
       <button mat-raised-button color="primary" (click)="openAddLoan()">
         <mat-icon>add</mat-icon> Add Loan
@@ -27,7 +29,7 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
     </div>
 
     @if (loading()) {
-      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+      <app-skeleton type="table"></app-skeleton>
     } @else if (loans().length === 0) {
       <div class="empty-state">
         <div class="empty-icon-wrap purple">
@@ -197,9 +199,9 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
         }
       </div>
     }
+    </div>
   `,
   styles: [`
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .header-row {
       display: flex;
       justify-content: flex-end;
@@ -289,14 +291,15 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
     .mobile-cards { display: none; }
     .loan-card {
       background: var(--color-surface);
-      border-radius: var(--radius-md);
-      margin-bottom: 10px;
-      padding: 16px 14px 10px;
+      border-radius: var(--radius-lg);
+      margin-bottom: 12px;
+      padding: 16px;
       box-shadow: var(--shadow-sm);
       cursor: pointer;
-      transition: box-shadow var(--transition-fast);
+      transition: box-shadow var(--transition-fast), transform 0.1s ease;
+      -webkit-tap-highlight-color: transparent;
     }
-    .loan-card:active { box-shadow: var(--shadow-md); }
+    .loan-card:active { box-shadow: var(--shadow-md); transform: scale(0.98); }
     .loan-top {
       display: flex;
       align-items: center;
@@ -379,6 +382,7 @@ export class LoanListComponent implements OnInit {
   private notify = inject(NotificationService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
+  private cdr = inject(ChangeDetectorRef);
 
   loans = signal<PersonalLoan[]>([]);
   loading = signal(true);
@@ -401,8 +405,9 @@ export class LoanListComponent implements OnInit {
       next: (loans) => {
         this.loans.set(loans);
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
-      error: () => { this.loading.set(false); }
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 
@@ -452,7 +457,7 @@ export class LoanListComponent implements OnInit {
         this.notify.success('Loan deleted successfully');
         this.loadLoans();
       },
-      error: () => { this.loading.set(false); this.notify.error('Failed to delete loan'); }
+      error: () => { this.loading.set(false); this.notify.error('Failed to delete loan'); this.cdr.detectChanges(); }
     });
   }
 

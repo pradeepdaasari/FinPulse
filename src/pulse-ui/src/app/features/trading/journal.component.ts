@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
@@ -8,7 +8,8 @@ import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { TradingService } from '../../core/services/trading.service';
 import { TradeEntry, TradingSetupSummary } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
@@ -20,9 +21,11 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
   imports: [
     CommonModule, MatCardModule, MatButtonModule, MatIconModule,
     MatTableModule, MatChipsModule, MatDialogModule, MatTooltipModule,
-    MatProgressSpinnerModule, CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe
+    CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe,
+    SkeletonLoaderComponent, PullToRefreshDirective
   ],
   template: `
+    <div appPullToRefresh (refresh)="loadTrades()">
     <div class="page-banner">
       <div class="banner-pattern"></div>
       <div class="banner-content">
@@ -33,7 +36,7 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
     </div>
 
     @if (loading()) {
-      <div class="loading-container"><mat-spinner></mat-spinner></div>
+      <app-skeleton type="table"></app-skeleton>
     } @else {
     <div class="stats-row">
       <div class="stat-card stat-blue">
@@ -256,10 +259,10 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
       </div>
     }
     }
+    </div>
   `,
   styles: [`
     :host { display: block; }
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .page-banner {
       position: relative;
       margin: -24px -24px 24px;
@@ -366,16 +369,19 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
     /* Mobile feed */
     .mobile-feed { display: none; }
     .trade-card {
-      display: flex; align-items: center; gap: 10px;
-      padding: 12px 4px; border-bottom: 1px solid var(--color-border); cursor: pointer;
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 4px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background var(--transition-fast);
     }
+    .trade-card + .trade-card { border-top: 1px solid var(--color-border); }
     .trade-card:active { background: var(--color-surface-hover); }
     .card-non-compliant { background: var(--color-stat-red-bg); border-radius: var(--radius-sm); }
     .trade-dir-dot {
-      width: 36px; height: 36px; border-radius: 10px;
+      width: 42px; height: 42px; border-radius: 12px;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
-    .trade-dir-dot mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .trade-dir-dot mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .dot-long { background: var(--color-stat-green-bg); }
     .dot-long mat-icon { color: var(--color-success); }
     .dot-short { background: var(--color-stat-red-bg); }
@@ -415,6 +421,7 @@ export class JournalComponent implements OnInit {
   private tradingService = inject(TradingService);
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   trades = signal<TradeEntry[]>([]);
@@ -460,7 +467,7 @@ export class JournalComponent implements OnInit {
   ngOnInit(): void {
     this.updateMonthLabel();
     this.loadTrades();
-    this.tradingService.getSetups().subscribe(s => this.setups.set(s));
+    this.tradingService.getSetups().subscribe(s => { this.setups.set(s); this.cdr.detectChanges(); });
   }
 
   loadTrades(): void {
@@ -468,8 +475,8 @@ export class JournalComponent implements OnInit {
     const lastDay = new Date(this.currentYear, this.currentMonth, 0).getDate();
     const to = `${this.currentYear}-${String(this.currentMonth).padStart(2, '0')}-${lastDay}`;
     this.tradingService.getTrades(from, to).subscribe({
-      next: data => { this.trades.set(data); this.loading.set(false); },
-      error: () => { this.trades.set([]); this.loading.set(false); }
+      next: data => { this.trades.set(data); this.loading.set(false); this.cdr.detectChanges(); },
+      error: () => { this.trades.set([]); this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 
@@ -511,7 +518,7 @@ export class JournalComponent implements OnInit {
     this.loading.set(true);
     this.tradingService.deleteTrade(t.id).subscribe({
       next: () => { this.notify.success('Trade deleted'); this.loadTrades(); },
-      error: () => { this.loading.set(false); this.notify.error('Failed to delete trade'); }
+      error: () => { this.loading.set(false); this.notify.error('Failed to delete trade'); this.cdr.detectChanges(); }
     });
   }
 }

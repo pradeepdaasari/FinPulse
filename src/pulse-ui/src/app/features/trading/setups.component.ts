@@ -1,11 +1,11 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
 import { TradingService } from '../../core/services/trading.service';
 import { TradingSetupSummary } from '../../core/models/trading.model';
 import { SetupEditorDialogComponent } from './setup-editor-dialog.component';
@@ -14,7 +14,7 @@ import { NotificationService } from '../../core/services/notification.service';
 @Component({
   selector: 'app-setups',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, MatChipsModule, MatProgressSpinnerModule],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, MatChipsModule, SkeletonLoaderComponent],
   template: `
     <div class="page-banner">
       <div class="banner-pattern"></div>
@@ -39,7 +39,7 @@ import { NotificationService } from '../../core/services/notification.service';
     </div>
 
     @if (loading()) {
-      <div class="loading-center"><mat-spinner diameter="40"></mat-spinner></div>
+      <app-skeleton type="table"></app-skeleton>
     } @else if (setups().length === 0) {
       <div class="empty-state">
         <div class="empty-icon-wrap">
@@ -210,6 +210,7 @@ export class SetupsComponent implements OnInit {
   private tradingService = inject(TradingService);
   private dialog = inject(MatDialog);
   private notify = inject(NotificationService);
+  private cdr = inject(ChangeDetectorRef);
 
   setups = signal<TradingSetupSummary[]>([]);
   loading = signal(true);
@@ -221,8 +222,8 @@ export class SetupsComponent implements OnInit {
   loadSetups(): void {
     this.loading.set(true);
     this.tradingService.getSetups().subscribe({
-      next: (data) => { this.setups.set(data); this.loading.set(false); },
-      error: () => { this.loading.set(false); }
+      next: (data) => { this.setups.set(data); this.loading.set(false); this.cdr.detectChanges(); },
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 
@@ -252,7 +253,7 @@ export class SetupsComponent implements OnInit {
       this.loading.set(true);
       this.tradingService.deleteSetup(setup.id).subscribe({
         next: () => { this.notify.success('Setup deleted'); this.loadSetups(); },
-        error: () => { this.loading.set(false); this.notify.error('Failed to delete setup'); }
+        error: () => { this.loading.set(false); this.notify.error('Failed to delete setup'); this.cdr.detectChanges(); }
       });
     }
   }

@@ -1,11 +1,12 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -21,10 +22,11 @@ import { toLocalDateString } from '../../core/utils/date-utils';
   imports: [
     CommonModule, FormsModule, CurrencyPipe, DecimalPipe,
     MatCardModule, MatButtonModule, MatButtonToggleModule, MatIconModule,
-    MatProgressSpinnerModule, MatDatepickerModule, MatFormFieldModule, MatInputModule,
-    BaseChartDirective
+    MatDatepickerModule, MatFormFieldModule, MatInputModule,
+    BaseChartDirective, SkeletonLoaderComponent, PullToRefreshDirective
   ],
   template: `
+    <div appPullToRefresh (refresh)="loadDashboard()">
     <!-- Header Row -->
     <div class="header-row">
       <h2 class="page-title">Trading Dashboard</h2>
@@ -56,7 +58,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     </div>
 
     @if (loading()) {
-      <div class="loading-container"><mat-spinner></mat-spinner></div>
+      <app-skeleton type="dashboard"></app-skeleton>
     } @else if (dashboard()) {
 
     <!-- Top Stats Row -->
@@ -286,6 +288,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     </div>
 
     }
+    </div>
   `,
   styles: [`
     :host { display: block; }
@@ -299,9 +302,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     .custom-range { display: flex; align-items: center; gap: 8px; }
     .date-field { width: 130px; }
     .date-field .mat-mdc-form-field-infix { padding-top: 8px; padding-bottom: 8px; }
-    .go-btn { height: 40px; }
-
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
+    .go-btn { height: 40px; min-width: 56px; padding: 0 16px; border-radius: 10px; }
 
     /* Stats Grid */
     .stats-grid {
@@ -424,6 +425,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
 })
 export class TradingDashboardComponent implements OnInit {
   private tradingService = inject(TradingService);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   dashboard = signal<TradingDashboard | null>(null);
@@ -616,7 +618,7 @@ export class TradingDashboardComponent implements OnInit {
     return { from, to: today };
   }
 
-  private loadDashboard(fromOverride?: Date, toOverride?: Date): void {
+  loadDashboard(fromOverride?: Date, toOverride?: Date): void {
     this.loading.set(true);
     let fromStr: string | undefined;
     let toStr: string | undefined;
@@ -636,9 +638,11 @@ export class TradingDashboardComponent implements OnInit {
       next: (data) => {
         this.dashboard.set(data);
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
       error: () => {
         this.loading.set(false);
+        this.cdr.detectChanges();
       }
     });
   }

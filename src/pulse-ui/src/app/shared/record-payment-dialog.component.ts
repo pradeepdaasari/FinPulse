@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -10,6 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CreditCardService } from '../core/services/credit-card.service';
 import { LoanService } from '../core/services/loan.service';
 import { FundingSourceService } from '../core/services/funding-source.service';
@@ -38,7 +39,8 @@ export interface RecordPaymentData {
     MatButtonModule,
     MatButtonToggleModule,
     MatIconModule,
-    MatSelectModule
+    MatSelectModule,
+    MatProgressSpinnerModule
   ],
   template: `
     <div class="dialog-header">
@@ -51,6 +53,9 @@ export interface RecordPaymentData {
       </div>
     </div>
     <mat-dialog-content>
+      @if (loadingAccounts()) {
+        <div class="dialog-loading"><mat-spinner diameter="32"></mat-spinner></div>
+      } @else {
       <div class="debt-info">
         <mat-icon>{{ data.debtType === 'CreditCard' ? 'credit_card' : 'account_balance' }}</mat-icon>
         <div>
@@ -101,6 +106,7 @@ export interface RecordPaymentData {
           <textarea matInput formControlName="notes" rows="2" placeholder="e.g. Paid via bank transfer"></textarea>
         </mat-form-field>
       </form>
+      }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>Cancel</button>
@@ -174,6 +180,10 @@ export interface RecordPaymentData {
     .full-width {
       width: 100%;
     }
+    .dialog-loading {
+      display: flex; justify-content: center; align-items: center;
+      min-height: 200px;
+    }
     @media (max-width: 600px) {
       mat-dialog-content {
         min-width: unset;
@@ -187,9 +197,11 @@ export class RecordPaymentDialogComponent {
   private loanService = inject(LoanService);
   private fundingSourceService = inject(FundingSourceService);
   private dialogRef = inject(MatDialogRef<RecordPaymentDialogComponent>);
+  private cdr = inject(ChangeDetectorRef);
   data: RecordPaymentData = inject(MAT_DIALOG_DATA);
 
   saving = signal(false);
+  loadingAccounts = signal(true);
   paymentType = signal<'full' | 'minimum' | 'custom'>('full');
   bankAccounts = signal<FundingSource[]>([]);
 
@@ -201,8 +213,16 @@ export class RecordPaymentDialogComponent {
   });
 
   constructor() {
-    this.fundingSourceService.getAll().subscribe(sources => {
-      this.bankAccounts.set(sources.filter(s => s.type === 'BankAccount'));
+    this.fundingSourceService.getAll().subscribe({
+      next: (sources) => {
+        this.bankAccounts.set(sources.filter(s => s.type === 'BankAccount'));
+        this.loadingAccounts.set(false);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadingAccounts.set(false);
+        this.cdr.detectChanges();
+      }
     });
   }
 

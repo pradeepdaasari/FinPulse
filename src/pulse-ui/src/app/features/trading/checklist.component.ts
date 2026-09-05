@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -9,7 +9,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { TradingService } from '../../core/services/trading.service';
 import { TradingSetupSummary, TradingSetup, PreMarketNote, TradeEntry, DailyLimits, ChecklistResponse } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
@@ -21,10 +22,11 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
   standalone: true,
   imports: [
     CommonModule, FormsModule, ReactiveFormsModule, RouterModule, MatCardModule, MatButtonModule,
-    MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatCheckboxModule, MatProgressSpinnerModule, CurrencyPipe,
-    RichTextEditorComponent
+    MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatCheckboxModule, CurrencyPipe,
+    RichTextEditorComponent, SkeletonLoaderComponent, PullToRefreshDirective
   ],
   template: `
+    <div appPullToRefresh (refresh)="loadData()">
     <!-- Banner -->
     <div class="page-banner">
       <div class="banner-pattern"></div>
@@ -68,7 +70,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     </div>
 
     @if (loading()) {
-      <div class="loading-container"><mat-spinner></mat-spinner></div>
+      <app-skeleton type="card"></app-skeleton>
     }
 
     <!-- BLOCKED: No pre-market -->
@@ -336,10 +338,10 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
         </mat-card-content>
       </mat-card>
     }
+    </div>
   `,
   styles: [`
     :host { display: block; }
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
 
     .page-banner {
       position: relative;
@@ -545,6 +547,7 @@ export class ChecklistComponent implements OnInit {
   private tradingService = inject(TradingService);
   private notify = inject(NotificationService);
   private fb = inject(FormBuilder);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   hasPreMarketNote = signal(false);
@@ -618,25 +621,29 @@ export class ChecklistComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.loadData();
+  }
+
+  loadData(): void {
     const today = toLocalDateString(new Date());
 
     this.tradingService.getTodayNote().subscribe({
-      next: (note) => { this.todayNote.set(note); this.hasPreMarketNote.set(true); },
-      error: () => { this.hasPreMarketNote.set(false); }
+      next: (note) => { this.todayNote.set(note); this.hasPreMarketNote.set(true); this.cdr.detectChanges(); },
+      error: () => { this.hasPreMarketNote.set(false); this.cdr.detectChanges(); }
     });
 
     this.tradingService.getSetups().subscribe({
-      next: (setups) => this.setups.set(setups.filter(s => s.isActive)),
+      next: (setups) => { this.setups.set(setups.filter(s => s.isActive)); this.cdr.detectChanges(); },
       error: () => {}
     });
 
     this.tradingService.getTrades(today, today).subscribe({
-      next: (trades) => this.todayTrades.set(trades),
+      next: (trades) => { this.todayTrades.set(trades); this.cdr.detectChanges(); },
       error: () => {}
     });
 
     this.tradingService.getLimits().subscribe({
-      next: (limits) => this.limits.set(limits),
+      next: (limits) => { this.limits.set(limits); this.cdr.detectChanges(); },
       error: () => {},
       complete: () => this.loading.set(false)
     });
@@ -649,6 +656,7 @@ export class ChecklistComponent implements OnInit {
       next: (setup) => {
         this.selectedSetup.set(setup);
         this.checkStates.set(new Array(setup.checklistItems.length).fill(false));
+        this.cdr.detectChanges();
       }
     });
   }
@@ -687,6 +695,7 @@ export class ChecklistComponent implements OnInit {
         this.notify.success('Trade logged successfully');
         this.todayTrades.update(trades => [...trades, {} as TradeEntry]);
         this.resetForm();
+        this.cdr.detectChanges();
       },
       error: () => this.notify.error('Failed to log trade')
     });

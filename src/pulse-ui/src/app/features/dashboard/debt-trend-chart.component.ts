@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -71,7 +71,7 @@ import { TrendData } from '../../core/models/dashboard.model';
     .mom-change.negative { color: var(--color-success); background: var(--color-success-bg); }
     .mom-change.positive { color: var(--color-danger); background: var(--color-danger-bg); }
     .title-with-icon { display: flex; align-items: center; }
-    .card-title-icon { font-size: 20px; width: 20px; height: 20px; margin-right: 8px; color: var(--color-primary); }
+    .card-title-icon { font-size: 20px; width: 20px; height: 20px; margin-right: 8px; color: #FF9500; }
     .chart-container { position: relative; height: 280px; }
     .empty-state {
       display: flex;
@@ -84,6 +84,7 @@ import { TrendData } from '../../core/models/dashboard.model';
 })
 export class DebtTrendChartComponent implements OnInit {
   private dashboardService = inject(DashboardService);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   trendData = signal<TrendData | null>(null);
@@ -132,6 +133,7 @@ export class DebtTrendChartComponent implements OnInit {
           ]
         });
       }
+      this.cdr.detectChanges();
     });
   }
 }

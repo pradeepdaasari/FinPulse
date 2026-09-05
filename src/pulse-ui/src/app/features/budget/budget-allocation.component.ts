@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
@@ -420,6 +420,7 @@ import { BudgetAllocation } from '../../core/models/budget.model';
 })
 export class BudgetAllocationComponent implements OnInit {
   private budgetService = inject(BudgetService);
+  private cdr = inject(ChangeDetectorRef);
 
   allocation = signal<BudgetAllocation | null>(null);
   loading = signal(true);
@@ -441,8 +442,9 @@ export class BudgetAllocationComponent implements OnInit {
         this.allocation.set(data);
         this.buildPieChart(data);
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
-      error: () => { this.loading.set(false); }
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 

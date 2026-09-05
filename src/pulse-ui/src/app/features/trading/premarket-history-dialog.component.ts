@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -74,13 +74,14 @@ import { PreMarketNote } from '../../core/models/trading.model';
 })
 export class PremarketHistoryDialogComponent implements OnInit {
   private tradingService = inject(TradingService);
+  private cdr = inject(ChangeDetectorRef);
   loading = signal(true);
   notes = signal<PreMarketNote[]>([]);
 
   ngOnInit(): void {
     this.tradingService.getPreMarketNotes().subscribe({
-      next: (data) => { this.notes.set(data); this.loading.set(false); },
-      error: () => { this.loading.set(false); }
+      next: (data) => { this.notes.set(data); this.loading.set(false); this.cdr.detectChanges(); },
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 }

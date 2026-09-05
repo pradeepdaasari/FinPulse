@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { RouterLink } from '@angular/router';
@@ -7,7 +7,6 @@ import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { PaymentService } from '../../core/services/payment.service';
 
@@ -16,12 +15,15 @@ import { NotificationService } from '../../core/services/notification.service';
 import { PaymentHistory, PaymentSummary } from '../../core/models/payment-history.model';
 import { DebtItem } from '../../core/models/debt-item.model';
 import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.component';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 
 @Component({
   selector: 'app-payment-history',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatCardModule, MatTableModule, MatChipsModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, LocalDatePipe],
+  imports: [CommonModule, RouterLink, MatCardModule, MatTableModule, MatChipsModule, MatIconModule, MatButtonModule, CurrencyPipe, DatePipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
+    <div appPullToRefresh (refresh)="loadPayments()">
     <div class="filter-row">
       <mat-chip-set>
         <mat-chip [highlighted]="activeFilter() === 'all'" (click)="filterByType('all')">
@@ -56,7 +58,7 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
     }
 
     @if (loading()) {
-      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+      <app-skeleton type="table"></app-skeleton>
     } @else {
       <div class="summary-row">
         <mat-card class="summary-card stat-total">
@@ -203,9 +205,9 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
         </div>
       }
     }
+    </div>
   `,
   styles: [`
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .filter-row {
       margin-bottom: var(--spacing-sm);
     }
@@ -409,11 +411,14 @@ import { EditPaymentDialogComponent } from '../../shared/edit-payment-dialog.com
     /* Mobile payment cards */
     .payment-card {
       background: var(--color-surface);
-      border-radius: var(--radius-md);
-      margin-bottom: 10px;
-      padding: 14px;
+      border-radius: var(--radius-lg);
+      margin-bottom: 12px;
+      padding: 16px;
       box-shadow: var(--shadow-sm);
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.1s ease;
     }
+    .payment-card:active { transform: scale(0.98); }
     .payment-card-top {
       display: flex;
       align-items: center;
@@ -482,6 +487,7 @@ export class PaymentHistoryComponent implements OnInit {
   private debtService = inject(DebtService);
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
+  private cdr = inject(ChangeDetectorRef);
   private debtMap = new Map<string, DebtItem>();
 
   allPayments = signal<PaymentHistory[]>([]);
@@ -529,6 +535,7 @@ export class PaymentHistoryComponent implements OnInit {
     this.debtService.getAll().subscribe(debts => {
       debts.forEach(d => this.debtMap.set(d.key, d));
       this.debtItems.set(debts);
+      this.cdr.detectChanges();
     });
     this.loadPayments();
   }
@@ -588,18 +595,19 @@ export class PaymentHistoryComponent implements OnInit {
         this.notify.success('Payment deleted successfully');
         this.loadPayments();
       },
-      error: () => { this.loading.set(false); this.notify.error('Failed to delete payment'); }
+      error: () => { this.loading.set(false); this.notify.error('Failed to delete payment'); this.cdr.detectChanges(); }
     });
   }
 
-  private loadPayments(): void {
+  loadPayments(): void {
     this.loading.set(true);
     this.paymentService.getAll().subscribe({
       next: (response) => {
         this.allPayments.set(response.payments);
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
-      error: () => { this.loading.set(false); }
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 }

@@ -3,6 +3,7 @@
 html {
   @include mat.theme((
     color: (
+      theme-type: light,
       primary: mat.$azure-palette,
       tertiary: mat.$violet-palette,
     ),
@@ -126,7 +127,7 @@ html {
   // Gradients
   --gradient-primary: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
   --gradient-accent: linear-gradient(135deg, #5856D6 0%, #AF52DE 100%);
-  --gradient-sidebar: linear-gradient(180deg, #1C1C1E 0%, #2C2C2E 100%);
+  --gradient-sidebar: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(242,242,247,0.95) 100%);
   --gradient-login: linear-gradient(160deg, #0A1628 0%, #1a2744 40%, #0f3460 100%);
 
   // Icon tint backgrounds — bold enough to see
@@ -135,14 +136,14 @@ html {
   --gradient-icon-green: rgba(52, 199, 89, 0.15);
   --gradient-icon-amber: rgba(255, 149, 0, 0.15);
 
-  // Sidebar — frosted dark
-  --color-sidebar-bg: rgba(28, 28, 30, 0.95);
-  --color-sidebar-text: rgba(255, 255, 255, 0.55);
-  --color-sidebar-text-active: #FFFFFF;
-  --color-sidebar-hover: rgba(255, 255, 255, 0.05);
-  --color-sidebar-active: rgba(0, 122, 255, 0.18);
-  --color-sidebar-accent: #0A84FF;
-  --color-sidebar-border: rgba(255, 255, 255, 0.04);
+  // Sidebar — frosted light
+  --color-sidebar-bg: rgba(255, 255, 255, 0.88);
+  --color-sidebar-text: #6E6E73;
+  --color-sidebar-text-active: #1D1D1F;
+  --color-sidebar-hover: rgba(0, 0, 0, 0.04);
+  --color-sidebar-active: rgba(0, 122, 255, 0.1);
+  --color-sidebar-accent: #007AFF;
+  --color-sidebar-border: rgba(0, 0, 0, 0.06);
 
   // Transitions — smooth Apple curves
   --transition-fast: 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
@@ -153,138 +154,7 @@ html {
   --color-skeleton: rgba(0, 0, 0, 0.06);
 }
 
-// ─── Dark Mode ──────────────────────────────────────────────────────────────
-
-:root.dark {
-  --color-primary: #0A84FF;
-  --color-primary-light: #409CFF;
-  --color-primary-dark: #0062CC;
-  --color-accent: #7D7AFF;
-
-  --color-bg: #000000;
-  --color-surface: #1C1C1E;
-  --color-surface-secondary: #2C2C2E;
-  --color-surface-hover: #3A3A3C;
-  --color-border: rgba(255, 255, 255, 0.08);
-
-  --color-text: #F5F5F7;
-  --color-text-secondary: #98989D;
-  --color-text-muted: #636366;
-
-  --color-success: #30D158;
-  --color-success-bg: rgba(48, 209, 88, 0.12);
-  --color-warning: #FF9F0A;
-  --color-warning-bg: rgba(255, 159, 10, 0.12);
-  --color-danger: #FF453A;
-  --color-danger-bg: rgba(255, 69, 58, 0.12);
-
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.25);
-  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5), 0 4px 10px rgba(0, 0, 0, 0.3);
-  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.3);
-  --shadow-float: 0 24px 80px rgba(0, 0, 0, 0.7), 0 8px 24px rgba(0, 0, 0, 0.4);
-
-  --color-value-blue: #0A84FF;
-  --color-value-green: #30D158;
-  --color-value-purple: #BF5AF2;
-  --color-value-amber: #FF9F0A;
-
-  --gradient-icon-blue: rgba(10, 132, 255, 0.2);
-  --gradient-icon-purple: rgba(125, 122, 255, 0.2);
-  --gradient-icon-green: rgba(48, 209, 88, 0.2);
-  --gradient-icon-amber: rgba(255, 159, 10, 0.2);
-
-  --color-action-pay: #30D158;
-  --color-action-pay-bg: rgba(48, 209, 88, 0.15);
-  --color-action-edit: #0A84FF;
-  --color-action-edit-bg: rgba(10, 132, 255, 0.15);
-  --color-action-view: #BF5AF2;
-  --color-action-view-bg: rgba(191, 90, 242, 0.15);
-  --color-action-delete: #FF453A;
-  --color-action-delete-bg: rgba(255, 69, 58, 0.15);
-
-  --color-apr-low: #32D74B;
-  --color-apr-low-bg: rgba(50, 215, 75, 0.18);
-  --color-apr-mid: #FF9F0A;
-  --color-apr-mid-bg: rgba(255, 159, 10, 0.18);
-  --color-apr-high: #FF453A;
-  --color-apr-high-bg: rgba(255, 69, 58, 0.18);
-
-  --color-stat-blue: #0A84FF;
-  --color-stat-blue-bg: rgba(10, 132, 255, 0.15);
-  --color-stat-green: #30D158;
-  --color-stat-green-bg: rgba(48, 209, 88, 0.15);
-  --color-stat-purple: #BF5AF2;
-  --color-stat-purple-bg: rgba(191, 90, 242, 0.15);
-  --color-stat-amber: #FF9F0A;
-  --color-stat-amber-bg: rgba(255, 159, 10, 0.15);
-  --color-stat-red: #FF453A;
-  --color-stat-red-bg: rgba(255, 69, 58, 0.15);
-
-  --color-freq-daily: #FF453A;
-  --color-freq-daily-bg: rgba(255, 69, 58, 0.2);
-  --color-freq-weekly: #64D2FF;
-  --color-freq-weekly-bg: rgba(100, 210, 255, 0.2);
-  --color-freq-biweekly: #BF5AF2;
-  --color-freq-biweekly-bg: rgba(191, 90, 242, 0.2);
-  --color-freq-monthly: #FF9F0A;
-  --color-freq-monthly-bg: rgba(255, 159, 10, 0.2);
-
-  --color-skeleton: rgba(255, 255, 255, 0.08);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    --color-primary: #0A84FF;
-    --color-primary-light: #409CFF;
-    --color-primary-dark: #0062CC;
-    --color-accent: #7D7AFF;
-
-    --color-bg: #000000;
-    --color-surface: #1C1C1E;
-    --color-surface-secondary: #2C2C2E;
-    --color-surface-hover: #3A3A3C;
-    --color-border: rgba(255, 255, 255, 0.08);
-
-    --color-text: #F5F5F7;
-    --color-text-secondary: #98989D;
-    --color-text-muted: #636366;
-
-    --color-success: #30D158;
-    --color-success-bg: rgba(48, 209, 88, 0.12);
-    --color-warning: #FF9F0A;
-    --color-warning-bg: rgba(255, 159, 10, 0.12);
-    --color-danger: #FF453A;
-    --color-danger-bg: rgba(255, 69, 58, 0.12);
-
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
-    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.25);
-    --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5), 0 4px 10px rgba(0, 0, 0, 0.3);
-    --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.3);
-    --shadow-float: 0 24px 80px rgba(0, 0, 0, 0.7), 0 8px 24px rgba(0, 0, 0, 0.4);
-
-    --color-value-blue: #0A84FF;
-    --color-value-green: #30D158;
-    --color-value-purple: #BF5AF2;
-    --color-value-amber: #FF9F0A;
-
-    --gradient-icon-blue: rgba(10, 132, 255, 0.2);
-    --gradient-icon-purple: rgba(125, 122, 255, 0.2);
-    --gradient-icon-green: rgba(48, 209, 88, 0.2);
-    --gradient-icon-amber: rgba(255, 159, 10, 0.2);
-
-    --color-freq-daily: #FF453A;
-    --color-freq-daily-bg: rgba(255, 69, 58, 0.2);
-    --color-freq-weekly: #64D2FF;
-    --color-freq-weekly-bg: rgba(100, 210, 255, 0.2);
-    --color-freq-biweekly: #BF5AF2;
-    --color-freq-biweekly-bg: rgba(191, 90, 242, 0.2);
-    --color-freq-monthly: #FF9F0A;
-    --color-freq-monthly-bg: rgba(255, 159, 10, 0.2);
-
-    --color-skeleton: rgba(255, 255, 255, 0.08);
-  }
-}
+// Dark mode removed — light mode only
 
 // ─── Reset ───────────────────────────────────────────────────────────────────
 
@@ -302,6 +172,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.47;
   font-weight: 400;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 // ─── Typography ──────────────────────────────────────────────────────────────
@@ -327,8 +199,10 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
   background: var(--color-surface) !important;
   transition: box-shadow var(--transition-base);
 
-  &:hover {
-    box-shadow: var(--shadow-md) !important;
+  @media (hover: hover) {
+    &:hover {
+      box-shadow: var(--shadow-md) !important;
+    }
   }
 }
 
@@ -374,8 +248,10 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
     border-bottom: none !important;
   }
 
-  &:hover {
-    background: var(--color-surface-hover) !important;
+  @media (hover: hover) {
+    &:hover {
+      background: var(--color-surface-hover) !important;
+    }
   }
 }
 
@@ -394,8 +270,8 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
   transition: all var(--transition-fast) !important;
   box-shadow: none !important;
 
-  &:hover {
-    opacity: 0.85;
+  @media (hover: hover) {
+    &:hover { opacity: 0.85; }
   }
 }
 
@@ -403,9 +279,11 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
   transition: background var(--transition-fast), transform var(--transition-fast) !important;
   border-radius: var(--radius-sm) !important;
 
-  &:hover {
-    background: var(--color-surface-hover) !important;
-    transform: scale(1.05);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--color-surface-hover) !important;
+      transform: scale(1.05);
+    }
   }
 }
 
@@ -555,6 +433,22 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
   }
 }
 
+@media (max-width: 599px) {
+  .mat-mdc-tab-group .mat-mdc-tab-header {
+    border-bottom: none;
+    padding: 0 4px;
+  }
+  .mat-mdc-tab-group .mat-mdc-tab {
+    min-width: 0 !important;
+    padding: 0 12px !important;
+    font-size: 0.85rem !important;
+    height: 40px !important;
+  }
+  .mat-mdc-tab-group .mat-mdc-tab-header-pagination {
+    min-width: 28px !important;
+  }
+}
+
 // ─── Material Chips ──────────────────────────────────────────────────────────
 
 .mat-mdc-chip {
@@ -635,11 +529,11 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
 
 @media (max-width: 599px) {
   :root {
-    --text-xs: 0.8rem;
-    --text-sm: 0.925rem;
-    --text-base: 1.05rem;
-    --text-lg: 1.2rem;
-    --text-xl: 1.55rem;
+    --text-xs: 0.765rem;
+    --text-sm: 0.882rem;
+    --text-base: 1rem;
+    --text-lg: 1.18rem;
+    --text-xl: 1.47rem;
   }
 
   body {
@@ -656,13 +550,67 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
   // Table cells: readable size with touch-friendly padding
   .mat-mdc-header-cell,
   .mat-mdc-cell {
-    padding: 10px 8px !important;
+    padding: 12px 8px !important;
     font-size: var(--text-sm) !important;
   }
 
-  // Cards: comfortable padding
+  // List items: native-size text
+  .mat-mdc-list-item {
+    font-size: var(--text-base) !important;
+  }
+
+  // Cards: bump inner text
+  .mat-mdc-card-title {
+    font-size: 1.1rem !important;
+  }
+  .mat-mdc-card-subtitle {
+    font-size: var(--text-sm) !important;
+  }
+
+  // Mobile text boost: ensure no text feels cramped
+  .stat-label { font-size: 0.75rem !important; }
+  .stat-value { font-size: 1.15rem !important; }
+
+  // Loan/card/account mobile list cards
+  .mobile-cards .loan-card,
+  .mobile-cards .cc-card,
+  .mobile-cards .account-card {
+    font-size: var(--text-base);
+  }
+
+  // Secondary/muted text in cards and lists
+  .summary-detail, .summary-label,
+  .txn-meta, .lc-desc,
+  .projection-detail, .alert-detail,
+  .mc-date, .mc-unit {
+    font-size: var(--text-xs) !important;
+  }
+
+  .txn-name, .lc-name, .loan-name, .card-name, .account-name,
+  .summary-amount, .projection-name, .alert-name, .mc-label {
+    font-size: var(--text-base) !important;
+  }
+
+  .txn-amount {
+    font-size: 1.05rem !important;
+    font-weight: 600;
+  }
+
+  // Section headers in pages
+  .section-title, h3 {
+    font-size: var(--text-lg) !important;
+  }
+
+  // Cards: iOS-style generous radius + subtle shadow
   .mat-mdc-card {
-    border-radius: var(--radius-sm) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+  }
+
+  // Nested cards: no double elevation
+  .mat-mdc-card .mat-mdc-card {
+    box-shadow: none !important;
+    border: 1px solid var(--color-border) !important;
   }
 
   .mat-mdc-card-content {
@@ -721,6 +669,27 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
   .mat-mdc-slide-toggle {
     font-size: var(--text-sm) !important;
   }
+
+  // Touch feedback: tap shrink on interactive cards
+  .loan-card, .cc-card, .account-card, .budget-card,
+  .recurring-card, .txn-card, .goal-card, .setup-card,
+  .trade-card, .metric-card, .workout-card {
+    transition: transform 0.1s ease, opacity 0.1s ease;
+    -webkit-tap-highlight-color: transparent;
+    &:active {
+      transform: scale(0.98);
+      opacity: 0.85;
+    }
+  }
+
+  // Smooth page transitions
+  .content-area {
+    animation: fadeInPage 0.2s ease-out;
+  }
+  @keyframes fadeInPage {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 }
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
@@ -744,41 +713,48 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
   border-bottom-color: var(--color-border) !important;
 }
 
-// ─── Button Toggle — large tappable targets ──────────────────────────────────
+// ─── Button Toggle — iOS segmented control ──────────────────────────────────
 
 .mat-button-toggle-group {
-  border-radius: var(--radius-sm) !important;
-  border: 1px solid var(--color-border) !important;
-  overflow: visible !important;
-  flex-wrap: wrap;
+  border-radius: var(--radius-full) !important;
+  border: none !important;
+  background: rgba(0, 0, 0, 0.06) !important;
+  padding: 2px !important;
+  overflow: hidden !important;
+  flex-wrap: nowrap;
 
   .mat-button-toggle {
     border: none !important;
+    border-radius: var(--radius-full) !important;
+    background: transparent !important;
+    transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
   }
 
   .mat-button-toggle-label-content {
     font-size: var(--text-sm) !important;
-    padding: 0 14px !important;
-    line-height: 40px !important;
-    font-weight: 600;
+    padding: 0 16px !important;
+    line-height: 36px !important;
+    font-weight: 500;
+    color: var(--color-text-secondary);
   }
 
   .mat-button-toggle-checked {
-    background: rgba(0, 122, 255, 0.12) !important;
-    color: var(--color-primary) !important;
+    background: var(--color-surface) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+
+    .mat-button-toggle-label-content {
+      font-weight: 600;
+      color: var(--color-text) !important;
+    }
   }
 }
 
 @media (max-width: 599px) {
   .mat-button-toggle-group {
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-    flex-wrap: nowrap;
-
     .mat-button-toggle-label-content {
-      font-size: 0.8rem !important;
-      padding: 0 10px !important;
-      line-height: 38px !important;
+      font-size: 0.82rem !important;
+      padding: 0 12px !important;
+      line-height: 34px !important;
       white-space: nowrap;
     }
   }
@@ -833,28 +809,7 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
   }
 }
 
-// ─── Dark Mode Material Overrides ────────────────────────────────────────────
-
-.dark {
-  .mat-mdc-dialog-container .mdc-dialog__surface {
-    background: var(--color-surface) !important;
-  }
-
-  .mdc-text-field--outlined .mdc-notched-outline__leading,
-  .mdc-text-field--outlined .mdc-notched-outline__notch,
-  .mdc-text-field--outlined .mdc-notched-outline__trailing {
-    border-color: var(--color-border) !important;
-  }
-
-  .mat-mdc-select-panel,
-  .mat-mdc-autocomplete-panel {
-    background: var(--color-surface-secondary) !important;
-  }
-
-  .cdk-overlay-dark-backdrop {
-    background: rgba(0, 0, 0, 0.6);
-  }
-}
+// Dark mode material overrides removed — light mode only
 
 // ─── Icon Picker Menu ───────────────────────────────────────────────────────
 
@@ -902,7 +857,7 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
   }
 
   html {
-    font-size: 16px;
+    font-size: 17px;
     -webkit-text-size-adjust: 100%;
   }
 
@@ -914,6 +869,12 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
   .cdk-overlay-container {
     overflow: hidden;
     max-width: 100%;
+  }
+
+  .mat-drawer-backdrop.mat-drawer-shown {
+    z-index: 1001;
+    position: fixed;
+    inset: 0;
   }
 
   app-root {
@@ -933,7 +894,7 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
   }
 
   .mat-mdc-card {
-    border-radius: var(--radius-md) !important;
+    border-radius: var(--radius-lg) !important;
   }
 
   .mat-mdc-card-content {
@@ -964,4 +925,136 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
     width: 44px !important;
     height: 44px !important;
   }
+}
+
+// ─── Native Mobile Enhancements ─────────────────────────────────────────────
+
+// Stats row: horizontal scrollable strip on mobile (overrides per-component 2x2 grids)
+@media (max-width: 599px) {
+  .stats-row {
+    display: flex !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 10px !important;
+    padding-bottom: 4px;
+    margin-left: -14px;
+    margin-right: -14px;
+    padding-left: 14px;
+    padding-right: 14px;
+    scrollbar-width: none;
+    &::-webkit-scrollbar { display: none; }
+  }
+
+  .stats-row > .stat-card,
+  .stats-row > div[class*="stat-"] {
+    flex: 0 0 auto;
+    min-width: 160px;
+    max-width: 200px;
+    scroll-snap-align: start;
+  }
+}
+
+// Touch feedback: scale-down on press for tappable mobile cards
+@media (max-width: 599px) {
+  .loan-card, .cc-card, .account-card, .budget-card,
+  .recurring-card, .goal-card, .metric-card, .trade-card,
+  .mobile-feed .txn-card,
+  .mobile-cards > div[class*="-card"],
+  [style*="cursor: pointer"].mat-mdc-card {
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.1s ease, opacity 0.1s ease !important;
+    &:active {
+      transform: scale(0.98);
+      opacity: 0.85;
+    }
+  }
+}
+
+// Header-row: icon-only buttons on mobile
+@media (max-width: 599px) {
+  .header-row button[mat-raised-button],
+  .header-row button[mat-flat-button] {
+    font-size: 0 !important;
+    min-width: 44px !important;
+    padding: 0 12px !important;
+    gap: 0 !important;
+    mat-icon, .mat-icon {
+      font-size: 22px !important;
+      margin: 0 !important;
+    }
+  }
+}
+
+// Skeleton shimmer animation
+@keyframes skeleton-shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+
+.skeleton-line, .skeleton-card, .skeleton-circle, .skeleton-chart-area, .skeleton-panel {
+  animation: skeleton-shimmer 1.5s ease-in-out infinite !important;
+  background: linear-gradient(
+    90deg,
+    var(--color-skeleton) 0%,
+    rgba(0, 0, 0, 0.02) 50%,
+    var(--color-skeleton) 100%
+  ) !important;
+  background-size: 200px 100% !important;
+}
+
+// ─── Global Stat Card Base Styles ───────────────────────────────────────────
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-card > mat-icon, .stat-card > .mat-icon {
+  font-size: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 10px;
+  border-radius: 12px;
+}
+
+.stat-blue > mat-icon, .stat-blue > .mat-icon { color: var(--color-stat-blue); background: var(--color-stat-blue-bg); }
+.stat-green > mat-icon, .stat-green > .mat-icon { color: var(--color-stat-green); background: var(--color-stat-green-bg); }
+.stat-purple > mat-icon, .stat-purple > .mat-icon { color: var(--color-stat-purple); background: var(--color-stat-purple-bg); }
+.stat-amber > mat-icon, .stat-amber > .mat-icon { color: var(--color-stat-amber); background: var(--color-stat-amber-bg); }
+.stat-red > mat-icon, .stat-red > .mat-icon { color: var(--color-stat-red); background: var(--color-stat-red-bg); }
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.stat-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }

@@ -1,10 +1,11 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { StrategyService } from '../../core/services/strategy.service';
@@ -16,10 +17,11 @@ import { StrategyComparison } from '../../core/models/strategy.model';
   standalone: true,
   imports: [
     CommonModule, MatCardModule, MatListModule, MatIconModule,
-    SkeletonLoaderComponent, MatFormFieldModule, MatInputModule,
+    SkeletonLoaderComponent, PullToRefreshDirective, MatFormFieldModule, MatInputModule,
     MatButtonModule, CurrencyPipe
   ],
   template: `
+    <div appPullToRefresh (refresh)="loadData()">
     @if (loading()) {
       <app-skeleton type="card" [count]="2"></app-skeleton>
     } @else if (comparison()) {
@@ -145,6 +147,7 @@ import { StrategyComparison } from '../../core/models/strategy.model';
         </mat-card>
       </div>
     }
+    </div>
   `,
   styles: [`
     /* Extra Payment Row */
@@ -449,6 +452,7 @@ import { StrategyComparison } from '../../core/models/strategy.model';
 export class StrategyComparisonComponent implements OnInit {
   private strategyService = inject(StrategyService);
   private notificationService = inject(NotificationService);
+  private cdr = inject(ChangeDetectorRef);
 
   comparison = signal<StrategyComparison | null>(null);
   loading = signal(true);
@@ -456,12 +460,18 @@ export class StrategyComparisonComponent implements OnInit {
   chosenStrategy = signal<string | null>(localStorage.getItem('pulse_chosen_strategy'));
 
   ngOnInit(): void {
+    this.loadData();
+  }
+
+  loadData(): void {
+    this.loading.set(true);
     this.strategyService.getComparison().subscribe({
       next: (data) => {
         this.comparison.set(data);
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
-      error: () => { this.loading.set(false); }
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 
@@ -471,7 +481,7 @@ export class StrategyComparisonComponent implements OnInit {
     // StrategyService does not yet support extra payment param;
     // UI-only feature: re-fetch base data (future enhancement will pass extra to API)
     this.strategyService.getComparison().subscribe({
-      next: (data) => this.comparison.set(data),
+      next: (data) => { this.comparison.set(data); this.cdr.detectChanges(); },
       error: () => {}
     });
   }

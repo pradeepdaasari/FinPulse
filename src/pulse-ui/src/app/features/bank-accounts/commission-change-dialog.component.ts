@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -202,6 +202,7 @@ export class CommissionChangeDialogComponent {
   private accountService = inject(BankAccountService);
   data = inject<CommissionChangeDialogData>(MAT_DIALOG_DATA);
   dialogRef = inject(MatDialogRef<CommissionChangeDialogComponent>);
+  private cdr = inject(ChangeDetectorRef);
 
   saving = signal(false);
   result = signal<{ tradesRecalculated: number } | null>(null);
@@ -251,10 +252,12 @@ export class CommissionChangeDialogComponent {
       next: (res) => {
         this.saving.set(false);
         this.result.set({ tradesRecalculated: res.tradesRecalculated });
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.saving.set(false);
         this.errorMsg.set(err?.error?.message || 'Failed to apply changes. Please try again.');
+        this.cdr.detectChanges();
       }
     });
   }

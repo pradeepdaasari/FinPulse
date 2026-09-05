@@ -1,4 +1,4 @@
-import { Component, Input, inject, signal } from '@angular/core';
+import { Component, Input, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatListModule } from '@angular/material/list';
@@ -54,7 +54,7 @@ import { NotificationService } from '../../core/services/notification.service';
       width: 20px;
       height: 20px;
       margin-right: 8px;
-      color: var(--color-primary);
+      color: #5AC8FA;
     }
     .urgency-badge {
       padding: 4px 10px;
@@ -108,6 +108,7 @@ import { NotificationService } from '../../core/services/notification.service';
 export class UpcomingPaymentsComponent {
   private paymentService = inject(PaymentService);
   private notify = inject(NotificationService);
+  private cdr = inject(ChangeDetectorRef);
 
   @Input({ required: true }) payments!: UpcomingPayment[];
 
@@ -123,10 +124,12 @@ export class UpcomingPaymentsComponent {
         this.paidSet.set(updated);
         this.paying.set(false);
         this.notify.success(`Payment of ${payment.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} recorded for ${payment.debtName}`);
+        this.cdr.detectChanges();
       },
       error: () => {
         this.paying.set(false);
         this.notify.error('Failed to record payment');
+        this.cdr.detectChanges();
       }
     });
   }

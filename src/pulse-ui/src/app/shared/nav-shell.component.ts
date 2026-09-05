@@ -1,5 +1,5 @@
-import { Component, computed, inject, signal, ViewChild, OnInit, OnDestroy } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd, ChildrenOutletContexts } from '@angular/router';
+import { Component, computed, inject, signal, ViewChild, OnInit, OnDestroy, effect } from '@angular/core';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError, ChildrenOutletContexts } from '@angular/router';
 import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatListModule } from '@angular/material/list';
@@ -38,7 +38,7 @@ import { routeFadeAnimation } from './route-animations';
   ],
   animations: [routeFadeAnimation],
   template: `
-    <mat-sidenav-container class="shell-container">
+    <mat-sidenav-container class="shell-container" [hasBackdrop]="isMobile()" (backdropClick)="sidenav.close()">
       <mat-sidenav #sidenav
         [mode]="isMobile() ? 'over' : 'side'"
         [opened]="!isMobile()"
@@ -55,7 +55,7 @@ import { routeFadeAnimation } from './route-animations';
 
         <mat-nav-list class="nav-list">
           <!-- Finance Section -->
-          <div class="nav-section-header" [class.expanded]="expandedSections().includes('finance')" (click)="toggleSection('finance')">
+          <div class="nav-section-header section-finance" [class.expanded]="expandedSections().includes('finance')" (click)="toggleSection('finance')">
             <span class="section-label">Finance</span>
             <mat-icon class="section-chevron">expand_more</mat-icon>
           </div>
@@ -63,69 +63,69 @@ import { routeFadeAnimation } from './route-animations';
             <div class="nav-section-items">
               <a mat-list-item routerLink="/dashboard" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>dashboard</mat-icon>
+                <mat-icon matListItemIcon class="ic-blue">dashboard</mat-icon>
                 <span matListItemTitle>Dashboard</span>
               </a>
               <a mat-list-item routerLink="/loans" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>account_balance</mat-icon>
+                <mat-icon matListItemIcon class="ic-indigo">account_balance</mat-icon>
                 <span matListItemTitle>My Loans</span>
               </a>
               <a mat-list-item routerLink="/cards" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>credit_card</mat-icon>
+                <mat-icon matListItemIcon class="ic-orange">credit_card</mat-icon>
                 <span matListItemTitle>My Cards</span>
               </a>
               <a mat-list-item routerLink="/accounts" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>savings</mat-icon>
+                <mat-icon matListItemIcon class="ic-green">savings</mat-icon>
                 <span matListItemTitle>Bank Accounts</span>
               </a>
               <a mat-list-item routerLink="/expenses" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>swap_horiz</mat-icon>
+                <mat-icon matListItemIcon class="ic-teal">swap_horiz</mat-icon>
                 <span matListItemTitle>Transactions</span>
               </a>
               <a mat-list-item routerLink="/budget" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>pie_chart</mat-icon>
+                <mat-icon matListItemIcon class="ic-purple">pie_chart</mat-icon>
                 <span matListItemTitle>Budget</span>
               </a>
               <a mat-list-item routerLink="/recurring" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>repeat</mat-icon>
+                <mat-icon matListItemIcon class="ic-amber">repeat</mat-icon>
                 <span matListItemTitle>Recurring</span>
               </a>
               <a mat-list-item routerLink="/goals" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>flag</mat-icon>
+                <mat-icon matListItemIcon class="ic-red">flag</mat-icon>
                 <span matListItemTitle>Goals</span>
               </a>
               <a mat-list-item routerLink="/categories" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>category</mat-icon>
+                <mat-icon matListItemIcon class="ic-pink">category</mat-icon>
                 <span matListItemTitle>Categories</span>
               </a>
               <a mat-list-item routerLink="/strategies" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>trending_down</mat-icon>
+                <mat-icon matListItemIcon class="ic-green">trending_down</mat-icon>
                 <span matListItemTitle>Payoff Strategies</span>
               </a>
               <a mat-list-item routerLink="/simulator" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>science</mat-icon>
+                <mat-icon matListItemIcon class="ic-cyan">science</mat-icon>
                 <span matListItemTitle>What-If Simulator</span>
               </a>
               <a mat-list-item routerLink="/payments" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>receipt_long</mat-icon>
+                <mat-icon matListItemIcon class="ic-indigo">receipt_long</mat-icon>
                 <span matListItemTitle>Payments</span>
               </a>
             </div>
           }
 
           <!-- Trading Section -->
-          <div class="nav-section-header" [class.expanded]="expandedSections().includes('trading')" (click)="toggleSection('trading')">
+          <div class="nav-section-header section-trading" [class.expanded]="expandedSections().includes('trading')" (click)="toggleSection('trading')">
             <span class="section-label">Trading</span>
             <mat-icon class="section-chevron">expand_more</mat-icon>
           </div>
@@ -133,54 +133,54 @@ import { routeFadeAnimation } from './route-animations';
             <div class="nav-section-items">
               <a mat-list-item routerLink="/trading" routerLinkActive="active-link"
                  [routerLinkActiveOptions]="{exact: true}" (click)="onNavClick()">
-                <mat-icon matListItemIcon>candlestick_chart</mat-icon>
+                <mat-icon matListItemIcon class="ic-purple">candlestick_chart</mat-icon>
                 <span matListItemTitle>Dashboard</span>
               </a>
               <a mat-list-item routerLink="/trading/premarket" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>wb_twilight</mat-icon>
+                <mat-icon matListItemIcon class="ic-amber">wb_twilight</mat-icon>
                 <span matListItemTitle>Pre-Market</span>
               </a>
               <a mat-list-item routerLink="/trading/checklist" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>checklist</mat-icon>
+                <mat-icon matListItemIcon class="ic-green">checklist</mat-icon>
                 <span matListItemTitle>Trade Checklist</span>
               </a>
               <a mat-list-item routerLink="/trading/journal" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>auto_stories</mat-icon>
+                <mat-icon matListItemIcon class="ic-blue">auto_stories</mat-icon>
                 <span matListItemTitle>Trade Journal</span>
               </a>
               <a mat-list-item routerLink="/trading/calendar" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>calendar_month</mat-icon>
+                <mat-icon matListItemIcon class="ic-red">calendar_month</mat-icon>
                 <span matListItemTitle>Calendar</span>
               </a>
               <a mat-list-item routerLink="/trading/review" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>grading</mat-icon>
+                <mat-icon matListItemIcon class="ic-orange">grading</mat-icon>
                 <span matListItemTitle>Daily Review</span>
               </a>
               <a mat-list-item routerLink="/trading/setups" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>tune</mat-icon>
+                <mat-icon matListItemIcon class="ic-teal">tune</mat-icon>
                 <span matListItemTitle>My Setups</span>
               </a>
               <a mat-list-item routerLink="/trading/playbook" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>menu_book</mat-icon>
+                <mat-icon matListItemIcon class="ic-indigo">menu_book</mat-icon>
                 <span matListItemTitle>Playbook & Rules</span>
               </a>
               <a mat-list-item routerLink="/trading/weekly" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>analytics</mat-icon>
+                <mat-icon matListItemIcon class="ic-cyan">analytics</mat-icon>
                 <span matListItemTitle>Weekly Summary</span>
               </a>
             </div>
           }
 
           <!-- Health Section -->
-          <div class="nav-section-header" [class.expanded]="expandedSections().includes('health')" (click)="toggleSection('health')">
+          <div class="nav-section-header section-health" [class.expanded]="expandedSections().includes('health')" (click)="toggleSection('health')">
             <span class="section-label">Health & Fitness</span>
             <mat-icon class="section-chevron">expand_more</mat-icon>
           </div>
@@ -188,39 +188,39 @@ import { routeFadeAnimation } from './route-animations';
             <div class="nav-section-items">
               <a mat-list-item routerLink="/health" routerLinkActive="active-link"
                  [routerLinkActiveOptions]="{exact: true}" (click)="onNavClick()">
-                <mat-icon matListItemIcon>monitoring</mat-icon>
+                <mat-icon matListItemIcon class="ic-red">monitoring</mat-icon>
                 <span matListItemTitle>Health Dashboard</span>
               </a>
               <a mat-list-item routerLink="/health/metrics" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>straighten</mat-icon>
+                <mat-icon matListItemIcon class="ic-green">straighten</mat-icon>
                 <span matListItemTitle>Vitals & Metrics</span>
               </a>
               <a mat-list-item routerLink="/health/blood-work" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>bloodtype</mat-icon>
+                <mat-icon matListItemIcon class="ic-pink">bloodtype</mat-icon>
                 <span matListItemTitle>Blood Work</span>
               </a>
               <a mat-list-item routerLink="/health/plans" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>fitness_center</mat-icon>
+                <mat-icon matListItemIcon class="ic-orange">fitness_center</mat-icon>
                 <span matListItemTitle>Workout Plans</span>
               </a>
               <a mat-list-item routerLink="/health/workout" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>exercise</mat-icon>
+                <mat-icon matListItemIcon class="ic-blue">exercise</mat-icon>
                 <span matListItemTitle>Today's Workout</span>
               </a>
               <a mat-list-item routerLink="/health/progress" routerLinkActive="active-link"
                  (click)="onNavClick()">
-                <mat-icon matListItemIcon>emoji_events</mat-icon>
+                <mat-icon matListItemIcon class="ic-amber">emoji_events</mat-icon>
                 <span matListItemTitle>Progress & PRs</span>
               </a>
             </div>
           }
 
           @if (isAdmin()) {
-            <div class="nav-section-header" [class.expanded]="expandedSections().includes('admin')" (click)="toggleSection('admin')">
+            <div class="nav-section-header section-admin" [class.expanded]="expandedSections().includes('admin')" (click)="toggleSection('admin')">
               <span class="section-label">Admin</span>
               <mat-icon class="section-chevron">expand_more</mat-icon>
             </div>
@@ -228,7 +228,7 @@ import { routeFadeAnimation } from './route-animations';
               <div class="nav-section-items">
                 <a mat-list-item routerLink="/admin/users" routerLinkActive="active-link"
                    (click)="onNavClick()">
-                  <mat-icon matListItemIcon>admin_panel_settings</mat-icon>
+                  <mat-icon matListItemIcon class="ic-indigo">admin_panel_settings</mat-icon>
                   <span matListItemTitle>User Management</span>
                 </a>
               </div>
@@ -238,6 +238,9 @@ import { routeFadeAnimation } from './route-animations';
       </mat-sidenav>
 
       <mat-sidenav-content>
+        @if (routeLoading()) {
+          <div class="route-progress-bar"><div class="route-progress-fill"></div></div>
+        }
         <mat-toolbar class="app-toolbar">
           @if (isMobile() && !isPhone()) {
             <button mat-icon-button (click)="sidenav.toggle()" aria-label="Toggle menu">
@@ -251,9 +254,6 @@ import { routeFadeAnimation } from './route-animations';
           }
           <span class="toolbar-title">{{ pageTitle() }}</span>
           <span class="toolbar-spacer"></span>
-          <button mat-icon-button class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="'Switch theme'" matTooltip="Toggle theme">
-            <mat-icon>{{ themeIcon() }}</mat-icon>
-          </button>
           <button mat-button class="search-trigger" (click)="openPalette()" aria-label="Search">
             <mat-icon>search</mat-icon>
             <span class="search-hint">Search</span>
@@ -296,24 +296,24 @@ import { routeFadeAnimation } from './route-animations';
 
     @if (isPhone()) {
       <nav class="bottom-tabs" [class.kb-hidden]="keyboardOpen()" role="navigation" aria-label="Main navigation">
-        <a class="tab-item" routerLink="/dashboard" routerLinkActive="tab-active" [routerLinkActiveOptions]="{exact: true}">
-          <mat-icon>dashboard</mat-icon>
+        <a class="tab-item" [class.tab-active]="activeModule() === 'finance' && !isExpensesRoute()" routerLink="/dashboard">
+          <mat-icon class="tab-ic-blue">dashboard</mat-icon>
           <span>Home</span>
         </a>
-        <a class="tab-item" routerLink="/expenses" routerLinkActive="tab-active">
-          <mat-icon>swap_horiz</mat-icon>
+        <a class="tab-item" [class.tab-active]="isExpensesRoute()" routerLink="/expenses">
+          <mat-icon class="tab-ic-teal">swap_horiz</mat-icon>
           <span>Transactions</span>
         </a>
-        <a class="tab-item" routerLink="/trading" routerLinkActive="tab-active">
-          <mat-icon>candlestick_chart</mat-icon>
+        <a class="tab-item" [class.tab-active]="activeModule() === 'trading'" routerLink="/trading">
+          <mat-icon class="tab-ic-purple">candlestick_chart</mat-icon>
           <span>Trading</span>
         </a>
-        <a class="tab-item" routerLink="/health" routerLinkActive="tab-active">
-          <mat-icon>monitoring</mat-icon>
+        <a class="tab-item" [class.tab-active]="activeModule() === 'health'" routerLink="/health">
+          <mat-icon class="tab-ic-red">monitoring</mat-icon>
           <span>Health</span>
         </a>
         <button class="tab-item" (click)="sidenav.toggle()" aria-label="More navigation">
-          <mat-icon>more_horiz</mat-icon>
+          <mat-icon class="tab-ic-gray">more_horiz</mat-icon>
           <span>More</span>
         </button>
       </nav>
@@ -327,14 +327,15 @@ import { routeFadeAnimation } from './route-animations';
     }
 
     .sidenav {
-      width: 240px;
-      background: var(--gradient-sidebar);
-      backdrop-filter: blur(20px) saturate(180%);
-      border-right: none;
+      width: 260px;
+      background: var(--color-surface);
+      border-right: 0.5px solid var(--color-sidebar-border);
     }
 
     .sidenav-header {
-      padding: 20px 16px 12px;
+      padding: 20px 16px 8px;
+      border-bottom: 0.5px solid var(--color-sidebar-border);
+      margin: 0 10px 8px;
     }
 
     .brand {
@@ -345,7 +346,7 @@ import { routeFadeAnimation } from './route-animations';
       cursor: pointer;
       transition: opacity var(--transition-fast);
     }
-    .brand:hover { opacity: 0.8; }
+    @media (hover: hover) { .brand:hover { opacity: 0.8; } }
 
     .brand-icon {
       color: var(--color-sidebar-accent);
@@ -366,36 +367,50 @@ import { routeFadeAnimation } from './route-animations';
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 0.75rem;
+      font-size: 0.68rem;
       font-weight: 700;
       letter-spacing: 0.06em;
       text-transform: uppercase;
-      color: var(--color-sidebar-text);
-      opacity: 0.6;
-      padding: 16px 16px 8px;
+      color: #8E8E93;
+      padding: 10px 16px 6px 12px;
+      margin-top: 4px;
       user-select: none;
       cursor: pointer;
-      transition: opacity 0.15s;
-      min-height: 40px;
+      transition: color 0.15s, background 0.15s;
+      min-height: 36px;
+      border-left: 3px solid transparent;
+      border-top: 1px solid var(--color-sidebar-border, rgba(0, 0, 0, 0.06));
     }
 
     .nav-section-header:hover {
-      opacity: 0.9;
+      color: var(--color-text-secondary);
+      background: rgba(0, 0, 0, 0.02);
     }
 
     .nav-section-header:first-child {
-      padding-top: 6px;
+      padding-top: 4px;
+      border-top: none;
+      margin-top: 0;
     }
+
+    .section-finance { border-left-color: #007AFF; }
+    .section-finance .section-label { color: #007AFF; }
+    .section-trading { border-left-color: #AF52DE; }
+    .section-trading .section-label { color: #AF52DE; }
+    .section-health { border-left-color: #FF3B30; }
+    .section-health .section-label { color: #FF3B30; }
+    .section-admin { border-left-color: #FF9500; }
+    .section-admin .section-label { color: #FF9500; }
 
     .section-label { flex: 1; }
 
     .section-chevron {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
       transition: transform 0.2s ease;
       transform: rotate(-90deg);
-      opacity: 0.7;
+      color: var(--color-text-muted);
     }
 
     .nav-section-header.expanded .section-chevron {
@@ -421,63 +436,76 @@ import { routeFadeAnimation } from './route-animations';
       font-family: var(--font-primary);
       font-size: var(--text-sm);
       font-weight: 500;
-      color: var(--color-sidebar-text) !important;
+      color: var(--color-text-secondary) !important;
       transition: all var(--transition-fast);
-      height: 36px !important;
+      height: 38px !important;
     }
 
     .nav-list a mat-icon {
-      color: var(--color-sidebar-text) !important;
       font-size: 20px;
       width: 20px;
       height: 20px;
+      transition: transform 0.15s ease;
     }
 
+    .nav-list a mat-icon.ic-blue { color: #007AFF !important; }
+    .nav-list a mat-icon.ic-indigo { color: #5856D6 !important; }
+    .nav-list a mat-icon.ic-purple { color: #AF52DE !important; }
+    .nav-list a mat-icon.ic-pink { color: #FF2D55 !important; }
+    .nav-list a mat-icon.ic-red { color: #FF3B30 !important; }
+    .nav-list a mat-icon.ic-orange { color: #FF9500 !important; }
+    .nav-list a mat-icon.ic-amber { color: #FFCC00 !important; }
+    .nav-list a mat-icon.ic-green { color: #34C759 !important; }
+    .nav-list a mat-icon.ic-teal { color: #5AC8FA !important; }
+    .nav-list a mat-icon.ic-cyan { color: #32ADE6 !important; }
+
     .nav-list a span {
-      color: var(--color-sidebar-text) !important;
+      color: #3A3A3C !important;
+      font-weight: 500;
+      letter-spacing: -0.01em;
     }
 
     .nav-list a:hover {
       background-color: var(--color-sidebar-hover) !important;
     }
 
-    .nav-list a:hover mat-icon,
-    .nav-list a:hover span {
-      color: var(--color-sidebar-text-active) !important;
-    }
-
     .nav-list a.active-link {
-      background-color: var(--color-sidebar-active) !important;
-    }
-
-    .nav-list a.active-link mat-icon {
-      color: var(--color-sidebar-accent) !important;
+      background-color: rgba(0, 122, 255, 0.08) !important;
     }
 
     .nav-list a.active-link span {
-      color: var(--color-sidebar-text-active) !important;
+      color: #1D1D1F !important;
+      font-weight: 600;
     }
 
+    .route-progress-bar {
+      position: fixed; top: 0; left: 0; right: 0; height: 3px;
+      z-index: 1100; background: transparent; overflow: hidden;
+    }
+    .route-progress-fill {
+      height: 100%; width: 30%;
+      background: linear-gradient(90deg, #007AFF, #5AC8FA);
+      border-radius: 0 2px 2px 0;
+      animation: routeProgress 1.5s ease-in-out infinite;
+    }
+    @keyframes routeProgress {
+      0% { transform: translateX(-100%); width: 30%; }
+      50% { transform: translateX(100%); width: 60%; }
+      100% { transform: translateX(300%); width: 30%; }
+    }
     .app-toolbar {
-      background: rgba(255, 255, 255, 0.72) !important;
-      backdrop-filter: blur(20px) saturate(180%);
+      background: var(--color-surface) !important;
       color: var(--color-text) !important;
-      border-bottom: none;
+      border-bottom: 0.5px solid var(--color-border);
       box-shadow: none;
-      height: 56px;
+      height: 52px;
       position: sticky;
       top: 0;
       z-index: 10;
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
     }
 
-    :host-context(.dark) .app-toolbar {
-      background: rgba(28, 28, 30, 0.82) !important;
-    }
-
-    :host-context(.dark) .bottom-tabs {
-      background: rgba(28, 28, 30, 0.88);
-      border-top-color: rgba(255, 255, 255, 0.06);
-    }
 
     .theme-toggle {
       margin-right: 4px;
@@ -527,7 +555,7 @@ import { routeFadeAnimation } from './route-animations';
     .content-area {
       position: relative;
       padding: 24px 32px;
-      min-height: calc(100vh - 56px);
+      min-height: calc(100vh - 52px);
     }
 
     @media (max-width: 768px) {
@@ -563,44 +591,54 @@ import { routeFadeAnimation } from './route-animations';
       .shell-container, :host ::ng-deep .mat-sidenav-content {
         overflow-x: hidden;
       }
+      .sidenav {
+        width: 280px;
+        background: rgba(255, 255, 255, 0.96);
+        border-right: none;
+        box-shadow: var(--shadow-xl);
+        z-index: 1002 !important;
+      }
       .mobile-brand {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 36px;
-        height: 36px;
+        width: 34px;
+        height: 34px;
         border-radius: 10px;
-        background: linear-gradient(135deg, rgba(0,122,255,0.15) 0%, rgba(88,86,214,0.15) 100%);
-        margin-right: 10px;
+        background: linear-gradient(135deg, rgba(0,122,255,0.12) 0%, rgba(88,86,214,0.12) 100%);
+        margin-right: 8px;
         text-decoration: none;
         -webkit-tap-highlight-color: transparent;
       }
       .mobile-brand-icon {
-        font-size: 22px !important;
-        width: 22px !important;
-        height: 22px !important;
+        font-size: 20px !important;
+        width: 20px !important;
+        height: 20px !important;
         color: var(--color-primary);
       }
       .content-area {
-        padding: 20px 16px;
+        padding: 14px 14px;
         padding-bottom: 100px;
       }
       .app-toolbar {
-        height: 56px;
-        padding: 0 14px !important;
+        height: 48px;
+        padding: 0 12px !important;
+        background: var(--color-surface) !important;
+        backdrop-filter: none;
       }
       .app-toolbar button[mat-icon-button] {
-        width: 44px;
-        height: 44px;
+        width: 40px;
+        height: 40px;
       }
       .app-toolbar button[mat-icon-button] mat-icon {
-        font-size: 24px !important;
-        width: 24px !important;
-        height: 24px !important;
+        font-size: 22px !important;
+        width: 22px !important;
+        height: 22px !important;
       }
       .toolbar-title {
-        font-size: 1.2rem !important;
+        font-size: 1.1rem !important;
         font-weight: 700 !important;
+        letter-spacing: -0.02em;
       }
     }
 
@@ -609,21 +647,27 @@ import { routeFadeAnimation } from './route-animations';
       bottom: 32px;
       right: 32px;
       z-index: 100;
-      width: 56px !important;
-      height: 56px !important;
+      width: 52px !important;
+      height: 52px !important;
       background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%) !important;
       color: #fff !important;
-      box-shadow: 0 6px 20px rgba(0, 122, 255, 0.4), var(--shadow-lg) !important;
+      box-shadow: 0 4px 16px rgba(0, 122, 255, 0.35) !important;
       transition: transform var(--transition-fast), box-shadow var(--transition-fast);
     }
     .global-fab mat-icon {
-      font-size: 28px !important;
-      width: 28px !important;
-      height: 28px !important;
+      font-size: 26px !important;
+      width: 26px !important;
+      height: 26px !important;
     }
-    .global-fab:hover {
-      transform: scale(1.08);
-      box-shadow: 0 8px 28px rgba(0, 122, 255, 0.5), var(--shadow-xl) !important;
+    @media (hover: hover) {
+      .global-fab:hover {
+        transform: scale(1.06);
+        box-shadow: 0 6px 24px rgba(0, 122, 255, 0.45) !important;
+      }
+    }
+    .global-fab:active {
+      transform: scale(0.92);
+      box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25) !important;
     }
     .search-trigger {
       display: flex;
@@ -665,13 +709,15 @@ import { routeFadeAnimation } from './route-animations';
       right: 0;
       z-index: 1000;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-around;
-      height: 72px;
+      height: calc(52px + env(safe-area-inset-bottom, 0px));
+      padding-top: 6px;
       padding-bottom: env(safe-area-inset-bottom, 0px);
-      background: rgba(255, 255, 255, 0.88);
-      backdrop-filter: blur(20px) saturate(180%);
-      border-top: 0.5px solid var(--color-border);
+      box-sizing: border-box;
+      background: var(--color-surface);
+      backdrop-filter: none;
+      border-top: 0.5px solid rgba(0, 0, 0, 0.08);
     }
 
     .tab-item {
@@ -679,52 +725,81 @@ import { routeFadeAnimation } from './route-animations';
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 3px;
+      gap: 2px;
       flex: 1;
-      padding: 8px 0;
+      padding: 4px 0;
       text-decoration: none;
-      color: var(--color-text-muted);
+      color: #8E8E93;
       border: none;
       background: none;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
-      transition: color var(--transition-fast);
+      transition: color var(--transition-fast), transform 0.08s ease;
+      position: relative;
+
+      &:active {
+        transform: scale(0.88);
+      }
     }
 
     .tab-item mat-icon {
-      font-size: 28px;
-      width: 28px;
-      height: 28px;
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
     }
 
     .tab-item span {
       font-family: var(--font-primary);
-      font-size: 0.8rem;
-      font-weight: 600;
+      font-size: 0.65rem;
+      font-weight: 500;
       letter-spacing: 0.01em;
     }
+
+    .tab-item .tab-ic-blue { color: #007AFF; }
+    .tab-item .tab-ic-teal { color: #5AC8FA; }
+    .tab-item .tab-ic-purple { color: #AF52DE; }
+    .tab-item .tab-ic-red { color: #FF3B30; }
+    .tab-item .tab-ic-gray { color: #8E8E93; }
 
     .tab-item.tab-active {
       color: var(--color-primary);
     }
+    .tab-item.tab-active mat-icon {
+      color: var(--color-primary) !important;
+    }
+    .tab-item.tab-active span {
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+    .tab-item.tab-active::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 48px;
+      height: 30px;
+      background: rgba(0, 122, 255, 0.12);
+      border-radius: 14px;
+    }
 
     @media (max-width: 599px) {
       .global-fab {
-        bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 16px);
+        bottom: calc(52px + env(safe-area-inset-bottom, 0px) + 16px);
         right: 20px;
-        width: 56px !important;
-        height: 56px !important;
+        width: 52px !important;
+        height: 52px !important;
       }
       .global-fab mat-icon {
-        font-size: 26px !important;
-        width: 26px !important;
-        height: 26px !important;
+        font-size: 24px !important;
+        width: 24px !important;
+        height: 24px !important;
       }
       .content-area {
-        padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 20px) !important;
+        padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px) + 20px) !important;
       }
       .nav-list {
-        padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 20px);
+        padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px) + 20px);
       }
     }
   `]
@@ -748,10 +823,14 @@ export class NavShellComponent implements OnInit, OnDestroy {
   isMobile = signal(false);
   isPhone = signal(false);
   keyboardOpen = signal(false);
+  routeLoading = signal(false);
   private initialViewportHeight = 0;
   private viewportHandler = () => this.checkKeyboard();
   pageTitle = signal('Dashboard');
   expandedSections = signal<string[]>(['finance', 'trading', 'health']);
+  activeModule = signal<string>('finance');
+  private currentUrl = signal('/dashboard');
+  isExpensesRoute = computed(() => this.currentUrl().startsWith('/expenses'));
   userEmail = computed(() => this.authService.currentUser()?.email ?? '');
   isAdmin = computed(() => this.authService.isAdmin());
 
@@ -798,6 +877,15 @@ export class NavShellComponent implements OnInit, OnDestroy {
 
     const initialUrl = this.router.url;
     this.pageTitle.set(this.pageTitles[initialUrl] ?? this.pageTitles['/' + initialUrl.split('/')[1]] ?? 'Pulse');
+    this.expandSectionForRoute(initialUrl);
+
+    this.router.events.subscribe(event => {
+      if (event instanceof NavigationStart) {
+        this.routeLoading.set(true);
+      } else if (event instanceof NavigationEnd || event instanceof NavigationCancel || event instanceof NavigationError) {
+        this.routeLoading.set(false);
+      }
+    });
 
     this.router.events.pipe(
       filter((e): e is NavigationEnd => e instanceof NavigationEnd)
@@ -847,6 +935,9 @@ export class NavShellComponent implements OnInit, OnDestroy {
     if (url.startsWith('/trading')) section = 'trading';
     else if (url.startsWith('/health')) section = 'health';
     else if (url.startsWith('/admin')) section = 'admin';
+
+    this.activeModule.set(section);
+    this.currentUrl.set(url);
 
     const current = this.expandedSections();
     if (!current.includes(section)) {
@@ -935,17 +1026,6 @@ export class NavShellComponent implements OnInit, OnDestroy {
       error: () => this.notify.error('Failed to load setups')
     });
   }
-
-  toggleTheme(): void {
-    this.themeService.toggle();
-  }
-
-  themeIcon = computed(() => {
-    const mode = this.themeService.theme();
-    if (mode === 'dark') return 'dark_mode';
-    if (mode === 'light') return 'light_mode';
-    return 'brightness_auto';
-  });
 
   openPalette(): void {
     this.commandPalette.open();

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,11 +6,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { forkJoin, of, catchError } from 'rxjs';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { DailyExpenseService } from '../../core/services/daily-expense.service';
-import { WorkoutLogService } from '../../core/services/workout-log.service';
 import { RecurringService } from '../../core/services/recurring.service';
 import { UpcomingPayment } from '../../core/models/dashboard.model';
 import { DailyExpense } from '../../core/models/daily-expense.model';
-import { WorkoutLog } from '../../core/models/workout-log.model';
 import { RecurringTransaction } from '../../core/models/recurring.model';
 import { toLocalDateString } from '../../core/utils/date-utils';
 
@@ -48,14 +46,6 @@ import { toLocalDateString } from '../../core/utils/date-utils';
               }
             </span>
             <span class="glance-label">Today</span>
-          </div>
-        </div>
-        <div class="glance-divider"></div>
-        <div class="glance-section">
-          <mat-icon class="glance-icon icon-green">fitness_center</mat-icon>
-          <div class="glance-info">
-            <span class="glance-value">{{ workoutLabel() }}</span>
-            <span class="glance-label">Workout</span>
           </div>
         </div>
       </div>
@@ -160,16 +150,15 @@ import { toLocalDateString } from '../../core/utils/date-utils';
 export class TodayGlanceComponent implements OnInit {
   private dashboardService = inject(DashboardService);
   private expenseService = inject(DailyExpenseService);
-  private workoutService = inject(WorkoutLogService);
   private recurringService = inject(RecurringService);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   loaded = signal(false);
   paymentsDueToday = signal<UpcomingPayment[]>([]);
   paymentsTotalDue = signal<number>(0);
   todaySpending = signal<number>(0);
-  workoutLabel = signal<string>('Rest day');
   recurringDue = signal<RecurringTransaction[]>([]);
   recurringDueTotal = signal<number>(0);
 
@@ -181,9 +170,8 @@ export class TodayGlanceComponent implements OnInit {
     forkJoin({
       summary: this.dashboardService.getSummary().pipe(catchError(() => of(null))),
       expenses: this.expenseService.getExpenses({ dateFrom: today, dateTo: today }).pipe(catchError(() => of(null))),
-      workout: this.workoutService.getToday().pipe(catchError(() => of(null))),
       recurring: this.recurringService.getAll().pipe(catchError(() => of([])))
-    }).subscribe(({ summary, expenses, workout, recurring }) => {
+    }).subscribe(({ summary, expenses, recurring }) => {
       // Payments due today
       if (summary && summary.upcomingPayments) {
         const todayPayments = summary.upcomingPayments.filter(p => {
@@ -205,13 +193,6 @@ export class TodayGlanceComponent implements OnInit {
         this.todaySpending.set(spent);
       }
 
-      // Workout
-      if (workout) {
-        this.workoutLabel.set(workout.focusArea || 'Completed');
-      } else {
-        this.workoutLabel.set('Rest day');
-      }
-
       // Recurring bills due today
       if (recurring && recurring.length > 0) {
         const tz = localStorage.getItem('pulse_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -223,6 +204,7 @@ export class TodayGlanceComponent implements OnInit {
 
       this.loaded.set(true);
       this.loading.set(false);
+      this.cdr.detectChanges();
     });
   }
 }

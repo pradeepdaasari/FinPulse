@@ -1,23 +1,25 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { BankAccountService } from '../../core/services/bank-account.service';
 import { BankAccount } from '../../core/models/bank-account.model';
 import { NotificationService } from '../../core/services/notification.service';
 import { AddAccountDialogComponent } from './add-account-dialog.component';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 
 @Component({
   selector: 'app-account-list',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatProgressSpinnerModule, CurrencyPipe],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, CurrencyPipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
+    <div appPullToRefresh (refresh)="loadAccounts()">
     <div class="header-row">
       <button mat-raised-button color="primary" (click)="openAddAccount()">
         <mat-icon>add</mat-icon> Add Account
@@ -25,7 +27,7 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
     </div>
 
     @if (loading()) {
-      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+      <app-skeleton type="table"></app-skeleton>
     } @else if (accounts().length === 0) {
       <div class="empty-state">
         <div class="empty-icon-wrap blue">
@@ -139,9 +141,9 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
         }
       </div>
     }
+    </div>
   `,
   styles: [`
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .header-row {
       display: flex; justify-content: flex-end; align-items: center;
       margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);
@@ -200,12 +202,13 @@ import { AddAccountDialogComponent } from './add-account-dialog.component';
 
     .mobile-cards { display: none; }
     .account-card {
-      display: flex; align-items: center; gap: 12px; padding: 14px 12px;
-      background: var(--color-surface); border-radius: var(--radius-md);
-      margin-bottom: 10px; box-shadow: var(--shadow-sm);
-      cursor: pointer; transition: box-shadow var(--transition-fast);
+      display: flex; align-items: center; gap: 14px; padding: 16px;
+      background: var(--color-surface); border-radius: var(--radius-lg);
+      margin-bottom: 12px; box-shadow: var(--shadow-sm);
+      cursor: pointer; transition: box-shadow var(--transition-fast), transform 0.1s ease;
+      -webkit-tap-highlight-color: transparent;
     }
-    .account-card:active { box-shadow: var(--shadow-md); }
+    .account-card:active { box-shadow: var(--shadow-md); transform: scale(0.98); }
     .ac-icon {
       width: 44px; height: 44px; border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
@@ -254,6 +257,7 @@ export class AccountListComponent implements OnInit {
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
 
   accounts = signal<BankAccount[]>([]);
   loading = signal(true);
@@ -274,8 +278,9 @@ export class AccountListComponent implements OnInit {
         this.accounts.set(accounts);
         this.totalBalance.set(accounts.reduce((sum, a) => sum + a.currentBalance, 0));
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
-      error: () => this.loading.set(false)
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 
@@ -321,6 +326,7 @@ export class AccountListComponent implements OnInit {
       error: (err) => {
         this.loading.set(false);
         this.notify.error(err.error?.message || 'Failed to delete account');
+        this.cdr.detectChanges();
       }
     });
   }

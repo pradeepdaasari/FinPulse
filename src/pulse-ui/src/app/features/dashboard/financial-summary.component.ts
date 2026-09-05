@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, Input, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
@@ -236,6 +236,7 @@ export class FinancialSummaryComponent implements OnInit {
 
   private dashboardService = inject(DashboardService);
   private bankAccountService = inject(BankAccountService);
+  private cdr = inject(ChangeDetectorRef);
   loading = signal(true);
   data = signal<FinancialSummary | null>(null);
   totalBankBalance = signal(0);
@@ -283,11 +284,11 @@ export class FinancialSummaryComponent implements OnInit {
 
   ngOnInit(): void {
     this.dashboardService.getFinancialSummary().subscribe({
-      next: (summary) => { this.data.set(summary); this.loading.set(false); },
-      error: () => { this.loading.set(false); }
+      next: (summary) => { this.data.set(summary); this.loading.set(false); this.cdr.detectChanges(); },
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
     this.bankAccountService.getAll().subscribe({
-      next: (accounts) => this.totalBankBalance.set(accounts.reduce((sum, a) => sum + a.currentBalance, 0)),
+      next: (accounts) => { this.totalBankBalance.set(accounts.reduce((sum, a) => sum + a.currentBalance, 0)); this.cdr.detectChanges(); },
       error: () => {}
     });
   }

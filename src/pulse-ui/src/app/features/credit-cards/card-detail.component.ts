@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { forkJoin } from 'rxjs';
@@ -8,11 +8,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule } from '@angular/material/paginator';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { CreditCardService } from '../../core/services/credit-card.service';
+import { PaymentService } from '../../core/services/payment.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { toLocalDateString } from '../../core/utils/date-utils';
 import { DailyExpenseService } from '../../core/services/daily-expense.service';
@@ -21,6 +21,7 @@ import { DailyExpense } from '../../core/models/daily-expense.model';
 import { PayoffEntry } from '../../core/models/dashboard.model';
 import { PaymentHistory } from '../../core/models/payment-history.model';
 import { sumCurrency } from '../../core/utils/currency';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
 
 interface CardTransaction {
   id: string | number;
@@ -35,10 +36,10 @@ interface CardTransaction {
 @Component({
   selector: 'app-card-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatPaginatorModule, MatProgressSpinnerModule, MatTooltipModule, MatChipsModule, CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatPaginatorModule, MatTooltipModule, MatChipsModule, CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe, SkeletonLoaderComponent],
   template: `
     @if (loading()) {
-      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+      <app-skeleton type="card"></app-skeleton>
     } @else if (card()) {
       <div class="header-row">
         <div class="header-left">
@@ -219,6 +220,14 @@ interface CardTransaction {
                 <th mat-header-cell *matHeaderCellDef>Notes</th>
                 <td mat-cell *matCellDef="let p">{{ p.notes || '—' }}</td>
               </ng-container>
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let p">
+                  <button mat-icon-button color="warn" (click)="deletePayment(p)" matTooltip="Delete payment" aria-label="Delete payment">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
 
               <tr mat-header-row *matHeaderRowDef="paymentColumns"></tr>
               <tr mat-row *matRowDef="let row; columns: paymentColumns;"></tr>
@@ -265,7 +274,6 @@ interface CardTransaction {
     }
   `,
   styles: [`
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .header-row {
       display: flex;
       justify-content: space-between;
@@ -378,7 +386,9 @@ export class CardDetailComponent implements OnInit {
   private cardService = inject(CreditCardService);
   private expenseService = inject(DailyExpenseService);
   private dialog = inject(MatDialog);
+  private paymentService = inject(PaymentService);
   private notify = inject(NotificationService);
+  private cdr = inject(ChangeDetectorRef);
 
   card = signal<CreditCard | null>(null);
   timeline = signal<PayoffEntry[]>([]);
@@ -440,7 +450,7 @@ export class CardDetailComponent implements OnInit {
   });
 
   timelineColumns = ['month', 'date', 'payment', 'principal', 'interest', 'remainingBalance'];
-  paymentColumns = ['paymentDate', 'amountPaid', 'notes'];
+  paymentColumns = ['paymentDate', 'amountPaid', 'notes', 'actions'];
   txnColumns = ['date', 'description', 'category', 'type', 'amount'];
 
   getUtilization(): number {
@@ -467,16 +477,18 @@ export class CardDetailComponent implements OnInit {
       next: (card) => {
         this.card.set(card);
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
-      error: () => { this.loading.set(false); }
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
     this.cardService.getPayoffTimeline(id).subscribe({
-      next: (entries) => { this.timeline.set(entries); }
+      next: (entries) => { this.timeline.set(entries); this.cdr.detectChanges(); }
     });
     this.cardService.getPayments(id).subscribe({
       next: (payments) => {
         this.paymentHistory.set(payments);
         this.totalPaid.set(sumCurrency(payments.map(p => p.amountPaid)));
+        this.cdr.detectChanges();
       }
     });
     forkJoin({
@@ -493,6 +505,7 @@ export class CardDetailComponent implements OnInit {
         if (sorted.some(t => t.date.slice(0, 7) === curMonth)) {
           this.txnMonth.set(curMonth);
         }
+        this.cdr.detectChanges();
       }
     });
   }
@@ -543,7 +556,31 @@ export class CardDetailComponent implements OnInit {
             this.notify.success('Card deleted');
             this.router.navigate(['/cards']);
           },
-          error: () => { this.loading.set(false); this.notify.error('Failed to delete card'); }
+          error: () => { this.loading.set(false); this.notify.error('Failed to delete card'); this.cdr.detectChanges(); }
+        });
+      });
+    });
+  }
+
+  deletePayment(payment: PaymentHistory): void {
+    import('../../shared/confirm-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.ConfirmDialogComponent, {
+        width: '400px',
+        data: {
+          title: 'Delete Payment?',
+          message: `This will remove the $${payment.amountPaid.toFixed(2)} payment and add it back to the card balance.`,
+          confirmText: 'Delete',
+          color: 'warn'
+        }
+      });
+      dialogRef.afterClosed().subscribe(confirmed => {
+        if (!confirmed) return;
+        this.paymentService.delete(payment.id).subscribe({
+          next: () => {
+            this.notify.success('Payment deleted — balance restored');
+            this.loadCard();
+          },
+          error: () => this.notify.error('Failed to delete payment')
         });
       });
     });

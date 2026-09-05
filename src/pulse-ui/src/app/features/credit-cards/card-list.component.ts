@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { Router } from '@angular/router';
@@ -8,7 +8,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { CreditCardService } from '../../core/services/credit-card.service';
 import { CreditCard } from '../../core/models/credit-card.model';
@@ -16,12 +15,15 @@ import { NotificationService } from '../../core/services/notification.service';
 import { AddCardDialogComponent } from './add-card-dialog.component';
 import { UpdateBalanceDialogComponent } from './update-balance-dialog.component';
 import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog.component';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 
 @Component({
   selector: 'app-card-list',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatTooltipModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatTooltipModule, CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
+    <div appPullToRefresh (refresh)="loadCards()">
     <div class="header-row">
       <button mat-raised-button color="primary" (click)="openAddCard()">
         <mat-icon>add</mat-icon> Add Card
@@ -29,7 +31,7 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
     </div>
 
     @if (loading()) {
-      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+      <app-skeleton type="table"></app-skeleton>
     } @else if (cards().length === 0) {
       <div class="empty-state">
         <div class="empty-icon-wrap purple">
@@ -225,9 +227,9 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
         }
       </div>
     }
+    </div>
   `,
   styles: [`
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .header-row {
       display: flex;
       justify-content: flex-end;
@@ -348,18 +350,19 @@ import { RecordPaymentDialogComponent } from '../../shared/record-payment-dialog
     .mobile-cards { display: none; }
     .cc-card {
       background: var(--color-surface);
-      border-radius: var(--radius-md);
-      margin-bottom: 10px;
-      padding: 16px 14px 10px;
+      border-radius: var(--radius-lg);
+      margin-bottom: 12px;
+      padding: 16px;
       box-shadow: var(--shadow-sm);
       cursor: pointer;
-      transition: box-shadow var(--transition-fast);
+      transition: box-shadow var(--transition-fast), transform 0.1s ease;
       border-left: 3px solid transparent;
+      -webkit-tap-highlight-color: transparent;
     }
     .cc-card.card-healthy { border-left-color: var(--color-success); }
     .cc-card.card-warning { border-left-color: var(--color-warning); }
     .cc-card.card-danger { border-left-color: var(--color-danger); }
-    .cc-card:active { box-shadow: var(--shadow-md); }
+    .cc-card:active { box-shadow: var(--shadow-md); transform: scale(0.98); }
     .cc-top { display: flex; align-items: center; gap: 12px; }
     .cc-icon {
       width: 44px; height: 44px; border-radius: 12px;
@@ -439,6 +442,7 @@ export class CardListComponent implements OnInit {
   private notify = inject(NotificationService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
+  private cdr = inject(ChangeDetectorRef);
 
   cards = signal<CreditCard[]>([]);
   loading = signal(true);
@@ -463,8 +467,9 @@ export class CardListComponent implements OnInit {
       next: (cards) => {
         this.cards.set(cards);
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
-      error: () => { this.loading.set(false); }
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 
@@ -531,7 +536,7 @@ export class CardListComponent implements OnInit {
         this.notify.success('Card deleted successfully');
         this.loadCards();
       },
-      error: () => { this.loading.set(false); this.notify.error('Failed to delete card'); }
+      error: () => { this.loading.set(false); this.notify.error('Failed to delete card'); this.cdr.detectChanges(); }
     });
   }
 

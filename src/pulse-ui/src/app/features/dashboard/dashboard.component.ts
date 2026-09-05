@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -76,6 +76,7 @@ import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 export class DashboardComponent implements OnInit {
   private dashboardService = inject(DashboardService);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
 
   summary = signal<DashboardSummary | null>(null);
   loading = signal(true);
@@ -98,9 +99,11 @@ export class DashboardComponent implements OnInit {
         }
         this.summary.set(data);
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
       error: () => {
         this.loading.set(false);
+        this.cdr.detectChanges();
       }
     });
   }

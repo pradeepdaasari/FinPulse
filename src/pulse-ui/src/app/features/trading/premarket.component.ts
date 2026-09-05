@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -8,11 +8,12 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TradingService } from '../../core/services/trading.service';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
 import { PreMarketNote, MarketBias, MentalState } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
 import { RichTextEditorComponent } from '../../shared/rich-text-editor.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { toLocalDateString } from '../../core/utils/date-utils';
 
 @Component({
@@ -21,9 +22,10 @@ import { toLocalDateString } from '../../core/utils/date-utils';
   imports: [
     CommonModule, ReactiveFormsModule, MatCardModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatSliderModule, MatChipsModule,
-    MatProgressSpinnerModule, CurrencyPipe, DatePipe, RichTextEditorComponent
+    CurrencyPipe, DatePipe, RichTextEditorComponent, SkeletonLoaderComponent, PullToRefreshDirective
   ],
   template: `
+    <div appPullToRefresh (refresh)="loadData()">
     <div class="page-banner">
       <div class="banner-pattern"></div>
       <div class="banner-content">
@@ -70,7 +72,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     </div>
 
     @if (loading()) {
-      <div class="loading-center"><mat-spinner diameter="40"></mat-spinner></div>
+      <app-skeleton type="card"></app-skeleton>
     } @else {
       <form [formGroup]="form" class="premarket-form" (ngSubmit)="save()">
         <!-- Mental State -->
@@ -206,6 +208,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
         </div>
       }
     }
+    </div>
   `,
   styles: [`
     :host { display: block; }
@@ -243,21 +246,19 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     .date-label { font-size: 0.95rem; font-weight: 600; min-width: 180px; text-align: center; }
 
     .stats-row {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: var(--spacing-sm); margin-bottom: var(--spacing-lg);
+      grid-template-columns: repeat(3, 1fr);
+      margin-bottom: var(--spacing-lg);
     }
     .stat-card {
-      display: flex; align-items: center; gap: 10px;
-      background: var(--color-surface); border-radius: var(--radius-md);
-      padding: 14px; box-shadow: var(--shadow-sm);
+      gap: 10px;
+      padding: 14px;
     }
-    .stat-card > mat-icon { font-size: 24px; width: 24px; height: 24px; }
-    .stat-card.stat-green > mat-icon { color: var(--color-stat-green); }
-    .stat-card.stat-blue > mat-icon { color: var(--color-stat-blue); }
-    .stat-card.stat-purple > mat-icon { color: var(--color-stat-purple); }
-    .stat-content { display: flex; flex-direction: column; min-width: 0; }
-    .stat-value { font-size: 1.1rem; font-weight: 700; }
-    .stat-label { font-size: 0.7rem; font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.02em; }
+    .stat-card > mat-icon { font-size: 24px; width: 24px; height: 24px; padding: 0; border-radius: 0; background: none; }
+    .stat-card.stat-green > mat-icon { color: var(--color-stat-green); background: none; }
+    .stat-card.stat-blue > mat-icon { color: var(--color-stat-blue); background: none; }
+    .stat-card.stat-purple > mat-icon { color: var(--color-stat-purple); background: none; }
+    .stat-value { font-size: 1.1rem; }
+    .stat-label { letter-spacing: 0.02em; }
 
     .mental-dots { display: flex; gap: 4px; align-items: center; }
     .mental-dot {
@@ -380,6 +381,7 @@ export class PremarketComponent implements OnInit {
   private tradingService = inject(TradingService);
   private fb = inject(FormBuilder);
   private notify = inject(NotificationService);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   saving = signal(false);
@@ -427,11 +429,13 @@ export class PremarketComponent implements OnInit {
           maxLoss: note.maxLoss
         });
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
       error: () => {
         this.editingId.set(null);
         this.form.reset({ mentalState: 'green', marketBias: 'neutral', maxTrades: 3, maxLoss: 500 });
         this.loading.set(false);
+        this.cdr.detectChanges();
       }
     });
 
@@ -439,6 +443,7 @@ export class PremarketComponent implements OnInit {
       next: (notes) => {
         this.history.set(notes.slice(0, 10));
         this.calculateStats(notes);
+        this.cdr.detectChanges();
       }
     });
   }
@@ -467,11 +472,13 @@ export class PremarketComponent implements OnInit {
         this.editingId.set(note.id);
         this.notify.success('Pre-market plan saved');
         this.saving.set(false);
+        this.cdr.detectChanges();
         this.loadData();
       },
       error: () => {
         this.notify.error('Failed to save plan');
         this.saving.set(false);
+        this.cdr.detectChanges();
       }
     });
   }

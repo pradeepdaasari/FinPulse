@@ -1,11 +1,9 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
-import { MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
@@ -37,12 +35,12 @@ interface MonthlyPayment {
 @Component({
   selector: 'app-monthly-payments',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatTableModule, MatIconModule, MatButtonModule, MatChipsModule, MatTooltipModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, LocalDatePipe],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, MatTooltipModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, LocalDatePipe],
   template: `
     @if (loading()) {
       <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
     } @else {
-    <mat-card class="payments-table-card">
+    <mat-card class="payments-card">
       <mat-card-header>
         <mat-card-title>
           <div class="card-title-row">
@@ -65,103 +63,65 @@ interface MonthlyPayment {
             <span>All payments are up to date!</span>
           </div>
         } @else {
-          <div class="table-wrapper">
-            <table mat-table [dataSource]="payments()">
-              <ng-container matColumnDef="name">
-                <th mat-header-cell *matHeaderCellDef>Account</th>
-                <td mat-cell *matCellDef="let p">
-                  <div class="account-cell">
-                    <mat-icon class="account-icon">{{ p.type === 'Loan' ? 'account_balance' : 'credit_card' }}</mat-icon>
-                    <div>
-                      <span class="account-name">{{ p.name }}</span>
-                      <span class="account-type">{{ p.type }}
-                        @if (p.isAutopay) {
-                          <span class="autopay-badge"><mat-icon>autorenew</mat-icon>Auto</span>
-                        }
-                      </span>
-                    </div>
-                  </div>
-                </td>
-              </ng-container>
+          <div class="payment-header">
+            <span class="col-account">Account</span>
+            <span class="col-due">Due</span>
+            <span class="col-balance">Balance</span>
+            <span class="col-paid">Paid</span>
+            <span class="col-date">Due Date</span>
+            <span class="col-status">Status</span>
+            <span class="col-actions"></span>
+          </div>
 
-              <ng-container matColumnDef="amount">
-                <th mat-header-cell *matHeaderCellDef>Due</th>
-                <td mat-cell *matCellDef="let p" class="amount-cell">
-                  <span>{{ p.amount | currency }}</span>
-                  @if (p.minimumPayment != null && p.minimumPayment > 0) {
-                    <span class="min-payment-label">Min: {{ p.minimumPayment | currency }}</span>
-                  }
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="balance">
-                <th mat-header-cell *matHeaderCellDef>Balance</th>
-                <td mat-cell *matCellDef="let p" class="balance-cell">{{ p.currentBalance | currency }}</td>
-              </ng-container>
-
-              <ng-container matColumnDef="dueDate">
-                <th mat-header-cell *matHeaderCellDef>Due Date</th>
-                <td mat-cell *matCellDef="let p" class="due-date-cell">
-                  {{ p.dueDate | localDate:'MMM d, y' }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="daysLeft">
-                <th mat-header-cell *matHeaderCellDef>Days Left</th>
-                <td mat-cell *matCellDef="let p" class="days-cell">
-                  @if (p.daysUntilDue < 0) {
-                    <span class="days-overdue">{{ p.daysUntilDue * -1 }} days ago</span>
-                  } @else if (p.daysUntilDue === 0) {
-                    <span class="days-today">Today</span>
-                  } @else {
-                    <span class="days-remaining">{{ p.daysUntilDue }} days</span>
-                  }
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="paid">
-                <th mat-header-cell *matHeaderCellDef>Paid</th>
-                <td mat-cell *matCellDef="let p" class="paid-cell">
-                  @if (p.paidAmount > 0) {
-                    <span class="paid-progress">{{ p.paidAmount | currency }}</span>
-                    <span class="paid-remaining">({{ p.amount - p.paidAmount | currency }} left)</span>
-                  } @else {
-                    <span class="paid-remaining">({{ p.amount | currency }} left)</span>
-                  }
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="status">
-                <th mat-header-cell *matHeaderCellDef>Status</th>
-                <td mat-cell *matCellDef="let p">
-                  <span class="status-badge" [class]="'status-' + p.status">
-                    @if (p.status === 'due-soon') {
-                      Due in {{ p.daysUntilDue }}d
-                    } @else {
-                      {{ p.daysUntilDue }} days
+          @for (p of payments(); track p.id) {
+            <div class="payment-row" (click)="recordPayment(p)">
+              <div class="col-account">
+                <mat-icon class="account-icon">{{ p.type === 'Loan' ? 'account_balance' : 'credit_card' }}</mat-icon>
+                <div>
+                  <span class="account-name">{{ p.name }}</span>
+                  <span class="account-type">{{ p.type }}
+                    @if (p.isAutopay) {
+                      <span class="autopay-badge"><mat-icon>autorenew</mat-icon>Auto</span>
                     }
                   </span>
-                </td>
-              </ng-container>
+                </div>
+              </div>
+              <div class="col-due">
+                <span class="due-amount">{{ p.amount | currency }}</span>
+                @if (p.minimumPayment != null && p.minimumPayment > 0) {
+                  <span class="min-label">Min: {{ p.minimumPayment | currency }}</span>
+                }
+              </div>
+              <div class="col-balance">{{ p.currentBalance | currency }}</div>
+              <div class="col-paid">
+                @if (p.paidAmount > 0) {
+                  <span class="paid-amount">{{ p.paidAmount | currency }}</span>
+                  <span class="paid-remaining">({{ p.amount - p.paidAmount | currency }} left)</span>
+                } @else {
+                  <span class="paid-remaining">({{ p.amount | currency }} left)</span>
+                }
+              </div>
+              <div class="col-date">{{ p.dueDate | date:'MMM d, y' }}</div>
+              <div class="col-status">
+                <span class="status-badge" [class]="'status-' + p.status">
+                  @if (p.status === 'due-soon') {
+                    Due in {{ p.daysUntilDue }}d
+                  } @else {
+                    {{ p.daysUntilDue }} days
+                  }
+                </span>
+              </div>
+              <div class="col-actions">
+                @if (p.minimumPaid) {
+                  <mat-icon class="min-paid-check" matTooltip="Minimum paid">check_circle_outline</mat-icon>
+                }
+                <button mat-icon-button color="primary" (click)="recordPayment(p); $event.stopPropagation()" aria-label="Record Payment">
+                  <mat-icon>payments</mat-icon>
+                </button>
+              </div>
+            </div>
+          }
 
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef></th>
-                <td mat-cell *matCellDef="let p">
-                  <div class="actions-wrap">
-                    @if (p.minimumPaid) {
-                      <mat-icon class="min-paid-check" matTooltip="Minimum paid">check_circle_outline</mat-icon>
-                    }
-                    <button mat-icon-button color="primary" (click)="recordPayment(p)" aria-label="Record Payment">
-                      <mat-icon>payments</mat-icon>
-                    </button>
-                  </div>
-                </td>
-              </ng-container>
-
-              <tr mat-header-row *matHeaderRowDef="columns"></tr>
-              <tr mat-row *matRowDef="let row; columns: columns;"></tr>
-            </table>
-          </div>
           <div class="total-row">
             <span>Total Due This Month</span>
             <span class="total-amount">{{ totalDue() | currency }}</span>
@@ -173,186 +133,102 @@ interface MonthlyPayment {
   `,
   styles: [`
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
-    .payments-table-card {
-      margin-top: var(--spacing-md);
-    }
+    .payments-card { margin-top: var(--spacing-md); }
     .card-title-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
+      display: flex; justify-content: space-between; align-items: center; width: 100%;
     }
-    .card-title-text {
-      display: flex;
-      align-items: center;
-    }
-    .card-title-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-      margin-right: 8px;
-      color: var(--color-primary);
-    }
+    .card-title-text { display: flex; align-items: center; }
+    .card-title-icon { font-size: 20px; width: 20px; height: 20px; margin-right: 8px; color: #5856D6; }
     .payment-count {
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--color-text-secondary);
-      background: var(--color-bg);
-      padding: 4px 12px;
-      border-radius: 20px;
+      font-size: 0.875rem; font-weight: 500; color: var(--color-text-secondary);
+      background: var(--color-bg); padding: 4px 12px; border-radius: 20px;
     }
-    .table-wrapper {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-    table { width: 100%; min-width: 450px; }
-    .account-cell {
-      display: flex;
+
+    /* Desktop table layout */
+    .payment-header, .payment-row {
+      display: grid;
+      grid-template-columns: 2fr 1.2fr 1fr 1.2fr 1fr 0.8fr 70px;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
+      padding: 10px 12px;
     }
-    .account-icon {
-      color: var(--color-primary);
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
+    .payment-header {
+      font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted);
+      text-transform: uppercase; letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--color-border);
     }
-    .account-name {
-      display: block;
-      font-weight: 500;
+    .payment-row {
+      border-bottom: 1px solid var(--color-border-light, rgba(0,0,0,0.04));
     }
-    .account-type {
-      display: block;
-      font-size: 0.75rem;
-      color: var(--color-text-muted);
-    }
-    .amount-cell {
-      font-weight: 600;
-    }
-    .min-payment-label {
-      display: block;
-      font-size: 0.7rem;
-      font-weight: 500;
-      color: var(--color-text-muted);
-    }
-    .balance-cell {
-      font-weight: 500;
-      color: var(--color-text-secondary);
-    }
-    .due-date-cell {
-      white-space: nowrap;
-    }
-    .status-badge {
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 0.6875rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-    }
-    .status-overdue {
-      background-color: var(--color-danger-bg);
-      color: var(--color-danger);
-    }
-    .status-due-soon {
-      background-color: var(--color-warning-bg);
-      color: var(--color-warning);
-    }
-    .status-upcoming {
-      background-color: var(--color-success-bg);
-      color: var(--color-success);
-    }
-    .status-paid {
-      background-color: var(--color-success-bg);
-      color: var(--color-success);
-    }
-    .paid-cell { font-size: 0.875rem; }
-    .paid-progress { font-weight: 600; color: var(--color-success); }
+    .payment-row:last-of-type { border-bottom: none; }
+
+    .col-account { display: flex; align-items: center; gap: 10px; }
+    .account-icon { color: var(--color-primary); font-size: 20px; width: 20px; height: 20px; }
+    .account-name { display: block; font-weight: 500; }
+    .account-type { display: block; font-size: 0.75rem; color: var(--color-text-muted); }
+    .due-amount { font-weight: 600; }
+    .min-label { display: block; font-size: 0.7rem; color: var(--color-text-muted); }
+    .col-balance { font-weight: 500; color: var(--color-text-secondary); }
+    .col-date { white-space: nowrap; }
+    .paid-amount { font-weight: 600; color: var(--color-success); }
     .paid-remaining { color: var(--color-text-muted); font-size: 0.75rem; display: block; }
-    .next-due { color: var(--color-text-secondary); font-size: 0.8125rem; }
-    .paid-check { color: var(--color-success); font-size: 22px; width: 22px; height: 22px; }
-    .total-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: var(--spacing-md) var(--spacing-md) 0;
-      margin-top: var(--spacing-md);
-      border-top: 1px solid var(--color-border);
-      font-weight: 600;
-    }
-    .total-amount {
-      font-size: 1.125rem;
-      color: var(--color-primary);
-    }
-    .empty-state {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: var(--spacing-md);
-      color: var(--color-success);
-    }
-    .empty-state mat-icon {
-      font-size: 28px;
-      width: 28px;
-      height: 28px;
-    }
-    .paycheck-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: var(--spacing-sm) var(--spacing-md);
-      margin-bottom: var(--spacing-md);
-      background: var(--gradient-icon-blue);
-      border: 1px solid rgba(21, 101, 192, 0.15);
-      border-radius: var(--radius-sm);
-      font-size: 0.875rem;
-      color: var(--color-primary-dark);
-    }
-    .paycheck-info mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-      color: var(--color-primary);
-    }
-    .paycheck-days {
-      color: var(--color-text-secondary);
-      font-size: 0.8125rem;
-    }
-    .actions-wrap { display: inline-flex; align-items: center; gap: 2px; }
+    .col-actions { display: flex; align-items: center; gap: 2px; justify-content: flex-end; }
     .min-paid-check { color: var(--color-success); font-size: 20px; width: 20px; height: 20px; }
-    .mat-column-actions { width: 80px; text-align: center; }
-    .days-cell { font-weight: 500; }
-    .days-overdue { color: var(--color-danger); }
-    .days-today { color: var(--color-warning); font-weight: 700; }
-    .days-remaining { color: var(--color-text-secondary); }
+
+    .status-badge {
+      padding: 4px 10px; border-radius: 20px; font-size: 0.6875rem;
+      font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    .status-overdue { background-color: var(--color-danger-bg); color: var(--color-danger); }
+    .status-due-soon { background-color: var(--color-warning-bg); color: var(--color-warning); }
+    .status-upcoming { background-color: var(--color-success-bg); color: var(--color-success); }
+    .status-paid { background-color: var(--color-success-bg); color: var(--color-success); }
+
     .autopay-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 2px;
-      margin-left: 6px;
-      font-size: 0.625rem;
-      font-weight: 600;
-      color: var(--color-primary-dark);
-      background: var(--gradient-icon-blue);
-      padding: 1px 5px;
-      border-radius: 8px;
-      vertical-align: middle;
+      display: inline-flex; align-items: center; gap: 2px; margin-left: 6px;
+      font-size: 0.625rem; font-weight: 600; color: var(--color-primary-dark);
+      background: var(--gradient-icon-blue); padding: 1px 5px; border-radius: 8px;
     }
-    .autopay-badge mat-icon {
-      font-size: 11px;
-      width: 11px;
-      height: 11px;
+    .autopay-badge mat-icon { font-size: 11px; width: 11px; height: 11px; }
+
+    .total-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: var(--spacing-md) var(--spacing-md) 0; margin-top: var(--spacing-md);
+      border-top: 1px solid var(--color-border); font-weight: 600;
     }
+    .total-amount { font-size: 1.125rem; color: var(--color-primary); }
+
+    .empty-state {
+      display: flex; align-items: center; gap: 12px;
+      padding: var(--spacing-md); color: var(--color-success);
+    }
+    .empty-state mat-icon { font-size: 28px; width: 28px; height: 28px; }
+
+    .paycheck-info {
+      display: flex; align-items: center; gap: 10px;
+      padding: var(--spacing-sm) var(--spacing-md); margin-bottom: var(--spacing-md);
+      background: var(--gradient-icon-blue); border: 1px solid rgba(21, 101, 192, 0.15);
+      border-radius: var(--radius-sm); font-size: 0.875rem; color: var(--color-primary-dark);
+    }
+    .paycheck-info mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); }
+    .paycheck-days { color: var(--color-text-secondary); font-size: 0.8125rem; }
+
     @media (max-width: 599px) {
-      table { min-width: 0; }
-      .mat-column-balance,
-      .mat-column-dueDate,
-      .mat-column-daysLeft,
-      .mat-column-paid,
-      .mat-column-status { display: none; }
-      .account-name { font-size: 0.8125rem; }
-      .account-icon { display: none; }
-      .account-cell { gap: 0; }
+      .payment-header { display: none; }
+      .payment-row {
+        grid-template-columns: 1fr auto;
+        gap: 4px 12px;
+        padding: 12px 4px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .payment-row:active { opacity: 0.7; }
+      .col-balance, .col-paid, .col-date, .col-status, .col-actions { display: none; }
+      .col-account { grid-column: 1; }
+      .col-due { grid-column: 2; text-align: right; }
+      .account-name { font-size: 0.9375rem; }
+      .account-icon { font-size: 20px; width: 20px; height: 20px; }
+      .due-amount { font-size: 1rem; }
       .card-title-row { flex-direction: column; align-items: flex-start; gap: 4px; }
       .payment-count { font-size: 0.75rem; }
       .paycheck-info { flex-wrap: wrap; font-size: 0.8rem; }
@@ -366,6 +242,7 @@ export class MonthlyPaymentsComponent implements OnInit {
   private paymentService = inject(PaymentService);
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   payments = signal<MonthlyPayment[]>([]);
@@ -373,7 +250,6 @@ export class MonthlyPaymentsComponent implements OnInit {
   paycheckDay = signal<number | null>(null);
   paycheckDateLabel = signal('');
   daysUntilPaycheck = signal(0);
-  columns = ['name', 'amount', 'balance', 'paid', 'dueDate', 'status', 'actions'];
 
   ngOnInit(): void {
     this.profileService.getProfile().subscribe({
@@ -382,6 +258,7 @@ export class MonthlyPaymentsComponent implements OnInit {
           const anchor = new Date(profile.nextPayDate);
           this.paycheckDay.set(anchor.getDate());
           this.calculatePaycheckInfo(anchor, profile.payFrequency);
+          this.cdr.detectChanges();
         }
       },
       error: () => {}
@@ -418,11 +295,8 @@ export class MonthlyPaymentsComponent implements OnInit {
       const now = new Date();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
-      const today = now.getDate();
 
       const monthlyPayments: MonthlyPayment[] = [];
-
-      const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
       for (const debt of debts) {
         const dueDay = debt.dueDay ?? 1;
@@ -479,6 +353,7 @@ export class MonthlyPaymentsComponent implements OnInit {
       this.payments.set(monthlyPayments);
       this.totalDue.set(sumCurrency(monthlyPayments.map(p => p.amount)));
       this.loading.set(false);
+      this.cdr.detectChanges();
     });
   }
 

@@ -1,10 +1,11 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectorRef } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { MatTableModule } from '@angular/material/table';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -14,10 +15,11 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
 @Component({
   selector: 'app-progress',
   standalone: true,
-  imports: [MatCardModule, MatIconModule, MatButtonModule, MatSelectModule, MatFormFieldModule, MatProgressSpinnerModule, MatTableModule, DatePipe, DecimalPipe, FormsModule],
+  imports: [MatCardModule, MatIconModule, MatButtonModule, MatSelectModule, MatFormFieldModule, MatTableModule, DatePipe, DecimalPipe, FormsModule, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
+    <div appPullToRefresh (refresh)="loadData()">
     @if (loading()) {
-      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+      <app-skeleton type="card"></app-skeleton>
     } @else {
       <!-- Stats Cards -->
       @if (stats()) {
@@ -143,9 +145,9 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
         </div>
       }
     }
+    </div>
   `,
   styles: [`
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .stats-grid {
       display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
       margin-bottom: var(--spacing-lg);
@@ -236,6 +238,7 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
 })
 export class ProgressComponent implements OnInit {
   private logService = inject(WorkoutLogService);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   stats = signal<WorkoutStats | null>(null);
@@ -247,16 +250,20 @@ export class ProgressComponent implements OnInit {
   private maxWeight = 0;
 
   ngOnInit() {
+    this.loadData();
+  }
+
+  loadData(): void {
     this.logService.getStats().subscribe({
-      next: s => this.stats.set(s),
+      next: s => { this.stats.set(s); this.cdr.detectChanges(); },
       error: () => {}
     });
     this.logService.getRecords().subscribe({
-      next: r => { this.records.set(r); this.loading.set(false); },
-      error: () => this.loading.set(false)
+      next: r => { this.records.set(r); this.loading.set(false); this.cdr.detectChanges(); },
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
     this.logService.getExercises().subscribe({
-      next: e => this.exercises.set(e),
+      next: e => { this.exercises.set(e); this.cdr.detectChanges(); },
       error: () => {}
     });
   }
@@ -267,6 +274,7 @@ export class ProgressComponent implements OnInit {
       next: p => {
         this.progress.set(p);
         this.maxWeight = Math.max(...p.map(x => x.maxWeight), 1);
+        this.cdr.detectChanges();
       }
     });
   }

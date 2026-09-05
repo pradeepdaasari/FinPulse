@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectorRef } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -268,6 +268,7 @@ export class PlanEditorDialogComponent implements OnInit {
   private planService = inject(WorkoutPlanService);
   private notify = inject(NotificationService);
   private data: { planId?: number } = inject(MAT_DIALOG_DATA);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   saving = signal(false);
@@ -288,6 +289,7 @@ export class PlanEditorDialogComponent implements OnInit {
         this.days = plan.days.sort((a, b) => a.dayOfWeek - b.dayOfWeek);
         if (this.days.length === 0) this.initDays();
         this.loading.set(false);
+        this.cdr.detectChanges();
       });
     } else {
       this.initDays();
@@ -338,8 +340,8 @@ export class PlanEditorDialogComponent implements OnInit {
       : this.planService.create(plan);
 
     obs.subscribe({
-      next: () => { this.saving.set(false); this.notify.success('Plan saved'); this.dialogRef.close(true); },
-      error: () => { this.saving.set(false); this.notify.error('Failed to save plan'); }
+      next: () => { this.saving.set(false); this.notify.success('Plan saved'); this.cdr.detectChanges(); this.dialogRef.close(true); },
+      error: () => { this.saving.set(false); this.notify.error('Failed to save plan'); this.cdr.detectChanges(); }
     });
   }
 }

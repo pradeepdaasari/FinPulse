@@ -1,3 +1,5 @@
+using Pulse.Core.Models.Enums;
+
 namespace Pulse.Core.DTOs;
 
 public class BudgetPlanDto
@@ -33,6 +35,8 @@ public class CategorySummaryDto
     public string? Icon { get; set; }
     public bool IsDebt { get; set; }
     public bool IsRecurring { get; set; }
+    public int? DebtId { get; set; }
+    public DebtType? DebtType { get; set; }
 }
 
 public class PaycheckBreakdownDto

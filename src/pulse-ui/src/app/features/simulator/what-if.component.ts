@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
@@ -268,6 +268,7 @@ interface DebtSlider {
 export class WhatIfComponent implements OnInit {
   private debtService = inject(DebtService);
   private simulatorService = inject(SimulatorService);
+  private cdr = inject(ChangeDetectorRef);
 
   debts = signal<DebtSlider[]>([]);
   result = signal<WhatIfResult | null>(null);
@@ -288,8 +289,9 @@ export class WhatIfComponent implements OnInit {
         }));
         this.debts.set(items);
         this.loadingDebts.set(false);
+        this.cdr.detectChanges();
       },
-      error: () => { this.loadingDebts.set(false); }
+      error: () => { this.loadingDebts.set(false); this.cdr.detectChanges(); }
     });
   }
 
@@ -316,8 +318,9 @@ export class WhatIfComponent implements OnInit {
       next: (result) => {
         this.result.set(result);
         this.simulating.set(false);
+        this.cdr.detectChanges();
       },
-      error: () => { this.simulating.set(false); }
+      error: () => { this.simulating.set(false); this.cdr.detectChanges(); }
     });
   }
 }

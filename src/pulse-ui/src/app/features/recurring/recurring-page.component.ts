@@ -1,11 +1,10 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
@@ -15,12 +14,15 @@ import { DailyExpense, DailyExpenseCreate, TransactionType, FundingSourceType } 
 import { NotificationService } from '../../core/services/notification.service';
 import { RecurringDialogComponent } from './recurring-dialog.component';
 import { AddExpenseDialogComponent, ExpenseDialogData } from '../expenses/add-expense-dialog.component';
+import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
+import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 
 @Component({
   selector: 'app-recurring-page',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatProgressSpinnerModule, MatSlideToggleModule, MatTooltipModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatSlideToggleModule, MatTooltipModule, CurrencyPipe, DatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
+    <div appPullToRefresh (refresh)="loadData()">
     <div class="header-row">
       <button mat-raised-button color="primary" (click)="openAdd()">
         <mat-icon>add</mat-icon> Add Recurring
@@ -28,7 +30,7 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from '../expenses/add-ex
     </div>
 
     @if (loading()) {
-      <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
+      <app-skeleton type="table"></app-skeleton>
     } @else if (items().length === 0) {
       <div class="empty-state">
         <div class="empty-icon-wrap amber">
@@ -264,9 +266,9 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from '../expenses/add-ex
         }
       </div>
     }
+    </div>
   `,
   styles: [`
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .header-row {
       display: flex; justify-content: flex-end; align-items: center;
       margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);
@@ -423,6 +425,7 @@ export class RecurringPageComponent implements OnInit {
   private service = inject(RecurringService);
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
+  private cdr = inject(ChangeDetectorRef);
 
   items = signal<RecurringTransaction[]>([]);
   loading = signal(true);
@@ -457,8 +460,8 @@ export class RecurringPageComponent implements OnInit {
 
   loadData(): void {
     this.service.getAll().subscribe({
-      next: (items) => { this.items.set(items); this.loading.set(false); },
-      error: () => this.loading.set(false)
+      next: (items) => { this.items.set(items); this.loading.set(false); this.cdr.detectChanges(); },
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 

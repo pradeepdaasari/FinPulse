@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -77,6 +77,7 @@ import { AdminService } from '../../core/services/admin.service';
 export class AddUserDialogComponent {
   private adminService = inject(AdminService);
   private dialogRef = inject(MatDialogRef<AddUserDialogComponent>);
+  private cdr = inject(ChangeDetectorRef);
 
   username = '';
   email = '';
@@ -91,11 +92,13 @@ export class AddUserDialogComponent {
     this.adminService.createUser(this.username, this.email, this.password).subscribe({
       next: (user) => {
         this.loading.set(false);
+        this.cdr.detectChanges();
         this.dialogRef.close(user);
       },
       error: (err) => {
         this.loading.set(false);
         this.error.set(err.error?.errors?.join(', ') || 'Failed to create user');
+        this.cdr.detectChanges();
       }
     });
   }

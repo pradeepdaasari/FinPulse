@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -170,6 +170,7 @@ export class UserManagementComponent implements OnInit {
   private authService = inject(AuthService);
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   users = signal<AppUser[]>([]);
@@ -204,6 +205,7 @@ export class UserManagementComponent implements OnInit {
     this.adminService.getUsers().subscribe(users => {
       this.users.set(users);
       this.loading.set(false);
+      this.cdr.detectChanges();
     });
   }
 
