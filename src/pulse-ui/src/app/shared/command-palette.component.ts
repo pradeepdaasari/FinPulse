@@ -257,7 +257,7 @@ export class CommandPaletteComponent {
   private handleAction(action: string): void {
     switch (action) {
       case 'add-expense':
-        import('../features/expenses/add-expense-dialog.component').then(m => {
+        import('../features/finance/expenses/add-expense-dialog.component').then(m => {
           this.dialog.open(m.AddExpenseDialogComponent, {
             width: '480px',
             data: { expense: null }

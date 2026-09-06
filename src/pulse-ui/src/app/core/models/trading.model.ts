@@ -80,6 +80,8 @@ export interface TradeEntry {
   regExchangeFees?: number;
   totalFees?: number;
   netPnl?: number;
+  plannedRisk?: number;
+  mistakeTags?: string[];
 }
 
 export type SpreadType = 'Single' | 'Vertical' | 'IronCondor' | 'Butterfly' | 'Calendar';
@@ -255,4 +257,19 @@ export interface TradingDashboard {
   bySetup: (BreakdownRow & { setupId: number; setupName: string })[];
   byOptionType: (BreakdownRow & { optionType: string })[];
   timeOfDay: (BreakdownRow & { bucket: string })[];
+  expectancy: number;
+  equityCurve: { date: string; cumPnl: number; drawdown: number }[];
+  maxDrawdown: number;
+  currentDrawdown: number;
+  revengeTradeCount: number;
+  revengeTradeCost: number;
+  oversizedTradeCount: number;
+  oversizedTradeCost: number;
+  winRateByTradeNumber: { tradeNumber: string; count: number; winRate: number; avgPnl: number }[];
+  averageR: number;
+  cumulativeR: number;
+  rDistribution: { bucket: string; count: number }[];
+  tradesWithRisk: number;
+  byEmotion: (BreakdownRow & { emotion: string })[];
+  byMistakeTag: (BreakdownRow & { tag: string })[];
 }

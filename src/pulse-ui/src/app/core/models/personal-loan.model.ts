@@ -13,6 +13,8 @@ export interface PersonalLoan {
   loanType: LoanType;
   isAutopay: boolean;
   paymentFrequency: 'Monthly' | 'Biweekly' | 'Weekly';
+  fundedBankAccountId?: number | null;
+  fundedBankAccountName?: string | null;
   createdAt: string;
   updatedAt: string;
 }

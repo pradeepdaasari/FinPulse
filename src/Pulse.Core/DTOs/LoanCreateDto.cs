@@ -29,4 +29,6 @@ public class LoanCreateDto
     public bool IsAutopay { get; set; }
 
     public PaymentFrequency PaymentFrequency { get; set; } = PaymentFrequency.Monthly;
+
+    public int? FundedBankAccountId { get; set; }
 }

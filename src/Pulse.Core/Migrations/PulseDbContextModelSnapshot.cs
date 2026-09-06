@@ -957,6 +957,9 @@ namespace Pulse.Core.Migrations
                     b.Property<int>("DurationMonths")
                         .HasColumnType("int");
 
+                    b.Property<int?>("FundedBankAccountId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsAutopay")
                         .HasColumnType("bit");
 
@@ -1451,6 +1454,10 @@ namespace Pulse.Core.Migrations
                     b.Property<int?>("LinkedExpenseId")
                         .HasColumnType("int");
 
+                    b.Property<string>("MistakeTags")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<int>("Multiplier")
                         .HasColumnType("int");
 
@@ -1464,6 +1471,9 @@ namespace Pulse.Core.Migrations
                     b.Property<string>("OptionType")
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
+
+                    b.Property<decimal?>("PlannedRisk")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal?>("Pnl")
                         .HasPrecision(18, 2)

@@ -68,7 +68,7 @@ interface WisdomItem {
             <mat-icon class="focus-icon">center_focus_strong</mat-icon>
             <span class="focus-title">Weekly Focus</span>
           </div>
-          <p class="focus-rule">{{ weeklyFocus()!.ruleText }}</p>
+          <p class="focus-rule" [innerHTML]="weeklyFocus()!.ruleText"></p>
           <div class="focus-dots">
             @for (d of [1,2,3,4,5]; track d) {
               <div class="focus-dot" [class.filled]="d <= (weeklyFocus()!.complianceDays ?? 0)">
