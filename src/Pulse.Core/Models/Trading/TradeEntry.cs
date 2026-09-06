@@ -46,6 +46,13 @@ public class TradeEntry
     public bool ExpiredWorthless { get; set; }
     public int Multiplier { get; set; } = 100;
 
+    // Risk & R-Multiple
+    public decimal? PlannedRisk { get; set; }
+
+    // Mistake tracking
+    [MaxLength(500)]
+    public string? MistakeTags { get; set; }
+
     // Fees & net P&L
     public decimal? CommissionFees { get; set; }
     public decimal? RegExchangeFees { get; set; }

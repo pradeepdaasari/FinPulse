@@ -23,7 +23,6 @@ public class PayoffStrategyService : IPayoffStrategyService
 
     private PayoffStrategyDto RunStrategy(List<DebtSnapshotDto> debts, decimal totalMonthlyBudget, string strategyName)
     {
-        // Create working copies of debt state
         var workingDebts = debts.Select((d, idx) => new WorkingDebt
         {
             Index = idx,
@@ -35,6 +34,7 @@ public class PayoffStrategyService : IPayoffStrategyService
             MinimumPayment = d.MinimumPayment,
             EffectiveApr = d.EffectiveApr,
             PromoEndDate = d.PromoEndDate,
+            DueDay = d.DueDay,
             TotalInterestPaid = 0,
             PaidOff = false,
             PayoffMonth = 0
@@ -44,6 +44,7 @@ public class PayoffStrategyService : IPayoffStrategyService
         decimal totalInterest = 0;
         int monthsToPayoff = 0;
         var startDate = DateTime.Today;
+        var monthlyPlan = new List<MonthlyActionStepDto>();
 
         for (int month = 1; month <= MaxMonths; month++)
         {
@@ -54,16 +55,12 @@ public class PayoffStrategyService : IPayoffStrategyService
             monthsToPayoff = month;
             var currentDate = startDate.AddMonths(month);
 
-            // Update effective APR based on promo expiry
             foreach (var debt in activeDebts)
             {
                 if (debt.PromoEndDate.HasValue && currentDate > debt.PromoEndDate.Value)
-                {
                     debt.EffectiveApr = debt.AprPercent;
-                }
             }
 
-            // Calculate interest for all active debts
             foreach (var debt in activeDebts)
             {
                 decimal interest = Math.Round(debt.Balance * debt.EffectiveApr / 100m / 12m, 2);
@@ -72,13 +69,24 @@ public class PayoffStrategyService : IPayoffStrategyService
                 totalInterest += interest;
             }
 
-            // Pay minimums on all debts
             decimal budgetRemaining = totalMonthlyBudget;
             foreach (var debt in activeDebts)
             {
                 decimal minPayment = Math.Min(debt.MinimumPayment, debt.Balance);
                 debt.Balance -= minPayment;
                 budgetRemaining -= minPayment;
+
+                if (month == 1)
+                {
+                    monthlyPlan.Add(new MonthlyActionStepDto
+                    {
+                        DebtName = debt.Name,
+                        Amount = minPayment,
+                        IsMinimum = true,
+                        Explanation = "Minimum payment — keeps you in good standing",
+                        DueDay = debt.DueDay
+                    });
+                }
 
                 if (debt.Balance < 0.01m)
                 {
@@ -88,21 +96,13 @@ public class PayoffStrategyService : IPayoffStrategyService
                 }
             }
 
-            // Sort remaining active debts by strategy
-            var targetDebts = workingDebts
-                .Where(d => !d.PaidOff)
-                .ToList();
+            var targetDebts = workingDebts.Where(d => !d.PaidOff).ToList();
 
             if (strategyName == "Avalanche")
-            {
                 targetDebts = targetDebts.OrderByDescending(d => d.EffectiveApr).ToList();
-            }
-            else // Snowball
-            {
+            else
                 targetDebts = targetDebts.OrderBy(d => d.Balance).ToList();
-            }
 
-            // Apply extra payments to target debts
             foreach (var debt in targetDebts)
             {
                 if (budgetRemaining <= 0)
@@ -112,6 +112,18 @@ public class PayoffStrategyService : IPayoffStrategyService
                 debt.Balance -= extraPayment;
                 budgetRemaining -= extraPayment;
 
+                if (month == 1 && extraPayment > 0)
+                {
+                    monthlyPlan.Add(new MonthlyActionStepDto
+                    {
+                        DebtName = debt.Name,
+                        Amount = extraPayment,
+                        IsMinimum = false,
+                        Explanation = "Extra payment — this is the one we're attacking first!",
+                        DueDay = debt.DueDay
+                    });
+                }
+
                 if (debt.Balance < 0.01m)
                 {
                     debt.Balance = 0;
@@ -121,7 +133,6 @@ public class PayoffStrategyService : IPayoffStrategyService
             }
         }
 
-        // Build payoff order
         foreach (var debt in workingDebts.OrderBy(d => d.PayoffMonth))
         {
             payoffOrder.Add(new DebtPayoffOrderDto
@@ -130,16 +141,32 @@ public class PayoffStrategyService : IPayoffStrategyService
                 Balance = debt.OriginalBalance,
                 AprPercent = debt.AprPercent,
                 PayoffMonth = debt.PayoffMonth,
-                TotalInterestPaid = debt.TotalInterestPaid
+                TotalInterestPaid = debt.TotalInterestPaid,
+                MinimumPayment = debt.MinimumPayment,
+                DueDay = debt.DueDay
             });
         }
+
+        var quickWins = workingDebts
+            .Where(d => d.PayoffMonth > 0 && (d.PayoffMonth <= 3 || d.OriginalBalance < 500))
+            .OrderBy(d => d.PayoffMonth)
+            .Select(d => new QuickWinDto
+            {
+                DebtName = d.Name,
+                Balance = d.OriginalBalance,
+                MonthsToPayoff = d.PayoffMonth
+            })
+            .ToList();
 
         return new PayoffStrategyDto
         {
             Name = strategyName,
             TotalInterest = totalInterest,
             MonthsToPayoff = monthsToPayoff,
-            DebtPayoffOrder = payoffOrder
+            DebtPayoffOrder = payoffOrder,
+            MonthlyPlan = monthlyPlan,
+            QuickWins = quickWins,
+            TotalMonthlyPayment = totalMonthlyBudget
         };
     }
 
@@ -155,6 +182,7 @@ public class PayoffStrategyService : IPayoffStrategyService
         public decimal EffectiveApr { get; set; }
         public DateTime? PromoEndDate { get; set; }
         public decimal TotalInterestPaid { get; set; }
+        public int DueDay { get; set; }
         public bool PaidOff { get; set; }
         public int PayoffMonth { get; set; }
     }

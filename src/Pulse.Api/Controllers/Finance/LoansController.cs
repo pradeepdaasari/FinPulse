@@ -27,18 +27,47 @@ public class LoansController : ControllerBase
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
     [HttpGet]
-    public async Task<ActionResult<List<PersonalLoan>>> GetAll()
+    public async Task<ActionResult> GetAll()
     {
         var loans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
-        return Ok(loans);
+        var bankAccountIds = loans.Where(l => l.FundedBankAccountId.HasValue).Select(l => l.FundedBankAccountId!.Value).Distinct().ToList();
+        var bankNames = bankAccountIds.Count > 0
+            ? await _db.BankAccounts.Where(a => bankAccountIds.Contains(a.Id) && a.UserId == UserId).ToDictionaryAsync(a => a.Id, a => a.AccountName)
+            : new Dictionary<int, string>();
+
+        var result = loans.Select(l => new
+        {
+            l.Id, l.LenderName, l.OriginalAmount, l.CurrentBalance, l.AprPercent,
+            l.DurationMonths, l.StartDate, l.MonthlyPayment, l.DueDay, l.LoanType,
+            l.IsAutopay, l.PaymentFrequency, l.FundedBankAccountId,
+            FundedBankAccountName = l.FundedBankAccountId.HasValue && bankNames.ContainsKey(l.FundedBankAccountId.Value)
+                ? bankNames[l.FundedBankAccountId.Value] : null,
+            l.CreatedAt, l.UpdatedAt
+        });
+        return Ok(result);
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<PersonalLoan>> GetById(int id)
+    public async Task<ActionResult> GetById(int id)
     {
         var loan = await _db.PersonalLoans.FirstOrDefaultAsync(l => l.Id == id && l.UserId == UserId);
         if (loan is null) return NotFound();
-        return Ok(loan);
+
+        string? bankName = null;
+        if (loan.FundedBankAccountId.HasValue)
+        {
+            var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == loan.FundedBankAccountId && a.UserId == UserId);
+            bankName = account?.AccountName;
+        }
+
+        return Ok(new
+        {
+            loan.Id, loan.LenderName, loan.OriginalAmount, loan.CurrentBalance, loan.AprPercent,
+            loan.DurationMonths, loan.StartDate, loan.MonthlyPayment, loan.DueDay, loan.LoanType,
+            loan.IsAutopay, loan.PaymentFrequency, loan.FundedBankAccountId,
+            FundedBankAccountName = bankName,
+            loan.CreatedAt, loan.UpdatedAt
+        });
     }
 
     [HttpPost]
@@ -61,6 +90,7 @@ public class LoansController : ControllerBase
             LoanType = dto.LoanType,
             IsAutopay = dto.IsAutopay,
             PaymentFrequency = dto.PaymentFrequency,
+            FundedBankAccountId = dto.FundedBankAccountId,
             UserId = UserId
         };
 
@@ -91,6 +121,7 @@ public class LoansController : ControllerBase
         loan.LoanType = dto.LoanType;
         loan.IsAutopay = dto.IsAutopay;
         loan.PaymentFrequency = dto.PaymentFrequency;
+        loan.FundedBankAccountId = dto.FundedBankAccountId;
 
         await _db.SaveChangesAsync();
 

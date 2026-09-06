@@ -203,6 +203,22 @@ import { NotificationService } from '../../core/services/notification.service';
     @media (max-width: 599px) {
       .page-banner { margin: -16px -16px 20px; padding: 32px 16px 24px; }
       .setups-grid { grid-template-columns: 1fr; }
+
+      .header-row button,
+      .empty-state button,
+      .setup-actions button {
+        min-width: 44px;
+        min-height: 44px;
+      }
+
+      .setup-card {
+        -webkit-tap-highlight-color: transparent;
+        &:active { transform: scale(0.98); }
+      }
+
+      .setup-card-header { flex-wrap: wrap; gap: 8px; }
+      .setup-desc { white-space: normal; }
+      .setup-actions { flex-wrap: wrap; }
     }
   `]
 })

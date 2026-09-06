@@ -5,82 +5,82 @@ import { adminGuard } from './core/guards/admin.guard';
 export const routes: Routes = [
   {
     path: 'login',
-    loadComponent: () => import('./features/login/login.component').then(m => m.LoginComponent)
+    loadComponent: () => import('./features/common/login/login.component').then(m => m.LoginComponent)
   },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   {
     path: 'dashboard',
-    loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
+    loadComponent: () => import('./features/common/dashboard/dashboard.component').then(m => m.DashboardComponent),
     canActivate: [authGuard]
   },
   {
     path: 'loans',
-    loadComponent: () => import('./features/loans/loan-list.component').then(m => m.LoanListComponent),
+    loadComponent: () => import('./features/finance/loans/loan-list.component').then(m => m.LoanListComponent),
     canActivate: [authGuard]
   },
   {
     path: 'loans/:id',
-    loadComponent: () => import('./features/loans/loan-detail.component').then(m => m.LoanDetailComponent),
+    loadComponent: () => import('./features/finance/loans/loan-detail.component').then(m => m.LoanDetailComponent),
     canActivate: [authGuard]
   },
   {
     path: 'cards',
-    loadComponent: () => import('./features/credit-cards/card-list.component').then(m => m.CardListComponent),
+    loadComponent: () => import('./features/finance/credit-cards/card-list.component').then(m => m.CardListComponent),
     canActivate: [authGuard]
   },
   {
     path: 'cards/:id',
-    loadComponent: () => import('./features/credit-cards/card-detail.component').then(m => m.CardDetailComponent),
+    loadComponent: () => import('./features/finance/credit-cards/card-detail.component').then(m => m.CardDetailComponent),
     canActivate: [authGuard]
   },
   {
     path: 'strategies',
-    loadComponent: () => import('./features/strategies/strategy-comparison.component').then(m => m.StrategyComparisonComponent),
+    loadComponent: () => import('./features/finance/strategies/strategy-comparison.component').then(m => m.StrategyComparisonComponent),
     canActivate: [authGuard]
   },
   {
     path: 'simulator',
-    loadComponent: () => import('./features/simulator/what-if.component').then(m => m.WhatIfComponent),
+    loadComponent: () => import('./features/finance/simulator/what-if.component').then(m => m.WhatIfComponent),
     canActivate: [authGuard]
   },
   {
     path: 'budget',
-    loadComponent: () => import('./features/budget/budget-page.component').then(m => m.BudgetPageComponent),
+    loadComponent: () => import('./features/finance/budget/budget-page.component').then(m => m.BudgetPageComponent),
     canActivate: [authGuard]
   },
   {
     path: 'accounts',
-    loadComponent: () => import('./features/bank-accounts/account-list.component').then(m => m.AccountListComponent),
+    loadComponent: () => import('./features/finance/bank-accounts/account-list.component').then(m => m.AccountListComponent),
     canActivate: [authGuard]
   },
   {
     path: 'accounts/:id',
-    loadComponent: () => import('./features/bank-accounts/account-detail.component').then(m => m.AccountDetailComponent),
+    loadComponent: () => import('./features/finance/bank-accounts/account-detail.component').then(m => m.AccountDetailComponent),
     canActivate: [authGuard]
   },
   {
     path: 'expenses',
-    loadComponent: () => import('./features/expenses/expenses-page.component').then(m => m.ExpensesPageComponent),
+    loadComponent: () => import('./features/finance/expenses/expenses-page.component').then(m => m.ExpensesPageComponent),
     canActivate: [authGuard]
   },
   {
     path: 'categories',
-    loadComponent: () => import('./features/categories/category-page.component').then(m => m.CategoryPageComponent),
+    loadComponent: () => import('./features/finance/categories/category-page.component').then(m => m.CategoryPageComponent),
     canActivate: [authGuard]
   },
   {
     path: 'payments',
-    loadComponent: () => import('./features/payments/payment-history.component').then(m => m.PaymentHistoryComponent),
+    loadComponent: () => import('./features/finance/payments/payment-history.component').then(m => m.PaymentHistoryComponent),
     canActivate: [authGuard]
   },
   {
     path: 'recurring',
-    loadComponent: () => import('./features/recurring/recurring-page.component').then(m => m.RecurringPageComponent),
+    loadComponent: () => import('./features/finance/recurring/recurring-page.component').then(m => m.RecurringPageComponent),
     canActivate: [authGuard]
   },
   {
     path: 'goals',
-    loadComponent: () => import('./features/goals/goals-page.component').then(m => m.GoalsPageComponent),
+    loadComponent: () => import('./features/finance/goals/goals-page.component').then(m => m.GoalsPageComponent),
     canActivate: [authGuard]
   },
   {
@@ -160,8 +160,13 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'settings',
+    loadComponent: () => import('./features/common/settings/settings.component').then(m => m.SettingsComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'admin/users',
-    loadComponent: () => import('./features/admin/user-management.component').then(m => m.UserManagementComponent),
+    loadComponent: () => import('./features/common/admin/user-management.component').then(m => m.UserManagementComponent),
     canActivate: [authGuard, adminGuard]
   }
 ];

@@ -102,7 +102,61 @@ import { toLocalDateString } from '../../core/utils/date-utils';
           <span class="stat-sub fees-sub">{{ feesPercent() | number:'1.1-1' }}% of gross P&L</span>
         }
       </div>
+      <div class="stat-card">
+        <span class="stat-value stat-large" [class.positive]="dashboard()!.expectancy >= 0" [class.negative]="dashboard()!.expectancy < 0">
+          {{ dashboard()!.expectancy | currency:'USD':'symbol':'1.0-0' }}
+        </span>
+        <span class="stat-label">Expectancy</span>
+        <span class="stat-sub">per trade</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value stat-large negative">{{ dashboard()!.maxDrawdown | number:'1.1-1' }}%</span>
+        <span class="stat-label">Max Drawdown</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value stat-large negative">{{ dashboard()!.currentDrawdown | number:'1.1-1' }}%</span>
+        <span class="stat-label">Current Drawdown</span>
+      </div>
+      @if (dashboard()!.tradesWithRisk > 0) {
+        <div class="stat-card">
+          <span class="stat-value stat-large" [class.positive]="dashboard()!.averageR >= 0" [class.negative]="dashboard()!.averageR < 0">
+            {{ dashboard()!.averageR | number:'1.2-2' }}R
+          </span>
+          <span class="stat-label">Avg R-Multiple</span>
+          <span class="stat-sub">{{ dashboard()!.tradesWithRisk }} trades with risk</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value stat-large" [class.positive]="dashboard()!.cumulativeR >= 0" [class.negative]="dashboard()!.cumulativeR < 0">
+            {{ dashboard()!.cumulativeR | number:'1.1-1' }}R
+          </span>
+          <span class="stat-label">Cumulative R</span>
+        </div>
+      }
     </div>
+
+    <!-- Revenge/Oversizing Alerts -->
+    @if (dashboard()!.revengeTradeCount > 0 || dashboard()!.oversizedTradeCount > 0) {
+      <div class="alert-row">
+        @if (dashboard()!.revengeTradeCount > 0) {
+          <div class="alert-card revenge-alert">
+            <mat-icon>warning</mat-icon>
+            <div class="alert-content">
+              <span class="alert-title">{{ dashboard()!.revengeTradeCount }} Revenge Trade{{ dashboard()!.revengeTradeCount > 1 ? 's' : '' }}</span>
+              <span class="alert-cost">Cost: {{ dashboard()!.revengeTradeCost | currency:'USD':'symbol':'1.0-0' }}</span>
+            </div>
+          </div>
+        }
+        @if (dashboard()!.oversizedTradeCount > 0) {
+          <div class="alert-card oversize-alert">
+            <mat-icon>scale</mat-icon>
+            <div class="alert-content">
+              <span class="alert-title">{{ dashboard()!.oversizedTradeCount }} Oversized Trade{{ dashboard()!.oversizedTradeCount > 1 ? 's' : '' }}</span>
+              <span class="alert-cost">Cost: {{ dashboard()!.oversizedTradeCost | currency:'USD':'symbol':'1.0-0' }}</span>
+            </div>
+          </div>
+        }
+      </div>
+    }
 
     <!-- Mentor Insight Card -->
     @if (insights().length > 0) {
@@ -132,6 +186,48 @@ import { toLocalDateString } from '../../core/utils/date-utils';
               [options]="monthlyChartOptions"
               type="bar">
             </canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+
+    <!-- Equity Curve Chart -->
+    @if (equityChartData()) {
+      <mat-card class="chart-card">
+        <mat-card-content>
+          <h3 class="section-title">Equity Curve</h3>
+          <div class="chart-container">
+            <canvas baseChart
+              [data]="equityChartData()!"
+              [options]="equityChartOptions"
+              type="line">
+            </canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+
+    <!-- Win Rate by Trade # in Session -->
+    @if (dashboard()!.winRateByTradeNumber.length > 0) {
+      <mat-card class="table-card" style="margin-bottom: 20px;">
+        <mat-card-content>
+          <h3 class="section-title">Win Rate by Trade # in Session</h3>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead>
+                <tr><th>Trade #</th><th>Count</th><th>Win Rate</th><th>Avg P&L</th></tr>
+              </thead>
+              <tbody>
+                @for (row of dashboard()!.winRateByTradeNumber; track row.tradeNumber) {
+                  <tr [class.worst-row]="row.winRate < 40">
+                    <td class="col-name">{{ row.tradeNumber }}</td>
+                    <td>{{ row.count }}</td>
+                    <td>{{ row.winRate | number:'1.0-0' }}%</td>
+                    <td [class.positive]="row.avgPnl >= 0" [class.negative]="row.avgPnl < 0">{{ row.avgPnl | currency:'USD':'symbol':'1.0-0' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
           </div>
         </mat-card-content>
       </mat-card>
@@ -236,6 +332,82 @@ import { toLocalDateString } from '../../core/utils/date-utils';
         </mat-card-content>
       </mat-card>
     </div>
+
+    <!-- Emotion & Mistake Tags -->
+    @if (dashboard()!.byEmotion.length > 0 || dashboard()!.byMistakeTag.length > 0) {
+      <div class="two-col">
+        @if (dashboard()!.byEmotion.length > 0) {
+          <mat-card class="table-card">
+            <mat-card-content>
+              <h3 class="section-title">Performance by Emotion</h3>
+              <div class="table-scroll">
+                <table class="data-table">
+                  <thead>
+                    <tr><th>Emotion</th><th>Trades</th><th>Win Rate</th><th>Avg P&L</th><th>Net P&L</th></tr>
+                  </thead>
+                  <tbody>
+                    @for (row of sortedEmotions(); track row.emotion) {
+                      <tr>
+                        <td class="col-name">{{ row.emotion }}</td>
+                        <td>{{ row.trades }}</td>
+                        <td>{{ row.winRate }}%</td>
+                        <td [class.positive]="row.avgPnl >= 0" [class.negative]="row.avgPnl < 0">{{ row.avgPnl | currency:'USD':'symbol':'1.0-0' }}</td>
+                        <td [class.positive]="row.pnl >= 0" [class.negative]="row.pnl < 0">{{ row.pnl | currency:'USD':'symbol':'1.0-0' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
+        @if (dashboard()!.byMistakeTag.length > 0) {
+          <mat-card class="table-card">
+            <mat-card-content>
+              <h3 class="section-title">Cost of Mistakes</h3>
+              <div class="table-scroll">
+                <table class="data-table">
+                  <thead>
+                    <tr><th>Mistake</th><th>Trades</th><th>Win Rate</th><th>Avg P&L</th><th>Net P&L</th></tr>
+                  </thead>
+                  <tbody>
+                    @for (row of sortedMistakes(); track row.tag) {
+                      <tr>
+                        <td class="col-name">{{ row.tag }}</td>
+                        <td>{{ row.trades }}</td>
+                        <td>{{ row.winRate }}%</td>
+                        <td [class.positive]="row.avgPnl >= 0" [class.negative]="row.avgPnl < 0">{{ row.avgPnl | currency:'USD':'symbol':'1.0-0' }}</td>
+                        <td [class.positive]="row.pnl >= 0" [class.negative]="row.pnl < 0" class="col-name">{{ row.pnl | currency:'USD':'symbol':'1.0-0' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    }
+
+    <!-- R-Distribution -->
+    @if (dashboard()!.rDistribution.length > 0) {
+      <mat-card class="table-card" style="margin-bottom: 20px;">
+        <mat-card-content>
+          <h3 class="section-title">R-Multiple Distribution</h3>
+          <div class="r-dist-row">
+            @for (bucket of dashboard()!.rDistribution; track bucket.bucket) {
+              <div class="r-bucket">
+                <div class="r-bar-wrap">
+                  <div class="r-bar" [style.height.%]="rBarHeight(bucket.count)" [class.r-positive]="bucket.bucket.includes('+') || bucket.bucket.includes('>')" [class.r-negative]="bucket.bucket.includes('-') || bucket.bucket.includes('<')"></div>
+                </div>
+                <span class="r-count">{{ bucket.count }}</span>
+                <span class="r-label">{{ bucket.bucket }}</span>
+              </div>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
 
     <!-- Call vs Put Comparison -->
     @if (callData() || putData()) {
@@ -411,6 +583,38 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     .today-val { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
     .today-lbl { font-size: 0.7rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; }
 
+    /* Alert Cards */
+    .alert-row { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .alert-card {
+      flex: 1; min-width: 200px; display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px; border-radius: var(--radius-md); font-weight: 600;
+    }
+    .alert-card mat-icon { font-size: 24px; width: 24px; height: 24px; flex-shrink: 0; }
+    .alert-content { display: flex; flex-direction: column; gap: 2px; }
+    .alert-title { font-size: 0.85rem; }
+    .alert-cost { font-size: 0.75rem; opacity: 0.8; }
+    .revenge-alert {
+      background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+      border: 1.5px solid var(--color-danger); color: var(--color-danger);
+    }
+    .oversize-alert {
+      background: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface));
+      border: 1.5px solid var(--color-warning); color: var(--color-warning);
+    }
+
+    /* R-Distribution */
+    .r-dist-row { display: flex; justify-content: center; gap: 12px; padding: 8px 0; }
+    .r-bucket { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+    .r-bar-wrap { width: 100%; height: 80px; display: flex; align-items: flex-end; justify-content: center; }
+    .r-bar {
+      width: 70%; min-height: 4px; border-radius: 4px 4px 0 0;
+      transition: height 0.3s ease;
+    }
+    .r-bar.r-positive { background: var(--color-success); }
+    .r-bar.r-negative { background: var(--color-danger); }
+    .r-count { font-size: 0.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .r-label { font-size: 0.65rem; color: var(--color-text-muted); font-weight: 600; text-align: center; }
+
     /* Mobile */
     @media (max-width: 599px) {
       .header-row { flex-direction: column; }
@@ -420,6 +624,11 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       .two-col { grid-template-columns: 1fr; }
       .today-row { grid-template-columns: 1fr; }
       .chart-container { height: 220px; }
+      .alert-row { flex-direction: column; }
+      .alert-card { min-width: 0; }
+      .r-dist-row { gap: 6px; }
+      .r-bar-wrap { height: 60px; }
+      .r-label { font-size: 0.55rem; }
     }
   `]
 })
@@ -494,6 +703,85 @@ export class TradingDashboardComponent implements OnInit {
     };
   });
 
+  equityChartData = computed<ChartConfiguration<'line'>['data'] | null>(() => {
+    const d = this.dashboard();
+    if (!d || d.equityCurve.length === 0) return null;
+    const labels = d.equityCurve.map(p => p.date);
+    const cumPnl = d.equityCurve.map(p => p.cumPnl);
+    const drawdown = d.equityCurve.map(p => -p.drawdown);
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Cumulative P&L',
+          data: cumPnl,
+          borderColor: 'rgba(52, 199, 89, 0.9)',
+          backgroundColor: 'rgba(52, 199, 89, 0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 0,
+          borderWidth: 2,
+        },
+        {
+          label: 'Drawdown',
+          data: drawdown,
+          borderColor: 'rgba(255, 59, 48, 0.6)',
+          backgroundColor: 'rgba(255, 59, 48, 0.08)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 0,
+          borderWidth: 1,
+        }
+      ]
+    };
+  });
+
+  equityChartOptions: ChartConfiguration<'line'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => {
+            const val = ctx.parsed.y ?? 0;
+            return ctx.dataset.label + ': ' + (val >= 0 ? '$' : '-$') + Math.abs(val).toLocaleString('en-US', { maximumFractionDigits: 0 });
+          }
+        }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
+      y: {
+        grid: { color: 'rgba(128, 128, 128, 0.1)' },
+        ticks: {
+          callback: (value) => {
+            const v = Number(value);
+            return (v >= 0 ? '$' : '-$') + Math.abs(v).toLocaleString('en-US', { maximumFractionDigits: 0 });
+          }
+        }
+      }
+    }
+  };
+
+  sortedEmotions = computed(() => {
+    const d = this.dashboard();
+    if (!d) return [];
+    return [...d.byEmotion].sort((a, b) => b.trades - a.trades);
+  });
+
+  sortedMistakes = computed(() => {
+    const d = this.dashboard();
+    if (!d) return [];
+    return [...d.byMistakeTag].sort((a, b) => a.pnl - b.pnl);
+  });
+
+  maxRBucketCount = computed(() => {
+    const d = this.dashboard();
+    if (!d) return 1;
+    return Math.max(1, ...d.rDistribution.map(b => b.count));
+  });
+
   monthlyChartOptions: ChartConfiguration<'bar'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
@@ -562,12 +850,28 @@ export class TradingDashboardComponent implements OnInit {
       }
     }
 
+    if (d.winRateByTradeNumber.length >= 2) {
+      const first = d.winRateByTradeNumber[0];
+      const last = d.winRateByTradeNumber[d.winRateByTradeNumber.length - 1];
+      if (first.winRate - last.winRate > 15) {
+        msgs.push(`Your win rate drops from ${first.winRate.toFixed(0)}% on trade #1 to ${last.winRate.toFixed(0)}% on later trades. Consider stopping after 3 trades.`);
+      }
+    }
+
+    if (d.revengeTradeCount > 0) {
+      msgs.push(`${d.revengeTradeCount} revenge trade${d.revengeTradeCount > 1 ? 's' : ''} cost you ${d.revengeTradeCost < 0 ? '-' : ''}$${Math.abs(d.revengeTradeCost).toLocaleString('en-US', { maximumFractionDigits: 0 })}. After a loss, walk away for 30 minutes.`);
+    }
+
     if (msgs.length === 0 || d.totalTrades >= 5) {
       msgs.push('Discipline is your edge. Every trade you log and review compounds your growth as a trader.');
     }
 
-    return msgs.slice(0, 3);
+    return msgs.slice(0, 5);
   });
+
+  rBarHeight(count: number): number {
+    return Math.max(5, (count / this.maxRBucketCount()) * 100);
+  }
 
   ngOnInit(): void {
     this.loadDashboard();

@@ -1,5 +1,5 @@
-import { Component, inject, signal, OnInit, ChangeDetectorRef } from '@angular/core';
-import { CommonModule, CurrencyPipe } from '@angular/common';
+import { Component, inject, signal, computed, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -12,6 +12,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatChipsModule } from '@angular/material/chips';
 import { TradingService } from '../../core/services/trading.service';
 import { toLocalISOString } from '../../core/utils/date-utils';
 import { BankAccountService } from '../../core/services/bank-account.service';
@@ -29,10 +30,10 @@ export interface TradeEntryDialogData {
   selector: 'app-trade-entry-dialog',
   standalone: true,
   imports: [
-    CommonModule, CurrencyPipe, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
+    CommonModule, CurrencyPipe, DecimalPipe, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatDatepickerModule,
     MatButtonModule, MatIconModule, MatButtonToggleModule, MatCheckboxModule, MatProgressSpinnerModule,
-    RichTextEditorComponent
+    MatChipsModule, RichTextEditorComponent
   ],
   providers: [provideNativeDateAdapter()],
   template: `
@@ -235,8 +236,8 @@ export interface TradeEntryDialogData {
           </div>
         }
 
-        <!-- Contracts, Multiplier, P&L -->
-        <div class="row-3col">
+        <!-- Contracts, Multiplier, P&L, Risk -->
+        <div class="row-4col">
           <mat-form-field appearance="outline">
             <mat-label>Qty</mat-label>
             <input matInput type="number" formControlName="quantity" min="1" (input)="calcPnl()">
@@ -248,6 +249,11 @@ export interface TradeEntryDialogData {
           <mat-form-field appearance="outline">
             <mat-label>P&L</mat-label>
             <input matInput type="number" formControlName="pnl" step="0.01">
+            <span matTextPrefix>$</span>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Risk</mat-label>
+            <input matInput type="number" formControlName="plannedRisk" step="1" min="0">
             <span matTextPrefix>$</span>
           </mat-form-field>
         </div>
@@ -306,15 +312,45 @@ export interface TradeEntryDialogData {
                     <span class="negative">−{{ maxRisk()! | currency }}</span>
                   </div>
                 }
+                @if (computedR() != null) {
+                  <div class="fee-chip r-chip" [class.positive-r]="computedR()! >= 0" [class.negative-r]="computedR()! < 0">
+                    <span class="fee-chip-label">R</span>
+                    <span>{{ computedR()! >= 0 ? '+' : '' }}{{ computedR()! | number:'1.1-1' }}R</span>
+                  </div>
+                }
               </div>
             </div>
           }
         }
 
-        <!-- Bottom row: checklist + notes + tags -->
+        <!-- Bottom row: checklist + emotion + mistakes + notes + tags -->
         <mat-checkbox formControlName="checklistCompleted" color="primary" class="checklist-check">
           Checklist completed
         </mat-checkbox>
+
+        <!-- Emotion at entry -->
+        <div class="emotion-section">
+          <label class="section-label">How are you feeling?</label>
+          <mat-button-toggle-group formControlName="emotionAtEntry" class="emotion-toggle">
+            @for (e of emotions; track e.value) {
+              <mat-button-toggle [value]="e.value" class="emotion-btn">
+                <span class="emotion-icon">{{ e.icon }}</span>
+                <span class="emotion-label">{{ e.label }}</span>
+              </mat-button-toggle>
+            }
+          </mat-button-toggle-group>
+        </div>
+
+        <!-- Mistake tags -->
+        <div class="mistake-section">
+          <label class="section-label">Mistakes (if any)</label>
+          <div class="mistake-chips">
+            @for (m of mistakeOptions; track m) {
+              <button type="button" class="mistake-chip" [class.selected]="selectedMistakes().includes(m)"
+                (click)="toggleMistake(m)">{{ m }}</button>
+            }
+          </div>
+        </div>
 
         <app-rich-text-editor label="Notes" formControlName="notes" height="80px"
           placeholder="Quick notes..."></app-rich-text-editor>
@@ -429,12 +465,48 @@ export interface TradeEntryDialogData {
     }
     .fee-chip .positive { color: var(--color-success); }
     .fee-chip .negative { color: var(--color-danger); }
+    .fee-chip.r-chip { border: 1.5px solid var(--color-stat-blue); background: transparent; font-weight: 700; }
+    .fee-chip.r-chip.positive-r { border-color: var(--color-success); color: var(--color-success); }
+    .fee-chip.r-chip.negative-r { border-color: var(--color-danger); color: var(--color-danger); }
 
     ::ng-deep .trade-form .mat-mdc-form-field-subscript-wrapper { display: none; }
     ::ng-deep .trade-form .mat-mdc-form-field-hint-wrapper { display: none; }
     ::ng-deep .options-section .mat-mdc-form-field-subscript-wrapper { display: block; }
 
-    .checklist-check { margin: 6px 0; }
+    .checklist-check { margin: 6px 0 2px; }
+
+    .section-label {
+      display: block; font-size: 0.75rem; font-weight: 600; color: var(--color-text-secondary);
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+    }
+    .emotion-section { margin: 4px 0 8px; }
+    .emotion-toggle { width: 100%; display: flex; }
+    .emotion-toggle .mat-button-toggle { flex: 1; }
+    ::ng-deep .emotion-toggle .mat-button-toggle-button {
+      display: flex; align-items: center; justify-content: center; padding: 8px 4px;
+    }
+    .emotion-btn {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 2px; width: 100%;
+    }
+    .emotion-icon { font-size: 1.3rem; line-height: 1; }
+    .emotion-label { font-size: 0.6rem; font-weight: 600; line-height: 1; }
+    ::ng-deep .emotion-toggle .mat-button-toggle-checked {
+      background: var(--color-stat-blue-bg) !important; color: var(--color-stat-blue) !important;
+    }
+
+    .mistake-section { margin: 0 0 8px; }
+    .mistake-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .mistake-chip {
+      padding: 4px 10px; border-radius: var(--radius-full); font-size: 0.72rem; font-weight: 600;
+      border: 1.5px solid var(--color-border); background: transparent; color: var(--color-text-secondary);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .mistake-chip:hover { border-color: var(--color-text-muted); }
+    .mistake-chip.selected {
+      background: var(--color-stat-red-bg); color: var(--color-danger);
+      border-color: var(--color-danger);
+    }
     .expired-check { margin: 4px 0 10px; display: block; }
     .expired-hint { font-size: 0.72rem; color: var(--color-text-muted); margin-left: 4px; }
     .max-risk-line { border-top: 1px dashed var(--color-border, #e0e0e0); padding-top: 4px; margin-top: 2px; }
@@ -459,6 +531,11 @@ export interface TradeEntryDialogData {
       .fee-chip { font-size: 0.7rem; padding: 4px 8px; }
       .options-section { padding: 10px 8px 6px; overflow: hidden; max-width: 100%; box-sizing: border-box; }
       .expired-hint { display: block; margin-left: 0; margin-top: 2px; }
+      .emotion-toggle { flex-wrap: wrap; }
+      .emotion-toggle .mat-button-toggle { flex: 0 0 calc(33.33% - 2px); }
+      .emotion-icon { font-size: 1.2rem; }
+      .emotion-label { font-size: 0.65rem; }
+      .mistake-chip { padding: 6px 12px; font-size: 0.75rem; min-height: 36px; display: flex; align-items: center; }
     }
   `]
 })
@@ -474,12 +551,24 @@ export class TradeEntryDialogComponent implements OnInit {
   loading = signal(true);
   saving = signal(false);
   feesManuallyEdited = false;
+  selectedMistakes = signal<string[]>(this.data?.trade?.mistakeTags ?? []);
+
+  emotions = [
+    { value: 'Confident', label: 'Confident', icon: '💪' },
+    { value: 'Fearful', label: 'Fearful', icon: '😰' },
+    { value: 'Greedy', label: 'Greedy', icon: '🤑' },
+    { value: 'Bored', label: 'Bored', icon: '😴' },
+    { value: 'Frustrated', label: 'Frustrated', icon: '😤' },
+    { value: 'Neutral', label: 'Neutral', icon: '😐' }
+  ];
+  mistakeOptions = ['FOMO', 'Revenge', 'Oversized', 'Chased Entry', 'No Setup', 'Held Too Long', 'Exited Early', 'Broke Rules'];
   brokerageAccounts = signal<BankAccount[]>([]);
   selectedAccount = signal<BankAccount | null>(null);
   estimatedFees = signal(0);
   netPnl = signal(0);
   balanceAfter = signal(0);
   maxRisk = signal<number | null>(null);
+  computedR = signal<number | null>(null);
 
   private getTimeStr(dateStr?: string): string {
     const d = dateStr ? new Date(dateStr) : new Date();
@@ -517,6 +606,8 @@ export class TradeEntryDialogComponent implements OnInit {
     commissionFees: [this.data?.trade?.commissionFees ?? null as number | null],
     regExchangeFees: [this.data?.trade?.regExchangeFees ?? null as number | null],
     checklistCompleted: [this.data?.trade?.checklistCompleted ?? false],
+    emotionAtEntry: [this.data?.trade?.emotionAtEntry ?? null as string | null],
+    plannedRisk: [this.data?.trade?.plannedRisk ?? null as number | null],
     notes: [this.data?.trade?.notes ?? ''],
     tags: [this.data?.trade?.tags?.join(', ') ?? '']
   });
@@ -595,6 +686,7 @@ export class TradeEntryDialogComponent implements OnInit {
       this.estimatedFees.set(0);
       this.netPnl.set(v.pnl ?? 0);
       if (!acct) this.feesManuallyEdited = false;
+      this.updateComputedR();
       return;
     }
     if (!this.feesManuallyEdited) {
@@ -617,6 +709,19 @@ export class TradeEntryDialogComponent implements OnInit {
     this.estimatedFees.set(Math.round(fees * 100) / 100);
     this.netPnl.set(Math.round(net * 100) / 100);
     this.balanceAfter.set(Math.round((acct.currentBalance + net) * 100) / 100);
+    this.updateComputedR();
+  }
+
+  private updateComputedR(): void {
+    const pnl = this.form.value.pnl;
+    const risk = this.form.value.plannedRisk;
+    if (pnl != null && risk != null && risk > 0) {
+      const fees = this.estimatedFees();
+      const netPnl = pnl - fees;
+      this.computedR.set(Math.round((netPnl / risk) * 100) / 100);
+    } else {
+      this.computedR.set(null);
+    }
   }
 
   private getLegsForSpread(spreadType: string | null | undefined): number {
@@ -625,6 +730,15 @@ export class TradeEntryDialogComponent implements OnInit {
       case 'Butterfly': return 3;
       case 'IronCondor': return 4;
       default: return 1;
+    }
+  }
+
+  toggleMistake(tag: string): void {
+    const current = this.selectedMistakes();
+    if (current.includes(tag)) {
+      this.selectedMistakes.set(current.filter(t => t !== tag));
+    } else {
+      this.selectedMistakes.set([...current, tag]);
     }
   }
 
@@ -646,7 +760,10 @@ export class TradeEntryDialogComponent implements OnInit {
       checklistCompleted: val.checklistCompleted ?? false,
       notes: val.notes || undefined,
       tags: val.tags ? val.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
-      isRevengeTrading: false,
+      isRevengeTrading: this.selectedMistakes().includes('Revenge'),
+      emotionAtEntry: val.emotionAtEntry || undefined,
+      plannedRisk: val.plannedRisk ?? undefined,
+      mistakeTags: this.selectedMistakes().length > 0 ? this.selectedMistakes() : undefined,
       checklistResponses: [],
       assetType: val.assetType ?? 'Options',
       optionType: val.assetType === 'Options' && val.spreadType !== 'IronCondor' ? val.optionType ?? undefined : undefined,

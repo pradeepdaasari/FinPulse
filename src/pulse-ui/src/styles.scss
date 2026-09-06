@@ -665,9 +665,31 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
     }
   }
 
-  // Slide toggles: larger
+  // Slide toggles: fix visibility and sizing
   .mat-mdc-slide-toggle {
     font-size: var(--text-sm) !important;
+  }
+  .mdc-switch__track {
+    background-color: var(--color-border) !important;
+    border: 1px solid var(--color-text-muted) !important;
+    opacity: 1 !important;
+  }
+  .mdc-switch--selected .mdc-switch__track {
+    background-color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+  }
+  .mdc-switch__handle-track .mdc-switch__handle {
+    width: 20px !important;
+    height: 20px !important;
+  }
+  .mdc-switch__handle::after {
+    background: #fff !important;
+  }
+  .mdc-switch--unselected .mdc-switch__handle::after {
+    background: var(--color-text-muted) !important;
+  }
+  .mdc-switch--selected .mdc-switch__handle::after {
+    background: #fff !important;
   }
 
   // Touch feedback: tap shrink on interactive cards

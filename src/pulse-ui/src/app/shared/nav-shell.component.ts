@@ -259,10 +259,10 @@ import { routeFadeAnimation } from './route-animations';
             <span class="search-hint">Search</span>
             <span class="search-kbd">&#8984;K</span>
           </button>
-          <div class="user-info">
+          <a class="user-info" routerLink="/settings" matTooltip="Settings & Profile">
             <mat-icon class="user-avatar">account_circle</mat-icon>
             <span class="user-email">{{ userEmail() }}</span>
-          </div>
+          </a>
           <button mat-icon-button (click)="logout()" aria-label="Logout" matTooltip="Logout">
             <mat-icon>logout</mat-icon>
           </button>
@@ -273,17 +273,38 @@ import { routeFadeAnimation } from './route-animations';
       </mat-sidenav-content>
 
     </mat-sidenav-container>
-    <button mat-fab class="global-fab" [class.kb-hidden]="keyboardOpen()"
+    <button mat-fab class="global-fab" [class.kb-hidden]="keyboardOpen()" [class.fab-hidden]="hideGlobalFab()"
       [matMenuTriggerFor]="isPhone() ? null : fabMenu"
       (click)="isPhone() && openQuickExpense()"
       aria-label="Quick actions">
       <mat-icon>add</mat-icon>
     </button>
     <mat-menu #fabMenu="matMenu" class="fab-menu" yPosition="above" xPosition="before">
-      <button mat-menu-item (click)="openExpenseDialog()">
-        <mat-icon class="menu-icon txn">swap_horiz</mat-icon>
-        <span>Add Transaction</span>
+      <button mat-menu-item (click)="openExpenseDialog('Expense')">
+        <mat-icon class="menu-icon expense">remove_circle_outline</mat-icon>
+        <span>Expense</span>
       </button>
+      <button mat-menu-item (click)="openExpenseDialog('Income')">
+        <mat-icon class="menu-icon income">add_circle_outline</mat-icon>
+        <span>Income</span>
+      </button>
+      <button mat-menu-item (click)="openExpenseDialog('Transfer')">
+        <mat-icon class="menu-icon transfer">swap_horiz</mat-icon>
+        <span>Transfer</span>
+      </button>
+      <button mat-menu-item (click)="openExpenseDialog('CardPayment')">
+        <mat-icon class="menu-icon card">credit_card</mat-icon>
+        <span>Card Payment</span>
+      </button>
+      <button mat-menu-item (click)="openExpenseDialog('LoanPayment')">
+        <mat-icon class="menu-icon loan">account_balance</mat-icon>
+        <span>Loan Payment</span>
+      </button>
+      <button mat-menu-item (click)="openExpenseDialog('Refund')">
+        <mat-icon class="menu-icon refund">undo</mat-icon>
+        <span>Refund</span>
+      </button>
+      <div class="fab-menu-divider"></div>
       <button mat-menu-item (click)="openTradeDialog()">
         <mat-icon class="menu-icon trade">candlestick_chart</mat-icon>
         <span>Log Trade</span>
@@ -531,7 +552,11 @@ import { routeFadeAnimation } from './route-animations';
       padding: 4px 12px 4px 8px;
       border-radius: var(--radius-full);
       background: var(--color-surface-secondary);
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.15s;
     }
+    .user-info:hover { background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-secondary)); }
     .user-avatar {
       font-size: 22px;
       width: 22px;
@@ -593,7 +618,7 @@ import { routeFadeAnimation } from './route-animations';
       }
       .sidenav {
         width: 280px;
-        background: rgba(255, 255, 255, 0.96);
+        background: var(--color-surface);
         border-right: none;
         box-shadow: var(--shadow-xl);
         z-index: 1002 !important;
@@ -669,6 +694,7 @@ import { routeFadeAnimation } from './route-animations';
       transform: scale(0.92);
       box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25) !important;
     }
+    .global-fab.fab-hidden { display: none !important; }
     .search-trigger {
       display: flex;
       align-items: center;
@@ -691,7 +717,13 @@ import { routeFadeAnimation } from './route-animations';
       border: 1px solid var(--color-border);
     }
 
-    .menu-icon.txn { color: #1565c0; }
+    .fab-menu-divider { height: 1px; background: var(--color-border); margin: 4px 16px; }
+    .menu-icon.expense { color: var(--color-danger); }
+    .menu-icon.income { color: var(--color-success); }
+    .menu-icon.transfer { color: var(--color-primary); }
+    .menu-icon.card { color: #5856D6; }
+    .menu-icon.loan { color: #007AFF; }
+    .menu-icon.refund { color: var(--color-warning); }
     .menu-icon.trade { color: #5856D6; }
     .menu-icon.metric { color: #d32f2f; }
 
@@ -831,6 +863,10 @@ export class NavShellComponent implements OnInit, OnDestroy {
   activeModule = signal<string>('finance');
   private currentUrl = signal('/dashboard');
   isExpensesRoute = computed(() => this.currentUrl().startsWith('/expenses'));
+  hideGlobalFab = computed(() => {
+    const url = this.currentUrl();
+    return url === '/loans' || url === '/cards' || url === '/accounts';
+  });
   userEmail = computed(() => this.authService.currentUser()?.email ?? '');
   isAdmin = computed(() => this.authService.isAdmin());
 
@@ -862,6 +898,7 @@ export class NavShellComponent implements OnInit, OnDestroy {
     '/trading/setups': 'My Setups',
     '/trading/playbook': 'Playbook & Rules',
     '/trading/weekly': 'Weekly Summary',
+    '/settings': 'Settings',
     '/admin': 'User Management',
     '/admin/users': 'User Management',
   };
@@ -969,7 +1006,7 @@ export class NavShellComponent implements OnInit, OnDestroy {
   }
 
   openExpenseDialog(preselectedType?: string): void {
-    import('../features/expenses/add-expense-dialog.component').then(m => {
+    import('../features/finance/expenses/add-expense-dialog.component').then(m => {
       const ref = this.dialog.open(m.AddExpenseDialogComponent, {
         width: '480px',
         maxWidth: '95vw',
@@ -977,6 +1014,10 @@ export class NavShellComponent implements OnInit, OnDestroy {
       });
       ref.afterClosed().subscribe((result: any) => {
         if (!result) return;
+        if (result.loanPayment) {
+          this.notify.success(`${result.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} payment recorded for ${result.debtName}`);
+          return;
+        }
         if (result.splits) {
           this.expenseService.createSplit(result.splits).subscribe({
             next: () => this.notify.success('Transaction saved'),

@@ -197,7 +197,9 @@ public class TradingController : ControllerBase
                 t.AssetType, t.OptionType, t.SpreadType,
                 t.StrikePrice, t.StrikePrice2, t.StrikePrice3, t.StrikePrice4,
                 t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.Multiplier, t.BankAccountId,
-                t.CommissionFees, t.RegExchangeFees, t.TotalFees, t.NetPnl
+                t.CommissionFees, t.RegExchangeFees, t.TotalFees, t.NetPnl,
+                t.PlannedRisk,
+                MistakeTags = t.MistakeTags != null ? JsonSerializer.Deserialize<string[]>(t.MistakeTags) : null
             })
             .ToListAsync();
         return Ok(trades);
@@ -219,7 +221,9 @@ public class TradingController : ControllerBase
                 t.AssetType, t.OptionType, t.SpreadType,
                 t.StrikePrice, t.StrikePrice2, t.StrikePrice3, t.StrikePrice4,
                 t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.Multiplier, t.BankAccountId,
-                t.CommissionFees, t.RegExchangeFees, t.TotalFees, t.NetPnl, t.CreatedAt
+                t.CommissionFees, t.RegExchangeFees, t.TotalFees, t.NetPnl, t.CreatedAt,
+                t.PlannedRisk,
+                MistakeTags = t.MistakeTags != null ? JsonSerializer.Deserialize<string[]>(t.MistakeTags) : null
             })
             .Take(20)
             .ToListAsync();
@@ -274,6 +278,8 @@ public class TradingController : ControllerBase
                 ExpiredWorthless = input.ExpiredWorthless,
                 Multiplier = input.Multiplier,
                 BankAccountId = input.BankAccountId,
+                PlannedRisk = input.PlannedRisk,
+                MistakeTags = input.MistakeTags != null ? JsonSerializer.Serialize(input.MistakeTags) : null,
                 ChecklistResponses = (input.ChecklistResponses ?? new()).Select(r => new ChecklistResponse
                 {
                     ChecklistItemId = r.ChecklistItemId,
@@ -346,6 +352,8 @@ public class TradingController : ControllerBase
             trade.ExpiredWorthless = input.ExpiredWorthless;
             trade.Multiplier = input.Multiplier;
             trade.BankAccountId = input.BankAccountId;
+            trade.PlannedRisk = input.PlannedRisk;
+            trade.MistakeTags = input.MistakeTags != null ? JsonSerializer.Serialize(input.MistakeTags) : null;
 
             _db.ChecklistResponses.RemoveRange(trade.ChecklistResponses);
             trade.ChecklistResponses = (input.ChecklistResponses ?? new()).Select(r => new ChecklistResponse
@@ -712,6 +720,130 @@ public class TradingController : ControllerBase
                 AvgPnl = Math.Round(g.Average(t => t.NetPnl ?? t.Pnl ?? 0), 2)
             }).ToList();
 
+        // --- Feature 1: Expectancy ---
+        var winRateDec = closed.Count == 0 ? 0m : (decimal)wins.Count / closed.Count;
+        var lossRateDec = 1m - winRateDec;
+        var expectancy = Math.Round((winRateDec * avgWin) - (lossRateDec * avgLoss), 2);
+
+        // --- Feature 2: Equity Curve + Drawdown ---
+        var dailyPnlSorted = closed.GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date)
+            .Select(g => new { Date = g.Key, Pnl = g.Sum(t => t.NetPnl ?? t.Pnl ?? 0) })
+            .OrderBy(d => d.Date).ToList();
+        var equityCurve = new List<object>();
+        decimal cumPnl = 0, peak = 0, maxDrawdown = 0;
+        foreach (var day in dailyPnlSorted)
+        {
+            cumPnl += day.Pnl;
+            peak = Math.Max(peak, cumPnl);
+            var dd = peak > 0 ? Math.Round((peak - cumPnl) / peak * 100, 2) : 0;
+            maxDrawdown = Math.Max(maxDrawdown, dd);
+            equityCurve.Add(new { Date = day.Date.ToString("yyyy-MM-dd"), CumulativePnl = Math.Round(cumPnl, 2), Drawdown = dd });
+        }
+        var currentDrawdown = peak > 0 ? Math.Round((peak - cumPnl) / peak * 100, 2) : 0m;
+
+        // --- Feature 3: Revenge/Oversizing Detection ---
+        var sortedTrades = closed.OrderBy(t => t.Date).ThenBy(t => t.EntryTime).ToList();
+        int revengeCount = 0; decimal revengeCost = 0;
+        int oversizedCount = 0; decimal oversizedCost = 0;
+        for (int i = 0; i < sortedTrades.Count; i++)
+        {
+            var trade = sortedTrades[i];
+            if (i > 0)
+            {
+                var prev = sortedTrades[i - 1];
+                if (prev.Pnl < 0 && TimeZoneInfo.ConvertTimeFromUtc(prev.Date, tz).Date == TimeZoneInfo.ConvertTimeFromUtc(trade.Date, tz).Date)
+                {
+                    if (TimeSpan.TryParse(trade.EntryTime, out var entryTs) && TimeSpan.TryParse(prev.ExitTime ?? prev.EntryTime, out var prevExitTs))
+                    {
+                        var gap = (entryTs - prevExitTs).TotalMinutes;
+                        if (gap >= 0 && gap <= 30)
+                        {
+                            revengeCount++;
+                            revengeCost += trade.NetPnl ?? trade.Pnl ?? 0;
+                        }
+                    }
+                }
+            }
+            if (i >= 5)
+            {
+                var trailingAvg = sortedTrades.Skip(Math.Max(0, i - 20)).Take(Math.Min(20, i)).Average(t => t.Quantity);
+                if (trade.Quantity > trailingAvg * 1.5m)
+                {
+                    oversizedCount++;
+                    oversizedCost += trade.NetPnl ?? trade.Pnl ?? 0;
+                }
+            }
+        }
+
+        // --- Feature 4: Win Rate by Trade # in Session ---
+        var winRateByTradeNumber = closed
+            .GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date)
+            .SelectMany(dayGroup =>
+            {
+                var dayTrades = dayGroup.OrderBy(t => t.Date).ThenBy(t => t.EntryTime).ToList();
+                return dayTrades.Select((t, idx) => new { TradeNumber = Math.Min(idx + 1, 5), t.Pnl });
+            })
+            .GroupBy(x => x.TradeNumber)
+            .Select(g => new
+            {
+                TradeNumber = g.Key == 5 ? "5+" : g.Key.ToString(),
+                Trades = g.Count(),
+                Wins = g.Count(x => x.Pnl > 0),
+                WinRate = g.Count() == 0 ? 0m : Math.Round((decimal)g.Count(x => x.Pnl > 0) / g.Count() * 100, 1),
+                AvgPnl = Math.Round(g.Average(x => x.Pnl ?? 0), 2)
+            })
+            .OrderBy(x => x.TradeNumber).ToList();
+
+        // --- Feature 5: Emotion + Mistake Tag Analytics ---
+        var byEmotion = closed.Where(t => !string.IsNullOrEmpty(t.EmotionAtEntry))
+            .GroupBy(t => t.EmotionAtEntry!)
+            .Select(g => new
+            {
+                Tag = g.Key,
+                Pnl = g.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+                Trades = g.Count(),
+                Wins = g.Count(t => t.Pnl > 0),
+                WinRate = g.Count() == 0 ? 0m : Math.Round((decimal)g.Count(t => t.Pnl > 0) / g.Count() * 100, 1),
+                AvgPnl = Math.Round(g.Average(t => t.NetPnl ?? t.Pnl ?? 0), 2)
+            }).ToList();
+
+        var byMistakeTag = closed
+            .Where(t => !string.IsNullOrEmpty(t.MistakeTags))
+            .SelectMany(t =>
+            {
+                try { var tags = System.Text.Json.JsonSerializer.Deserialize<string[]>(t.MistakeTags!); return (tags ?? Array.Empty<string>()).Select(tag => new { Tag = tag, Pnl = t.Pnl ?? 0, NetPnl = t.NetPnl ?? t.Pnl ?? 0 }); }
+                catch { return Enumerable.Empty<dynamic>(); }
+            })
+            .GroupBy(x => (string)x.Tag)
+            .Select(g => new
+            {
+                Tag = g.Key,
+                Pnl = g.Sum(x => (decimal)x.NetPnl),
+                Trades = g.Count(),
+                Wins = g.Count(x => (decimal)x.Pnl > 0),
+                WinRate = g.Count() == 0 ? 0m : Math.Round((decimal)g.Count(x => (decimal)x.Pnl > 0) / g.Count() * 100, 1),
+                AvgPnl = Math.Round(g.Average(x => (decimal)x.NetPnl), 2)
+            }).ToList();
+
+        // --- Feature 6: R-Multiple Tracking ---
+        var tradesWithR = closed.Where(t => t.PlannedRisk.HasValue && t.PlannedRisk > 0).ToList();
+        var rMultiples = tradesWithR.Select(t => new
+        {
+            R = Math.Round((t.NetPnl ?? t.Pnl ?? 0) / t.PlannedRisk!.Value, 2),
+            t.Date
+        }).ToList();
+        var avgR = rMultiples.Count > 0 ? Math.Round(rMultiples.Average(r => r.R), 2) : 0m;
+        var cumulativeR = rMultiples.Count > 0 ? Math.Round(rMultiples.Sum(r => r.R), 2) : 0m;
+        var rDistribution = new[]
+        {
+            new { Bucket = "< -2R", Count = rMultiples.Count(r => r.R < -2) },
+            new { Bucket = "-2R to -1R", Count = rMultiples.Count(r => r.R >= -2 && r.R < -1) },
+            new { Bucket = "-1R to 0R", Count = rMultiples.Count(r => r.R >= -1 && r.R < 0) },
+            new { Bucket = "0R to 1R", Count = rMultiples.Count(r => r.R >= 0 && r.R < 1) },
+            new { Bucket = "1R to 2R", Count = rMultiples.Count(r => r.R >= 1 && r.R < 2) },
+            new { Bucket = "> 2R", Count = rMultiples.Count(r => r.R >= 2) }
+        };
+
         return Ok(new
         {
             TotalPnl = closed.Sum(t => t.Pnl ?? 0),
@@ -722,6 +854,7 @@ public class TradingController : ControllerBase
             AvgWin = Math.Round(avgWin, 2),
             AvgLoss = Math.Round(avgLoss, 2),
             ProfitFactor = avgLoss == 0 ? 0m : Math.Round(wins.Sum(t => t.NetPnl ?? t.Pnl ?? 0) / Math.Abs(losses.Sum(t => t.NetPnl ?? t.Pnl ?? 0) == 0 ? 1 : losses.Sum(t => t.NetPnl ?? t.Pnl ?? 0)), 2),
+            Expectancy = expectancy,
             LargestWin = closed.Count == 0 ? 0m : closed.Max(t => t.NetPnl ?? t.Pnl ?? 0),
             LargestLoss = closed.Count == 0 ? 0m : closed.Min(t => t.NetPnl ?? t.Pnl ?? 0),
             BestDay = dailyPnl.Count == 0 ? 0m : dailyPnl.Max(d => d.Pnl),
@@ -731,6 +864,26 @@ public class TradingController : ControllerBase
             TradesToday = trades.Count(t => t.Date.Date == today),
             PnlToday = trades.Where(t => t.Date.Date == today).Sum(t => t.NetPnl ?? t.Pnl ?? 0),
             ChecklistCompliance = trades.Count == 0 ? 0m : Math.Round((decimal)trades.Count(t => t.ChecklistCompleted) / trades.Count * 100, 1),
+            // Equity Curve + Drawdown
+            EquityCurve = equityCurve,
+            MaxDrawdown = Math.Round(maxDrawdown, 2),
+            CurrentDrawdown = currentDrawdown,
+            // Revenge/Oversizing
+            RevengeTradeCount = revengeCount,
+            RevengeTradeCost = Math.Round(revengeCost, 2),
+            OversizedTradeCount = oversizedCount,
+            OversizedTradeCost = Math.Round(oversizedCost, 2),
+            // Win Rate by Trade #
+            WinRateByTradeNumber = winRateByTradeNumber,
+            // R-Multiple
+            AverageR = avgR,
+            CumulativeR = cumulativeR,
+            RDistribution = rDistribution,
+            TradesWithRisk = tradesWithR.Count,
+            // Tag Analytics
+            ByEmotion = byEmotion,
+            ByMistakeTag = byMistakeTag,
+            // Existing breakdowns
             MonthlyPnl = monthlyPnl,
             DayOfWeek = dayOfWeek,
             ByInstrument = byInstrument,
@@ -1120,6 +1273,8 @@ public class TradeEntryCreateDto
     public decimal? RegExchangeFees { get; set; }
     public decimal? TotalFees { get; set; }
     public decimal? NetPnl { get; set; }
+    public decimal? PlannedRisk { get; set; }
+    public string[]? MistakeTags { get; set; }
 }
 
 public class ChecklistResponseDto
