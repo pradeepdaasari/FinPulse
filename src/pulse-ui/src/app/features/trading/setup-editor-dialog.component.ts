@@ -31,7 +31,7 @@ export interface SetupEditorData {
     </h2>
 
     <mat-dialog-content>
-      <form [formGroup]="form" class="setup-form">
+      <form [formGroup]="form" class="setup-form" (submit)="$event.preventDefault()">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Setup Name</mat-label>
           <input matInput formControlName="name" placeholder="e.g., Morning Breakout, SPX Put Credit Spread">

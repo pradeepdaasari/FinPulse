@@ -172,7 +172,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
             <div class="limit-item">
               <mat-form-field appearance="outline">
                 <mat-label>Max Loss</mat-label>
-                <input matInput type="number" formControlName="maxLoss" min="0">
+                <input matInput type="number" inputmode="decimal" formControlName="maxLoss" min="0">
                 <span matTextPrefix>$&nbsp;</span>
               </mat-form-field>
             </div>

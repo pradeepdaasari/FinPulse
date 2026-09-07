@@ -37,7 +37,7 @@ import { CommissionChangeDialogComponent, CommissionChangeDialogData } from './c
       </div>
     </div>
     <mat-dialog-content>
-      <form [formGroup]="form" class="account-form">
+      <form [formGroup]="form" class="account-form" (submit)="$event.preventDefault()">
         <mat-form-field class="full-width">
           <mat-label>Account Name</mat-label>
           <input matInput formControlName="accountName" placeholder="e.g. Chase Checking, Ally Savings">
@@ -55,7 +55,7 @@ import { CommissionChangeDialogComponent, CommissionChangeDialogData } from './c
 
           <mat-form-field>
             <mat-label>Current Balance</mat-label>
-            <input matInput type="number" formControlName="currentBalance">
+            <input matInput type="number" inputmode="decimal" formControlName="currentBalance">
             <span matTextPrefix>$&nbsp;</span>
           </mat-form-field>
         </div>
@@ -70,12 +70,12 @@ import { CommissionChangeDialogComponent, CommissionChangeDialogData } from './c
             <div class="fees-grid">
               <mat-form-field appearance="outline">
                 <mat-label>Commission</mat-label>
-                <input matInput type="number" formControlName="optionsCommission" step="0.01" placeholder="0.65">
+                <input matInput type="number" inputmode="decimal" formControlName="optionsCommission" step="0.01" placeholder="0.65">
                 <mat-hint>e.g. 0.65</mat-hint>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Reg + Exchange</mat-label>
-                <input matInput type="number" formControlName="optionsRegFee" step="0.001" placeholder="0.03">
+                <input matInput type="number" inputmode="decimal" formControlName="optionsRegFee" step="0.001" placeholder="0.03">
                 <mat-hint>e.g. 0.03</mat-hint>
               </mat-form-field>
             </div>
@@ -83,12 +83,12 @@ import { CommissionChangeDialogComponent, CommissionChangeDialogData } from './c
             <div class="fees-grid">
               <mat-form-field appearance="outline">
                 <mat-label>Commission</mat-label>
-                <input matInput type="number" formControlName="futuresCommission" step="0.01" placeholder="2.25">
+                <input matInput type="number" inputmode="decimal" formControlName="futuresCommission" step="0.01" placeholder="2.25">
                 <mat-hint>e.g. 2.25</mat-hint>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Reg + Exchange</mat-label>
-                <input matInput type="number" formControlName="futuresRegFee" step="0.001" placeholder="0.02">
+                <input matInput type="number" inputmode="decimal" formControlName="futuresRegFee" step="0.001" placeholder="0.02">
                 <mat-hint>e.g. 0.02</mat-hint>
               </mat-form-field>
             </div>

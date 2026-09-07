@@ -100,7 +100,7 @@ const TIMEZONES: TimezoneOption[] = [
                 <mat-form-field appearance="outline">
                   <mat-label>Monthly Income</mat-label>
                   <span matPrefix>$&nbsp;</span>
-                  <input matInput type="number" [(ngModel)]="profileIncome" min="0" step="100">
+                  <input matInput type="number" inputmode="decimal" [(ngModel)]="profileIncome" min="0" step="100">
                   <mat-hint>Gross monthly income</mat-hint>
                 </mat-form-field>
                 <mat-form-field appearance="outline">
@@ -114,7 +114,7 @@ const TIMEZONES: TimezoneOption[] = [
                 <mat-form-field appearance="outline">
                   <mat-label>Net Pay Per Check</mat-label>
                   <span matPrefix>$&nbsp;</span>
-                  <input matInput type="number" [(ngModel)]="profileNetPay" min="0" step="50">
+                  <input matInput type="number" inputmode="decimal" [(ngModel)]="profileNetPay" min="0" step="50">
                   <mat-hint>Take-home amount per paycheck</mat-hint>
                 </mat-form-field>
                 <mat-form-field appearance="outline">

@@ -351,6 +351,8 @@ import { routeFadeAnimation } from './route-animations';
       width: 260px;
       background: var(--color-surface);
       border-right: 0.5px solid var(--color-sidebar-border);
+      backdrop-filter: blur(var(--glass-blur));
+      -webkit-backdrop-filter: blur(var(--glass-blur));
     }
 
     .sidenav-header {
@@ -748,8 +750,9 @@ import { routeFadeAnimation } from './route-animations';
       padding-bottom: env(safe-area-inset-bottom, 0px);
       box-sizing: border-box;
       background: var(--color-surface);
-      backdrop-filter: none;
-      border-top: 0.5px solid rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(var(--glass-blur));
+      -webkit-backdrop-filter: blur(var(--glass-blur));
+      border-top: 0.5px solid var(--color-border);
     }
 
     .tab-item {

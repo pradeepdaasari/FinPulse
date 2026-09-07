@@ -42,7 +42,7 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
       </div>
     </div>
     <mat-dialog-content>
-      <form [formGroup]="form" class="loan-form">
+      <form [formGroup]="form" class="loan-form" (submit)="$event.preventDefault(); save()">
         <div class="form-row">
           <mat-form-field>
             <mat-label>Loan Type</mat-label>
@@ -65,13 +65,13 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
         <div class="form-row">
           <mat-form-field>
             <mat-label>Loan Amount</mat-label>
-            <input matInput type="number" formControlName="originalAmount">
+            <input matInput type="number" inputmode="decimal" formControlName="originalAmount">
             <span matTextPrefix>$&nbsp;</span>
           </mat-form-field>
 
           <mat-form-field>
             <mat-label>Current Balance</mat-label>
-            <input matInput type="number" formControlName="currentBalance">
+            <input matInput type="number" inputmode="decimal" formControlName="currentBalance">
             <span matTextPrefix>$&nbsp;</span>
           </mat-form-field>
         </div>
@@ -86,24 +86,20 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
 
           <mat-form-field>
             <mat-label>Duration (Months)</mat-label>
-            <input matInput type="number" formControlName="durationMonths">
+            <input matInput type="number" inputmode="numeric" formControlName="durationMonths">
           </mat-form-field>
         </div>
 
         <div class="form-row">
           <mat-form-field>
-            <mat-label>Monthly EMI</mat-label>
-            <input matInput type="number" formControlName="monthlyPayment">
-            <span matTextPrefix>$&nbsp;</span>
+            <mat-label>Payment Frequency</mat-label>
+            <mat-select formControlName="paymentFrequency" (selectionChange)="paymentFrequencyValue.set($event.value)">
+              <mat-option value="Monthly">Monthly</mat-option>
+              <mat-option value="Biweekly">Biweekly</mat-option>
+              <mat-option value="Weekly">Weekly</mat-option>
+            </mat-select>
           </mat-form-field>
 
-          <mat-form-field>
-            <mat-label>APR %</mat-label>
-            <input matInput type="number" formControlName="aprPercent" step="0.01">
-          </mat-form-field>
-        </div>
-
-        <div class="form-row">
           <mat-form-field>
             <mat-label>Due Day of Month</mat-label>
             <mat-select formControlName="dueDay">
@@ -112,14 +108,18 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
               }
             </mat-select>
           </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field>
+            <mat-label>{{ emiLabel() }}</mat-label>
+            <input matInput type="number" inputmode="decimal" formControlName="monthlyPayment">
+            <span matTextPrefix>$&nbsp;</span>
+          </mat-form-field>
 
           <mat-form-field>
-            <mat-label>Payment Frequency</mat-label>
-            <mat-select formControlName="paymentFrequency">
-              <mat-option value="Monthly">Monthly</mat-option>
-              <mat-option value="Biweekly">Biweekly</mat-option>
-              <mat-option value="Weekly">Weekly</mat-option>
-            </mat-select>
+            <mat-label>APR %</mat-label>
+            <input matInput type="number" inputmode="decimal" formControlName="aprPercent" step="0.01">
           </mat-form-field>
         </div>
 
@@ -138,38 +138,31 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
               </mat-option>
             }
           </mat-select>
-          <mat-hint>Which bank account received the loan funds</mat-hint>
         </mat-form-field>
 
-        <mat-slide-toggle formControlName="isAutopay" color="primary">
-          This loan is on autopay
-        </mat-slide-toggle>
-
-        <div class="promo-section">
-          <mat-slide-toggle formControlName="hasPromo" color="primary">
-            This loan has a promotional rate
+        <div class="toggle-row">
+          <mat-slide-toggle formControlName="isAutopay" color="primary">
+            Autopay
           </mat-slide-toggle>
-
-          @if (form.get('hasPromo')?.value) {
-            <div class="promo-fields">
-              <div class="form-row">
-                <mat-form-field>
-                  <mat-label>Promo APR %</mat-label>
-                  <input matInput type="number" formControlName="promoAprPercent" step="0.01">
-                  <mat-hint>Current promotional rate</mat-hint>
-                </mat-form-field>
-
-                <mat-form-field>
-                  <mat-label>Promo Ends On</mat-label>
-                  <input matInput [matDatepicker]="promoPicker" formControlName="promoEndDate">
-                  <mat-datepicker-toggle matIconSuffix [for]="promoPicker"></mat-datepicker-toggle>
-                  <mat-datepicker #promoPicker></mat-datepicker>
-                  <mat-hint>When regular APR kicks in</mat-hint>
-                </mat-form-field>
-              </div>
-            </div>
-          }
+          <mat-slide-toggle formControlName="hasPromo" color="primary">
+            Promotional rate
+          </mat-slide-toggle>
         </div>
+
+        @if (form.get('hasPromo')?.value) {
+          <div class="form-row">
+            <mat-form-field>
+              <mat-label>Promo APR %</mat-label>
+              <input matInput type="number" inputmode="decimal" formControlName="promoAprPercent" step="0.01">
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Promo Ends On</mat-label>
+              <input matInput [matDatepicker]="promoPicker" formControlName="promoEndDate">
+              <mat-datepicker-toggle matIconSuffix [for]="promoPicker"></mat-datepicker-toggle>
+              <mat-datepicker #promoPicker></mat-datepicker>
+            </mat-form-field>
+          </div>
+        }
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end" class="dialog-actions">
@@ -209,15 +202,11 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
     .full-width {
       width: 100%;
     }
-    .promo-section {
-      margin-top: var(--spacing-md);
-      padding: var(--spacing-md);
-      background: var(--color-bg);
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--color-border);
-    }
-    .promo-fields {
-      margin-top: var(--spacing-md);
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-lg);
+      flex-wrap: wrap;
     }
     .category-search-box {
       display: flex; align-items: center; gap: 8px;
@@ -268,6 +257,13 @@ export class AddLoanDialogComponent implements OnInit {
   filteredBankSources = computed(() => {
     const q = this.bankSearch().toLowerCase();
     return q ? this.bankSources().filter(s => s.name.toLowerCase().includes(q)) : this.bankSources();
+  });
+  paymentFrequencyValue = signal('Monthly');
+  emiLabel = computed(() => {
+    const freq = this.paymentFrequencyValue();
+    if (freq === 'Biweekly') return 'Biweekly Payment';
+    if (freq === 'Weekly') return 'Weekly Payment';
+    return 'Monthly EMI';
   });
 
   ngOnInit(): void {

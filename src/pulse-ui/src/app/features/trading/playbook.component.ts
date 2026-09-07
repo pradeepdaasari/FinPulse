@@ -121,21 +121,21 @@ interface WisdomItem {
             <div class="limit-item">
               <mat-form-field appearance="outline">
                 <mat-label>Max Trades / Day</mat-label>
-                <input matInput type="number" [(ngModel)]="maxTrades" min="1" max="20">
+                <input matInput type="number" inputmode="numeric" [(ngModel)]="maxTrades" min="1" max="20">
                 <mat-icon matPrefix>bar_chart</mat-icon>
               </mat-form-field>
             </div>
             <div class="limit-item">
               <mat-form-field appearance="outline">
                 <mat-label>Max Daily Loss</mat-label>
-                <input matInput type="number" [(ngModel)]="maxLoss" min="0" step="50">
+                <input matInput type="number" inputmode="decimal" [(ngModel)]="maxLoss" min="0" step="50">
                 <span matTextPrefix>$&nbsp;</span>
               </mat-form-field>
             </div>
             <div class="limit-item">
               <mat-form-field appearance="outline">
                 <mat-label>Stop After N Consecutive Losses</mat-label>
-                <input matInput type="number" [(ngModel)]="stopAfterLosses" min="1" max="10">
+                <input matInput type="number" inputmode="numeric" [(ngModel)]="stopAfterLosses" min="1" max="10">
                 <mat-icon matPrefix>block</mat-icon>
               </mat-form-field>
             </div>

@@ -10,6 +10,43 @@ html {
     typography: Roboto,
     density: 0,
   ));
+  @include mat.slide-toggle-overrides((
+    // iOS-style: 51×31 track, 27px handle inside with 2px inset
+    track-width: 51px,
+    track-height: 31px,
+    track-shape: 999px,
+    track-outline-color: transparent,
+    track-outline-width: 0px,
+    unselected-track-color: #e5e5ea,
+    unselected-hover-track-color: #dddde2,
+    unselected-focus-track-color: #dddde2,
+    unselected-pressed-track-color: #d6d6db,
+    selected-track-color: #34c759,
+    selected-hover-track-color: #2db84f,
+    selected-focus-track-color: #34c759,
+    selected-pressed-track-color: #2db84f,
+    selected-track-outline-color: transparent,
+    selected-track-outline-width: 0px,
+    handle-width: 27px,
+    handle-height: 27px,
+    handle-shape: 999px,
+    unselected-handle-size: 27px,
+    selected-handle-size: 27px,
+    pressed-handle-size: 27px,
+    with-icon-handle-size: 27px,
+    unselected-handle-color: #fff,
+    unselected-hover-handle-color: #fff,
+    unselected-focus-handle-color: #fff,
+    unselected-pressed-handle-color: #fff,
+    selected-handle-color: #fff,
+    selected-hover-handle-color: #fff,
+    selected-focus-handle-color: #fff,
+    selected-pressed-handle-color: #fff,
+    handle-surface-color: #fff,
+    handle-elevation-shadow: (0 1px 4px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.06)),
+    visible-track-opacity: 1,
+    hidden-track-opacity: 0,
+  ));
 }
 
 :root {
@@ -35,12 +72,17 @@ html {
   --color-primary-dark: #0062CC;
   --color-accent: #5856D6;
 
-  // Surfaces — warm layered grays
-  --color-bg: #F2F2F7;
-  --color-surface: #FFFFFF;
-  --color-surface-secondary: #F9F9FB;
-  --color-surface-hover: #F5F5FA;
-  --color-border: rgba(0, 0, 0, 0.06);
+  // Surfaces — frosted glass
+  --color-bg: #F0F0F5;
+  --color-surface: rgba(255, 255, 255, 0.72);
+  --color-surface-secondary: rgba(249, 249, 251, 0.60);
+  --color-surface-hover: rgba(245, 245, 250, 0.80);
+  --color-border: rgba(255, 255, 255, 0.35);
+
+  // Glass tokens
+  --glass-blur: 20px;
+  --glass-border: 1px solid rgba(255, 255, 255, 0.35);
+  --glass-shadow: 0 2px 16px rgba(0, 0, 0, 0.06), 0 0 1px rgba(0, 0, 0, 0.08);
 
   // Text hierarchy
   --color-text: #1D1D1F;
@@ -55,12 +97,12 @@ html {
   --color-danger: #FF3B30;
   --color-danger-bg: rgba(255, 59, 48, 0.08);
 
-  // Shadows — visible, confident depth
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.10), 0 4px 10px rgba(0, 0, 0, 0.06);
-  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.06);
-  --shadow-float: 0 24px 80px rgba(0, 0, 0, 0.16), 0 8px 24px rgba(0, 0, 0, 0.08);
+  // Shadows — softened for glass surfaces
+  --shadow-sm: 0 1px 6px rgba(0, 0, 0, 0.04), 0 0 1px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 0 1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.06);
+  --shadow-xl: 0 12px 36px rgba(0, 0, 0, 0.10), 0 0 1px rgba(0, 0, 0, 0.06);
+  --shadow-float: 0 20px 60px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.06);
 
   // Radii — generous Apple-like rounding
   --radius-sm: 10px;
@@ -194,9 +236,11 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
 
 .mat-mdc-card {
   border-radius: var(--radius-md) !important;
-  box-shadow: var(--shadow-sm) !important;
-  border: none !important;
+  box-shadow: var(--glass-shadow) !important;
+  border: var(--glass-border) !important;
   background: var(--color-surface) !important;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   transition: box-shadow var(--transition-base);
 
   @media (hover: hover) {
@@ -315,6 +359,10 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
     border-radius: var(--radius-xl) !important;
     box-shadow: var(--shadow-float) !important;
     padding: var(--spacing-lg) !important;
+    background: rgba(255, 255, 255, 0.82) !important;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
   }
 }
 
@@ -504,6 +552,18 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
   padding: 0 !important;
 }
 
+// ─── Glass surface helpers ──────────────────────────────────────────────────
+
+.stat-card,
+.loan-card, .cc-card, .account-card,
+.budget-card, .recurring-card, .txn-card,
+.goal-card, .setup-card, .trade-card,
+.metric-card, .workout-card,
+.promo-section, .fees-section {
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
 // ─── Scrollbar ───────────────────────────────────────────────────────────────
 
 ::-webkit-scrollbar {
@@ -665,33 +725,6 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
     }
   }
 
-  // Slide toggles: fix visibility and sizing
-  .mat-mdc-slide-toggle {
-    font-size: var(--text-sm) !important;
-  }
-  .mdc-switch__track {
-    background-color: var(--color-border) !important;
-    border: 1px solid var(--color-text-muted) !important;
-    opacity: 1 !important;
-  }
-  .mdc-switch--selected .mdc-switch__track {
-    background-color: var(--color-primary) !important;
-    border-color: var(--color-primary) !important;
-  }
-  .mdc-switch__handle-track .mdc-switch__handle {
-    width: 20px !important;
-    height: 20px !important;
-  }
-  .mdc-switch__handle::after {
-    background: #fff !important;
-  }
-  .mdc-switch--unselected .mdc-switch__handle::after {
-    background: var(--color-text-muted) !important;
-  }
-  .mdc-switch--selected .mdc-switch__handle::after {
-    background: #fff !important;
-  }
-
   // Touch feedback: tap shrink on interactive cards
   .loan-card, .cc-card, .account-card, .budget-card,
   .recurring-card, .txn-card, .goal-card, .setup-card,
@@ -723,6 +756,19 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
 
 .section-icon {
   display: none;
+}
+
+// ─── Slide toggles ──────────────────────────────────────────────────────────
+// Token overrides in the html{} block above via mat.slide-toggle-overrides()
+// Structural fixes that tokens can't control:
+.mat-mdc-slide-toggle {
+  .mdc-switch__icons { display: none !important; }
+  .mdc-switch__handle-track {
+    width: calc(100% - 27px) !important;
+  }
+  .mdc-switch__handle {
+    margin: 0 2px !important;
+  }
 }
 
 // ─── Fix filled form fields — remove gray backgrounds ─────────────────────────

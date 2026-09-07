@@ -57,7 +57,7 @@ export interface ExpenseDialogData {
       @if (loading()) {
         <div class="loading-container"><mat-spinner diameter="28"></mat-spinner></div>
       } @else {
-      <form [formGroup]="form" class="expense-form">
+      <form [formGroup]="form" class="expense-form" (submit)="$event.preventDefault()">
         <div class="txn-icons">
           <div class="txn-icon-item" [class.active]="form.value.transactionType === 'Expense'" (click)="form.patchValue({transactionType: 'Expense'})">
             <div class="txn-circle expense"><mat-icon>remove_circle_outline</mat-icon></div>
@@ -168,7 +168,7 @@ export interface ExpenseDialogData {
         @if (form.value.transactionType !== 'LoanPayment' && form.value.transactionType !== 'CardPayment') {
           <mat-form-field appearance="outline">
             <mat-label>{{ form.value.transactionType === 'Transfer' ? 'Transfer Amount' : form.value.transactionType === 'Refund' ? 'Refund Amount' : 'Amount' }}</mat-label>
-            <input matInput type="number" formControlName="amount" min="0.01" step="0.01">
+            <input matInput type="number" inputmode="decimal" formControlName="amount" min="0.01" step="0.01">
             <span matTextPrefix>$&nbsp;</span>
           </mat-form-field>
         }
@@ -254,7 +254,7 @@ export interface ExpenseDialogData {
 
             <mat-form-field appearance="outline">
               <mat-label>Payment Amount</mat-label>
-              <input matInput type="number" formControlName="amount" min="0.01" step="0.01">
+              <input matInput type="number" inputmode="decimal" formControlName="amount" min="0.01" step="0.01">
               <span matTextPrefix>$&nbsp;</span>
             </mat-form-field>
 
@@ -323,7 +323,7 @@ export interface ExpenseDialogData {
 
             <mat-form-field appearance="outline">
               <mat-label>Payment Amount</mat-label>
-              <input matInput type="number" formControlName="amount" min="0.01" step="0.01">
+              <input matInput type="number" inputmode="decimal" formControlName="amount" min="0.01" step="0.01">
               <span matTextPrefix>$&nbsp;</span>
             </mat-form-field>
 
@@ -452,7 +452,7 @@ export interface ExpenseDialogData {
             </mat-form-field>
             <mat-form-field appearance="outline" class="split-amt">
               <mat-label>Amount</mat-label>
-              <input matInput type="number" formControlName="amount" min="0.01" step="0.01">
+              <input matInput type="number" inputmode="decimal" formControlName="amount" min="0.01" step="0.01">
               <span matTextPrefix>$&nbsp;</span>
             </mat-form-field>
             <button mat-icon-button color="warn" (click)="removeSplitRow($index)" type="button" [disabled]="splitRows.length <= 2">

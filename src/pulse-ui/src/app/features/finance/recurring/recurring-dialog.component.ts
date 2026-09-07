@@ -41,7 +41,7 @@ import { RecurringTransaction } from '../../../core/models/recurring.model';
       @if (loading()) {
         <div class="loading-container"><mat-spinner diameter="28"></mat-spinner></div>
       } @else {
-      <form [formGroup]="form" class="expense-form">
+      <form [formGroup]="form" class="expense-form" (submit)="$event.preventDefault()">
         <div class="txn-icons">
           <div class="txn-icon-item" [class.active]="form.value.transactionType === 0" (click)="form.patchValue({transactionType: 0}); onTypeChange()">
             <div class="txn-circle expense"><mat-icon>remove_circle_outline</mat-icon></div>
@@ -60,7 +60,7 @@ import { RecurringTransaction } from '../../../core/models/recurring.model';
 
         <mat-form-field appearance="outline">
           <mat-label>Amount</mat-label>
-          <input matInput type="number" formControlName="amount" min="0.01" step="0.01">
+          <input matInput type="number" inputmode="decimal" formControlName="amount" min="0.01" step="0.01">
           <span matTextPrefix>$&nbsp;</span>
         </mat-form-field>
 

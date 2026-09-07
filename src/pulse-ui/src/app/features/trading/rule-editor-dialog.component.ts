@@ -31,7 +31,7 @@ export interface RuleEditorDialogData {
       {{ data?.rule ? 'Edit' : 'Add' }} Trading Rule
     </h2>
     <mat-dialog-content>
-      <form [formGroup]="form" class="rule-form">
+      <form [formGroup]="form" class="rule-form" (submit)="$event.preventDefault()">
         <app-rich-text-editor label="Rule" formControlName="text" height="100px"
           placeholder="e.g., Never enter without a defined stop loss"></app-rich-text-editor>
 

@@ -28,7 +28,7 @@ export interface MarkPaidDialogData {
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Amount Paid</mat-label>
         <span matTextPrefix>$&nbsp;</span>
-        <input matInput type="number" [(ngModel)]="amount" step="0.01" min="0.01">
+        <input matInput type="number" inputmode="decimal" [(ngModel)]="amount" step="0.01" min="0.01">
       </mat-form-field>
     </mat-dialog-content>
     <mat-dialog-actions align="end">

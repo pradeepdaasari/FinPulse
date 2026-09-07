@@ -39,7 +39,7 @@ import { CreditCardService } from '../../../core/services/credit-card.service';
       </div>
     </div>
     <mat-dialog-content>
-      <form [formGroup]="form" class="card-form">
+      <form [formGroup]="form" class="card-form" (submit)="$event.preventDefault()">
         <mat-form-field class="full-width">
           <mat-label>Card Name</mat-label>
           <input matInput formControlName="cardName" placeholder="e.g. Chase Sapphire, Amex Gold">
@@ -48,13 +48,13 @@ import { CreditCardService } from '../../../core/services/credit-card.service';
         <div class="form-row">
           <mat-form-field>
             <mat-label>Credit Limit</mat-label>
-            <input matInput type="number" formControlName="creditLimit">
+            <input matInput type="number" inputmode="decimal" formControlName="creditLimit">
             <span matTextPrefix>$&nbsp;</span>
           </mat-form-field>
 
           <mat-form-field>
             <mat-label>Statement Balance</mat-label>
-            <input matInput type="number" formControlName="currentBalance">
+            <input matInput type="number" inputmode="decimal" formControlName="currentBalance">
             <span matTextPrefix>$&nbsp;</span>
           </mat-form-field>
         </div>
@@ -62,7 +62,7 @@ import { CreditCardService } from '../../../core/services/credit-card.service';
         <div class="form-row">
           <mat-form-field>
             <mat-label>Minimum Payment</mat-label>
-            <input matInput type="number" formControlName="minimumPayment">
+            <input matInput type="number" inputmode="decimal" formControlName="minimumPayment">
             <span matTextPrefix>$&nbsp;</span>
           </mat-form-field>
         </div>
@@ -70,7 +70,7 @@ import { CreditCardService } from '../../../core/services/credit-card.service';
         <div class="form-row">
           <mat-form-field>
             <mat-label>APR %</mat-label>
-            <input matInput type="number" formControlName="aprPercent" step="0.01">
+            <input matInput type="number" inputmode="decimal" formControlName="aprPercent" step="0.01">
           </mat-form-field>
 
           <mat-form-field>
@@ -85,7 +85,7 @@ import { CreditCardService } from '../../../core/services/credit-card.service';
 
         <mat-form-field class="full-width">
           <mat-label>Billing Cycle Days</mat-label>
-          <input matInput type="number" formControlName="billingCycleDays">
+          <input matInput type="number" inputmode="numeric" formControlName="billingCycleDays">
           <mat-hint>Number of days in your billing cycle (typically 28-31)</mat-hint>
         </mat-form-field>
 
@@ -103,7 +103,7 @@ import { CreditCardService } from '../../../core/services/credit-card.service';
               <div class="form-row">
                 <mat-form-field>
                   <mat-label>Promo APR %</mat-label>
-                  <input matInput type="number" formControlName="promoAprPercent" step="0.01">
+                  <input matInput type="number" inputmode="decimal" formControlName="promoAprPercent" step="0.01">
                   <mat-hint>Current promotional rate</mat-hint>
                 </mat-form-field>
 

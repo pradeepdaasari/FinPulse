@@ -51,7 +51,7 @@ interface MetricConfig {
           <div class="value-row">
             <mat-form-field appearance="outline" class="value-field">
               <mat-label>Value</mat-label>
-              <input matInput type="number" [(ngModel)]="value" step="0.1">
+              <input matInput type="number" inputmode="decimal" [(ngModel)]="value" step="0.1">
             </mat-form-field>
             <div class="unit-badge">{{ getUnit() }}</div>
           </div>
