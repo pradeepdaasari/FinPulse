@@ -321,7 +321,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
 
                     <mat-form-field appearance="outline">
                       <mat-label>Contracts</mat-label>
-                      <input matInput type="number" inputmode="numeric" formControlName="quantity" min="1">
+                      <input matInput type="number" inputmode="decimal" formControlName="quantity" min="1">
                     </mat-form-field>
                   </div>
 

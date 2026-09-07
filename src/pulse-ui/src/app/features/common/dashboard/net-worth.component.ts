@@ -14,7 +14,7 @@ import { FinancialSummary } from '../../../core/models/dashboard.model';
       <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
     } @else if (summary()) {
       <div class="net-worth-card">
-        <div class="nw-top" (click)="expanded.set(!expanded())">
+        <button type="button" class="nw-top" (click)="toggleExpand()">
           <div class="nw-main">
             <span class="nw-label">Net Worth</span>
             <span class="nw-value" [class.positive]="summary()!.netWorth >= 0" [class.negative]="summary()!.netWorth < 0">
@@ -28,7 +28,7 @@ import { FinancialSummary } from '../../../core/models/dashboard.model';
             }
           </div>
           <mat-icon class="expand-icon" [class.rotated]="expanded()">expand_more</mat-icon>
-        </div>
+        </button>
 
         @if (expanded()) {
           <div class="nw-breakdown">
@@ -112,6 +112,9 @@ import { FinancialSummary } from '../../../core/models/dashboard.model';
       display: flex; align-items: center; justify-content: space-between;
       padding: 20px 24px;
       cursor: pointer; -webkit-tap-highlight-color: transparent;
+      width: 100%; border: none; background: transparent;
+      text-align: left; font-family: inherit; color: inherit;
+      outline: none;
     }
     .nw-top:active { opacity: 0.8; }
     .nw-main { display: flex; flex-direction: column; gap: 4px; }
@@ -232,6 +235,11 @@ export class NetWorthComponent implements OnInit {
   previousSummary = signal<FinancialSummary | null>(null);
   trend = signal<number>(0);
   expanded = signal(false);
+
+  toggleExpand(): void {
+    this.expanded.set(!this.expanded());
+    this.cdr.detectChanges();
+  }
 
   ngOnInit(): void {
     const now = new Date();

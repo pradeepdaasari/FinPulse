@@ -85,7 +85,7 @@ import { CreditCardService } from '../../../core/services/credit-card.service';
 
         <mat-form-field class="full-width">
           <mat-label>Billing Cycle Days</mat-label>
-          <input matInput type="number" inputmode="numeric" formControlName="billingCycleDays">
+          <input matInput type="number" inputmode="decimal" formControlName="billingCycleDays">
           <mat-hint>Number of days in your billing cycle (typically 28-31)</mat-hint>
         </mat-form-field>
 

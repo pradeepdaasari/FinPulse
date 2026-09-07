@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ElementRef, NgZone, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatBottomSheetRef } from '@angular/material/bottom-sheet';
 import { MatIconModule } from '@angular/material/icon';
@@ -33,7 +33,12 @@ export interface TxnTypeOption {
     </div>
   `,
   styles: [`
-    :host { display: block; padding: 0 0 env(safe-area-inset-bottom, 16px); }
+    :host {
+      display: block;
+      padding: 0 0 env(safe-area-inset-bottom, 16px);
+      will-change: transform;
+      touch-action: none;
+    }
     .sheet-header {
       text-align: center;
       padding: 12px 20px 16px;
@@ -102,7 +107,20 @@ export interface TxnTypeOption {
     }
   `]
 })
-export class TxnTypeSheetComponent {
+export class TxnTypeSheetComponent implements OnInit, OnDestroy {
+  private sheetRef = inject(MatBottomSheetRef<TxnTypeSheetComponent>);
+  private elRef = inject(ElementRef);
+  private zone = inject(NgZone);
+
+  private startY = 0;
+  private currentY = 0;
+  private dragging = false;
+  private dismissThreshold = 80;
+
+  private touchStartHandler = (e: TouchEvent) => this.onTouchStart(e);
+  private touchMoveHandler = (e: TouchEvent) => this.onTouchMove(e);
+  private touchEndHandler = () => this.onTouchEnd();
+
   options: TxnTypeOption[] = [
     { value: 'Expense', label: 'Expense', icon: 'remove_circle_outline', color: '#d32f2f', bg: 'rgba(255,59,48,0.1)' },
     { value: 'Income', label: 'Income', icon: 'add_circle_outline', color: '#2e7d32', bg: 'rgba(48,209,88,0.1)' },
@@ -114,9 +132,60 @@ export class TxnTypeSheetComponent {
     { value: 'LogMetric', label: 'Log Metric', icon: 'monitor_heart', color: '#d32f2f', bg: 'rgba(211,47,47,0.1)' },
   ];
 
-  constructor(private sheetRef: MatBottomSheetRef<TxnTypeSheetComponent>) {}
+  ngOnInit(): void {
+    this.zone.runOutsideAngular(() => {
+      const el = this.elRef.nativeElement as HTMLElement;
+      el.addEventListener('touchstart', this.touchStartHandler, { passive: true });
+      el.addEventListener('touchmove', this.touchMoveHandler, { passive: false });
+      el.addEventListener('touchend', this.touchEndHandler, { passive: true });
+    });
+  }
+
+  ngOnDestroy(): void {
+    const el = this.elRef.nativeElement as HTMLElement;
+    el.removeEventListener('touchstart', this.touchStartHandler);
+    el.removeEventListener('touchmove', this.touchMoveHandler);
+    el.removeEventListener('touchend', this.touchEndHandler);
+  }
 
   select(value: string): void {
     this.sheetRef.dismiss(value);
+  }
+
+  private onTouchStart(e: TouchEvent): void {
+    this.startY = e.touches[0].clientY;
+    this.currentY = this.startY;
+    this.dragging = true;
+    const el = this.elRef.nativeElement as HTMLElement;
+    el.style.transition = 'none';
+  }
+
+  private onTouchMove(e: TouchEvent): void {
+    if (!this.dragging) return;
+    this.currentY = e.touches[0].clientY;
+    const dy = this.currentY - this.startY;
+    if (dy > 0) {
+      e.preventDefault();
+      const el = this.elRef.nativeElement as HTMLElement;
+      el.style.transform = `translateY(${dy}px)`;
+      el.style.opacity = String(Math.max(0.4, 1 - dy / 300));
+    }
+  }
+
+  private onTouchEnd(): void {
+    if (!this.dragging) return;
+    this.dragging = false;
+    const dy = this.currentY - this.startY;
+    const el = this.elRef.nativeElement as HTMLElement;
+    el.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
+
+    if (dy >= this.dismissThreshold) {
+      el.style.transform = `translateY(${el.offsetHeight}px)`;
+      el.style.opacity = '0';
+      setTimeout(() => this.zone.run(() => this.sheetRef.dismiss()), 200);
+    } else {
+      el.style.transform = 'translateY(0)';
+      el.style.opacity = '1';
+    }
   }
 }

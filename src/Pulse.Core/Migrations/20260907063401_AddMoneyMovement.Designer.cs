@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Pulse.Core.Data;
 
@@ -11,9 +12,11 @@ using Pulse.Core.Data;
 namespace Pulse.Core.Migrations
 {
     [DbContext(typeof(PulseDbContext))]
-    partial class PulseDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260907063401_AddMoneyMovement")]
+    partial class AddMoneyMovement
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -880,9 +883,6 @@ namespace Pulse.Core.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int?>("RelatedExpenseId")
-                        .HasColumnType("int");
-
                     b.Property<int?>("RelatedPaymentId")
                         .HasColumnType("int");
 
@@ -901,9 +901,6 @@ namespace Pulse.Core.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("MovementDate");
-
-                    b.HasIndex("RelatedExpenseId")
-                        .HasFilter("[RelatedExpenseId] IS NOT NULL");
 
                     b.HasIndex("RelatedPaymentId")
                         .HasFilter("[RelatedPaymentId] IS NOT NULL");

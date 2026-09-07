@@ -69,8 +69,8 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
-    path: 'payments',
-    loadComponent: () => import('./features/finance/payments/payment-history.component').then(m => m.PaymentHistoryComponent),
+    path: 'money-movements',
+    loadComponent: () => import('./features/finance/money-movements/money-movements-page.component').then(m => m.MoneyMovementsPageComponent),
     canActivate: [authGuard]
   },
   {

@@ -86,7 +86,7 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
 
           <mat-form-field>
             <mat-label>Duration (Months)</mat-label>
-            <input matInput type="number" inputmode="numeric" formControlName="durationMonths">
+            <input matInput type="number" inputmode="decimal" formControlName="durationMonths">
           </mat-form-field>
         </div>
 

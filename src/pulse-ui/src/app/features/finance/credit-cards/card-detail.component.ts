@@ -22,6 +22,7 @@ import { PayoffEntry } from '../../../core/models/dashboard.model';
 import { PaymentHistory } from '../../../core/models/payment-history.model';
 import { sumCurrency } from '../../../core/utils/currency';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
+import { EntityMovementsComponent } from '../../../shared/entity-movements.component';
 
 interface CardTransaction {
   id: string | number;
@@ -36,7 +37,7 @@ interface CardTransaction {
 @Component({
   selector: 'app-card-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatPaginatorModule, MatTooltipModule, MatChipsModule, CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe, SkeletonLoaderComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatPaginatorModule, MatTooltipModule, MatChipsModule, CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe, SkeletonLoaderComponent, EntityMovementsComponent],
   template: `
     @if (loading()) {
       <app-skeleton type="card"></app-skeleton>
@@ -316,6 +317,8 @@ interface CardTransaction {
           </div>
         </mat-card>
       }
+
+      <app-entity-movements entityType="CreditCard" [entityId]="card()!.id" />
     }
   `,
   styles: [`

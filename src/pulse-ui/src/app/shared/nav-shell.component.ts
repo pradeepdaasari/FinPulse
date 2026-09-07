@@ -2,7 +2,6 @@ import { Component, computed, inject, signal, ViewChild, OnInit, OnDestroy, effe
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError, ChildrenOutletContexts } from '@angular/router';
 import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -29,7 +28,6 @@ import { routeFadeAnimation } from './route-animations';
     RouterLinkActive,
     MatSidenavModule,
     MatToolbarModule,
-    MatListModule,
     MatIconModule,
     MatButtonModule,
     MatTooltipModule,
@@ -53,188 +51,196 @@ import { routeFadeAnimation } from './route-animations';
           </a>
         </div>
 
-        <mat-nav-list class="nav-list">
+        <div class="ios-nav-scroll">
           <!-- Finance Section -->
-          <div class="nav-section-header section-finance" [class.expanded]="expandedSections().includes('finance')" (click)="toggleSection('finance')">
-            <span class="section-label">Finance</span>
-            <mat-icon class="section-chevron">expand_more</mat-icon>
-          </div>
-          @if (expandedSections().includes('finance')) {
-            <div class="nav-section-items">
-              <a mat-list-item routerLink="/dashboard" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-blue">dashboard</mat-icon>
-                <span matListItemTitle>Dashboard</span>
-              </a>
-              <a mat-list-item routerLink="/loans" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-indigo">account_balance</mat-icon>
-                <span matListItemTitle>My Loans</span>
-              </a>
-              <a mat-list-item routerLink="/cards" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-orange">credit_card</mat-icon>
-                <span matListItemTitle>My Cards</span>
-              </a>
-              <a mat-list-item routerLink="/accounts" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-green">savings</mat-icon>
-                <span matListItemTitle>Bank Accounts</span>
-              </a>
-              <a mat-list-item routerLink="/expenses" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-teal">swap_horiz</mat-icon>
-                <span matListItemTitle>Transactions</span>
-              </a>
-              <a mat-list-item routerLink="/budget" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-purple">pie_chart</mat-icon>
-                <span matListItemTitle>Budget</span>
-              </a>
-              <a mat-list-item routerLink="/recurring" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-amber">repeat</mat-icon>
-                <span matListItemTitle>Recurring</span>
-              </a>
-              <a mat-list-item routerLink="/goals" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-red">flag</mat-icon>
-                <span matListItemTitle>Goals</span>
-              </a>
-              <a mat-list-item routerLink="/categories" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-pink">category</mat-icon>
-                <span matListItemTitle>Categories</span>
-              </a>
-              <a mat-list-item routerLink="/strategies" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-green">trending_down</mat-icon>
-                <span matListItemTitle>Payoff Strategies</span>
-              </a>
-              <a mat-list-item routerLink="/simulator" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-cyan">science</mat-icon>
-                <span matListItemTitle>What-If Simulator</span>
-              </a>
-              <a mat-list-item routerLink="/payments" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-indigo">receipt_long</mat-icon>
-                <span matListItemTitle>Payments</span>
-              </a>
-            </div>
-          }
-
-          <!-- Trading Section -->
-          <div class="nav-section-header section-trading" [class.expanded]="expandedSections().includes('trading')" (click)="toggleSection('trading')">
-            <span class="section-label">Trading</span>
-            <mat-icon class="section-chevron">expand_more</mat-icon>
-          </div>
-          @if (expandedSections().includes('trading')) {
-            <div class="nav-section-items">
-              <a mat-list-item routerLink="/trading" routerLinkActive="active-link"
-                 [routerLinkActiveOptions]="{exact: true}" (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-purple">candlestick_chart</mat-icon>
-                <span matListItemTitle>Dashboard</span>
-              </a>
-              <a mat-list-item routerLink="/trading/premarket" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-amber">wb_twilight</mat-icon>
-                <span matListItemTitle>Pre-Market</span>
-              </a>
-              <a mat-list-item routerLink="/trading/checklist" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-green">checklist</mat-icon>
-                <span matListItemTitle>Trade Checklist</span>
-              </a>
-              <a mat-list-item routerLink="/trading/journal" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-blue">auto_stories</mat-icon>
-                <span matListItemTitle>Trade Journal</span>
-              </a>
-              <a mat-list-item routerLink="/trading/calendar" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-red">calendar_month</mat-icon>
-                <span matListItemTitle>Calendar</span>
-              </a>
-              <a mat-list-item routerLink="/trading/review" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-orange">grading</mat-icon>
-                <span matListItemTitle>Daily Review</span>
-              </a>
-              <a mat-list-item routerLink="/trading/setups" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-teal">tune</mat-icon>
-                <span matListItemTitle>My Setups</span>
-              </a>
-              <a mat-list-item routerLink="/trading/playbook" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-indigo">menu_book</mat-icon>
-                <span matListItemTitle>Playbook & Rules</span>
-              </a>
-              <a mat-list-item routerLink="/trading/weekly" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-cyan">analytics</mat-icon>
-                <span matListItemTitle>Weekly Summary</span>
-              </a>
-            </div>
-          }
-
-          <!-- Health Section -->
-          <div class="nav-section-header section-health" [class.expanded]="expandedSections().includes('health')" (click)="toggleSection('health')">
-            <span class="section-label">Health & Fitness</span>
-            <mat-icon class="section-chevron">expand_more</mat-icon>
-          </div>
-          @if (expandedSections().includes('health')) {
-            <div class="nav-section-items">
-              <a mat-list-item routerLink="/health" routerLinkActive="active-link"
-                 [routerLinkActiveOptions]="{exact: true}" (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-red">monitoring</mat-icon>
-                <span matListItemTitle>Health Dashboard</span>
-              </a>
-              <a mat-list-item routerLink="/health/metrics" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-green">straighten</mat-icon>
-                <span matListItemTitle>Vitals & Metrics</span>
-              </a>
-              <a mat-list-item routerLink="/health/blood-work" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-pink">bloodtype</mat-icon>
-                <span matListItemTitle>Blood Work</span>
-              </a>
-              <a mat-list-item routerLink="/health/plans" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-orange">fitness_center</mat-icon>
-                <span matListItemTitle>Workout Plans</span>
-              </a>
-              <a mat-list-item routerLink="/health/workout" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-blue">exercise</mat-icon>
-                <span matListItemTitle>Today's Workout</span>
-              </a>
-              <a mat-list-item routerLink="/health/progress" routerLinkActive="active-link"
-                 (click)="onNavClick()">
-                <mat-icon matListItemIcon class="ic-amber">emoji_events</mat-icon>
-                <span matListItemTitle>Progress & PRs</span>
-              </a>
-            </div>
-          }
-
-          @if (isAdmin()) {
-            <div class="nav-section-header section-admin" [class.expanded]="expandedSections().includes('admin')" (click)="toggleSection('admin')">
-              <span class="section-label">Admin</span>
+          <div class="ios-section">
+            <button class="ios-section-header" [class.expanded]="expandedSections().includes('finance')" (click)="toggleSection('finance')">
+              <span class="section-label">Finance</span>
               <mat-icon class="section-chevron">expand_more</mat-icon>
-            </div>
-            @if (expandedSections().includes('admin')) {
-              <div class="nav-section-items">
-                <a mat-list-item routerLink="/admin/users" routerLinkActive="active-link"
-                   (click)="onNavClick()">
-                  <mat-icon matListItemIcon class="ic-indigo">admin_panel_settings</mat-icon>
-                  <span matListItemTitle>User Management</span>
+            </button>
+            @if (expandedSections().includes('finance')) {
+              <div class="ios-section-group">
+                <a class="ios-nav-item" routerLink="/dashboard" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-blue"><mat-icon>dashboard</mat-icon></span>
+                  <span class="ios-nav-label">Dashboard</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/loans" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-indigo"><mat-icon>account_balance</mat-icon></span>
+                  <span class="ios-nav-label">My Loans</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/cards" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-orange"><mat-icon>credit_card</mat-icon></span>
+                  <span class="ios-nav-label">My Cards</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/accounts" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-green"><mat-icon>savings</mat-icon></span>
+                  <span class="ios-nav-label">Bank Accounts</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/expenses" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-teal"><mat-icon>swap_horiz</mat-icon></span>
+                  <span class="ios-nav-label">Transactions</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/budget" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-purple"><mat-icon>pie_chart</mat-icon></span>
+                  <span class="ios-nav-label">Budget</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/recurring" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-amber"><mat-icon>repeat</mat-icon></span>
+                  <span class="ios-nav-label">Recurring</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/goals" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-red"><mat-icon>flag</mat-icon></span>
+                  <span class="ios-nav-label">Goals</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/categories" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-pink"><mat-icon>category</mat-icon></span>
+                  <span class="ios-nav-label">Categories</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/strategies" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-green"><mat-icon>trending_down</mat-icon></span>
+                  <span class="ios-nav-label">Payoff Strategies</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/simulator" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-cyan"><mat-icon>science</mat-icon></span>
+                  <span class="ios-nav-label">What-If Simulator</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item last" routerLink="/money-movements" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-cyan"><mat-icon>sync_alt</mat-icon></span>
+                  <span class="ios-nav-label">Money Flow</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
               </div>
             }
+          </div>
+
+          <!-- Trading Section -->
+          <div class="ios-section">
+            <button class="ios-section-header" [class.expanded]="expandedSections().includes('trading')" (click)="toggleSection('trading')">
+              <span class="section-label">Trading</span>
+              <mat-icon class="section-chevron">expand_more</mat-icon>
+            </button>
+            @if (expandedSections().includes('trading')) {
+              <div class="ios-section-group">
+                <a class="ios-nav-item" routerLink="/trading" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-purple"><mat-icon>candlestick_chart</mat-icon></span>
+                  <span class="ios-nav-label">Dashboard</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/trading/premarket" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-amber"><mat-icon>wb_twilight</mat-icon></span>
+                  <span class="ios-nav-label">Pre-Market</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/trading/checklist" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-green"><mat-icon>checklist</mat-icon></span>
+                  <span class="ios-nav-label">Trade Checklist</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/trading/journal" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-blue"><mat-icon>auto_stories</mat-icon></span>
+                  <span class="ios-nav-label">Trade Journal</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/trading/calendar" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-red"><mat-icon>calendar_month</mat-icon></span>
+                  <span class="ios-nav-label">Calendar</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/trading/review" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-orange"><mat-icon>grading</mat-icon></span>
+                  <span class="ios-nav-label">Daily Review</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/trading/setups" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-teal"><mat-icon>tune</mat-icon></span>
+                  <span class="ios-nav-label">My Setups</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/trading/playbook" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-indigo"><mat-icon>menu_book</mat-icon></span>
+                  <span class="ios-nav-label">Playbook & Rules</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item last" routerLink="/trading/weekly" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-cyan"><mat-icon>analytics</mat-icon></span>
+                  <span class="ios-nav-label">Weekly Summary</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+              </div>
+            }
+          </div>
+
+          <!-- Health Section -->
+          <div class="ios-section">
+            <button class="ios-section-header" [class.expanded]="expandedSections().includes('health')" (click)="toggleSection('health')">
+              <span class="section-label">Health & Fitness</span>
+              <mat-icon class="section-chevron">expand_more</mat-icon>
+            </button>
+            @if (expandedSections().includes('health')) {
+              <div class="ios-section-group">
+                <a class="ios-nav-item" routerLink="/health" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-red"><mat-icon>monitoring</mat-icon></span>
+                  <span class="ios-nav-label">Health Dashboard</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/health/metrics" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-green"><mat-icon>straighten</mat-icon></span>
+                  <span class="ios-nav-label">Vitals & Metrics</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/health/blood-work" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-pink"><mat-icon>bloodtype</mat-icon></span>
+                  <span class="ios-nav-label">Blood Work</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/health/plans" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-orange"><mat-icon>fitness_center</mat-icon></span>
+                  <span class="ios-nav-label">Workout Plans</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/health/workout" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-blue"><mat-icon>exercise</mat-icon></span>
+                  <span class="ios-nav-label">Today's Workout</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item last" routerLink="/health/progress" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-amber"><mat-icon>emoji_events</mat-icon></span>
+                  <span class="ios-nav-label">Progress & PRs</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+              </div>
+            }
+          </div>
+
+          @if (isAdmin()) {
+            <div class="ios-section">
+              <button class="ios-section-header" [class.expanded]="expandedSections().includes('admin')" (click)="toggleSection('admin')">
+                <span class="section-label">Admin</span>
+                <mat-icon class="section-chevron">expand_more</mat-icon>
+              </button>
+              @if (expandedSections().includes('admin')) {
+                <div class="ios-section-group">
+                  <a class="ios-nav-item last" routerLink="/admin/users" routerLinkActive="active-link" (click)="onNavClick()">
+                    <span class="ios-icon-pill ic-orange"><mat-icon>admin_panel_settings</mat-icon></span>
+                    <span class="ios-nav-label">User Management</span>
+                    <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                  </a>
+                </div>
+              }
+            </div>
           }
-        </mat-nav-list>
+        </div>
       </mat-sidenav>
 
       <mat-sidenav-content>
@@ -348,17 +354,13 @@ import { routeFadeAnimation } from './route-animations';
     }
 
     .sidenav {
-      width: 260px;
-      background: var(--color-surface);
-      border-right: 0.5px solid var(--color-sidebar-border);
-      backdrop-filter: blur(var(--glass-blur));
-      -webkit-backdrop-filter: blur(var(--glass-blur));
+      width: 280px;
+      background: var(--color-bg);
+      border-right: none;
     }
 
     .sidenav-header {
-      padding: 20px 16px 8px;
-      border-bottom: 0.5px solid var(--color-sidebar-border);
-      margin: 0 10px 8px;
+      padding: 20px 20px 12px;
     }
 
     .brand {
@@ -372,133 +374,171 @@ import { routeFadeAnimation } from './route-animations';
     @media (hover: hover) { .brand:hover { opacity: 0.8; } }
 
     .brand-icon {
-      color: var(--color-sidebar-accent);
+      color: var(--color-primary);
       font-size: 24px;
       width: 24px;
       height: 24px;
     }
 
     .brand-name {
-      font-family: var(--font-primary);
-      font-size: 1.125rem;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', var(--font-primary), sans-serif;
+      font-size: 1.25rem;
       font-weight: 700;
-      color: var(--color-sidebar-text-active);
+      color: var(--color-text);
       letter-spacing: -0.03em;
     }
 
-    .nav-section-header {
+    /* ─── iOS Settings-style nav ─── */
+    .ios-nav-scroll {
+      padding: 0 16px 20px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      height: calc(100vh - 60px);
+    }
+
+    .ios-section {
+      margin-bottom: 4px;
+    }
+
+    .ios-section-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: #8E8E93;
-      padding: 10px 16px 6px 12px;
-      margin-top: 4px;
-      user-select: none;
+      width: 100%;
+      padding: 14px 4px 6px;
+      border: none;
+      background: transparent;
       cursor: pointer;
-      transition: color 0.15s, background 0.15s;
-      min-height: 36px;
-      border-left: 3px solid transparent;
-      border-top: 1px solid var(--color-sidebar-border, rgba(0, 0, 0, 0.06));
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', var(--font-primary), sans-serif;
     }
 
-    .nav-section-header:hover {
-      color: var(--color-text-secondary);
-      background: rgba(0, 0, 0, 0.02);
+    .ios-section-header .section-label {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
     }
 
-    .nav-section-header:first-child {
-      padding-top: 4px;
-      border-top: none;
-      margin-top: 0;
-    }
-
-    .section-finance { border-left-color: #007AFF; }
-    .section-finance .section-label { color: #007AFF; }
-    .section-trading { border-left-color: #AF52DE; }
-    .section-trading .section-label { color: #AF52DE; }
-    .section-health { border-left-color: #FF3B30; }
-    .section-health .section-label { color: #FF3B30; }
-    .section-admin { border-left-color: #FF9500; }
-    .section-admin .section-label { color: #FF9500; }
-
-    .section-label { flex: 1; }
-
-    .section-chevron {
+    .ios-section-header .section-chevron {
       font-size: 16px;
       width: 16px;
       height: 16px;
-      transition: transform 0.2s ease;
+      transition: transform 0.25s ease;
       transform: rotate(-90deg);
       color: var(--color-text-muted);
     }
 
-    .nav-section-header.expanded .section-chevron {
+    .ios-section-header.expanded .section-chevron {
       transform: rotate(0deg);
     }
 
-    .nav-section-items {
-      animation: slideDown 0.15s ease-out;
+    .ios-section-group {
+      background: var(--color-surface);
+      border-radius: 12px;
+      overflow: hidden;
+      animation: iosSlideDown 0.2s ease-out;
     }
 
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-4px); }
+    @keyframes iosSlideDown {
+      from { opacity: 0; transform: translateY(-6px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
-    .nav-list {
-      padding: 8px 10px;
+    .ios-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      text-decoration: none;
+      color: var(--color-text);
+      transition: background 0.12s ease;
+      -webkit-tap-highlight-color: transparent;
+      position: relative;
+      min-height: 44px;
+      box-sizing: border-box;
+      cursor: pointer;
     }
 
-    .nav-list a {
-      border-radius: var(--radius-sm) !important;
-      margin-bottom: 1px;
-      font-family: var(--font-primary);
-      font-size: var(--text-sm);
-      font-weight: 500;
-      color: var(--color-text-secondary) !important;
-      transition: all var(--transition-fast);
-      height: 38px !important;
+    .ios-nav-item:not(.last)::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 46px;
+      right: 0;
+      height: 0.5px;
+      background: var(--color-border);
     }
 
-    .nav-list a mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-      transition: transform 0.15s ease;
+    .ios-nav-item:active {
+      background: var(--color-surface-secondary);
     }
 
-    .nav-list a mat-icon.ic-blue { color: #007AFF !important; }
-    .nav-list a mat-icon.ic-indigo { color: #5856D6 !important; }
-    .nav-list a mat-icon.ic-purple { color: #AF52DE !important; }
-    .nav-list a mat-icon.ic-pink { color: #FF2D55 !important; }
-    .nav-list a mat-icon.ic-red { color: #FF3B30 !important; }
-    .nav-list a mat-icon.ic-orange { color: #FF9500 !important; }
-    .nav-list a mat-icon.ic-amber { color: #FFCC00 !important; }
-    .nav-list a mat-icon.ic-green { color: #34C759 !important; }
-    .nav-list a mat-icon.ic-teal { color: #5AC8FA !important; }
-    .nav-list a mat-icon.ic-cyan { color: #32ADE6 !important; }
+    @media (hover: hover) {
+      .ios-nav-item:hover {
+        background: var(--color-surface-secondary);
+      }
+    }
 
-    .nav-list a span {
-      color: #3A3A3C !important;
-      font-weight: 500;
+    .ios-nav-item.active-link {
+      background: rgba(0, 122, 255, 0.08);
+    }
+
+    .ios-nav-item.active-link .ios-nav-label {
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+
+    .ios-nav-item.active-link .ios-chevron {
+      color: var(--color-primary);
+    }
+
+    .ios-icon-pill {
+      width: 30px;
+      height: 30px;
+      min-width: 30px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ios-icon-pill mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #fff;
+    }
+
+    .ios-icon-pill.ic-blue { background: #007AFF; }
+    .ios-icon-pill.ic-indigo { background: #5856D6; }
+    .ios-icon-pill.ic-purple { background: #AF52DE; }
+    .ios-icon-pill.ic-pink { background: #FF2D55; }
+    .ios-icon-pill.ic-red { background: #FF3B30; }
+    .ios-icon-pill.ic-orange { background: #FF9500; }
+    .ios-icon-pill.ic-amber { background: #FFCC00; }
+    .ios-icon-pill.ic-amber mat-icon { color: #1D1D1F; }
+    .ios-icon-pill.ic-green { background: #34C759; }
+    .ios-icon-pill.ic-teal { background: #5AC8FA; }
+    .ios-icon-pill.ic-cyan { background: #32ADE6; }
+
+    .ios-nav-label {
+      flex: 1;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', var(--font-primary), sans-serif;
+      font-size: 0.9375rem;
+      font-weight: 400;
+      color: var(--color-text);
       letter-spacing: -0.01em;
     }
 
-    .nav-list a:hover {
-      background-color: var(--color-sidebar-hover) !important;
-    }
-
-    .nav-list a.active-link {
-      background-color: rgba(0, 122, 255, 0.08) !important;
-    }
-
-    .nav-list a.active-link span {
-      color: #1D1D1F !important;
-      font-weight: 600;
+    .ios-chevron {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: var(--color-text-muted);
+      opacity: 0.5;
     }
 
     .route-progress-bar {
@@ -577,6 +617,7 @@ import { routeFadeAnimation } from './route-animations';
 
     :host ::ng-deep .mat-sidenav-content {
       scrollbar-gutter: stable;
+      overscroll-behavior-y: contain;
     }
 
     .content-area {
@@ -619,10 +660,10 @@ import { routeFadeAnimation } from './route-animations';
         overflow-x: hidden;
       }
       .sidenav {
-        width: 280px;
-        background: var(--color-surface);
+        width: 300px;
+        background: var(--color-bg);
         border-right: none;
-        box-shadow: var(--shadow-xl);
+        box-shadow: 0 0 40px rgba(0,0,0,0.2);
         z-index: 1002 !important;
       }
       .mobile-brand {
@@ -833,7 +874,7 @@ import { routeFadeAnimation } from './route-animations';
       .content-area {
         padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px) + 20px) !important;
       }
-      .nav-list {
+      .ios-nav-scroll {
         padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px) + 20px);
       }
     }
@@ -885,7 +926,7 @@ export class NavShellComponent implements OnInit, OnDestroy {
     '/categories': 'Categories',
     '/recurring': 'Recurring',
     '/goals': 'Goals',
-    '/payments': 'Payments',
+    '/money-movements': 'Money Flow',
     '/health': 'Health Dashboard',
     '/health/metrics': 'Vitals & Metrics',
     '/health/blood-work': 'Blood Work',
@@ -940,13 +981,56 @@ export class NavShellComponent implements OnInit, OnDestroy {
     });
   }
 
+  private swipeStartX = 0;
+  private swipeStartY = 0;
+  private swiping = false;
+  private touchStartHandler = (e: TouchEvent) => this.onTouchStart(e);
+  private touchMoveHandler = (e: TouchEvent) => this.onTouchMove(e);
+  private touchEndHandler = () => this.onTouchEnd();
+
   ngOnInit(): void {
     this.initialViewportHeight = window.visualViewport?.height ?? window.innerHeight;
     window.visualViewport?.addEventListener('resize', this.viewportHandler);
+    document.addEventListener('touchstart', this.touchStartHandler, { passive: true });
+    document.addEventListener('touchmove', this.touchMoveHandler, { passive: true });
+    document.addEventListener('touchend', this.touchEndHandler, { passive: true });
   }
 
   ngOnDestroy(): void {
     window.visualViewport?.removeEventListener('resize', this.viewportHandler);
+    document.removeEventListener('touchstart', this.touchStartHandler);
+    document.removeEventListener('touchmove', this.touchMoveHandler);
+    document.removeEventListener('touchend', this.touchEndHandler);
+  }
+
+  private onTouchStart(e: TouchEvent): void {
+    if (!this.isMobile()) return;
+    const touch = e.touches[0];
+    this.swipeStartX = touch.clientX;
+    this.swipeStartY = touch.clientY;
+    this.swiping = this.sidenav?.opened ? true : touch.clientX < 30;
+  }
+
+  private onTouchMove(e: TouchEvent): void {
+    if (!this.swiping || !this.isMobile()) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - this.swipeStartX;
+    const dy = Math.abs(touch.clientY - this.swipeStartY);
+    if (dy > Math.abs(dx)) {
+      this.swiping = false;
+      return;
+    }
+    if (!this.sidenav?.opened && dx > 60) {
+      this.swiping = false;
+      this.sidenav.open();
+    } else if (this.sidenav?.opened && dx < -60) {
+      this.swiping = false;
+      this.sidenav.close();
+    }
+  }
+
+  private onTouchEnd(): void {
+    this.swiping = false;
   }
 
   private checkKeyboard(): void {

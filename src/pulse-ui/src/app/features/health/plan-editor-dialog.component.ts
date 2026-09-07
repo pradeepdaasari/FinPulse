@@ -89,7 +89,7 @@ import { NotificationService } from '../../core/services/notification.service';
                   <div class="ex-card-details">
                     <mat-form-field appearance="outline" class="ex-field">
                       <mat-label>Sets</mat-label>
-                      <input matInput type="number" inputmode="numeric" [(ngModel)]="ex.targetSets">
+                      <input matInput type="number" inputmode="decimal" [(ngModel)]="ex.targetSets">
                     </mat-form-field>
                     <mat-form-field appearance="outline" class="ex-field">
                       <mat-label>Reps</mat-label>

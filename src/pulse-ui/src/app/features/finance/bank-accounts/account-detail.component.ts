@@ -20,6 +20,7 @@ import { DailyExpense } from '../../../core/models/daily-expense.model';
 import { NotificationService } from '../../../core/services/notification.service';
 import { toLocalDateString } from '../../../core/utils/date-utils';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
+import { EntityMovementsComponent } from '../../../shared/entity-movements.component';
 
 @Component({
   selector: 'app-account-detail',
@@ -28,7 +29,7 @@ import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.compone
     FormsModule, MatCardModule, MatIconModule, MatButtonModule, MatButtonToggleModule,
     MatTableModule, MatTooltipModule,
     MatDatepickerModule, MatFormFieldModule, MatInputModule,
-    CurrencyPipe, DatePipe, LocalDatePipe, SkeletonLoaderComponent
+    CurrencyPipe, DatePipe, LocalDatePipe, SkeletonLoaderComponent, EntityMovementsComponent
   ],
   template: `
     @if (loading()) {
@@ -301,6 +302,8 @@ import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.compone
           <p>No transactions recorded for this account yet.</p>
         </div>
       }
+
+      <app-entity-movements entityType="BankAccount" [entityId]="account()!.id" />
     }
   `,
   styles: [`

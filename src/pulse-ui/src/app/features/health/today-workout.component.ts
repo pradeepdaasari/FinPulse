@@ -168,7 +168,7 @@ interface PlanDay {
                   @for (set of ex.sets; track $index; let j = $index) {
                     <div class="set-row">
                       <span class="set-num">{{ j + 1 }}</span>
-                      <input type="number" inputmode="numeric" [(ngModel)]="set.reps" class="set-input" placeholder="0">
+                      <input type="number" inputmode="decimal" [(ngModel)]="set.reps" class="set-input" placeholder="0">
                       <input type="number" inputmode="decimal" [(ngModel)]="set.weight" class="set-input" placeholder="0" step="2.5">
                     </div>
                   }
@@ -199,7 +199,7 @@ interface PlanDay {
           <div class="workout-footer">
             <mat-form-field appearance="outline" class="duration-field">
               <mat-label>Duration (min)</mat-label>
-              <input matInput type="number" inputmode="numeric" [(ngModel)]="duration">
+              <input matInput type="number" inputmode="decimal" [(ngModel)]="duration">
             </mat-form-field>
             <mat-form-field appearance="outline" class="notes-field">
               <mat-label>Notes</mat-label>

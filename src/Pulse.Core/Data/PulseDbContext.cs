@@ -24,6 +24,7 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
     public DbSet<RecurringTransaction> RecurringTransactions => Set<RecurringTransaction>();
     public DbSet<SavingsGoal> SavingsGoals => Set<SavingsGoal>();
+    public DbSet<MoneyMovement> MoneyMovements => Set<MoneyMovement>();
 
     // Trading
     public DbSet<TradingSetup> TradingSetups => Set<TradingSetup>();
@@ -147,6 +148,18 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(e => new { e.Year, e.Month, e.UserId }).IsUnique();
             entity.Property(e => e.TotalDebt).HasPrecision(18, 2);
             entity.Property(e => e.TotalPaidThisMonth).HasPrecision(18, 2);
+        });
+
+        // MoneyMovement
+        modelBuilder.Entity<MoneyMovement>(entity =>
+        {
+            entity.Property(e => e.Amount).HasPrecision(18, 2);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => new { e.SourceType, e.SourceId });
+            entity.HasIndex(e => new { e.DestinationType, e.DestinationId });
+            entity.HasIndex(e => e.MovementDate);
+            entity.HasIndex(e => e.RelatedPaymentId).HasFilter("[RelatedPaymentId] IS NOT NULL");
+            entity.HasIndex(e => e.RelatedExpenseId).HasFilter("[RelatedExpenseId] IS NOT NULL");
         });
 
         // HealthMetric
@@ -460,6 +473,12 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
                 schedule.UpdatedAt = now;
                 if (entry.State == EntityState.Added)
                     schedule.CreatedAt = now;
+            }
+            else if (entry.Entity is MoneyMovement movement)
+            {
+                movement.UpdatedAt = now;
+                if (entry.State == EntityState.Added)
+                    movement.CreatedAt = now;
             }
         }
     }

@@ -54,7 +54,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
             <div class="section-icon-wrap payments-icon"><mat-icon>calendar_month</mat-icon></div>
             <h3>This Month's Payments</h3>
           </div>
-          <a class="view-all" routerLink="/payments">View All <mat-icon>chevron_right</mat-icon></a>
+          <a class="view-all" routerLink="/money-movements">View All <mat-icon>chevron_right</mat-icon></a>
         </div>
         <div class="payments-card">
           <app-monthly-payments-card></app-monthly-payments-card>
