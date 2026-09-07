@@ -81,7 +81,16 @@ using (var scope = app.Services.CreateScope())
     {
         try
         {
-            db.Database.Migrate();
+            var pending = db.Database.GetPendingMigrations();
+            if (pending.Any())
+            {
+                Console.WriteLine($"Applying {pending.Count()} pending migration(s)...");
+                db.Database.Migrate();
+            }
+            else
+            {
+                Console.WriteLine("No pending migrations — skipping Migrate().");
+            }
             break;
         }
         catch (Exception ex) when (attempt < 10)

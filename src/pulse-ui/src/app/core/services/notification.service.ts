@@ -31,7 +31,7 @@ export class NotificationService {
       data,
       duration,
       horizontalPosition: 'center',
-      verticalPosition: 'bottom',
+      verticalPosition: 'top',
       panelClass: 'toast-panel'
     });
   }

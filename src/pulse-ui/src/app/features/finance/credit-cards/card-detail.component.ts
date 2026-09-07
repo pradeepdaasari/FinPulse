@@ -23,6 +23,7 @@ import { PaymentHistory } from '../../../core/models/payment-history.model';
 import { sumCurrency } from '../../../core/utils/currency';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { EntityMovementsComponent } from '../../../shared/entity-movements.component';
+import { FundingSourceService } from '../../../core/services/funding-source.service';
 
 interface CardTransaction {
   id: string | number;
@@ -217,6 +218,10 @@ interface CardTransaction {
                 <th mat-header-cell *matHeaderCellDef>Amount</th>
                 <td mat-cell *matCellDef="let p" class="amount-cell">{{ p.amountPaid | currency }}</td>
               </ng-container>
+              <ng-container matColumnDef="fromAccount">
+                <th mat-header-cell *matHeaderCellDef>From Account</th>
+                <td mat-cell *matCellDef="let p">{{ getAccountName(p.fromAccountId) }}</td>
+              </ng-container>
               <ng-container matColumnDef="notes">
                 <th mat-header-cell *matHeaderCellDef>Notes</th>
                 <td mat-cell *matCellDef="let p">{{ p.notes || '—' }}</td>
@@ -224,6 +229,9 @@ interface CardTransaction {
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef></th>
                 <td mat-cell *matCellDef="let p">
+                  <button mat-icon-button (click)="editPayment(p)" matTooltip="Edit payment" aria-label="Edit payment">
+                    <mat-icon>edit</mat-icon>
+                  </button>
                   <button mat-icon-button color="warn" (click)="deletePayment(p)" matTooltip="Delete payment" aria-label="Delete payment">
                     <mat-icon>delete_outline</mat-icon>
                   </button>
@@ -236,16 +244,19 @@ interface CardTransaction {
           </div>
           <div class="mobile-cards">
             @for (p of paymentHistory(); track p.id) {
-              <div class="mobile-card">
+              <div class="mobile-card" (click)="editPayment(p)">
                 <div class="mobile-card-row">
                   <span class="mobile-card-date">{{ p.paymentDate | localDate:'mediumDate' }}</span>
                   <span class="mobile-card-amount amount-cell">{{ p.amountPaid | currency }}</span>
                 </div>
+                @if (p.fromAccountId) {
+                  <div class="mobile-card-notes">From: {{ getAccountName(p.fromAccountId) }}</div>
+                }
                 @if (p.notes) {
                   <div class="mobile-card-notes">{{ p.notes }}</div>
                 }
                 <div class="mobile-card-actions">
-                  <button mat-icon-button color="warn" (click)="deletePayment(p)" aria-label="Delete payment">
+                  <button mat-icon-button color="warn" (click)="deletePayment(p); $event.stopPropagation()" aria-label="Delete payment">
                     <mat-icon>delete_outline</mat-icon>
                   </button>
                 </div>
@@ -519,6 +530,7 @@ export class CardDetailComponent implements OnInit {
   private paymentService = inject(PaymentService);
   private notify = inject(NotificationService);
   private cdr = inject(ChangeDetectorRef);
+  private fundingSourceService = inject(FundingSourceService);
 
   card = signal<CreditCard | null>(null);
   timeline = signal<PayoffEntry[]>([]);
@@ -580,7 +592,8 @@ export class CardDetailComponent implements OnInit {
   });
 
   timelineColumns = ['month', 'date', 'payment', 'principal', 'interest', 'remainingBalance'];
-  paymentColumns = ['paymentDate', 'amountPaid', 'notes', 'actions'];
+  paymentColumns = ['paymentDate', 'amountPaid', 'fromAccount', 'notes', 'actions'];
+  private accountNameMap = new Map<number, string>();
   txnColumns = ['date', 'description', 'category', 'type', 'amount'];
 
   getUtilization(): number {
@@ -598,6 +611,10 @@ export class CardDetailComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCard();
+    this.fundingSourceService.getAll().subscribe(sources => {
+      sources.filter(s => s.type === 'BankAccount').forEach(s => this.accountNameMap.set(s.id, s.name));
+      this.cdr.detectChanges();
+    });
   }
 
   loadCard(): void {
@@ -714,5 +731,28 @@ export class CardDetailComponent implements OnInit {
         });
       });
     });
+  }
+
+  editPayment(payment: PaymentHistory): void {
+    import('../../../shared/record-payment-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.RecordPaymentDialogComponent, {
+        width: '440px',
+        data: {
+          debtType: 'CreditCard',
+          debtId: this.card()!.id,
+          debtName: this.card()!.cardName,
+          currentBalance: this.card()!.currentBalance,
+          existingPayment: payment
+        }
+      });
+      dialogRef.afterClosed().subscribe(result => {
+        if (result) this.loadCard();
+      });
+    });
+  }
+
+  getAccountName(accountId?: number): string {
+    if (!accountId) return 'External';
+    return this.accountNameMap.get(accountId) || 'Unknown';
   }
 }

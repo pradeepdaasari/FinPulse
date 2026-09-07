@@ -220,30 +220,18 @@ export class GoalsPageComponent implements OnInit {
   }
 
   openAdd(): void {
-    const dialogRef = this.dialog.open(GoalDialogComponent, {
+    this.dialog.open(GoalDialogComponent, {
       width: '600px', maxWidth: '95vw', data: null
-    });
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.service.create(result).subscribe({
-          next: () => { this.notify.success('Goal created'); this.loadData(); },
-          error: (err) => this.notify.error(err.error?.message || 'Failed to create')
-        });
-      }
+    }).afterClosed().subscribe(result => {
+      if (result) this.loadData();
     });
   }
 
   edit(goal: SavingsGoal): void {
-    const dialogRef = this.dialog.open(GoalDialogComponent, {
+    this.dialog.open(GoalDialogComponent, {
       width: '600px', maxWidth: '95vw', data: goal
-    });
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.service.update(goal.id, result).subscribe({
-          next: () => { this.notify.success('Goal updated'); this.loadData(); },
-          error: (err) => this.notify.error(err.error?.message || 'Failed to update')
-        });
-      }
+    }).afterClosed().subscribe(result => {
+      if (result) this.loadData();
     });
   }
 

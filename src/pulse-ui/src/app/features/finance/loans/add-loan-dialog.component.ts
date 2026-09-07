@@ -14,6 +14,8 @@ import { LoanService } from '../../../core/services/loan.service';
 import { FundingSourceService } from '../../../core/services/funding-source.service';
 import { FundingSource } from '../../../core/models/funding-source.model';
 import { PersonalLoan } from '../../../core/models/personal-loan.model';
+import { NotificationService } from '../../../core/services/notification.service';
+import { toLocalISOString } from '../../../core/utils/date-utils';
 
 @Component({
   selector: 'app-add-loan-dialog',
@@ -86,7 +88,7 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
 
           <mat-form-field>
             <mat-label>Duration (Months)</mat-label>
-            <input matInput type="number" inputmode="decimal" formControlName="durationMonths">
+            <input matInput type="number" inputmode="numeric" formControlName="durationMonths" step="1">
           </mat-form-field>
         </div>
 
@@ -101,10 +103,16 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
           </mat-form-field>
 
           <mat-form-field>
-            <mat-label>Due Day of Month</mat-label>
+            <mat-label>{{ dueDayLabel() }}</mat-label>
             <mat-select formControlName="dueDay">
-              @for (day of dueDays; track day) {
-                <mat-option [value]="day">{{ day }}</mat-option>
+              @if (isWeeklyOrBiweekly()) {
+                @for (day of weekDays; track day; let i = $index) {
+                  <mat-option [value]="i">{{ day }}</mat-option>
+                }
+              } @else {
+                @for (day of dueDays; track day) {
+                  <mat-option [value]="day">{{ day }}</mat-option>
+                }
               }
             </mat-select>
           </mat-form-field>
@@ -248,9 +256,11 @@ export class AddLoanDialogComponent implements OnInit {
   private loanService = inject(LoanService);
   private fundingSourceService = inject(FundingSourceService);
   private dialogRef = inject(MatDialogRef<AddLoanDialogComponent>);
+  private notify = inject(NotificationService);
   private cdr = inject(ChangeDetectorRef);
 
   dueDays = Array.from({ length: 28 }, (_, i) => i + 1);
+  weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   saving = signal(false);
   bankSources = signal<FundingSource[]>([]);
   bankSearch = signal('');
@@ -259,6 +269,11 @@ export class AddLoanDialogComponent implements OnInit {
     return q ? this.bankSources().filter(s => s.name.toLowerCase().includes(q)) : this.bankSources();
   });
   paymentFrequencyValue = signal('Monthly');
+  isWeeklyOrBiweekly = computed(() => {
+    const f = this.paymentFrequencyValue();
+    return f === 'Weekly' || f === 'Biweekly';
+  });
+  dueDayLabel = computed(() => this.isWeeklyOrBiweekly() ? 'Due Day of Week' : 'Due Day of Month');
   emiLabel = computed(() => {
     const freq = this.paymentFrequencyValue();
     if (freq === 'Biweekly') return 'Biweekly Payment';
@@ -305,24 +320,30 @@ export class AddLoanDialogComponent implements OnInit {
       originalAmount: value.originalAmount,
       currentBalance: value.currentBalance,
       aprPercent: value.aprPercent,
-      durationMonths: value.durationMonths,
-      startDate: value.startDate,
+      durationMonths: Math.round(value.durationMonths!),
+      startDate: value.startDate ? toLocalISOString(value.startDate) : null,
       monthlyPayment: value.monthlyPayment,
-      dueDay: value.dueDay,
+      dueDay: Math.round(value.dueDay!),
       paymentFrequency: value.paymentFrequency,
       fundedBankAccountId: value.fundedBankAccountId
     };
 
     if (value.hasPromo && value.promoAprPercent != null) {
       loan.promoAprPercent = value.promoAprPercent;
-      loan.promoEndDate = value.promoEndDate;
+      loan.promoEndDate = value.promoEndDate ? toLocalISOString(value.promoEndDate) : null;
     }
 
     this.loanService.create(loan).subscribe({
       next: (created) => {
         this.dialogRef.close(created);
       },
-      error: () => {
+      error: (err) => {
+        let msg = err?.error?.message || err?.error?.title || 'Failed to add loan';
+        if (err?.error?.errors) {
+          const first = Object.values(err.error.errors).flat()[0];
+          if (first) msg = String(first);
+        }
+        this.notify.error(msg);
         this.saving.set(false);
         this.cdr.detectChanges();
       }

@@ -12,8 +12,11 @@ import { toLocalISOString } from '../../../core/utils/date-utils';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { BankAccountService } from '../../../core/services/bank-account.service';
+import { SavingsGoalService } from '../../../core/services/savings-goal.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { BankAccount } from '../../../core/models/bank-account.model';
 import { SavingsGoal } from '../../../core/models/savings-goal.model';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-goal-dialog',
@@ -81,8 +84,8 @@ import { SavingsGoal } from '../../../core/models/savings-goal.model';
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>Cancel</button>
-      <button mat-raised-button color="primary" [disabled]="form.invalid || loading()" (click)="save()">
-        {{ data ? 'Update' : 'Create' }}
+      <button mat-raised-button color="primary" [disabled]="form.invalid || loading() || saving()" (click)="save()">
+        {{ saving() ? 'Saving...' : (data ? 'Update' : 'Create') }}
       </button>
     </mat-dialog-actions>
   `,
@@ -108,11 +111,14 @@ import { SavingsGoal } from '../../../core/models/savings-goal.model';
 export class GoalDialogComponent implements OnInit {
   private fb = inject(FormBuilder);
   private accountService = inject(BankAccountService);
+  private goalService = inject(SavingsGoalService);
+  private notify = inject(NotificationService);
   private dialogRef = inject(MatDialogRef<GoalDialogComponent>);
   data: SavingsGoal | null = inject(MAT_DIALOG_DATA);
   private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
+  saving = signal(false);
   accounts = signal<BankAccount[]>([]);
 
   form: FormGroup = this.fb.group({
@@ -145,8 +151,9 @@ export class GoalDialogComponent implements OnInit {
 
   save(): void {
     if (this.form.invalid) return;
+    this.saving.set(true);
     const val = this.form.value;
-    const result = {
+    const payload = {
       name: val.name,
       targetAmount: val.targetAmount,
       currentAmount: val.currentAmount ?? 0,
@@ -154,6 +161,16 @@ export class GoalDialogComponent implements OnInit {
       linkedAccountId: val.linkedAccountId || undefined,
       icon: val.icon || undefined
     };
-    this.dialogRef.close(result);
+    const op$ = this.data
+      ? this.goalService.update(this.data.id, payload)
+      : this.goalService.create(payload);
+    (op$ as Observable<unknown>).subscribe({
+      next: () => this.dialogRef.close(true),
+      error: (err: any) => {
+        this.notify.error(err.error?.message || `Failed to ${this.data ? 'update' : 'create'} goal`);
+        this.saving.set(false);
+        this.cdr.detectChanges();
+      }
+    });
   }
 }

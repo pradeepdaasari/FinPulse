@@ -29,7 +29,7 @@ public class CreditCardsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<CreditCard>>> GetAll()
     {
-        var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
+        var cards = await _db.CreditCards.Where(c => c.UserId == UserId).OrderByDescending(c => c.CreatedAt).ToListAsync();
         return Ok(cards);
     }
 

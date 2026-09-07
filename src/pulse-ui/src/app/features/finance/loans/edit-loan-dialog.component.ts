@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef, inject, signal, computed } from '@angular/core';
+import { Component, ChangeDetectorRef, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -11,7 +11,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { LoanService } from '../../../core/services/loan.service';
+import { FundingSourceService } from '../../../core/services/funding-source.service';
+import { FundingSource } from '../../../core/models/funding-source.model';
 import { PersonalLoan } from '../../../core/models/personal-loan.model';
+import { NotificationService } from '../../../core/services/notification.service';
+import { toLocalISOString } from '../../../core/utils/date-utils';
 
 @Component({
   selector: 'app-edit-loan-dialog',
@@ -84,7 +88,7 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
 
           <mat-form-field>
             <mat-label>Duration (Months)</mat-label>
-            <input matInput type="number" inputmode="decimal" formControlName="durationMonths">
+            <input matInput type="number" inputmode="numeric" formControlName="durationMonths" step="1">
           </mat-form-field>
         </div>
 
@@ -99,10 +103,16 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
           </mat-form-field>
 
           <mat-form-field>
-            <mat-label>Due Day of Month</mat-label>
+            <mat-label>{{ dueDayLabel() }}</mat-label>
             <mat-select formControlName="dueDay">
-              @for (day of dueDays; track day) {
-                <mat-option [value]="day">{{ day }}</mat-option>
+              @if (isWeeklyOrBiweekly()) {
+                @for (day of weekDays; track day; let i = $index) {
+                  <mat-option [value]="i">{{ day }}</mat-option>
+                }
+              } @else {
+                @for (day of dueDays; track day) {
+                  <mat-option [value]="day">{{ day }}</mat-option>
+                }
               }
             </mat-select>
           </mat-form-field>
@@ -120,6 +130,23 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
             <input matInput type="number" inputmode="decimal" formControlName="aprPercent" step="0.01">
           </mat-form-field>
         </div>
+
+        <mat-form-field>
+          <mat-label>Funded to (Bank Account)</mat-label>
+          <mat-select formControlName="fundedBankAccountId" (opened)="bankSearch.set('')">
+            <div class="category-search-box">
+              <mat-icon>search</mat-icon>
+              <input matInput placeholder="Search accounts..." (input)="bankSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+            </div>
+            <mat-option [value]="null">-- None --</mat-option>
+            @for (source of filteredBankSources(); track source.id) {
+              <mat-option [value]="source.id">
+                <mat-icon>account_balance</mat-icon>
+                {{ source.name }} ({{ source.currentBalance | currency }})
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
 
         <mat-slide-toggle formControlName="isAutopay" color="primary">
           This loan is on autopay
@@ -164,6 +191,13 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
       grid-template-columns: 1fr 1fr;
       gap: var(--spacing-md);
     }
+    .category-search-box {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 16px; border-bottom: 1px solid var(--color-border);
+      position: sticky; top: 0; background: var(--color-surface); z-index: 100;
+    }
+    .category-search-box mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-text-muted); }
+    .category-search-box input { border: none; outline: none; flex: 1; font-size: 0.875rem; background: transparent; color: inherit; }
     @media (max-width: 600px) {
       mat-dialog-content {
         min-width: unset;
@@ -174,22 +208,45 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
     }
   `]
 })
-export class EditLoanDialogComponent {
+export class EditLoanDialogComponent implements OnInit {
   private fb = inject(FormBuilder);
   private loanService = inject(LoanService);
+  private fundingSourceService = inject(FundingSourceService);
   private dialogRef = inject(MatDialogRef<EditLoanDialogComponent>);
   private data: PersonalLoan = inject(MAT_DIALOG_DATA);
+  private notify = inject(NotificationService);
   private cdr = inject(ChangeDetectorRef);
 
   dueDays = Array.from({ length: 28 }, (_, i) => i + 1);
+  weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   saving = signal(false);
+  bankSources = signal<FundingSource[]>([]);
+  bankSearch = signal('');
+  filteredBankSources = computed(() => {
+    const q = this.bankSearch().toLowerCase();
+    return q ? this.bankSources().filter(s => s.name.toLowerCase().includes(q)) : this.bankSources();
+  });
   paymentFrequencyValue = signal(this.data.paymentFrequency || 'Monthly');
+  isWeeklyOrBiweekly = computed(() => {
+    const f = this.paymentFrequencyValue();
+    return f === 'Weekly' || f === 'Biweekly';
+  });
+  dueDayLabel = computed(() => this.isWeeklyOrBiweekly() ? 'Due Day of Week' : 'Due Day of Month');
   emiLabel = computed(() => {
     const freq = this.paymentFrequencyValue();
     if (freq === 'Biweekly') return 'Biweekly Payment';
     if (freq === 'Weekly') return 'Weekly Payment';
     return 'Monthly EMI';
   });
+
+  ngOnInit(): void {
+    this.fundingSourceService.getAll().subscribe(sources => {
+      this.bankSources.set(
+        sources.filter(s => s.type === 'BankAccount').sort((a, b) => a.name.localeCompare(b.name))
+      );
+      this.cdr.detectChanges();
+    });
+  }
 
   form = this.fb.group({
     loanType: [this.data.loanType || 'Personal', Validators.required],
@@ -202,7 +259,8 @@ export class EditLoanDialogComponent {
     startDate: [new Date(this.data.startDate), Validators.required],
     monthlyPayment: [this.data.monthlyPayment, [Validators.required, Validators.min(1)]],
     dueDay: [this.data.dueDay, Validators.required],
-    paymentFrequency: [this.data.paymentFrequency, Validators.required]
+    paymentFrequency: [this.data.paymentFrequency, Validators.required],
+    fundedBankAccountId: [this.data.fundedBankAccountId ?? null]
   });
 
   save(): void {
@@ -217,18 +275,21 @@ export class EditLoanDialogComponent {
       originalAmount: value.originalAmount,
       currentBalance: value.currentBalance,
       aprPercent: value.aprPercent,
-      durationMonths: value.durationMonths,
-      startDate: value.startDate,
+      durationMonths: Math.round(value.durationMonths!),
+      startDate: value.startDate ? toLocalISOString(value.startDate) : null,
       monthlyPayment: value.monthlyPayment,
-      dueDay: value.dueDay,
-      paymentFrequency: value.paymentFrequency
+      dueDay: Math.round(value.dueDay!),
+      paymentFrequency: value.paymentFrequency,
+      fundedBankAccountId: value.fundedBankAccountId
     };
 
     this.loanService.update(this.data.id, payload).subscribe({
       next: (updated) => {
         this.dialogRef.close(updated);
       },
-      error: () => {
+      error: (err) => {
+        const msg = err?.error?.message || 'Failed to update loan';
+        this.notify.error(msg);
         this.saving.set(false);
         this.cdr.detectChanges();
       }

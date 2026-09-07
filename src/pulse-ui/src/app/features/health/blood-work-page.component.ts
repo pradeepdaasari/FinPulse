@@ -148,12 +148,7 @@ export class BloodWorkPageComponent implements OnInit {
     import('./add-blood-work-dialog.component').then(m => {
       const ref = this.dialog.open(m.AddBloodWorkDialogComponent, { width: '600px', maxWidth: '95vw', maxHeight: '90vh' });
       ref.afterClosed().subscribe(result => {
-        if (result) {
-          this.bloodWorkService.create(result).subscribe({
-            next: () => { this.notify.success('Report saved'); this.loadReports(); },
-            error: () => this.notify.error('Failed to save report')
-          });
-        }
+        if (result) this.loadReports();
       });
     });
   }

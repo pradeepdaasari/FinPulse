@@ -311,11 +311,24 @@ export class MetricsLogComponent implements OnInit {
   selectedType = '';
   displayedColumns = ['type', 'value', 'date', 'notes', 'actions'];
 
+  private trendNotes: (string | undefined)[] = [];
+
   chartOptions: ChartConfiguration<'line'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { display: false }
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          afterBody: (items) => {
+            const idx = items[0]?.dataIndex;
+            if (idx != null && this.trendNotes[idx]) {
+              return `📝 ${this.trendNotes[idx]}`;
+            }
+            return '';
+          }
+        }
+      }
     },
     scales: {
       x: {
@@ -374,6 +387,7 @@ export class MetricsLogComponent implements OnInit {
       this.healthService.getTrends(this.selectedType, 90).subscribe({
         next: data => {
           this.trendData.set(data);
+          this.trendNotes = data.map(d => d.notes);
           if (data.length > 1) {
             this.chartData.set({
               labels: data.map(d => {
@@ -408,15 +422,9 @@ export class MetricsLogComponent implements OnInit {
       const ref = this.dialog.open(m.AddMetricDialogComponent, { width: '420px', maxWidth: '95vw' });
       ref.afterClosed().subscribe(result => {
         if (result) {
-          this.healthService.create(result).subscribe({
-            next: () => {
-              this.notify.success('Metric logged');
-              this.loadMetrics();
-              this.loadTrend();
-              this.healthService.getTypes().subscribe(t => { this.types.set(t); this.cdr.detectChanges(); });
-            },
-            error: () => this.notify.error('Failed to save metric')
-          });
+          this.loadMetrics();
+          this.loadTrend();
+          this.healthService.getTypes().subscribe(t => { this.types.set(t); this.cdr.detectChanges(); });
         }
       });
     });
@@ -433,10 +441,8 @@ export class MetricsLogComponent implements OnInit {
         if (result === 'delete') {
           this.confirmDelete(metric);
         } else if (result) {
-          this.healthService.update(metric.id, result).subscribe({
-            next: () => { this.notify.success('Metric updated'); this.loadMetrics(); this.loadTrend(); },
-            error: () => this.notify.error('Failed to update')
-          });
+          this.loadMetrics();
+          this.loadTrend();
         }
       });
     });

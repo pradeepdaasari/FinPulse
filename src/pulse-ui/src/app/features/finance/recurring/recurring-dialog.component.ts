@@ -13,8 +13,11 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CategoryService } from '../../../core/services/category.service';
+import { RecurringService } from '../../../core/services/recurring.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { toLocalISOString } from '../../../core/utils/date-utils';
 import { RecurringTransaction } from '../../../core/models/recurring.model';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-recurring-dialog',
@@ -129,9 +132,9 @@ import { RecurringTransaction } from '../../../core/models/recurring.model';
     <mat-dialog-actions align="end" class="dialog-actions">
       <span class="action-spacer"></span>
       <button mat-button mat-dialog-close class="cancel-btn">Cancel</button>
-      <button mat-raised-button color="primary" class="save-btn" [disabled]="form.invalid || loading()" (click)="save()">
+      <button mat-raised-button color="primary" class="save-btn" [disabled]="form.invalid || loading() || saving()" (click)="save()">
         <mat-icon>{{ data ? 'check' : 'save' }}</mat-icon>
-        {{ data ? 'Update' : 'Create' }}
+        {{ saving() ? 'Saving...' : (data ? 'Update' : 'Create') }}
       </button>
     </mat-dialog-actions>
   `,
@@ -231,11 +234,14 @@ import { RecurringTransaction } from '../../../core/models/recurring.model';
 export class RecurringDialogComponent implements OnInit {
   private fb = inject(FormBuilder);
   private categoryService = inject(CategoryService);
+  private recurringService = inject(RecurringService);
+  private notify = inject(NotificationService);
   private dialogRef = inject(MatDialogRef<RecurringDialogComponent>);
   data: RecurringTransaction | null = inject(MAT_DIALOG_DATA);
   private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
+  saving = signal(false);
   categories = signal<any[]>([]);
   selectedParentId = signal<number | null>(null);
   parentSearch = signal('');
@@ -334,8 +340,9 @@ export class RecurringDialogComponent implements OnInit {
 
   save(): void {
     if (this.form.invalid) return;
+    this.saving.set(true);
     const val = this.form.value;
-    const result = {
+    const payload = {
       description: val.description,
       merchant: val.merchant || undefined,
       amount: val.amount,
@@ -346,6 +353,16 @@ export class RecurringDialogComponent implements OnInit {
       endDate: val.endDate ? toLocalISOString(new Date(val.endDate)) : undefined,
       isActive: val.isActive
     };
-    this.dialogRef.close(result);
+    const op$ = this.data
+      ? this.recurringService.update(this.data.id, payload)
+      : this.recurringService.create(payload);
+    (op$ as Observable<unknown>).subscribe({
+      next: () => this.dialogRef.close(true),
+      error: (err: any) => {
+        this.notify.error(err.error?.message || `Failed to ${this.data ? 'update' : 'create'}`);
+        this.saving.set(false);
+        this.cdr.detectChanges();
+      }
+    });
   }
 }

@@ -7,6 +7,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { FormsModule } from '@angular/forms';
 import { HealthMetric } from '../../core/models/health-metric.model';
+import { HealthMetricService } from '../../core/services/health-metric.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { toLocalISOString } from '../../core/utils/date-utils';
 
 interface MetricConfig {
@@ -76,9 +78,9 @@ interface MetricConfig {
       }
       <span class="action-spacer"></span>
       <button mat-button mat-dialog-close class="cancel-btn">Cancel</button>
-      <button mat-raised-button color="primary" class="save-btn" [disabled]="!selectedType || !value" (click)="save()">
+      <button mat-raised-button color="primary" class="save-btn" [disabled]="!selectedType || !value || saving" (click)="save()">
         <mat-icon>check</mat-icon>
-        {{ isEdit ? 'Update' : 'Save' }}
+        {{ saving ? 'Saving...' : (isEdit ? 'Update' : 'Save') }}
       </button>
     </mat-dialog-actions>
   `,
@@ -162,9 +164,12 @@ interface MetricConfig {
 })
 export class AddMetricDialogComponent implements OnInit {
   private dialogRef = inject(MatDialogRef<AddMetricDialogComponent>);
+  private metricService = inject(HealthMetricService);
+  private notify = inject(NotificationService);
   data: HealthMetric | null = inject(MAT_DIALOG_DATA);
 
   isEdit = false;
+  saving = false;
 
   metricConfigs: MetricConfig[] = [
     { type: 'Weight', label: 'Weight', unit: 'lbs', icon: 'monitor_weight' },
@@ -201,12 +206,23 @@ export class AddMetricDialogComponent implements OnInit {
   }
 
   save() {
-    this.dialogRef.close({
+    this.saving = true;
+    const payload = {
       metricType: this.selectedType,
-      value: this.value,
+      value: this.value!,
       unit: this.getUnit(),
       measuredAt: toLocalISOString(new Date(this.measuredAt)),
       notes: this.notes || undefined
+    };
+    const op$ = this.isEdit && this.data
+      ? this.metricService.update(this.data.id, payload)
+      : this.metricService.create(payload);
+    op$.subscribe({
+      next: () => this.dialogRef.close(true),
+      error: (err) => {
+        this.notify.error(err.error?.message || 'Failed to save metric');
+        this.saving = false;
+      }
     });
   }
 

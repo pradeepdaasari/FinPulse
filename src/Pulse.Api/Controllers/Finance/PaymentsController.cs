@@ -89,9 +89,43 @@ public class PaymentsController : ControllerBase
                         card.CurrentBalance = Math.Max(0, card.CurrentBalance - difference);
                 }
 
+                // Handle FromAccountId change — reverse old bank deduction, apply new
+                var oldFromAccountId = payment.FromAccountId;
+                var oldAmount = payment.AmountPaid;
+
+                if (oldFromAccountId != dto.FromAccountId || oldAmount != dto.AmountPaid)
+                {
+                    // Reverse old bank account deduction
+                    if (oldFromAccountId.HasValue)
+                    {
+                        var oldAccount = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == oldFromAccountId && a.UserId == UserId);
+                        if (oldAccount != null)
+                            oldAccount.CurrentBalance += oldAmount;
+                    }
+                    // Apply new bank account deduction
+                    if (dto.FromAccountId.HasValue)
+                    {
+                        var newAccount = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == dto.FromAccountId && a.UserId == UserId);
+                        if (newAccount != null)
+                            newAccount.CurrentBalance -= dto.AmountPaid;
+                    }
+                }
+
                 payment.AmountPaid = dto.AmountPaid;
                 payment.PaymentDate = dto.PaymentDate;
                 payment.Notes = dto.Notes;
+                payment.FromAccountId = dto.FromAccountId;
+
+                // Update associated money movement
+                var movement = await _db.MoneyMovements.FirstOrDefaultAsync(m => m.RelatedPaymentId == payment.Id && m.UserId == UserId);
+                if (movement != null)
+                {
+                    movement.SourceType = dto.FromAccountId.HasValue ? MoneyMovementEntityType.BankAccount : MoneyMovementEntityType.External;
+                    movement.SourceId = dto.FromAccountId;
+                    movement.Amount = dto.AmountPaid;
+                    movement.MovementDate = dto.PaymentDate;
+                    movement.Note = dto.Notes;
+                }
 
                 await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
