@@ -1126,3 +1126,110 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
+
+// ─── iOS-native datepicker overrides ────────────────────────────────────────
+
+.mat-datepicker-content {
+  border-radius: 16px !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.08) !important;
+  overflow: hidden;
+  border: none !important;
+
+  .mat-calendar {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', var(--font-primary), sans-serif;
+  }
+
+  .mat-calendar-header {
+    padding: 12px 12px 4px !important;
+  }
+
+  .mat-calendar-controls {
+    margin-top: 0 !important;
+  }
+
+  .mat-calendar-period-button {
+    font-weight: 600 !important;
+    font-size: 0.9375rem !important;
+    letter-spacing: -0.01em;
+  }
+
+  .mat-calendar-arrow {
+    border-top-color: var(--color-primary) !important;
+  }
+
+  .mat-calendar-previous-button,
+  .mat-calendar-next-button {
+    color: var(--color-primary) !important;
+  }
+
+  .mat-calendar-table-header th {
+    font-size: 0.6875rem !important;
+    font-weight: 600 !important;
+    color: var(--color-text-muted) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding-bottom: 6px !important;
+  }
+
+  .mat-calendar-body-cell-content {
+    border-radius: 50% !important;
+    font-size: 0.875rem !important;
+    font-weight: 400 !important;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .mat-calendar-body-selected {
+    background-color: var(--color-primary) !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+  }
+
+  .mat-calendar-body-today:not(.mat-calendar-body-selected) {
+    border-color: var(--color-primary) !important;
+    font-weight: 600 !important;
+    color: var(--color-primary) !important;
+  }
+
+  .mat-calendar-body-cell:not(.mat-calendar-body-disabled):hover
+  > .mat-calendar-body-cell-content:not(.mat-calendar-body-selected) {
+    background-color: color-mix(in srgb, var(--color-primary) 12%, transparent) !important;
+  }
+}
+
+@media (max-width: 599px) {
+  .mat-datepicker-content {
+    border-radius: 20px !important;
+    margin: 0 8px;
+  }
+
+  .cdk-overlay-pane:has(.mat-datepicker-content) {
+    max-width: calc(100vw - 16px) !important;
+  }
+}
+
+// Native date inputs — iOS style
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', var(--font-primary), sans-serif;
+  font-size: 1rem;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1.5px solid var(--color-border);
+  padding: 8px 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  transition: border-color 0.2s ease;
+
+  &:focus {
+    border-color: var(--color-primary);
+    outline: none;
+  }
+}
+
+// Datepicker toggle icon — softer
+.mat-datepicker-toggle {
+  .mat-mdc-icon-button {
+    color: var(--color-text-secondary) !important;
+  }
+}

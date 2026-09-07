@@ -240,11 +240,11 @@ export interface TradeEntryDialogData {
         <div class="row-4col">
           <mat-form-field appearance="outline">
             <mat-label>Qty</mat-label>
-            <input matInput type="number" inputmode="numeric" formControlName="quantity" min="1" (input)="calcPnl()">
+            <input matInput type="number" inputmode="decimal" formControlName="quantity" min="1" (input)="calcPnl()">
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Multiplier</mat-label>
-            <input matInput type="number" inputmode="numeric" formControlName="multiplier" min="1" (input)="calcPnl()">
+            <input matInput type="number" inputmode="decimal" formControlName="multiplier" min="1" (input)="calcPnl()">
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>P&L</mat-label>

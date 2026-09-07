@@ -17,11 +17,12 @@ import { PaymentHistory } from '../../../core/models/payment-history.model';
 import { sumCurrency } from '../../../core/utils/currency';
 import { AmortizationTableComponent } from './amortization-table.component';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
+import { EntityMovementsComponent } from '../../../shared/entity-movements.component';
 
 @Component({
   selector: 'app-loan-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatTooltipModule, CurrencyPipe, DatePipe, LocalDatePipe, AmortizationTableComponent, SkeletonLoaderComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatTooltipModule, CurrencyPipe, DatePipe, LocalDatePipe, AmortizationTableComponent, SkeletonLoaderComponent, EntityMovementsComponent],
   template: `
     @if (loading()) {
       <app-skeleton type="card"></app-skeleton>
@@ -121,6 +122,8 @@ import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.compone
           </div>
         </mat-card>
       }
+
+      <app-entity-movements entityType="Loan" [entityId]="loan()!.id" />
 
       @if (amortizationSchedule()) {
         <h3>Amortization Schedule</h3>

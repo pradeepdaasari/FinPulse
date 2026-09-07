@@ -81,7 +81,7 @@ import { CreditCard } from '../../../core/models/credit-card.model';
             <mat-form-field appearance="outline" class="half-width">
               <mat-label>Due Day</mat-label>
               <mat-icon matPrefix>event</mat-icon>
-              <input matInput type="number" inputmode="numeric" formControlName="dueDay">
+              <input matInput type="number" inputmode="decimal" formControlName="dueDay">
               <mat-hint>1–31</mat-hint>
             </mat-form-field>
           </div>

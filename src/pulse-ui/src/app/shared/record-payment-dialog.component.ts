@@ -77,7 +77,7 @@ export interface RecordPaymentData {
 
         <mat-form-field class="full-width">
           <mat-label>Payment Amount</mat-label>
-          <input matInput type="number" formControlName="amountPaid" step="0.01" [readonly]="paymentType() !== 'custom'">
+          <input matInput type="number" inputmode="decimal" formControlName="amountPaid" step="0.01" [readonly]="paymentType() !== 'custom'">
           <span matTextPrefix>$&nbsp;</span>
         </mat-form-field>
 

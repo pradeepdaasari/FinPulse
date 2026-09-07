@@ -24,7 +24,7 @@ import { MultiMonthComparison, MultiMonthTotal, MultiMonthCategory } from '../..
     <div class="controls">
       <mat-form-field class="months-input">
         <mat-label>Months to compare</mat-label>
-        <input matInput type="number" inputmode="numeric" [(ngModel)]="monthCount" min="1" max="12"
+        <input matInput type="number" inputmode="decimal" [(ngModel)]="monthCount" min="1" max="12"
                (keyup.enter)="loadData()">
         <mat-hint>1–12 months ending at current view</mat-hint>
       </mat-form-field>

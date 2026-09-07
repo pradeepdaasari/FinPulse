@@ -34,7 +34,7 @@ const COMMANDS: PaletteItem[] = [
   { label: 'Categories', icon: 'category', route: '/categories', keywords: ['tag', 'organize'] },
   { label: 'Payoff Strategies', icon: 'trending_down', route: '/strategies', keywords: ['avalanche', 'snowball', 'payoff'] },
   { label: 'What-If Simulator', icon: 'science', route: '/simulator', keywords: ['simulate', 'extra payment', 'what if'] },
-  { label: 'Payments', icon: 'receipt_long', route: '/payments', keywords: ['payment', 'history', 'record'] },
+  { label: 'Money Flow', icon: 'sync_alt', route: '/money-movements', keywords: ['payment', 'history', 'record', 'transfer', 'movement', 'flow'] },
 ];
 
 const ACTIONS: PaletteItem[] = [

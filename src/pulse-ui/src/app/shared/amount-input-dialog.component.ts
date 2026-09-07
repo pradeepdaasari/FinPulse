@@ -33,7 +33,7 @@ export interface AmountInputDialogData {
       <mat-form-field appearance="outline" class="amount-field">
         <mat-label>{{ data.placeholder || 'Amount' }}</mat-label>
         <span matTextPrefix>$&nbsp;</span>
-        <input matInput type="number" [(ngModel)]="amount" min="0.01" step="1" (keydown.enter)="submit()" autofocus>
+        <input matInput type="number" inputmode="decimal" [(ngModel)]="amount" min="0.01" step="0.01" (keydown.enter)="submit()" autofocus>
       </mat-form-field>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
