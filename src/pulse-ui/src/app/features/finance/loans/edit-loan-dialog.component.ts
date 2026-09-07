@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef, inject, signal } from '@angular/core';
+import { Component, ChangeDetectorRef, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -40,7 +40,7 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
       </div>
     </div>
     <mat-dialog-content>
-      <form [formGroup]="form" class="loan-form">
+      <form [formGroup]="form" class="loan-form" (submit)="$event.preventDefault()">
         <div class="form-row">
           <mat-form-field>
             <mat-label>Loan Type</mat-label>
@@ -63,13 +63,13 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
         <div class="form-row">
           <mat-form-field>
             <mat-label>Loan Amount</mat-label>
-            <input matInput type="number" formControlName="originalAmount">
+            <input matInput type="number" inputmode="decimal" formControlName="originalAmount">
             <span matTextPrefix>$&nbsp;</span>
           </mat-form-field>
 
           <mat-form-field>
             <mat-label>Current Balance</mat-label>
-            <input matInput type="number" formControlName="currentBalance">
+            <input matInput type="number" inputmode="decimal" formControlName="currentBalance">
             <span matTextPrefix>$&nbsp;</span>
           </mat-form-field>
         </div>
@@ -84,24 +84,20 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
 
           <mat-form-field>
             <mat-label>Duration (Months)</mat-label>
-            <input matInput type="number" formControlName="durationMonths">
+            <input matInput type="number" inputmode="numeric" formControlName="durationMonths">
           </mat-form-field>
         </div>
 
         <div class="form-row">
           <mat-form-field>
-            <mat-label>Monthly EMI</mat-label>
-            <input matInput type="number" formControlName="monthlyPayment">
-            <span matTextPrefix>$&nbsp;</span>
+            <mat-label>Payment Frequency</mat-label>
+            <mat-select formControlName="paymentFrequency" (selectionChange)="paymentFrequencyValue.set($event.value)">
+              <mat-option value="Monthly">Monthly</mat-option>
+              <mat-option value="Biweekly">Biweekly</mat-option>
+              <mat-option value="Weekly">Weekly</mat-option>
+            </mat-select>
           </mat-form-field>
 
-          <mat-form-field>
-            <mat-label>APR %</mat-label>
-            <input matInput type="number" formControlName="aprPercent" step="0.01">
-          </mat-form-field>
-        </div>
-
-        <div class="form-row">
           <mat-form-field>
             <mat-label>Due Day of Month</mat-label>
             <mat-select formControlName="dueDay">
@@ -110,14 +106,18 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
               }
             </mat-select>
           </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field>
+            <mat-label>{{ emiLabel() }}</mat-label>
+            <input matInput type="number" inputmode="decimal" formControlName="monthlyPayment">
+            <span matTextPrefix>$&nbsp;</span>
+          </mat-form-field>
 
           <mat-form-field>
-            <mat-label>Payment Frequency</mat-label>
-            <mat-select formControlName="paymentFrequency">
-              <mat-option value="Monthly">Monthly</mat-option>
-              <mat-option value="Biweekly">Biweekly</mat-option>
-              <mat-option value="Weekly">Weekly</mat-option>
-            </mat-select>
+            <mat-label>APR %</mat-label>
+            <input matInput type="number" inputmode="decimal" formControlName="aprPercent" step="0.01">
           </mat-form-field>
         </div>
 
@@ -183,6 +183,13 @@ export class EditLoanDialogComponent {
 
   dueDays = Array.from({ length: 28 }, (_, i) => i + 1);
   saving = signal(false);
+  paymentFrequencyValue = signal(this.data.paymentFrequency || 'Monthly');
+  emiLabel = computed(() => {
+    const freq = this.paymentFrequencyValue();
+    if (freq === 'Biweekly') return 'Biweekly Payment';
+    if (freq === 'Weekly') return 'Weekly Payment';
+    return 'Monthly EMI';
+  });
 
   form = this.fb.group({
     loanType: [this.data.loanType || 'Personal', Validators.required],

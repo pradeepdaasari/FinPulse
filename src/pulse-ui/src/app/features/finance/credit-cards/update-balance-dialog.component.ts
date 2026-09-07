@@ -43,27 +43,27 @@ import { CreditCard } from '../../../core/models/credit-card.model';
     <mat-divider></mat-divider>
 
     <mat-dialog-content>
-      <form [formGroup]="form" class="update-form">
+      <form [formGroup]="form" class="update-form" (submit)="$event.preventDefault()">
         <div class="form-section">
           <span class="section-label">Balance & Payments</span>
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Credit Limit</mat-label>
             <mat-icon matPrefix>credit_score</mat-icon>
-            <input matInput type="number" formControlName="creditLimit" step="0.01">
+            <input matInput type="number" inputmode="decimal" formControlName="creditLimit" step="0.01">
             <span matTextPrefix>$&nbsp;</span>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Statement Balance</mat-label>
             <mat-icon matPrefix>account_balance_wallet</mat-icon>
-            <input matInput type="number" formControlName="currentBalance" step="0.01">
+            <input matInput type="number" inputmode="decimal" formControlName="currentBalance" step="0.01">
             <span matTextPrefix>$&nbsp;</span>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Minimum Payment</mat-label>
             <mat-icon matPrefix>payments</mat-icon>
-            <input matInput type="number" formControlName="minimumPayment" step="0.01">
+            <input matInput type="number" inputmode="decimal" formControlName="minimumPayment" step="0.01">
             <span matTextPrefix>$&nbsp;</span>
           </mat-form-field>
         </div>
@@ -74,14 +74,14 @@ import { CreditCard } from '../../../core/models/credit-card.model';
             <mat-form-field appearance="outline" class="half-width">
               <mat-label>APR</mat-label>
               <mat-icon matPrefix>percent</mat-icon>
-              <input matInput type="number" formControlName="aprPercent" step="0.01">
+              <input matInput type="number" inputmode="decimal" formControlName="aprPercent" step="0.01">
               <span matTextSuffix>%</span>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="half-width">
               <mat-label>Due Day</mat-label>
               <mat-icon matPrefix>event</mat-icon>
-              <input matInput type="number" formControlName="dueDay">
+              <input matInput type="number" inputmode="numeric" formControlName="dueDay">
               <mat-hint>1–31</mat-hint>
             </mat-form-field>
           </div>
@@ -96,7 +96,7 @@ import { CreditCard } from '../../../core/models/credit-card.model';
             <div class="field-row promo-fields">
               <mat-form-field appearance="outline" class="half-width">
                 <mat-label>Promo APR</mat-label>
-                <input matInput type="number" formControlName="promoAprPercent" step="0.01">
+                <input matInput type="number" inputmode="decimal" formControlName="promoAprPercent" step="0.01">
                 <span matTextSuffix>%</span>
               </mat-form-field>
 

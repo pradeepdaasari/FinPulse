@@ -50,22 +50,22 @@ export interface EditCommissionDialogData {
         <div class="fees-grid">
           <mat-form-field appearance="outline">
             <mat-label>Commission</mat-label>
-            <input matInput type="number" [ngModel]="optionsCommission()" (ngModelChange)="optionsCommission.set($event)" step="0.01">
+            <input matInput type="number" inputmode="decimal" [ngModel]="optionsCommission()" (ngModelChange)="optionsCommission.set($event)" step="0.01">
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Reg + Exchange</mat-label>
-            <input matInput type="number" [ngModel]="optionsRegFee()" (ngModelChange)="optionsRegFee.set($event)" step="0.001">
+            <input matInput type="number" inputmode="decimal" [ngModel]="optionsRegFee()" (ngModelChange)="optionsRegFee.set($event)" step="0.001">
           </mat-form-field>
         </div>
         <div class="fee-sub-label">Futures (per contract)</div>
         <div class="fees-grid">
           <mat-form-field appearance="outline">
             <mat-label>Commission</mat-label>
-            <input matInput type="number" [ngModel]="futuresCommission()" (ngModelChange)="futuresCommission.set($event)" step="0.01">
+            <input matInput type="number" inputmode="decimal" [ngModel]="futuresCommission()" (ngModelChange)="futuresCommission.set($event)" step="0.01">
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Reg + Exchange</mat-label>
-            <input matInput type="number" [ngModel]="futuresRegFee()" (ngModelChange)="futuresRegFee.set($event)" step="0.001">
+            <input matInput type="number" inputmode="decimal" [ngModel]="futuresRegFee()" (ngModelChange)="futuresRegFee.set($event)" step="0.001">
           </mat-form-field>
         </div>
       </div>

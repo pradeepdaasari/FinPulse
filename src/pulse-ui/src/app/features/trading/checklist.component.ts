@@ -286,7 +286,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
                   <mat-icon>rocket_launch</mat-icon>
                   <h4>Confirm Trade Entry</h4>
                 </div>
-                <form [formGroup]="tradeForm" class="entry-form">
+                <form [formGroup]="tradeForm" class="entry-form" (submit)="$event.preventDefault()">
                   <div class="entry-grid">
                     <mat-form-field appearance="outline">
                       <mat-label>Instrument</mat-label>
@@ -315,13 +315,13 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
 
                     <mat-form-field appearance="outline">
                       <mat-label>Entry Price</mat-label>
-                      <input matInput type="number" formControlName="entryPrice" step="0.01">
+                      <input matInput type="number" inputmode="decimal" formControlName="entryPrice" step="0.01">
                       <span matTextPrefix>$&nbsp;</span>
                     </mat-form-field>
 
                     <mat-form-field appearance="outline">
                       <mat-label>Contracts</mat-label>
-                      <input matInput type="number" formControlName="quantity" min="1">
+                      <input matInput type="number" inputmode="numeric" formControlName="quantity" min="1">
                     </mat-form-field>
                   </div>
 

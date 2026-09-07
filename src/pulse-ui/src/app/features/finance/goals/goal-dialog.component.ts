@@ -36,7 +36,7 @@ import { SavingsGoal } from '../../../core/models/savings-goal.model';
       @if (loading()) {
         <div class="loading-container"><mat-spinner diameter="28"></mat-spinner></div>
       } @else {
-      <form [formGroup]="form" class="form-grid">
+      <form [formGroup]="form" class="form-grid" (submit)="$event.preventDefault()">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Goal Name</mat-label>
           <input matInput formControlName="name" placeholder="e.g. Emergency Fund, Vacation">
@@ -44,13 +44,13 @@ import { SavingsGoal } from '../../../core/models/savings-goal.model';
 
         <mat-form-field appearance="outline">
           <mat-label>Target Amount</mat-label>
-          <input matInput type="number" formControlName="targetAmount" min="0.01" step="0.01">
+          <input matInput type="number" inputmode="decimal" formControlName="targetAmount" min="0.01" step="0.01">
           <span matPrefix>$&nbsp;</span>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Current Amount</mat-label>
-          <input matInput type="number" formControlName="currentAmount" min="0" step="0.01">
+          <input matInput type="number" inputmode="decimal" formControlName="currentAmount" min="0" step="0.01">
           <span matPrefix>$&nbsp;</span>
         </mat-form-field>
 

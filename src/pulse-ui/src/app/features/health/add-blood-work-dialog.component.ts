@@ -57,7 +57,7 @@ import { BloodWorkResult } from '../../core/models/blood-work.model';
             </mat-form-field>
             <mat-form-field appearance="outline" class="value-field">
               <mat-label>Value</mat-label>
-              <input matInput type="number" [(ngModel)]="result.value" step="0.01">
+              <input matInput type="number" inputmode="decimal" [(ngModel)]="result.value" step="0.01">
             </mat-form-field>
             <mat-form-field appearance="outline" class="unit-field">
               <mat-label>Unit</mat-label>
@@ -65,11 +65,11 @@ import { BloodWorkResult } from '../../core/models/blood-work.model';
             </mat-form-field>
             <mat-form-field appearance="outline" class="ref-field">
               <mat-label>Ref Min</mat-label>
-              <input matInput type="number" [(ngModel)]="result.referenceMin" step="0.01">
+              <input matInput type="number" inputmode="decimal" [(ngModel)]="result.referenceMin" step="0.01">
             </mat-form-field>
             <mat-form-field appearance="outline" class="ref-field">
               <mat-label>Ref Max</mat-label>
-              <input matInput type="number" [(ngModel)]="result.referenceMax" step="0.01">
+              <input matInput type="number" inputmode="decimal" [(ngModel)]="result.referenceMax" step="0.01">
             </mat-form-field>
             <button mat-icon-button (click)="removeResult(i)" class="remove-btn">
               <mat-icon>close</mat-icon>

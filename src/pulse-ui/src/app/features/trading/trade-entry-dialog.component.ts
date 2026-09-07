@@ -48,7 +48,7 @@ export interface TradeEntryDialogData {
       @if (loading()) {
         <div class="loading-container"><mat-spinner diameter="28"></mat-spinner></div>
       } @else {
-      <form [formGroup]="form" class="trade-form">
+      <form [formGroup]="form" class="trade-form" (submit)="$event.preventDefault()">
 
         <!-- Row 1: Date + Time -->
         <div class="row-2col">
@@ -145,44 +145,44 @@ export interface TradeEntryDialogData {
             @if (form.value.spreadType === 'Single') {
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Strike</mat-label>
-                <input matInput type="number" formControlName="strikePrice" step="1">
+                <input matInput type="number" inputmode="decimal" formControlName="strikePrice" step="1">
               </mat-form-field>
             } @else if (form.value.spreadType === 'Calendar') {
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Strike</mat-label>
-                <input matInput type="number" formControlName="strikePrice" step="1">
+                <input matInput type="number" inputmode="decimal" formControlName="strikePrice" step="1">
               </mat-form-field>
             } @else if (form.value.spreadType === 'Vertical') {
               <div class="row-2col">
                 <mat-form-field appearance="outline">
                   <mat-label>Short Strike</mat-label>
-                  <input matInput type="number" formControlName="strikePrice" step="1" (input)="calcPnl()">
+                  <input matInput type="number" inputmode="decimal" formControlName="strikePrice" step="1" (input)="calcPnl()">
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>Long Strike</mat-label>
-                  <input matInput type="number" formControlName="strikePrice2" step="1" (input)="calcPnl()">
+                  <input matInput type="number" inputmode="decimal" formControlName="strikePrice2" step="1" (input)="calcPnl()">
                 </mat-form-field>
               </div>
             } @else if (form.value.spreadType === 'IronCondor') {
               <div class="row-4col">
                 <mat-form-field appearance="outline">
                   <mat-label>SC</mat-label>
-                  <input matInput type="number" formControlName="strikePrice" step="1" (input)="calcPnl()">
+                  <input matInput type="number" inputmode="decimal" formControlName="strikePrice" step="1" (input)="calcPnl()">
                   <mat-hint>Short Call</mat-hint>
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>LC</mat-label>
-                  <input matInput type="number" formControlName="strikePrice2" step="1" (input)="calcPnl()">
+                  <input matInput type="number" inputmode="decimal" formControlName="strikePrice2" step="1" (input)="calcPnl()">
                   <mat-hint>Long Call</mat-hint>
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>SP</mat-label>
-                  <input matInput type="number" formControlName="strikePrice3" step="1" (input)="calcPnl()">
+                  <input matInput type="number" inputmode="decimal" formControlName="strikePrice3" step="1" (input)="calcPnl()">
                   <mat-hint>Short Put</mat-hint>
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>LP</mat-label>
-                  <input matInput type="number" formControlName="strikePrice4" step="1" (input)="calcPnl()">
+                  <input matInput type="number" inputmode="decimal" formControlName="strikePrice4" step="1" (input)="calcPnl()">
                   <mat-hint>Long Put</mat-hint>
                 </mat-form-field>
               </div>
@@ -190,15 +190,15 @@ export interface TradeEntryDialogData {
               <div class="row-3col">
                 <mat-form-field appearance="outline">
                   <mat-label>Lower</mat-label>
-                  <input matInput type="number" formControlName="strikePrice" step="1">
+                  <input matInput type="number" inputmode="decimal" formControlName="strikePrice" step="1">
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>Middle</mat-label>
-                  <input matInput type="number" formControlName="strikePrice2" step="1">
+                  <input matInput type="number" inputmode="decimal" formControlName="strikePrice2" step="1">
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>Upper</mat-label>
-                  <input matInput type="number" formControlName="strikePrice3" step="1">
+                  <input matInput type="number" inputmode="decimal" formControlName="strikePrice3" step="1">
                 </mat-form-field>
               </div>
             }
@@ -207,12 +207,12 @@ export interface TradeEntryDialogData {
             <div class="row-2col">
               <mat-form-field appearance="outline">
                 <mat-label>Entry Premium</mat-label>
-                <input matInput type="number" formControlName="entryPremium" step="0.01" (input)="calcPnl()">
+                <input matInput type="number" inputmode="decimal" formControlName="entryPremium" step="0.01" (input)="calcPnl()">
                 <span matTextPrefix>$</span>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Exit Premium</mat-label>
-                <input matInput type="number" formControlName="exitPremium" step="0.01" (input)="calcPnl()" [readonly]="!!form.value.expiredWorthless">
+                <input matInput type="number" inputmode="decimal" formControlName="exitPremium" step="0.01" (input)="calcPnl()" [readonly]="!!form.value.expiredWorthless">
                 <span matTextPrefix>$</span>
               </mat-form-field>
             </div>
@@ -225,12 +225,12 @@ export interface TradeEntryDialogData {
           <div class="row-2col">
             <mat-form-field appearance="outline">
               <mat-label>Entry Price</mat-label>
-              <input matInput type="number" formControlName="entryPrice" step="0.01" (input)="calcPnl()">
+              <input matInput type="number" inputmode="decimal" formControlName="entryPrice" step="0.01" (input)="calcPnl()">
               <span matTextPrefix>$</span>
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Exit Price</mat-label>
-              <input matInput type="number" formControlName="exitPrice" step="0.01" (input)="calcPnl()">
+              <input matInput type="number" inputmode="decimal" formControlName="exitPrice" step="0.01" (input)="calcPnl()">
               <span matTextPrefix>$</span>
             </mat-form-field>
           </div>
@@ -240,20 +240,20 @@ export interface TradeEntryDialogData {
         <div class="row-4col">
           <mat-form-field appearance="outline">
             <mat-label>Qty</mat-label>
-            <input matInput type="number" formControlName="quantity" min="1" (input)="calcPnl()">
+            <input matInput type="number" inputmode="numeric" formControlName="quantity" min="1" (input)="calcPnl()">
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Multiplier</mat-label>
-            <input matInput type="number" formControlName="multiplier" min="1" (input)="calcPnl()">
+            <input matInput type="number" inputmode="numeric" formControlName="multiplier" min="1" (input)="calcPnl()">
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>P&L</mat-label>
-            <input matInput type="number" formControlName="pnl" step="0.01">
+            <input matInput type="number" inputmode="decimal" formControlName="pnl" step="0.01">
             <span matTextPrefix>$</span>
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Risk</mat-label>
-            <input matInput type="number" formControlName="plannedRisk" step="1" min="0">
+            <input matInput type="number" inputmode="decimal" formControlName="plannedRisk" step="1" min="0">
             <span matTextPrefix>$</span>
           </mat-form-field>
         </div>
@@ -274,12 +274,12 @@ export interface TradeEntryDialogData {
               <div class="fees-inputs">
                 <mat-form-field appearance="outline">
                   <mat-label>Commission</mat-label>
-                  <input matInput type="number" formControlName="commissionFees" step="0.01" (input)="onFeesChanged()">
+                  <input matInput type="number" inputmode="decimal" formControlName="commissionFees" step="0.01" (input)="onFeesChanged()">
                   <span matTextPrefix>$</span>
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>Reg + Exchange</mat-label>
-                  <input matInput type="number" formControlName="regExchangeFees" step="0.01" (input)="onFeesChanged()">
+                  <input matInput type="number" inputmode="decimal" formControlName="regExchangeFees" step="0.01" (input)="onFeesChanged()">
                   <span matTextPrefix>$</span>
                 </mat-form-field>
               </div>

@@ -94,13 +94,13 @@ import { ExpenseFilter } from '../../../core/models/daily-expense.model';
 
         <mat-form-field class="filter-field">
           <mat-label>Min Amount</mat-label>
-          <input matInput type="number" [(ngModel)]="minAmount" min="0">
+          <input matInput type="number" inputmode="decimal" [(ngModel)]="minAmount" min="0">
           <span matTextPrefix>$&nbsp;</span>
         </mat-form-field>
 
         <mat-form-field class="filter-field">
           <mat-label>Max Amount</mat-label>
-          <input matInput type="number" [(ngModel)]="maxAmount" min="0">
+          <input matInput type="number" inputmode="decimal" [(ngModel)]="maxAmount" min="0">
           <span matTextPrefix>$&nbsp;</span>
         </mat-form-field>
 
