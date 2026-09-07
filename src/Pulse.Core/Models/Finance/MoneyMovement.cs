@@ -28,6 +28,8 @@ public class MoneyMovement
 
     public int? RelatedExpenseId { get; set; }
 
+    public int? RelatedTradeId { get; set; }
+
     public string? UserId { get; set; }
 
     public DateTime CreatedAt { get; set; }

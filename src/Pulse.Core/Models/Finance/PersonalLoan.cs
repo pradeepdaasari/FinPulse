@@ -23,7 +23,7 @@ public class PersonalLoan
 
     public decimal MonthlyPayment { get; set; }
 
-    [Range(1, 28)]
+    [Range(0, 31)]
     public int DueDay { get; set; }
 
     public LoanType LoanType { get; set; } = LoanType.Personal;

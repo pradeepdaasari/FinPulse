@@ -8,6 +8,7 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
 import { BloodWorkService } from '../../core/services/blood-work.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { toLocalISOString } from '../../core/utils/date-utils';
 import { BloodWorkResult } from '../../core/models/blood-work.model';
 
@@ -81,7 +82,9 @@ import { BloodWorkResult } from '../../core/models/blood-work.model';
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>Cancel</button>
-      <button mat-flat-button color="primary" [disabled]="!reportDate || results.length === 0 || loading()" (click)="save()">Save Report</button>
+      <button mat-flat-button color="primary" [disabled]="!reportDate || results.length === 0 || loading() || saving()" (click)="save()">
+        {{ saving() ? 'Saving...' : 'Save Report' }}
+      </button>
     </mat-dialog-actions>
   `,
   styles: [`
@@ -116,9 +119,11 @@ import { BloodWorkResult } from '../../core/models/blood-work.model';
 export class AddBloodWorkDialogComponent {
   private dialogRef = inject(MatDialogRef<AddBloodWorkDialogComponent>);
   private bloodWorkService = inject(BloodWorkService);
+  private notify = inject(NotificationService);
   private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
+  saving = signal(false);
   reportDate = this.formatDate(new Date());
   labName = '';
   notes = '';
@@ -151,12 +156,21 @@ export class AddBloodWorkDialogComponent {
   }
 
   save() {
+    this.saving.set(true);
     const validResults = this.results.filter(r => r.testName && r.value);
-    this.dialogRef.close({
+    const payload = {
       reportDate: toLocalISOString(new Date(this.reportDate)),
       labName: this.labName || undefined,
       notes: this.notes || undefined,
       results: validResults
+    };
+    this.bloodWorkService.create(payload).subscribe({
+      next: () => this.dialogRef.close(true),
+      error: (err) => {
+        this.notify.error(err.error?.message || 'Failed to save report');
+        this.saving.set(false);
+        this.cdr.detectChanges();
+      }
     });
   }
 

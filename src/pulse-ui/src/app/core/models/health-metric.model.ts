@@ -14,4 +14,5 @@ export interface HealthMetricTrend {
   measuredAt: string;
   value: number;
   unit: string;
+  notes?: string;
 }

@@ -7,5 +7,7 @@ public enum MovementType
     CardPayment,
     Transfer,
     Deposit,
-    Withdrawal
+    Withdrawal,
+    TradePnl,
+    TradeFee
 }

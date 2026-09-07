@@ -470,30 +470,18 @@ export class RecurringPageComponent implements OnInit {
   }
 
   openAdd(): void {
-    const dialogRef = this.dialog.open(RecurringDialogComponent, {
+    this.dialog.open(RecurringDialogComponent, {
       width: '600px', maxWidth: '95vw', data: null
-    });
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.service.create(result).subscribe({
-          next: () => { this.notify.success('Recurring transaction created'); this.loadData(); },
-          error: (err) => this.notify.error(err.error?.message || 'Failed to create')
-        });
-      }
+    }).afterClosed().subscribe(result => {
+      if (result) this.loadData();
     });
   }
 
   edit(item: RecurringTransaction): void {
-    const dialogRef = this.dialog.open(RecurringDialogComponent, {
+    this.dialog.open(RecurringDialogComponent, {
       width: '600px', maxWidth: '95vw', data: item
-    });
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.service.update(item.id, result).subscribe({
-          next: () => { this.notify.success('Recurring transaction updated'); this.loadData(); },
-          error: (err) => this.notify.error(err.error?.message || 'Failed to update')
-        });
-      }
+    }).afterClosed().subscribe(result => {
+      if (result) this.loadData();
     });
   }
 

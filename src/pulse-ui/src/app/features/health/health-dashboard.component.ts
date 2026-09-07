@@ -287,10 +287,7 @@ export class HealthDashboardComponent implements OnInit {
       const ref = this.dialog.open(m.AddMetricDialogComponent, { width: '420px', maxWidth: '95vw' });
       ref.afterClosed().subscribe(result => {
         if (result) {
-          this.healthService.create(result).subscribe({
-            next: () => { this.notify.success('Metric logged'); this.healthService.getLatest().subscribe(m => { this.latestMetrics.set(m); this.cdr.detectChanges(); }); },
-            error: () => this.notify.error('Failed to save')
-          });
+          this.healthService.getLatest().subscribe(m => { this.latestMetrics.set(m); this.cdr.detectChanges(); });
         }
       });
     });

@@ -352,36 +352,54 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
   }
 }
 
-// ─── Material Dialog ─────────────────────────────────────────────────────────
+// ─── Material Dialog (iOS native style) ─────────────────────────────────────
 
 .mat-mdc-dialog-container {
   .mdc-dialog__surface {
-    border-radius: var(--radius-xl) !important;
-    box-shadow: var(--shadow-float) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12), 0 2px 12px rgba(0, 0, 0, 0.08) !important;
     padding: var(--spacing-lg) !important;
-    background: rgba(255, 255, 255, 0.82) !important;
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: #ffffff !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', var(--font-primary), sans-serif;
   }
 }
 
 .mat-mdc-dialog-title {
-  font-size: var(--text-lg) !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', var(--font-primary), sans-serif !important;
+  font-size: 1.1rem !important;
   font-weight: 700 !important;
-  letter-spacing: var(--tracking-tight) !important;
+  letter-spacing: -0.01em !important;
   padding: 0 0 var(--spacing-sm) !important;
+  &::before { display: none !important; }
 }
 
 .mat-mdc-dialog-actions {
   padding: var(--spacing-md) 0 0 !important;
-  border-top: 1px solid var(--color-border);
+  border-top: 0.5px solid var(--color-border);
   margin-top: var(--spacing-sm);
+  min-height: unset !important;
+  gap: 8px;
+
+  button {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', var(--font-primary), sans-serif !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em !important;
+  }
 }
 
-// ─── Mobile fullscreen dialogs ──────────────────────────────────────────────
+// ─── Mobile fullscreen dialogs (iOS sheet) ─────────────────────────────────
 
 @media (max-width: 599px) {
+  // Overlay sits above bottom tabs
+  .cdk-overlay-container {
+    z-index: 1100 !important;
+  }
+
+  .cdk-overlay-backdrop.cdk-overlay-backdrop-showing {
+    background: rgba(0, 0, 0, 0.4) !important;
+  }
+
   .cdk-overlay-pane.mat-mdc-dialog-panel {
     max-width: 100% !important;
     width: 100% !important;
@@ -401,6 +419,7 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
       display: flex !important;
       flex-direction: column !important;
       overflow-x: hidden !important;
+      background: #ffffff !important;
     }
 
     .mdc-dialog__container,
@@ -433,26 +452,29 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
     flex-shrink: 0;
     position: sticky !important;
     bottom: 0;
-    background: var(--color-surface) !important;
+    background: #ffffff !important;
     padding: var(--spacing-md) 0 env(safe-area-inset-bottom, 12px) !important;
     margin-top: auto !important;
-    border-top: 1px solid var(--color-border);
+    border-top: 0.5px solid var(--color-border);
     z-index: 10;
     max-width: 100% !important;
     box-sizing: border-box !important;
+    gap: 10px;
+    flex-direction: column !important;
 
-    .mat-mdc-raised-button,
-    .mat-mdc-flat-button,
-    .mat-mdc-unelevated-button {
-      min-height: 44px !important;
-      font-size: var(--text-base) !important;
-      padding: 10px 24px !important;
+    button {
+      width: 100% !important;
+      min-height: 50px !important;
+      font-size: 1rem !important;
+      border-radius: 14px !important;
       font-weight: 600 !important;
     }
 
-    button[mat-button] {
-      min-height: 44px !important;
-      font-size: var(--text-base) !important;
+    // Primary action first visually
+    .mat-mdc-raised-button,
+    .mat-mdc-flat-button,
+    .mat-mdc-unelevated-button {
+      order: -1;
     }
   }
 }
@@ -891,7 +913,6 @@ h4 { font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking
 .expense-dialog-panel {
   .mat-mdc-dialog-container .mdc-dialog__surface {
     padding-top: 0 !important;
-    border-radius: var(--radius-lg) !important;
     overflow: hidden;
   }
 

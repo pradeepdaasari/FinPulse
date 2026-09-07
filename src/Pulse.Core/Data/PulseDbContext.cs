@@ -160,6 +160,7 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(e => e.MovementDate);
             entity.HasIndex(e => e.RelatedPaymentId).HasFilter("[RelatedPaymentId] IS NOT NULL");
             entity.HasIndex(e => e.RelatedExpenseId).HasFilter("[RelatedExpenseId] IS NOT NULL");
+            entity.HasIndex(e => e.RelatedTradeId).HasFilter("[RelatedTradeId] IS NOT NULL");
         });
 
         // HealthMetric

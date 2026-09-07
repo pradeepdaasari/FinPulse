@@ -13,9 +13,11 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CreditCardService } from '../core/services/credit-card.service';
 import { LoanService } from '../core/services/loan.service';
+import { PaymentService } from '../core/services/payment.service';
 import { FundingSourceService } from '../core/services/funding-source.service';
 import { toLocalISOString } from '../core/utils/date-utils';
 import { FundingSource } from '../core/models/funding-source.model';
+import { PaymentHistory } from '../core/models/payment-history.model';
 
 export interface RecordPaymentData {
   debtId: string;
@@ -23,6 +25,8 @@ export interface RecordPaymentData {
   debtType: 'PersonalLoan' | 'CreditCard';
   currentBalance: number;
   minimumPayment?: number;
+  fundedBankAccountId?: number | null;
+  existingPayment?: PaymentHistory;
 }
 
 @Component({
@@ -48,7 +52,7 @@ export interface RecordPaymentData {
         <mat-icon>payments</mat-icon>
       </div>
       <div class="header-text">
-        <h2 mat-dialog-title>Record Payment</h2>
+        <h2 mat-dialog-title>{{ isEdit ? 'Edit' : 'Record' }} Payment</h2>
         <span class="dialog-subtitle">{{ data.debtName }}</span>
       </div>
     </div>
@@ -65,6 +69,7 @@ export interface RecordPaymentData {
       </div>
 
       <form [formGroup]="form" class="payment-form">
+        @if (!isEdit) {
         <div class="payment-type-row">
           <mat-button-toggle-group [value]="paymentType()" (change)="setPaymentType($event.value)">
             <mat-button-toggle value="full">Full ({{ data.currentBalance | currency }})</mat-button-toggle>
@@ -74,10 +79,11 @@ export interface RecordPaymentData {
             <mat-button-toggle value="custom">Custom</mat-button-toggle>
           </mat-button-toggle-group>
         </div>
+        }
 
         <mat-form-field class="full-width">
           <mat-label>Payment Amount</mat-label>
-          <input matInput type="number" inputmode="decimal" formControlName="amountPaid" step="0.01" [readonly]="paymentType() !== 'custom'">
+          <input matInput type="number" inputmode="decimal" formControlName="amountPaid" step="0.01" [readonly]="!isEdit && paymentType() !== 'custom'">
           <span matTextPrefix>$&nbsp;</span>
         </mat-form-field>
 
@@ -112,9 +118,9 @@ export interface RecordPaymentData {
       <button mat-button mat-dialog-close>Cancel</button>
       <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid || saving()">
         @if (saving()) {
-          Recording...
+          {{ isEdit ? 'Saving...' : 'Recording...' }}
         } @else {
-          Record Payment
+          {{ isEdit ? 'Update Payment' : 'Record Payment' }}
         }
       </button>
     </mat-dialog-actions>
@@ -195,27 +201,33 @@ export class RecordPaymentDialogComponent {
   private fb = inject(FormBuilder);
   private cardService = inject(CreditCardService);
   private loanService = inject(LoanService);
+  private paymentService = inject(PaymentService);
   private fundingSourceService = inject(FundingSourceService);
   private dialogRef = inject(MatDialogRef<RecordPaymentDialogComponent>);
   private cdr = inject(ChangeDetectorRef);
   data: RecordPaymentData = inject(MAT_DIALOG_DATA);
 
+  isEdit = !!this.data.existingPayment;
   saving = signal(false);
   loadingAccounts = signal(true);
-  paymentType = signal<'full' | 'minimum' | 'custom'>('full');
+  paymentType = signal<'full' | 'minimum' | 'custom'>(this.data.existingPayment ? 'custom' : 'full');
   bankAccounts = signal<FundingSource[]>([]);
 
   form = this.fb.group({
-    amountPaid: [this.data.currentBalance as number | null, [Validators.required, Validators.min(0.01)]],
-    fromAccountId: [null as number | null],
-    paymentDate: [new Date(), Validators.required],
-    notes: ['']
+    amountPaid: [(this.data.existingPayment?.amountPaid ?? this.data.currentBalance) as number | null, [Validators.required, Validators.min(0.01)]],
+    fromAccountId: [(this.data.existingPayment?.fromAccountId ?? null) as number | null],
+    paymentDate: [this.data.existingPayment ? new Date(this.data.existingPayment.paymentDate) : new Date(), Validators.required],
+    notes: [this.data.existingPayment?.notes ?? '']
   });
 
   constructor() {
     this.fundingSourceService.getAll().subscribe({
       next: (sources) => {
-        this.bankAccounts.set(sources.filter(s => s.type === 'BankAccount'));
+        const banks = sources.filter(s => s.type === 'BankAccount');
+        this.bankAccounts.set(banks);
+        if (!this.isEdit && this.data.fundedBankAccountId && banks.some(b => b.id === this.data.fundedBankAccountId)) {
+          this.form.patchValue({ fromAccountId: this.data.fundedBankAccountId });
+        }
         this.loadingAccounts.set(false);
         this.cdr.detectChanges();
       },
@@ -249,9 +261,11 @@ export class RecordPaymentDialogComponent {
       fromAccountId: value.fromAccountId || undefined
     };
 
-    const request$ = this.data.debtType === 'CreditCard'
-      ? this.cardService.recordPayment(this.data.debtId, payload)
-      : this.loanService.recordPayment(this.data.debtId, payload);
+    const request$ = this.isEdit
+      ? this.paymentService.update(this.data.existingPayment!.id, payload)
+      : this.data.debtType === 'CreditCard'
+        ? this.cardService.recordPayment(this.data.debtId, payload)
+        : this.loanService.recordPayment(this.data.debtId, payload);
 
     request$.subscribe({
       next: (payment) => {

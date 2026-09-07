@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef, OnInit, inject, signal } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -18,6 +18,7 @@ import { sumCurrency } from '../../../core/utils/currency';
 import { AmortizationTableComponent } from './amortization-table.component';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { EntityMovementsComponent } from '../../../shared/entity-movements.component';
+import { FundingSourceService } from '../../../core/services/funding-source.service';
 
 @Component({
   selector: 'app-loan-detail',
@@ -71,12 +72,12 @@ import { EntityMovementsComponent } from '../../../shared/entity-movements.compo
               <span class="value">{{ loan()!.startDate | localDate:'mediumDate' }}</span>
             </div>
             <div class="detail-item">
-              <span class="label">Monthly Payment</span>
+              <span class="label">{{ paymentLabel() }}</span>
               <span class="value">{{ loan()!.monthlyPayment | currency }}</span>
             </div>
             <div class="detail-item">
               <span class="label">Due Day</span>
-              <span class="value">{{ loan()!.dueDay }}</span>
+              <span class="value">{{ dueDayDisplay() }}</span>
             </div>
             <div class="detail-item">
               <span class="label">Frequency</span>
@@ -103,6 +104,10 @@ import { EntityMovementsComponent } from '../../../shared/entity-movements.compo
                 <th mat-header-cell *matHeaderCellDef>Amount</th>
                 <td mat-cell *matCellDef="let p" class="amount-cell">{{ p.amountPaid | currency }}</td>
               </ng-container>
+              <ng-container matColumnDef="fromAccount">
+                <th mat-header-cell *matHeaderCellDef>From Account</th>
+                <td mat-cell *matCellDef="let p">{{ getAccountName(p.fromAccountId) }}</td>
+              </ng-container>
               <ng-container matColumnDef="notes">
                 <th mat-header-cell *matHeaderCellDef>Notes</th>
                 <td mat-cell *matCellDef="let p">{{ p.notes || '—' }}</td>
@@ -110,6 +115,9 @@ import { EntityMovementsComponent } from '../../../shared/entity-movements.compo
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef></th>
                 <td mat-cell *matCellDef="let p">
+                  <button mat-icon-button (click)="editPayment(p)" matTooltip="Edit payment" aria-label="Edit payment">
+                    <mat-icon>edit</mat-icon>
+                  </button>
                   <button mat-icon-button color="warn" (click)="deletePayment(p)" matTooltip="Delete payment" aria-label="Delete payment">
                     <mat-icon>delete_outline</mat-icon>
                   </button>
@@ -192,6 +200,7 @@ export class LoanDetailComponent implements OnInit {
   private dialog = inject(MatDialog);
   private notify = inject(NotificationService);
   private paymentService = inject(PaymentService);
+  private fundingSourceService = inject(FundingSourceService);
   private cdr = inject(ChangeDetectorRef);
 
   loan = signal<PersonalLoan | null>(null);
@@ -199,10 +208,31 @@ export class LoanDetailComponent implements OnInit {
   paymentHistory = signal<PaymentHistory[]>([]);
   totalPaid = signal(0);
   loading = signal(true);
-  paymentColumns = ['paymentDate', 'amountPaid', 'notes', 'actions'];
+  paymentColumns = ['paymentDate', 'amountPaid', 'fromAccount', 'notes', 'actions'];
+  private accountNameMap = new Map<number, string>();
+  private weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  paymentLabel = computed(() => {
+    const f = this.loan()?.paymentFrequency;
+    if (f === 'Weekly') return 'Weekly Payment';
+    if (f === 'Biweekly') return 'Biweekly Payment';
+    return 'Monthly Payment';
+  });
+  dueDayDisplay = computed(() => {
+    const l = this.loan();
+    if (!l) return '';
+    const f = l.paymentFrequency;
+    if ((f === 'Weekly' || f === 'Biweekly') && l.dueDay >= 0 && l.dueDay <= 6) {
+      return this.weekDays[l.dueDay];
+    }
+    return String(l.dueDay);
+  });
 
   ngOnInit(): void {
     this.loadLoan();
+    this.fundingSourceService.getAll().subscribe(sources => {
+      sources.filter(s => s.type === 'BankAccount').forEach(s => this.accountNameMap.set(s.id, s.name));
+      this.cdr.detectChanges();
+    });
   }
 
   loadLoan(): void {
@@ -235,7 +265,7 @@ export class LoanDetailComponent implements OnInit {
     import('../../../shared/record-payment-dialog.component').then(m => {
       const dialogRef = this.dialog.open(m.RecordPaymentDialogComponent, {
         width: '440px',
-        data: { debtType: 'PersonalLoan', debtId: this.loan()!.id, debtName: this.loan()!.lenderName, currentBalance: this.loan()!.currentBalance, minimumPayment: this.loan()!.monthlyPayment }
+        data: { debtType: 'PersonalLoan', debtId: this.loan()!.id, debtName: this.loan()!.lenderName, currentBalance: this.loan()!.currentBalance, minimumPayment: this.loan()!.monthlyPayment, fundedBankAccountId: this.loan()!.fundedBankAccountId }
       });
       dialogRef.afterClosed().subscribe(result => {
         if (result) this.loadLoan();
@@ -297,5 +327,29 @@ export class LoanDetailComponent implements OnInit {
         });
       });
     });
+  }
+
+  editPayment(payment: PaymentHistory): void {
+    import('../../../shared/record-payment-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.RecordPaymentDialogComponent, {
+        width: '440px',
+        data: {
+          debtType: 'PersonalLoan',
+          debtId: this.loan()!.id,
+          debtName: this.loan()!.lenderName,
+          currentBalance: this.loan()!.currentBalance,
+          fundedBankAccountId: this.loan()!.fundedBankAccountId,
+          existingPayment: payment
+        }
+      });
+      dialogRef.afterClosed().subscribe(result => {
+        if (result) this.loadLoan();
+      });
+    });
+  }
+
+  getAccountName(accountId?: number): string {
+    if (!accountId) return 'External';
+    return this.accountNameMap.get(accountId) || 'Unknown';
   }
 }

@@ -11,6 +11,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { DailyExpense, DailyExpenseCreate, TransactionType, FundingSourceType } from '../../../core/models/daily-expense.model';
 import { toLocalISOString } from '../../../core/utils/date-utils';
 import { Category } from '../../../core/models/category.model';
@@ -22,6 +23,7 @@ import { PaymentService } from '../../../core/services/payment.service';
 import { DebtService } from '../../../core/services/debt.service';
 import { CreditCardService } from '../../../core/services/credit-card.service';
 import { DebtItem } from '../../../core/models/debt-item.model';
+import { NotificationService } from '../../../core/services/notification.service';
 import { FundingSource } from '../../../core/models/funding-source.model';
 
 export interface ExpenseDialogData {
@@ -38,7 +40,7 @@ export interface ExpenseDialogData {
   imports: [
     CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatDatepickerModule, MatNativeDateModule,
-    MatButtonModule, MatIconModule, MatAutocompleteModule, MatProgressSpinnerModule
+    MatButtonModule, MatIconModule, MatAutocompleteModule, MatProgressSpinnerModule, MatSlideToggleModule
   ],
   template: `
     <div class="dialog-banner">
@@ -171,6 +173,12 @@ export interface ExpenseDialogData {
             <input matInput type="number" inputmode="decimal" formControlName="amount" min="0.01" step="0.01">
             <span matTextPrefix>$&nbsp;</span>
           </mat-form-field>
+
+          @if (!data?.expense && form.value.transactionType === 'Expense') {
+            <mat-slide-toggle [checked]="splitMode()" (change)="splitMode() ? splitMode.set(false) : enableSplit()" class="split-toggle">
+              Split across categories
+            </mat-slide-toggle>
+          }
         }
 
         @if (form.value.transactionType === 'Transfer') {
@@ -469,19 +477,17 @@ export interface ExpenseDialogData {
     </mat-dialog-content>
 
     <mat-dialog-actions align="end" class="dialog-actions">
-      @if (!data?.expense && form.value.transactionType === 'Expense' && !splitMode()) {
-        <button mat-button class="split-btn" (click)="enableSplit()" type="button">
-          <mat-icon>call_split</mat-icon> Split
-        </button>
-      }
-      @if (splitMode()) {
-        <button mat-button (click)="splitMode.set(false)" type="button">Cancel Split</button>
-      }
-      <span class="action-spacer"></span>
       <button mat-stroked-button mat-dialog-close class="cancel-btn">Cancel</button>
       <button mat-raised-button color="primary" class="save-btn" (click)="save()" [disabled]="form.invalid || loading() || savingLoanPayment() || (splitMode() && !splitTotalValid()) || ((form.value.transactionType === 'LoanPayment' || form.value.transactionType === 'CardPayment') && !selectedDebt())">
-        <mat-icon>{{ data?.expense ? 'check' : 'save' }}</mat-icon>
-        {{ data?.expense ? 'Update' : 'Save' }}
+        @if (savingLoanPayment()) {
+          <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+          Saving...
+        } @else {
+          <ng-container>
+            <mat-icon>{{ data?.expense ? 'check' : 'save' }}</mat-icon>
+            {{ data?.expense ? 'Update' : 'Save' }}
+          </ng-container>
+        }
       </button>
     </mat-dialog-actions>
   `,
@@ -737,13 +743,9 @@ export interface ExpenseDialogData {
       border-top: 1px solid var(--color-border);
       gap: 8px;
     }
-    .action-spacer { flex: 1; }
-    .split-btn {
-      color: var(--color-stat-purple) !important;
-      font-weight: 600 !important;
-    }
-    .split-btn mat-icon {
-      font-size: 18px; width: 18px; height: 18px;
+    .split-toggle {
+      margin: -4px 0 8px;
+      font-size: 0.85rem;
     }
     .cancel-btn {
       font-weight: 600 !important;
@@ -760,6 +762,7 @@ export interface ExpenseDialogData {
     .save-btn mat-icon {
       font-size: 18px; width: 18px; height: 18px; margin-right: 4px;
     }
+    .btn-spinner { display: inline-block; margin-right: 6px; vertical-align: middle; }
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
     @media (max-width: 599px) {
       .dialog-banner { margin: -16px -16px 12px; padding: 14px 16px 12px; }
@@ -790,6 +793,7 @@ export class AddExpenseDialogComponent implements OnInit {
   private paymentService = inject(PaymentService);
   private debtService = inject(DebtService);
   private creditCardService = inject(CreditCardService);
+  private notify = inject(NotificationService);
   data = inject<ExpenseDialogData>(MAT_DIALOG_DATA);
   private cdr = inject(ChangeDetectorRef);
 
@@ -1068,13 +1072,37 @@ export class AddExpenseDialogComponent implements OnInit {
         this.form.patchValue({ selectedDebtKey: null });
       }
       const merchantCtrl = this.form.get('merchant')!;
+      const amountCtrl = this.form.get('amount')!;
+      const descCtrl = this.form.get('description')!;
       if (type === 'Transfer' || type === 'CardPayment' || type === 'LoanPayment') {
         merchantCtrl.clearValidators();
       } else {
         merchantCtrl.setValidators(Validators.required);
       }
+      if (type === 'CardPayment' || type === 'LoanPayment') {
+        amountCtrl.clearValidators();
+        descCtrl.clearValidators();
+      } else {
+        amountCtrl.setValidators([Validators.required, Validators.min(0.01)]);
+        descCtrl.setValidators([Validators.required, Validators.maxLength(500)]);
+      }
       merchantCtrl.updateValueAndValidity();
+      amountCtrl.updateValueAndValidity();
+      descCtrl.updateValueAndValidity();
     });
+
+    const initialType = this.form.value.transactionType;
+    if (initialType === 'Transfer' || initialType === 'CardPayment' || initialType === 'LoanPayment') {
+      const merchantCtrl = this.form.get('merchant')!;
+      merchantCtrl.clearValidators();
+      merchantCtrl.updateValueAndValidity();
+    }
+    if (initialType === 'CardPayment' || initialType === 'LoanPayment') {
+      this.form.get('amount')!.clearValidators();
+      this.form.get('amount')!.updateValueAndValidity();
+      this.form.get('description')!.clearValidators();
+      this.form.get('description')!.updateValueAndValidity();
+    }
 
     this.form.get('fundingSourceKey')!.valueChanges.subscribe(() => {
       this.updateToAccounts();
@@ -1152,14 +1180,22 @@ export class AddExpenseDialogComponent implements OnInit {
     const description = this.form.value.description || `Payment for ${debt?.name}`;
     if (!debt || !amount) return;
 
+    const fundingKey = this.form.value.fundingSourceKey;
+    let fromAccountId: number | null = null;
+    if (fundingKey) {
+      const [type, id] = fundingKey.split(':');
+      if (type === 'BankAccount') fromAccountId = parseInt(id, 10);
+    }
+
     this.savingLoanPayment.set(true);
-    this.paymentService.recordPayment(debt.type, debt.id, amount, description).subscribe({
+    this.paymentService.recordPayment(debt.type, debt.id, amount, description, this.buildDateTime(), fromAccountId).subscribe({
       next: () => {
         this.savingLoanPayment.set(false);
         this.dialogRef.close({ loanPayment: true, debtName: debt.name, amount });
       },
-      error: () => {
+      error: (err: any) => {
         this.savingLoanPayment.set(false);
+        this.notify.error(err?.error?.message || err?.error?.error || 'Payment failed');
         this.cdr.detectChanges();
       }
     });

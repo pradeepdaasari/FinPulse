@@ -5,6 +5,7 @@ export interface PaymentHistory {
   amountPaid: number;
   paymentDate: string;
   notes?: string;
+  fromAccountId?: number;
 }
 
 export interface PaymentSummary {

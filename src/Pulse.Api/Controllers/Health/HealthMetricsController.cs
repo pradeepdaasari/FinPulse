@@ -58,7 +58,7 @@ public class HealthMetricsController : ControllerBase
         var data = await _db.HealthMetrics
             .Where(m => m.UserId == UserId && m.MetricType == type && m.MeasuredAt >= since)
             .OrderBy(m => m.MeasuredAt)
-            .Select(m => new { m.MeasuredAt, m.Value, m.Unit })
+            .Select(m => new { m.MeasuredAt, m.Value, m.Unit, m.Notes })
             .ToListAsync();
         return Ok(data);
     }

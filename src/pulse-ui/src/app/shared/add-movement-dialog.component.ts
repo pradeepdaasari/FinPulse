@@ -53,6 +53,8 @@ interface EntityOption {
             <mat-option value="LoanFunding">Loan Funding</mat-option>
             <mat-option value="Deposit">Deposit</mat-option>
             <mat-option value="Withdrawal">Withdrawal</mat-option>
+            <mat-option value="TradePnl">Trade P&amp;L</mat-option>
+            <mat-option value="TradeFee">Trade Fee</mat-option>
           </mat-select>
         </mat-form-field>
 
