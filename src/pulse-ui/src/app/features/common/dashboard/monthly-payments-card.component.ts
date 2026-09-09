@@ -8,12 +8,10 @@ import { MatDialog } from '@angular/material/dialog';
 import { forkJoin, catchError, of } from 'rxjs';
 import { DebtService } from '../../../core/services/debt.service';
 import { PaymentService } from '../../../core/services/payment.service';
-import { RecurringService } from '../../../core/services/recurring.service';
 import { CreditCardService } from '../../../core/services/credit-card.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { DebtItem } from '../../../core/models/debt-item.model';
 import { PaymentHistory } from '../../../core/models/payment-history.model';
-import { RecurringTransaction } from '../../../core/models/recurring.model';
 import { CreditCard } from '../../../core/models/credit-card.model';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { AddExpenseDialogComponent, ExpenseDialogData } from '../../finance/expenses/add-expense-dialog.component';
@@ -21,7 +19,7 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from '../../finance/expe
 interface MonthlyPaymentRow {
   id: number;
   name: string;
-  kind: 'loan' | 'card' | 'bill';
+  kind: 'loan' | 'card';
   icon: string;
   iconColor: string;
   dueDay: number;
@@ -120,8 +118,6 @@ interface MonthlyPaymentRow {
                     <span class="pill pill-type">{{ row.subType }}</span>
                   } @else if (row.kind === 'card') {
                     <span class="pill pill-type">Card</span>
-                  } @else if (row.kind === 'bill') {
-                    <span class="pill pill-type">Bill</span>
                   }
                 </div>
               </div>
@@ -281,7 +277,6 @@ interface MonthlyPaymentRow {
 export class MonthlyPaymentsCardComponent implements OnInit {
   private debtService = inject(DebtService);
   private paymentService = inject(PaymentService);
-  private recurringService = inject(RecurringService);
   private creditCardService = inject(CreditCardService);
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
@@ -315,9 +310,8 @@ export class MonthlyPaymentsCardComponent implements OnInit {
     forkJoin({
       debts: this.debtService.getAll().pipe(catchError(() => of([] as DebtItem[]))),
       payments: this.paymentService.getAll().pipe(catchError(() => of({ payments: [] as PaymentHistory[], summary: { totalPaid: 0, loanTotal: 0, cardTotal: 0, count: 0 } }))),
-      recurring: this.recurringService.getAll().pipe(catchError(() => of([] as RecurringTransaction[]))),
       cards: this.creditCardService.getAll().pipe(catchError(() => of([] as CreditCard[])))
-    }).subscribe(({ debts, payments, recurring, cards }) => {
+    }).subscribe(({ debts, payments, cards }) => {
       const monthStart = new Date(year, month, 1);
       const monthEnd = new Date(year, month + 1, 0, 23, 59, 59);
       const today = new Date(year, month, now.getDate());
@@ -333,95 +327,62 @@ export class MonthlyPaymentsCardComponent implements OnInit {
       const rows: MonthlyPaymentRow[] = [];
 
       for (const debt of debts) {
-        const dueDay = Math.min(debt.dueDay, monthEnd.getDate());
-        const dueDate = new Date(year, month, dueDay);
-        const paidThisMonth = thisMonthPayments
-          .filter(p => p.debtId === debt.id && p.debtType === debt.type)
-          .reduce((s, p) => s + p.amountPaid, 0);
-
-        const isPaid = paidThisMonth >= debt.monthlyPayment;
-        const isOverdue = !isPaid && dueDate < today;
-        const isDueToday = !isPaid && dueDate.getDate() === today.getDate();
-        const isDueSoon = !isPaid && !isOverdue && !isDueToday && (dueDate.getTime() - today.getTime()) <= 3 * 86400000;
-
-        let status: MonthlyPaymentRow['status'] = 'upcoming';
-        let statusLabel = `Due ${this.formatDate(dueDate)}`;
-        if (isPaid) { status = 'paid'; statusLabel = 'Paid'; }
-        else if (isOverdue) {
-          const daysLate = Math.floor((today.getTime() - dueDate.getTime()) / 86400000);
-          status = 'overdue';
-          statusLabel = `${daysLate}d overdue — was due ${this.formatDate(dueDate)}`;
-        }
-        else if (isDueToday) { status = 'due-today'; statusLabel = 'Due today'; }
-        else if (isDueSoon) { status = 'due-soon'; statusLabel = `Due ${this.formatDate(dueDate)}`; }
-
+        if (debt.nextPaymentDate && new Date(debt.nextPaymentDate) > today) continue;
         const isCard = debt.type === 'CreditCard';
         const card = isCard ? cardMap.get(debt.id) : undefined;
-        const minPay = card?.minimumPayment ?? null;
-        rows.push({
-          id: debt.id,
-          name: debt.name,
-          kind: isCard ? 'card' : 'loan',
-          icon: isCard ? 'credit_card' : 'account_balance',
-          iconColor: isCard ? '#5856D6' : '#007AFF',
-          dueDay,
-          dueDate,
-          dueLabel: statusLabel,
-          amount: debt.monthlyPayment,
-          minimumPayment: isCard ? minPay : debt.monthlyPayment,
-          paidAmount: paidThisMonth,
-          balance: debt.currentBalance,
-          apr: debt.aprPercent,
-          isAutopay: debt.isAutopay,
-          status,
-          statusLabel,
-          debtType: debt.type,
-          subType: debt.subType || undefined,
-        });
-      }
+        const freq = debt.paymentFrequency || 'Monthly';
+        const debtPayments = thisMonthPayments.filter(p => p.debtId === debt.id && p.debtType === debt.type);
 
-      const activeBills = recurring.filter(r =>
-        r.isActive && r.transactionType === 'Expense' && r.frequency === 'Monthly'
-      );
-      for (const bill of activeBills) {
-        const nextRun = new Date(bill.nextRunDate);
-        const billInMonth = nextRun.getMonth() === month && nextRun.getFullYear() === year;
-        const alreadyPaid = nextRun > monthEnd;
-        if (!billInMonth && !alreadyPaid) continue;
+        const dueDates = this.getDueDatesInMonth(debt, year, month, monthEnd);
 
-        const dueDate = billInMonth ? nextRun : new Date(year, month, nextRun.getDate());
-        const isPaid = alreadyPaid || (nextRun > monthEnd);
-        const isOverdue = !isPaid && dueDate < today;
+        for (const dueDate of dueDates) {
+          const windowStart = new Date(dueDate.getTime() - 7 * 86400000);
+          const windowEnd = new Date(dueDate.getTime() + 7 * 86400000);
+          const nearbyPaid = freq === 'Monthly'
+            ? debtPayments.reduce((s, p) => s + p.amountPaid, 0)
+            : debtPayments
+                .filter(p => { const d = new Date(p.paymentDate); return d >= windowStart && d <= windowEnd; })
+                .reduce((s, p) => s + p.amountPaid, 0);
 
-        let status: MonthlyPaymentRow['status'] = 'upcoming';
-        let statusLabel = `Due ${this.formatDate(dueDate)}`;
-        if (isPaid) { status = 'paid'; statusLabel = 'Paid'; }
-        else if (isOverdue) {
-          const daysLate = Math.floor((today.getTime() - dueDate.getTime()) / 86400000);
-          status = 'overdue';
-          statusLabel = `${daysLate}d overdue — was due ${this.formatDate(dueDate)}`;
+          const paymentAmount = debt.perPaymentAmount;
+          const isPaid = nearbyPaid >= paymentAmount;
+          const isOverdue = !isPaid && dueDate < today;
+          const isDueToday = !isPaid && dueDate.getDate() === today.getDate() && dueDate.getMonth() === today.getMonth();
+          const isDueSoon = !isPaid && !isOverdue && !isDueToday && (dueDate.getTime() - today.getTime()) <= 3 * 86400000;
+
+          let status: MonthlyPaymentRow['status'] = 'upcoming';
+          let statusLabel = `Due ${this.formatDate(dueDate)}`;
+          if (isPaid) { status = 'paid'; statusLabel = 'Paid'; }
+          else if (isOverdue) {
+            const daysLate = Math.floor((today.getTime() - dueDate.getTime()) / 86400000);
+            status = 'overdue';
+            statusLabel = `${daysLate}d overdue — was due ${this.formatDate(dueDate)}`;
+          }
+          else if (isDueToday) { status = 'due-today'; statusLabel = 'Due today'; }
+          else if (isDueSoon) { status = 'due-soon'; statusLabel = `Due ${this.formatDate(dueDate)}`; }
+
+          const minPay = card?.minimumPayment ?? null;
+          rows.push({
+            id: debt.id,
+            name: freq !== 'Monthly' ? `${debt.name}` : debt.name,
+            kind: isCard ? 'card' : 'loan',
+            icon: isCard ? 'credit_card' : 'account_balance',
+            iconColor: isCard ? '#5856D6' : '#007AFF',
+            dueDay: dueDate.getDate(),
+            dueDate,
+            dueLabel: statusLabel,
+            amount: paymentAmount,
+            minimumPayment: isCard ? minPay : paymentAmount,
+            paidAmount: nearbyPaid,
+            balance: debt.currentBalance,
+            apr: debt.aprPercent,
+            isAutopay: debt.isAutopay,
+            status,
+            statusLabel,
+            debtType: debt.type,
+            subType: debt.subType || undefined,
+          });
         }
-        else if (dueDate.getDate() === today.getDate()) { status = 'due-today'; statusLabel = 'Due today'; }
-
-        rows.push({
-          id: bill.id,
-          name: bill.description || bill.merchant || 'Bill',
-          kind: 'bill',
-          icon: bill.categoryIcon || 'receipt_long',
-          iconColor: '#FF9500',
-          dueDay: dueDate.getDate(),
-          dueDate,
-          dueLabel: statusLabel,
-          amount: bill.amount,
-          minimumPayment: null,
-          paidAmount: isPaid ? bill.amount : 0,
-          balance: null,
-          apr: null,
-          isAutopay: false,
-          status,
-          statusLabel,
-          categoryIcon: bill.categoryIcon,
-        });
       }
 
       rows.sort((a, b) => {
@@ -458,6 +419,30 @@ export class MonthlyPaymentsCardComponent implements OnInit {
         this.loadData();
       }
     });
+  }
+
+  private getDueDatesInMonth(debt: DebtItem, year: number, month: number, monthEnd: Date): Date[] {
+    const freq = debt.paymentFrequency || 'Monthly';
+    if (freq === 'Monthly') {
+      const day = Math.min(debt.dueDay, monthEnd.getDate());
+      return [new Date(year, month, day)];
+    }
+    const interval = freq === 'Biweekly' ? 14 : 7;
+    const anchor = debt.startDate ? new Date(debt.startDate) : new Date(year, month, debt.dueDay);
+    const monthStart = new Date(year, month, 1);
+    const dates: Date[] = [];
+    let current = new Date(anchor);
+    while (current <= monthEnd) {
+      if (current >= monthStart) dates.push(new Date(current));
+      current = new Date(current.getTime() + interval * 86400000);
+    }
+    current = new Date(anchor.getTime() - interval * 86400000);
+    while (current >= monthStart) {
+      dates.push(new Date(current));
+      current = new Date(current.getTime() - interval * 86400000);
+    }
+    dates.sort((a, b) => a.getTime() - b.getTime());
+    return dates.length > 0 ? dates : [new Date(year, month, Math.min(debt.dueDay, monthEnd.getDate()))];
   }
 
   private formatDate(d: Date): string {

@@ -36,11 +36,15 @@ public class DebtsController : ControllerBase
                 Type = DebtType.PersonalLoan.ToString(),
                 Name = loan.LenderName,
                 CurrentBalance = loan.CurrentBalance,
-                MonthlyPayment = loan.MonthlyPayment,
+                MonthlyPayment = loan.MonthlyEquivalentPayment,
+                PerPaymentAmount = loan.MonthlyPayment,
                 AprPercent = loan.AprPercent,
                 DueDay = loan.DueDay,
                 IsAutopay = loan.IsAutopay,
-                SubType = loan.LoanType.ToString()
+                SubType = loan.LoanType.ToString(),
+                NextPaymentDate = loan.NextPaymentDate,
+                PaymentFrequency = loan.PaymentFrequency.ToString(),
+                StartDate = loan.StartDate
             });
         }
 
@@ -59,7 +63,8 @@ public class DebtsController : ControllerBase
                 IsAutopay = card.IsAutopay,
                 SubType = null,
                 PromoAprPercent = card.PromoAprPercent,
-                PromoEndDate = card.PromoEndDate
+                PromoEndDate = card.PromoEndDate,
+                PerPaymentAmount = card.MinimumPayment
             });
         }
 

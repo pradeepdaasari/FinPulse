@@ -31,4 +31,6 @@ public class LoanCreateDto
     public PaymentFrequency PaymentFrequency { get; set; } = PaymentFrequency.Monthly;
 
     public int? FundedBankAccountId { get; set; }
+
+    public DateTime? NextPaymentDate { get; set; }
 }

@@ -13,4 +13,7 @@ public class DebtSnapshotDto
     public decimal EffectiveApr { get; set; }
     public DateTime? PromoEndDate { get; set; }
     public int DueDay { get; set; }
+    public string PaymentFrequency { get; set; } = "Monthly";
+    public DateTime? StartDate { get; set; }
+    public decimal PerPaymentAmount { get; set; }
 }

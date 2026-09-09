@@ -1,5 +1,5 @@
 import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
-import { CommonModule, CurrencyPipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,7 +19,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
 @Component({
   selector: 'app-loan-list',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatTooltipModule, CurrencyPipe, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatTooltipModule, CurrencyPipe, DatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadLoans()">
     <div class="header-row">
@@ -91,6 +91,9 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
             <th mat-header-cell *matHeaderCellDef>Lender</th>
             <td mat-cell *matCellDef="let loan">
               <span class="lender-name">{{ loan.lenderName }}</span>
+              @if (isDeferred(loan)) {
+                <span class="deferred-chip">Paused until {{ loan.nextPaymentDate | date:'MMM yyyy' }}</span>
+              }
             </td>
           </ng-container>
 
@@ -163,7 +166,12 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
               </div>
               <div class="loan-info">
                 <span class="loan-name">{{ loan.lenderName }}</span>
-                <span class="loan-type-pill" [style.background]="getLoanTypeBg(loan.loanType)" [style.color]="getLoanTypeColor(loan.loanType)">{{ loan.loanType }}</span>
+                <div class="loan-pills">
+                  <span class="loan-type-pill" [style.background]="getLoanTypeBg(loan.loanType)" [style.color]="getLoanTypeColor(loan.loanType)">{{ loan.loanType }}</span>
+                  @if (isDeferred(loan)) {
+                    <span class="deferred-chip">Paused until {{ loan.nextPaymentDate | date:'MMM yyyy' }}</span>
+                  }
+                </div>
               </div>
               <div class="loan-balance">
                 <span class="loan-amount">{{ loan.currentBalance | currency }}</span>
@@ -260,6 +268,13 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       white-space: nowrap;
     }
     .lender-name { font-weight: 500; }
+    .deferred-chip {
+      display: inline-block; font-size: 0.65rem; font-weight: 600;
+      padding: 2px 8px; border-radius: var(--radius-full);
+      background: rgba(245,124,0,0.12); color: #e65100;
+      margin-left: 6px; white-space: nowrap;
+    }
+    .loan-pills { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
     .value-balance { font-weight: 700; color: var(--color-text); }
     .value-monthly { font-weight: 600; color: var(--color-primary); }
 
@@ -503,6 +518,10 @@ export class LoanListComponent implements OnInit {
       'Student': '#e65100', 'Home Equity': '#00695c', 'Business': '#4527a0'
     };
     return colors[type] || '#455a64';
+  }
+
+  isDeferred(loan: PersonalLoan): boolean {
+    return !!loan.nextPaymentDate && new Date(loan.nextPaymentDate) > new Date();
   }
 
   getLoanTypeBg(type: string): string {

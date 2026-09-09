@@ -50,27 +50,32 @@ public class BudgetPlanService : IBudgetPlanService
         }
 
         // Assign debt minimum payments to last paycheck before their due day
+        var monthEnd = new DateTime(year, month, DateTime.DaysInMonth(year, month));
         foreach (var debt in debts)
         {
-            var dueDay = debt.DueDay > 0 ? debt.DueDay : 1;
-            var dueDate = new DateTime(year, month, Math.Min(dueDay, DateTime.DaysInMonth(year, month)));
+            var dueDates = GetDebtDueDatesInMonth(debt, year, month, monthEnd);
+            var perPayment = dueDates.Count > 1 && debt.PerPaymentAmount > 0
+                ? debt.PerPaymentAmount
+                : debt.MinimumPayment;
 
-            var assigned = breakdowns
-                .Where(b => b.PayDate <= dueDate)
-                .OrderByDescending(b => b.PayDate)
-                .FirstOrDefault() ?? breakdowns.First();
-
-            assigned.Expenses.Add(new PaycheckExpenseDto
+            foreach (var dueDate in dueDates)
             {
-                ExpenseId = debt.Id,
-                Name = debt.Name,
-                CategoryId = 0,
-                CategoryName = "Debt Payment",
-                Amount = debt.MinimumPayment,
-                DueDay = dueDay,
-                IsAutopay = false,
-                IsDebtPayment = true
-            });
+                var assigned = breakdowns
+                    .OrderBy(b => Math.Abs((b.PayDate - dueDate).TotalDays))
+                    .First();
+
+                assigned.Expenses.Add(new PaycheckExpenseDto
+                {
+                    ExpenseId = debt.Id,
+                    Name = debt.Name,
+                    CategoryId = 0,
+                    CategoryName = "Debt Payment",
+                    Amount = perPayment,
+                    DueDay = dueDate.Day,
+                    IsAutopay = false,
+                    IsDebtPayment = true
+                });
+            }
         }
 
         // Assign recurring transactions to paychecks
@@ -190,6 +195,40 @@ public class BudgetPlanService : IBudgetPlanService
             },
             PaycheckBreakdowns = breakdowns
         };
+    }
+
+    private static List<DateTime> GetDebtDueDatesInMonth(DebtSnapshotDto debt, int year, int month, DateTime monthEnd)
+    {
+        var freq = debt.PaymentFrequency ?? "Monthly";
+        if (freq == "Monthly")
+        {
+            var day = Math.Min(debt.DueDay > 0 ? debt.DueDay : 1, monthEnd.Day);
+            return new List<DateTime> { new DateTime(year, month, day) };
+        }
+
+        var interval = freq == "Biweekly" ? 14 : 7;
+        var anchor = debt.StartDate ?? new DateTime(year, month, Math.Min(debt.DueDay > 0 ? debt.DueDay : 1, monthEnd.Day));
+        var monthStart = new DateTime(year, month, 1);
+        var dates = new List<DateTime>();
+
+        var current = anchor;
+        while (current <= monthEnd)
+        {
+            if (current >= monthStart) dates.Add(current);
+            current = current.AddDays(interval);
+        }
+        current = anchor.AddDays(-interval);
+        while (current >= monthStart)
+        {
+            dates.Add(current);
+            current = current.AddDays(-interval);
+        }
+
+        dates = dates.Distinct().OrderBy(d => d).ToList();
+        if (dates.Count == 0)
+            dates.Add(new DateTime(year, month, Math.Min(debt.DueDay > 0 ? debt.DueDay : 1, monthEnd.Day)));
+
+        return dates;
     }
 
     private static bool WillRunInMonth(RecurringTransaction r, int year, int month)

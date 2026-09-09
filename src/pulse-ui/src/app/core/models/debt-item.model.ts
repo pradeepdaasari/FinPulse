@@ -11,4 +11,8 @@ export interface DebtItem {
   subType?: string;
   promoAprPercent?: number;
   promoEndDate?: string;
+  nextPaymentDate?: string;
+  paymentFrequency?: 'Monthly' | 'Biweekly' | 'Weekly';
+  startDate?: string;
+  perPaymentAmount: number;
 }

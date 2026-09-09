@@ -28,7 +28,10 @@ public class SimulatorController : ControllerBase
     [HttpPost("what-if")]
     public async Task<ActionResult<WhatIfResultDto>> WhatIf(WhatIfRequestDto request)
     {
-        var loans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
+        var loans = await _db.PersonalLoans
+            .Where(l => l.UserId == UserId)
+            .Where(l => l.NextPaymentDate == null || l.NextPaymentDate <= DateTime.UtcNow)
+            .ToListAsync();
         var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
 
         var snapshots = new List<DebtSnapshotDto>();
@@ -42,7 +45,7 @@ public class SimulatorController : ControllerBase
                 Name = loan.LenderName,
                 Balance = loan.CurrentBalance,
                 AprPercent = loan.AprPercent,
-                MinimumPayment = loan.MonthlyPayment,
+                MinimumPayment = loan.MonthlyEquivalentPayment,
                 EffectiveApr = loan.AprPercent,
                 PromoEndDate = null
             });

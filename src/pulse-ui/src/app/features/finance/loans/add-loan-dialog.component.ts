@@ -148,6 +148,14 @@ import { toLocalISOString } from '../../../core/utils/date-utils';
           </mat-select>
         </mat-form-field>
 
+        <mat-form-field>
+          <mat-label>Next Payment Date</mat-label>
+          <input matInput [matDatepicker]="nextPayPicker" formControlName="nextPaymentDate">
+          <mat-datepicker-toggle matIconSuffix [for]="nextPayPicker"></mat-datepicker-toggle>
+          <mat-datepicker #nextPayPicker></mat-datepicker>
+          <mat-hint>Leave empty if payments are due every month</mat-hint>
+        </mat-form-field>
+
         <div class="toggle-row">
           <mat-slide-toggle formControlName="isAutopay" color="primary">
             Autopay
@@ -303,6 +311,7 @@ export class AddLoanDialogComponent implements OnInit {
     dueDay: [1, Validators.required],
     paymentFrequency: ['Monthly' as string, Validators.required],
     fundedBankAccountId: [null as number | null],
+    nextPaymentDate: [null as Date | null],
     hasPromo: [false],
     promoAprPercent: [null as number | null],
     promoEndDate: [null as Date | null]
@@ -325,7 +334,8 @@ export class AddLoanDialogComponent implements OnInit {
       monthlyPayment: value.monthlyPayment,
       dueDay: Math.round(value.dueDay!),
       paymentFrequency: value.paymentFrequency,
-      fundedBankAccountId: value.fundedBankAccountId
+      fundedBankAccountId: value.fundedBankAccountId,
+      nextPaymentDate: value.nextPaymentDate ? toLocalISOString(value.nextPaymentDate) : null
     };
 
     if (value.hasPromo && value.promoAprPercent != null) {

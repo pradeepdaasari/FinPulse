@@ -16,6 +16,7 @@ export interface StrategyComparison {
   totalDebt: number;
   monthlyIncome: number;
   netPayPerCheck: number;
+  recurringExpenses: number;
   payFrequency: string;
   paychecks: PaycheckInfo[];
 }
