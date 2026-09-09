@@ -9,6 +9,7 @@ public class StrategyComparisonDto
     public decimal TotalDebt { get; set; }
     public decimal MonthlyIncome { get; set; }
     public decimal NetPayPerCheck { get; set; }
+    public decimal RecurringExpenses { get; set; }
     public string PayFrequency { get; set; } = string.Empty;
     public List<PaycheckInfoDto> Paychecks { get; set; } = new();
 }

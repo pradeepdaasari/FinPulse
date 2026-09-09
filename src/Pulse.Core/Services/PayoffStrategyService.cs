@@ -35,6 +35,9 @@ public class PayoffStrategyService : IPayoffStrategyService
             EffectiveApr = d.EffectiveApr,
             PromoEndDate = d.PromoEndDate,
             DueDay = d.DueDay,
+            PaymentFrequency = d.PaymentFrequency,
+            StartDate = d.StartDate,
+            PerPaymentAmount = d.PerPaymentAmount > 0 ? d.PerPaymentAmount : d.MinimumPayment,
             TotalInterestPaid = 0,
             PaidOff = false,
             PayoffMonth = 0
@@ -78,14 +81,32 @@ public class PayoffStrategyService : IPayoffStrategyService
 
                 if (month == 1)
                 {
-                    monthlyPlan.Add(new MonthlyActionStepDto
+                    var dueDates = GetDueDatesInMonth(debt, startDate.Year, startDate.Month);
+                    if (dueDates.Count > 1)
                     {
-                        DebtName = debt.Name,
-                        Amount = minPayment,
-                        IsMinimum = true,
-                        Explanation = "Minimum payment — keeps you in good standing",
-                        DueDay = debt.DueDay
-                    });
+                        foreach (var dueDate in dueDates)
+                        {
+                            monthlyPlan.Add(new MonthlyActionStepDto
+                            {
+                                DebtName = debt.Name,
+                                Amount = debt.PerPaymentAmount,
+                                IsMinimum = true,
+                                Explanation = "Minimum payment — keeps you in good standing",
+                                DueDay = dueDate.Day
+                            });
+                        }
+                    }
+                    else
+                    {
+                        monthlyPlan.Add(new MonthlyActionStepDto
+                        {
+                            DebtName = debt.Name,
+                            Amount = minPayment,
+                            IsMinimum = true,
+                            Explanation = "Minimum payment — keeps you in good standing",
+                            DueDay = debt.DueDay
+                        });
+                    }
                 }
 
                 if (debt.Balance < 0.01m)
@@ -133,7 +154,11 @@ public class PayoffStrategyService : IPayoffStrategyService
             }
         }
 
-        foreach (var debt in workingDebts.OrderBy(d => d.PayoffMonth))
+        var sortedDebts = strategyName == "Avalanche"
+            ? workingDebts.OrderByDescending(d => d.EffectiveApr).ThenBy(d => d.PayoffMonth)
+            : workingDebts.OrderBy(d => d.OriginalBalance).ThenBy(d => d.PayoffMonth);
+
+        foreach (var debt in sortedDebts)
         {
             payoffOrder.Add(new DebtPayoffOrderDto
             {
@@ -170,6 +195,42 @@ public class PayoffStrategyService : IPayoffStrategyService
         };
     }
 
+    private static List<DateTime> GetDueDatesInMonth(WorkingDebt debt, int year, int month)
+    {
+        var freq = debt.PaymentFrequency ?? "Monthly";
+        var monthEnd = new DateTime(year, month, DateTime.DaysInMonth(year, month));
+
+        if (freq == "Monthly")
+        {
+            var day = Math.Min(debt.DueDay > 0 ? debt.DueDay : 1, monthEnd.Day);
+            return new List<DateTime> { new DateTime(year, month, day) };
+        }
+
+        var interval = freq == "Biweekly" ? 14 : 7;
+        var anchor = debt.StartDate ?? new DateTime(year, month, Math.Min(debt.DueDay > 0 ? debt.DueDay : 1, monthEnd.Day));
+        var monthStart = new DateTime(year, month, 1);
+        var dates = new List<DateTime>();
+
+        var current = anchor;
+        while (current <= monthEnd)
+        {
+            if (current >= monthStart) dates.Add(current);
+            current = current.AddDays(interval);
+        }
+        current = anchor.AddDays(-interval);
+        while (current >= monthStart)
+        {
+            dates.Add(current);
+            current = current.AddDays(-interval);
+        }
+
+        dates = dates.Distinct().OrderBy(d => d).ToList();
+        if (dates.Count == 0)
+            dates.Add(new DateTime(year, month, Math.Min(debt.DueDay > 0 ? debt.DueDay : 1, monthEnd.Day)));
+
+        return dates;
+    }
+
     private class WorkingDebt
     {
         public int Index { get; set; }
@@ -183,6 +244,9 @@ public class PayoffStrategyService : IPayoffStrategyService
         public DateTime? PromoEndDate { get; set; }
         public decimal TotalInterestPaid { get; set; }
         public int DueDay { get; set; }
+        public string? PaymentFrequency { get; set; }
+        public DateTime? StartDate { get; set; }
+        public decimal PerPaymentAmount { get; set; }
         public bool PaidOff { get; set; }
         public int PayoffMonth { get; set; }
     }

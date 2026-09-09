@@ -148,6 +148,14 @@ import { toLocalISOString } from '../../../core/utils/date-utils';
           </mat-select>
         </mat-form-field>
 
+        <mat-form-field>
+          <mat-label>Next Payment Date</mat-label>
+          <input matInput [matDatepicker]="nextPayPicker" formControlName="nextPaymentDate">
+          <mat-datepicker-toggle matIconSuffix [for]="nextPayPicker"></mat-datepicker-toggle>
+          <mat-datepicker #nextPayPicker></mat-datepicker>
+          <mat-hint>Leave empty if payments are due every month</mat-hint>
+        </mat-form-field>
+
         <mat-slide-toggle formControlName="isAutopay" color="primary">
           This loan is on autopay
         </mat-slide-toggle>
@@ -260,7 +268,8 @@ export class EditLoanDialogComponent implements OnInit {
     monthlyPayment: [this.data.monthlyPayment, [Validators.required, Validators.min(1)]],
     dueDay: [this.data.dueDay, Validators.required],
     paymentFrequency: [this.data.paymentFrequency, Validators.required],
-    fundedBankAccountId: [this.data.fundedBankAccountId ?? null]
+    fundedBankAccountId: [this.data.fundedBankAccountId ?? null],
+    nextPaymentDate: [this.data.nextPaymentDate ? new Date(this.data.nextPaymentDate) : null]
   });
 
   save(): void {
@@ -280,7 +289,8 @@ export class EditLoanDialogComponent implements OnInit {
       monthlyPayment: value.monthlyPayment,
       dueDay: Math.round(value.dueDay!),
       paymentFrequency: value.paymentFrequency,
-      fundedBankAccountId: value.fundedBankAccountId
+      fundedBankAccountId: value.fundedBankAccountId,
+      nextPaymentDate: value.nextPaymentDate ? toLocalISOString(value.nextPaymentDate) : null
     };
 
     this.loanService.update(this.data.id, payload).subscribe({

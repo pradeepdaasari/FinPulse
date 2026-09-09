@@ -15,6 +15,7 @@ export interface PersonalLoan {
   paymentFrequency: 'Monthly' | 'Biweekly' | 'Weekly';
   fundedBankAccountId?: number | null;
   fundedBankAccountName?: string | null;
+  nextPaymentDate?: string | null;
   createdAt: string;
   updatedAt: string;
 }

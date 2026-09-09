@@ -248,7 +248,10 @@ public class BudgetController : ControllerBase
 
     private async Task<List<DebtSnapshotDto>> GetDebtSnapshots()
     {
-        var loans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
+        var loans = await _db.PersonalLoans
+            .Where(l => l.UserId == UserId)
+            .Where(l => l.NextPaymentDate == null || l.NextPaymentDate <= DateTime.UtcNow)
+            .ToListAsync();
         var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
         var snapshots = new List<DebtSnapshotDto>();
 
@@ -261,10 +264,13 @@ public class BudgetController : ControllerBase
                 Name = loan.LenderName,
                 Balance = loan.CurrentBalance,
                 AprPercent = loan.AprPercent,
-                MinimumPayment = loan.MonthlyPayment,
+                MinimumPayment = loan.MonthlyEquivalentPayment,
                 EffectiveApr = loan.AprPercent,
                 PromoEndDate = null,
-                DueDay = loan.DueDay
+                DueDay = loan.DueDay,
+                PaymentFrequency = loan.PaymentFrequency.ToString(),
+                StartDate = loan.StartDate,
+                PerPaymentAmount = loan.MonthlyPayment
             });
         }
 
@@ -282,7 +288,8 @@ public class BudgetController : ControllerBase
                     ? card.PromoAprPercent ?? card.AprPercent
                     : card.AprPercent,
                 PromoEndDate = card.PromoEndDate,
-                DueDay = card.DueDay
+                DueDay = card.DueDay,
+                PerPaymentAmount = card.MinimumPayment
             });
         }
 

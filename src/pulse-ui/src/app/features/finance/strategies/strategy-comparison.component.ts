@@ -52,6 +52,45 @@ import { forkJoin, catchError, of } from 'rxjs';
         <p class="hero-encourage">You've got this. Here's your plan, step by step.</p>
       </div>
 
+      <!-- ═══════ SNAPSHOT GRID ═══════ -->
+      <div class="snapshot-grid">
+        <div class="snap-tile">
+          <span class="snap-val">{{ comparison()!.totalDebt | currency:'USD':'symbol':'1.0-0' }}</span>
+          <span class="snap-lbl">Total Owed</span>
+        </div>
+        <div class="snap-tile">
+          <span class="snap-val">{{ comparison()!.monthlyIncome | currency:'USD':'symbol':'1.0-0' }}</span>
+          <span class="snap-lbl">Monthly Income</span>
+        </div>
+        <div class="snap-tile highlight">
+          <span class="snap-val">{{ comparison()!.netPayPerCheck | currency:'USD':'symbol':'1.0-0' }}</span>
+          <span class="snap-lbl">Each Paycheck</span>
+        </div>
+        <div class="snap-tile">
+          <span class="snap-val">{{ debtCount() }}</span>
+          <span class="snap-lbl">Total Debts</span>
+        </div>
+        <div class="snap-tile">
+          <span class="snap-val">{{ comparison()!.recurringExpenses | currency:'USD':'symbol':'1.0-0' }}</span>
+          <span class="snap-lbl">Monthly Bills</span>
+        </div>
+        <div class="snap-tile highlight">
+          <span class="snap-val">{{ activeStrategy()!.totalMonthlyPayment | currency:'USD':'symbol':'1.0-0' }}</span>
+          <span class="snap-lbl">Debt Budget</span>
+        </div>
+      </div>
+      <div class="edu-callout edu-green">
+        <mat-icon>info</mat-icon>
+        <div>
+          <strong>How is the debt budget calculated?</strong>
+          Income ({{ comparison()!.monthlyIncome | currency:'USD':'symbol':'1.0-0' }})
+          minus recurring bills ({{ comparison()!.recurringExpenses | currency:'USD':'symbol':'1.0-0' }})
+          minus debt minimums ({{ totalMinimums() | currency:'USD':'symbol':'1.0-0' }})
+          leaves {{ availableExtra() | currency:'USD':'symbol':'1.0-0' }}/mo extra to attack your target debt.
+          That extra money is what makes you debt-free in {{ activeStrategy()!.monthsToPayoff }} months.
+        </div>
+      </div>
+
       <!-- ═══════ PAYCHECK GUIDE ═══════ -->
       @if (comparison()!.paychecks.length > 0 && budgetPlan()) {
         <div class="section-card paycheck-guide">
@@ -119,30 +158,34 @@ import { forkJoin, catchError, of } from 'rxjs';
             </div>
           </div>
           <div class="action-steps">
-            @for (step of groupedSteps(); track step.debtName + step.isMinimum; let i = $index) {
-              <div class="step" [class.extra-step]="!step.isMinimum">
-                <div class="step-number" [class.extra-number]="!step.isMinimum">{{ i + 1 }}</div>
-                <div class="step-content">
-                  <div class="step-main">
-                    <span class="step-action">Pay <strong>{{ step.amount | currency }}</strong> to <strong>{{ step.debtName }}</strong></span>
-                    @if (step.dueDay > 0) {
-                      <span class="step-due">due {{ step.dueDay }}{{ ordinal(step.dueDay) }}</span>
-                    }
-                  </div>
-                  <span class="step-why" [class.extra-why]="!step.isMinimum">
-                    @if (!step.isMinimum) {
-                      <mat-icon class="arrow-icon">north_east</mat-icon>
-                    }
-                    {{ step.explanation }}
-                  </span>
-                  @if (step.paycheckDate) {
-                    <span class="step-paycheck">
-                      <mat-icon>payments</mat-icon>
-                      Use your {{ step.paycheckDate | date:'MMM d' }} paycheck
-                    </span>
-                  }
+            @for (group of stepsByPaycheck(); track group.paycheckDate) {
+              @if (group.paycheckDate) {
+                <div class="paycheck-section-header">
+                  <mat-icon>payments</mat-icon>
+                  <span>{{ group.paycheckDate | date:'MMM d' }} paycheck</span>
+                  <span class="psh-amount">({{ group.paycheckAmount | currency:'USD':'symbol':'1.0-0' }})</span>
+                  <span class="psh-allocated">{{ group.total | currency }} allocated</span>
                 </div>
-              </div>
+              }
+              @for (step of group.steps; track step.debtName + step.dueDay + step.isMinimum; let i = $index) {
+                <div class="step" [class.extra-step]="!step.isMinimum">
+                  <div class="step-number" [class.extra-number]="!step.isMinimum">{{ i + 1 }}</div>
+                  <div class="step-content">
+                    <div class="step-main">
+                      <span class="step-action">Pay <strong>{{ step.amount | currency }}</strong> to <strong>{{ step.debtName }}</strong></span>
+                      @if (step.dueDay > 0) {
+                        <span class="step-due">due {{ step.dueDay }}{{ ordinal(step.dueDay) }}</span>
+                      }
+                    </div>
+                    <span class="step-why" [class.extra-why]="!step.isMinimum">
+                      @if (!step.isMinimum) {
+                        <mat-icon class="arrow-icon">north_east</mat-icon>
+                      }
+                      {{ step.explanation }}
+                    </span>
+                  </div>
+                </div>
+              }
             }
           </div>
           <div class="action-total">
@@ -246,6 +289,43 @@ import { forkJoin, catchError, of } from 'rxjs';
         }
       </div>
 
+      <!-- ═══════ UNDERSTANDING YOUR DEBTS ═══════ -->
+      @if (activeStrategy()) {
+        <div class="section-card debt-rank-section">
+          <div class="section-icon-header">
+            <div class="section-badge rank-badge">
+              <mat-icon>sort</mat-icon>
+            </div>
+            <div>
+              <h2 class="section-title">Understanding Your Debts</h2>
+              <p class="section-subtitle">Ranked by interest rate — the higher the rate, the more it costs you</p>
+            </div>
+          </div>
+          <div class="debt-rank-list">
+            @for (debt of debtsByApr(); track debt.debtName) {
+              <div class="rank-item">
+                <div class="rank-info">
+                  <span class="rank-name">{{ debt.debtName }}</span>
+                  <span class="rank-balance">{{ debt.balance | currency:'USD':'symbol':'1.0-0' }}</span>
+                </div>
+                <div class="rank-pills">
+                  <span class="apr-pill" [class]="aprClass(debt.aprPercent)">{{ debt.aprPercent | number:'1.1-1' }}% APR</span>
+                  <span class="rank-interest">{{ debt.totalInterestPaid | currency:'USD':'symbol':'1.0-0' }} interest</span>
+                </div>
+              </div>
+            }
+          </div>
+          <div class="edu-callout edu-amber">
+            <mat-icon>water_drop</mat-icon>
+            <div>
+              <strong>Think of interest like a leak.</strong>
+              Each debt pokes a hole in your wallet. A 36% APR card drains money 7x faster than a 5% loan.
+              The Avalanche strategy plugs the biggest leak first — saving you the most money overall.
+            </div>
+          </div>
+        </div>
+      }
+
       <!-- ═══════ PAYOFF ROADMAP ═══════ -->
       @if (activeStrategy()) {
         <div class="section-card roadmap">
@@ -255,7 +335,7 @@ import { forkJoin, catchError, of } from 'rxjs';
             </div>
             <div>
               <h2 class="section-title">Your Payoff Roadmap</h2>
-              <p class="section-subtitle">Debts will be eliminated in this order</p>
+              <p class="section-subtitle">Debts will be eliminated in this order — each one freed up rolls into the next</p>
             </div>
           </div>
           <div class="roadmap-timeline">
@@ -277,12 +357,25 @@ import { forkJoin, catchError, of } from 'rxjs';
                   <div class="road-meta">
                     <span>{{ debt.balance | currency:'USD':'symbol':'1.0-0' }} remaining</span>
                     <span class="road-dot"></span>
+                    <span class="apr-pill mini" [class]="aprClass(debt.aprPercent)">{{ debt.aprPercent | number:'1.0-1' }}%</span>
+                    <span class="road-dot"></span>
                     <span>{{ debt.minimumPayment | currency:'USD':'symbol':'1.0-0' }}/mo{{ i === 0 ? ' + extra' : '' }}</span>
-                    @if (debt.dueDay > 0) {
+                    @if (debt.totalInterestPaid > 0) {
                       <span class="road-dot"></span>
-                      <span>Due {{ debt.dueDay }}{{ ordinal(debt.dueDay) }}</span>
+                      <span class="road-interest-cost">{{ debt.totalInterestPaid | currency:'USD':'symbol':'1.0-0' }} interest</span>
                     }
                   </div>
+                  @if (i === 0) {
+                    <div class="road-callout">
+                      <mat-icon>star</mat-icon>
+                      This is your current target — all extra payments go here because
+                      @if (chosenStrategy() === 'avalanche') {
+                        it has the highest interest rate
+                      } @else {
+                        it has the smallest balance
+                      }
+                    </div>
+                  }
                 </div>
               </div>
             }
@@ -332,6 +425,235 @@ import { forkJoin, catchError, of } from 'rxjs';
           </div>
         }
       </div>
+
+      <!-- ═══════ INTEREST BREAKDOWN ═══════ -->
+      @if (activeStrategy()) {
+        <div class="section-card interest-section">
+          <div class="section-icon-header">
+            <div class="section-badge interest-badge">
+              <mat-icon>money_off</mat-icon>
+            </div>
+            <div>
+              <h2 class="section-title">The Cost of Interest</h2>
+              <p class="section-subtitle">This is what borrowing costs you — the price of each debt over its lifetime</p>
+            </div>
+          </div>
+          <div class="interest-table">
+            @for (debt of activeStrategy()!.debtPayoffOrder; track debt.debtName) {
+              @if (debt.totalInterestPaid > 0) {
+                <div class="int-row">
+                  <span class="int-name">{{ debt.debtName }}</span>
+                  <div class="int-bar-wrap">
+                    <div class="int-bar" [style.width.%]="(debt.totalInterestPaid / maxInterest()) * 100"></div>
+                  </div>
+                  <span class="int-amount">{{ debt.totalInterestPaid | currency:'USD':'symbol':'1.0-0' }}</span>
+                </div>
+              }
+            }
+          </div>
+          <div class="int-total-row">
+            <span>Total Interest Over {{ activeStrategy()!.monthsToPayoff }} Months</span>
+            <span class="int-total-val">{{ totalInterestPaid() | currency:'USD':'symbol':'1.0-0' }}</span>
+          </div>
+          <div class="edu-callout edu-amber">
+            <mat-icon>lightbulb</mat-icon>
+            <div>
+              <strong>Why do big loans cost more interest even with lower rates?</strong>
+              Because interest is a percentage of the balance. A $34K loan at 14% generates more interest dollars than a $2K card at 30%.
+              But the Avalanche still targets rate first — each dollar of extra payment saves more on the high-rate debt.
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ═══════ HOW THE AVALANCHE GROWS ═══════ -->
+      @if (activeStrategy() && chosenStrategy() === 'avalanche') {
+        <div class="section-card avalanche-explain">
+          <div class="section-icon-header">
+            <div class="section-badge explain-badge">
+              <mat-icon>terrain</mat-icon>
+            </div>
+            <div>
+              <h2 class="section-title">How the Avalanche Works</h2>
+              <p class="section-subtitle">Your payment power grows every time a debt is eliminated</p>
+            </div>
+          </div>
+          <div class="phase-cards">
+            <div class="phase-card">
+              <div class="phase-num">Phase 1</div>
+              <div class="phase-title">Attack the Worst Rate</div>
+              <p class="phase-desc">
+                Every month, pay minimums on all {{ debtCount() }} debts ({{ totalMinimums() | currency:'USD':'symbol':'1.0-0' }}).
+                Then ALL leftover money goes to <strong>{{ activeStrategy()!.debtPayoffOrder[0].debtName }}</strong>
+                because it has the worst interest rate ({{ activeStrategy()!.debtPayoffOrder[0].aprPercent | number:'1.1-1' }}%).
+              </p>
+            </div>
+            <div class="phase-card">
+              <div class="phase-num">Phase 2</div>
+              <div class="phase-title">Roll It Forward</div>
+              <p class="phase-desc">
+                When that first target dies, its entire payment (minimum + extra) rolls onto the next highest-rate debt.
+                Your available payment grows with each debt eliminated — like an avalanche picking up speed.
+              </p>
+            </div>
+            <div class="phase-card">
+              <div class="phase-num">Phase 3</div>
+              <div class="phase-title">Unstoppable Finish</div>
+              <p class="phase-desc">
+                By the time you reach your last debts, you could be throwing {{ activeStrategy()!.totalMonthlyPayment | currency:'USD':'symbol':'1.0-0' }}+/mo
+                at them because all other debts are gone. The finish line comes fast.
+              </p>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (activeStrategy() && chosenStrategy() === 'snowball') {
+        <div class="section-card avalanche-explain">
+          <div class="section-icon-header">
+            <div class="section-badge explain-badge" style="background: #00BCD4">
+              <mat-icon>ac_unit</mat-icon>
+            </div>
+            <div>
+              <h2 class="section-title">How the Snowball Works</h2>
+              <p class="section-subtitle">Quick wins build momentum — each debt eliminated fuels the next</p>
+            </div>
+          </div>
+          <div class="phase-cards">
+            <div class="phase-card">
+              <div class="phase-num">Phase 1</div>
+              <div class="phase-title">Crush the Smallest First</div>
+              <p class="phase-desc">
+                Pay minimums on all {{ debtCount() }} debts, then throw ALL extra cash at the smallest balance —
+                <strong>{{ activeStrategy()!.debtPayoffOrder[0].debtName }}</strong>
+                ({{ activeStrategy()!.debtPayoffOrder[0].balance | currency:'USD':'symbol':'1.0-0' }}).
+                The win comes fast and feels great.
+              </p>
+            </div>
+            <div class="phase-card">
+              <div class="phase-num">Phase 2</div>
+              <div class="phase-title">Stack the Wins</div>
+              <p class="phase-desc">
+                Each eliminated debt frees up its payment for the next target.
+                The psychological momentum of crossing debts off your list keeps you motivated to continue.
+              </p>
+            </div>
+            <div class="phase-card">
+              <div class="phase-num">Phase 3</div>
+              <div class="phase-title">The Snowball Is Massive</div>
+              <p class="phase-desc">
+                By the end, all freed-up payments combine into one giant monthly payment that
+                demolishes your remaining debts quickly.
+              </p>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ═══════ GOLDEN RULES ═══════ -->
+      <div class="section-card rules-section">
+        <div class="section-icon-header">
+          <div class="section-badge rules-badge">
+            <mat-icon>verified</mat-icon>
+          </div>
+          <div>
+            <h2 class="section-title">Golden Rules</h2>
+            <p class="section-subtitle">Stick to these and you'll hit your debt-free date</p>
+          </div>
+        </div>
+        <div class="rules-list">
+          <div class="rule-item">
+            <div class="rule-num">1</div>
+            <div class="rule-text">
+              <strong>Pay all minimums first, always.</strong>
+              Missing a minimum damages your credit score and triggers late fees.
+            </div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-num">2</div>
+            <div class="rule-text">
+              <strong>All extra money goes to ONE debt.</strong>
+              @if (activeStrategy() && activeStrategy()!.debtPayoffOrder.length > 0) {
+                Right now that's {{ activeStrategy()!.debtPayoffOrder[0].debtName }}. Don't split extra payments.
+              }
+            </div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-num">3</div>
+            <div class="rule-text">
+              <strong>When a debt dies, roll it forward.</strong>
+              Add the freed-up payment to the next target. Don't spend it on lifestyle.
+            </div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-num">4</div>
+            <div class="rule-text">
+              <strong>Don't take on new debt.</strong>
+              No new credit card charges beyond what you can pay in full each month.
+            </div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-num">5</div>
+            <div class="rule-text">
+              <strong>Automate your minimums.</strong>
+              Set up autopay so you never miss a due date. Manual only for the extra payment.
+            </div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-num">6</div>
+            <div class="rule-text">
+              <strong>Bonus paychecks = bonus attacks.</strong>
+              @if (comparison()!.payFrequency === 'Biweekly') {
+                You're paid biweekly — 2-3 times a year you get a 3rd paycheck. Throw it all at your target.
+              } @else {
+                Any windfall, bonus, or extra income goes straight to the target debt.
+              }
+            </div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-num">7</div>
+            <div class="rule-text">
+              <strong>Check in monthly.</strong>
+              Come back to this page each month. Watch balances drop. Celebrate each debt eliminated.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════ AFTER DEBT FREEDOM ═══════ -->
+      @if (activeStrategy()) {
+        <div class="section-card freedom-section">
+          <div class="section-icon-header">
+            <div class="section-badge freedom-badge">
+              <mat-icon>celebration</mat-icon>
+            </div>
+            <div>
+              <h2 class="section-title">After You're Debt-Free</h2>
+              <p class="section-subtitle">In {{ debtFreeDate() }}, that {{ activeStrategy()!.totalMonthlyPayment | currency:'USD':'symbol':'1.0-0' }}/mo becomes yours</p>
+            </div>
+          </div>
+          <div class="freedom-grid">
+            <div class="freedom-card">
+              <mat-icon>shield</mat-icon>
+              <strong>Build Emergency Fund</strong>
+              <p>Save 3–6 months of expenses. This prevents future debt when something unexpected happens.</p>
+            </div>
+            <div class="freedom-card">
+              <mat-icon>trending_up</mat-icon>
+              <strong>Invest for the Future</strong>
+              <p>That {{ activeStrategy()!.totalMonthlyPayment | currency:'USD':'symbol':'1.0-0' }}/mo invested at 8% avg becomes serious wealth in just a few years.</p>
+            </div>
+          </div>
+          <div class="edu-callout edu-green">
+            <mat-icon>auto_awesome</mat-icon>
+            <div>
+              <strong>The math of freedom:</strong>
+              Right now, {{ totalInterestPaid() | currency:'USD':'symbol':'1.0-0' }} of your money over the next {{ activeStrategy()!.monthsToPayoff }} months
+              goes to interest — paying for the privilege of owing money. After {{ debtFreeDate() }}, every dollar works for you.
+            </div>
+          </div>
+        </div>
+      }
 
       <!-- ═══════ MILESTONES ═══════ -->
       <div class="section-card milestones">
@@ -501,11 +823,16 @@ import { forkJoin, catchError, of } from 'rxjs';
       display: flex; align-items: center; gap: 4px;
     }
     .arrow-icon { font-size: 14px; width: 14px; height: 14px; }
-    .step-paycheck {
-      display: flex; align-items: center; gap: 4px;
-      font-size: 0.72rem; color: #00897B; font-weight: 600; margin-top: 2px;
+    .paycheck-section-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 0; margin-top: 8px;
+      font-size: 0.82rem; font-weight: 700; color: #00897B;
+      border-bottom: 1px solid color-mix(in srgb, #00897B 15%, transparent);
     }
-    .step-paycheck mat-icon { font-size: 13px; width: 13px; height: 13px; }
+    .paycheck-section-header:first-child { margin-top: 0; }
+    .paycheck-section-header mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .psh-amount { font-weight: 500; color: var(--color-text-muted); }
+    .psh-allocated { margin-left: auto; font-size: 0.72rem; font-weight: 600; color: var(--color-text-secondary); }
 
     .action-total {
       display: flex; justify-content: space-between; align-items: center;
@@ -655,6 +982,113 @@ import { forkJoin, catchError, of } from 'rxjs';
     .positive { color: var(--color-success); }
     .negative { color: var(--color-danger); }
 
+    .snapshot-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px;
+    }
+    .snap-tile {
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      border-radius: var(--radius-md); padding: 14px 10px; text-align: center;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .snap-tile.highlight { border-color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface)); }
+    .snap-val { font-size: 1.15rem; font-weight: 800; }
+    .snap-tile.highlight .snap-val { color: var(--color-primary); }
+    .snap-lbl { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; color: var(--color-text-muted); }
+
+    .edu-callout {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 14px 16px; border-radius: var(--radius-md);
+      font-size: 0.82rem; line-height: 1.55; margin-bottom: 16px;
+    }
+    .edu-callout mat-icon { font-size: 20px; width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; }
+    .edu-green { background: var(--color-stat-green-bg); }
+    .edu-green mat-icon { color: var(--color-success); }
+    .edu-amber { background: var(--color-stat-amber-bg); }
+    .edu-amber mat-icon { color: var(--color-stat-amber); }
+
+    .rank-badge { background: #6366F1; }
+    .debt-rank-list { display: flex; flex-direction: column; margin-bottom: 14px; }
+    .rank-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0; border-bottom: 1px solid var(--color-border); gap: 8px;
+    }
+    .rank-item:last-child { border-bottom: none; }
+    .rank-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .rank-name { font-size: 0.88rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rank-balance { font-size: 0.78rem; color: var(--color-text-muted); }
+    .rank-pills { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .rank-interest { font-size: 0.72rem; color: var(--color-danger); font-weight: 600; }
+
+    .apr-pill {
+      font-size: 0.6rem; font-weight: 700; padding: 2px 8px;
+      border-radius: var(--radius-full); white-space: nowrap;
+    }
+    .apr-pill.mini { font-size: 0.58rem; padding: 1px 6px; }
+    .apr-danger { background: color-mix(in srgb, var(--color-danger) 12%, transparent); color: var(--color-danger); }
+    .apr-amber { background: var(--color-stat-amber-bg); color: var(--color-stat-amber); }
+    .apr-safe { background: var(--color-stat-green-bg); color: var(--color-success); }
+    .road-callout {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: 6px; font-size: 0.75rem; font-weight: 600; color: var(--color-success);
+    }
+    .road-callout mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .road-interest-cost { color: var(--color-danger); font-weight: 600; }
+
+    .interest-badge { background: #E53935; }
+    .interest-table { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+    .int-row {
+      display: grid; grid-template-columns: minmax(100px,1fr) 1fr auto;
+      align-items: center; gap: 10px; font-size: 0.82rem;
+    }
+    .int-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .int-bar-wrap { height: 6px; background: var(--color-border); border-radius: 3px; overflow: hidden; }
+    .int-bar { height: 100%; background: var(--color-danger); border-radius: 3px; min-width: 2px; }
+    .int-amount { font-weight: 700; color: var(--color-danger); text-align: right; min-width: 50px; }
+    .int-total-row {
+      display: flex; justify-content: space-between; padding: 12px 0;
+      border-top: 2px solid var(--color-border); margin-bottom: 14px; font-weight: 700;
+    }
+    .int-total-val { color: var(--color-danger); }
+
+    .explain-badge { background: #43A047; }
+    .phase-cards { display: flex; flex-direction: column; gap: 12px; }
+    .phase-card {
+      padding: 16px; border: 1px solid var(--color-border);
+      border-radius: var(--radius-md); background: var(--color-surface-secondary);
+    }
+    .phase-num {
+      font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--color-success); background: var(--color-stat-green-bg);
+      display: inline-block; padding: 2px 8px; border-radius: var(--radius-full); margin-bottom: 6px;
+    }
+    .phase-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; }
+    .phase-desc { font-size: 0.82rem; color: var(--color-text-muted); margin: 0; line-height: 1.5; }
+
+    .rules-badge { background: #00897B; }
+    .rules-list { display: flex; flex-direction: column; }
+    .rule-item {
+      display: flex; gap: 12px; padding: 12px 0;
+      border-bottom: 1px solid var(--color-border); font-size: 0.85rem; line-height: 1.5;
+    }
+    .rule-item:last-child { border-bottom: none; }
+    .rule-num {
+      width: 26px; height: 26px; min-width: 26px; border-radius: var(--radius-full);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem; font-weight: 800; color: #fff; background: #00897B;
+    }
+    .rule-text { color: var(--color-text-muted); }
+    .rule-text strong { color: var(--color-text); }
+
+    .freedom-badge { background: #FF6F00; }
+    .freedom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+    .freedom-card {
+      padding: 16px; border: 1px solid var(--color-border);
+      border-radius: var(--radius-md); background: var(--color-surface-secondary);
+    }
+    .freedom-card mat-icon { font-size: 24px; width: 24px; height: 24px; color: var(--color-primary); margin-bottom: 8px; }
+    .freedom-card strong { display: block; font-size: 0.9rem; margin-bottom: 4px; }
+    .freedom-card p { font-size: 0.78rem; color: var(--color-text-muted); margin: 0; line-height: 1.4; }
+
     /* Mobile */
     @media (max-width: 599px) {
       .hero { padding: 24px 16px 22px; }
@@ -672,6 +1106,12 @@ import { forkJoin, catchError, of } from 'rxjs';
       .step-main { flex-direction: column; gap: 4px; }
       .road-item { padding-left: 44px; }
       .pc-header { flex-direction: column; align-items: flex-start; gap: 4px; }
+      .snapshot-grid { grid-template-columns: repeat(2, 1fr); }
+      .snap-val { font-size: 1rem; }
+      .freedom-grid { grid-template-columns: 1fr; }
+      .int-row { grid-template-columns: minmax(80px, 1fr) 60px auto; }
+      .rank-item { flex-direction: column; align-items: flex-start; }
+      .rank-pills { align-self: flex-start; }
     }
   `]
 })
@@ -707,7 +1147,34 @@ export class StrategyComparisonComponent implements OnInit {
   groupedSteps = computed(() => {
     const s = this.activeStrategy();
     if (!s) return [];
-    return s.monthlyPlan;
+    return [...s.monthlyPlan].sort((a, b) => (a.dueDay || 0) - (b.dueDay || 0));
+  });
+
+  stepsByPaycheck = computed(() => {
+    const steps = this.groupedSteps();
+    const comp = this.comparison();
+    if (!comp || steps.length === 0) return [];
+
+    const groups = new Map<string, MonthlyActionStep[]>();
+    for (const step of steps) {
+      const key = step.paycheckDate || 'unassigned';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(step);
+    }
+
+    const paycheckMap = new Map<string, number>();
+    for (const pc of comp.paychecks) {
+      paycheckMap.set(pc.date, pc.amount);
+    }
+
+    return Array.from(groups.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, items]) => ({
+        paycheckDate: date === 'unassigned' ? null : date,
+        paycheckAmount: paycheckMap.get(date) ?? 0,
+        steps: items,
+        total: items.reduce((s, i) => s + i.amount, 0)
+      }));
   });
 
   strategyExplanation = computed(() => {
@@ -721,6 +1188,40 @@ export class StrategyComparisonComponent implements OnInit {
       }
     }
     return "The difference between strategies is small for your debts. Snowball gives you quick wins for motivation. Either way, you're winning by having a plan.";
+  });
+
+  debtCount = computed(() => {
+    const s = this.activeStrategy();
+    return s ? s.debtPayoffOrder.length : 0;
+  });
+
+  totalMinimums = computed(() => {
+    const s = this.activeStrategy();
+    return s ? s.debtPayoffOrder.reduce((sum, d) => sum + d.minimumPayment, 0) : 0;
+  });
+
+  totalInterestPaid = computed(() => {
+    const s = this.activeStrategy();
+    return s ? s.debtPayoffOrder.reduce((sum, d) => sum + d.totalInterestPaid, 0) : 0;
+  });
+
+  maxInterest = computed(() => {
+    const s = this.activeStrategy();
+    if (!s) return 1;
+    return Math.max(...s.debtPayoffOrder.map(d => d.totalInterestPaid), 1);
+  });
+
+  availableExtra = computed(() => {
+    const comp = this.comparison();
+    const s = this.activeStrategy();
+    if (!comp || !s) return 0;
+    return Math.max(comp.monthlyIncome - comp.recurringExpenses - this.totalMinimums(), 0);
+  });
+
+  debtsByApr = computed(() => {
+    const s = this.activeStrategy();
+    if (!s) return [];
+    return [...s.debtPayoffOrder].sort((a, b) => b.aprPercent - a.aprPercent);
   });
 
   paycheckBreakdowns = computed(() => {
@@ -859,6 +1360,12 @@ export class StrategyComparisonComponent implements OnInit {
       if (proj) return Math.min(proj.progressPercent, 100);
     }
     return 0;
+  }
+
+  aprClass(apr: number): string {
+    if (apr >= 25) return 'apr-danger';
+    if (apr >= 10) return 'apr-amber';
+    return 'apr-safe';
   }
 
   private fmt(n: number): string {

@@ -28,7 +28,10 @@ public class StrategiesController : ControllerBase
     [HttpGet("comparison")]
     public async Task<ActionResult<StrategyComparisonDto>> GetComparison([FromQuery] decimal extraPayment = 0)
     {
-        var loans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
+        var loans = await _db.PersonalLoans
+            .Where(l => l.UserId == UserId)
+            .Where(l => l.NextPaymentDate == null || l.NextPaymentDate <= DateTime.UtcNow)
+            .ToListAsync();
         var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
         var profile = await _db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == UserId);
 
@@ -43,10 +46,13 @@ public class StrategiesController : ControllerBase
                 Name = loan.LenderName,
                 Balance = loan.CurrentBalance,
                 AprPercent = loan.AprPercent,
-                MinimumPayment = loan.MonthlyPayment,
+                MinimumPayment = loan.MonthlyEquivalentPayment,
                 EffectiveApr = loan.AprPercent,
                 PromoEndDate = null,
-                DueDay = loan.DueDay
+                DueDay = loan.DueDay,
+                PaymentFrequency = loan.PaymentFrequency.ToString(),
+                StartDate = loan.StartDate,
+                PerPaymentAmount = loan.MonthlyPayment
             });
         }
 
@@ -64,20 +70,35 @@ public class StrategiesController : ControllerBase
                     ? card.PromoAprPercent ?? card.AprPercent
                     : card.AprPercent,
                 PromoEndDate = card.PromoEndDate,
-                DueDay = card.DueDay
+                DueDay = card.DueDay,
+                PerPaymentAmount = card.MinimumPayment
             });
         }
 
         snapshots = snapshots.Where(s => s.Balance > 0).ToList();
 
         var totalMinimumPayments = snapshots.Sum(s => s.MinimumPayment);
-        var extraFromProfile = profile?.MonthlyIncome * 0.2m ?? 0m;
-        var totalMonthlyBudget = totalMinimumPayments + extraFromProfile + extraPayment;
+
+        var recurringExpenses = await _db.RecurringTransactions
+            .Where(r => r.UserId == UserId && r.IsActive)
+            .SumAsync(r => r.Amount);
+
+        var monthlyIncome = profile?.MonthlyIncome ?? 0;
+        if (profile?.NextPayDate != null && profile.NetPayPerCheck > 0)
+        {
+            var now = DateTime.Today;
+            var payDates = GetPayDatesInMonth(profile.NextPayDate.Value, profile.PayFrequency, now.Year, now.Month);
+            monthlyIncome = payDates.Count * profile.NetPayPerCheck;
+        }
+
+        var availableAfterBills = Math.Max(monthlyIncome - recurringExpenses - totalMinimumPayments, 0);
+        var totalMonthlyBudget = totalMinimumPayments + availableAfterBills + extraPayment;
 
         var comparison = _strategyService.CompareStrategies(snapshots, totalMonthlyBudget);
         comparison.TotalDebt = snapshots.Sum(s => s.Balance);
-        comparison.MonthlyIncome = profile?.MonthlyIncome ?? 0;
+        comparison.MonthlyIncome = monthlyIncome;
         comparison.NetPayPerCheck = profile?.NetPayPerCheck ?? 0;
+        comparison.RecurringExpenses = recurringExpenses;
         comparison.PayFrequency = profile?.PayFrequency.ToString() ?? "Monthly";
 
         if (profile?.NextPayDate != null)
@@ -104,9 +125,7 @@ public class StrategiesController : ControllerBase
         {
             var dueDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month,
                 Math.Min(step.DueDay > 0 ? step.DueDay : 1, DateTime.DaysInMonth(DateTime.Today.Year, DateTime.Today.Month)));
-            var bestPaycheck = paychecks.Where(p => p <= dueDate).OrderByDescending(p => p).FirstOrDefault();
-            if (bestPaycheck == default)
-                bestPaycheck = paychecks.First();
+            var bestPaycheck = paychecks.OrderBy(p => Math.Abs((p - dueDate).TotalDays)).First();
             step.PaycheckDate = bestPaycheck.ToString("yyyy-MM-dd");
         }
     }

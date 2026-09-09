@@ -297,56 +297,65 @@ export class MonthlyPaymentsComponent implements OnInit {
       const currentYear = now.getFullYear();
 
       const monthlyPayments: MonthlyPayment[] = [];
+      const monthEnd = new Date(currentYear, currentMonth + 1, 0);
 
       for (const debt of debts) {
-        const dueDay = debt.dueDay ?? 1;
-        const cycleStart = this.getCycleStart(dueDay, now);
-        const paidAmount = this.sumPaymentsInCycle(paymentResponse.payments, debt.id, debt.type, cycleStart);
-
+        if (debt.nextPaymentDate && new Date(debt.nextPaymentDate) > now) continue;
         const isLoan = debt.type === 'PersonalLoan';
-        const hasActivePromo = !isLoan && debt.promoAprPercent === 0 && debt.promoEndDate && new Date(debt.promoEndDate) > now;
-        const dueAmount = isLoan ? debt.monthlyPayment : (hasActivePromo ? debt.monthlyPayment : debt.currentBalance);
-
-        const isPaid = roundCurrency(paidAmount) >= roundCurrency(dueAmount);
-        if (isPaid) continue;
-
-        let dueDate = new Date(currentYear, currentMonth, dueDay);
-        let daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-        if (daysUntilDue < 0) {
-          dueDate = new Date(currentYear, currentMonth + 1, dueDay);
-          daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        }
-
-        if (daysUntilDue > 30) continue;
-
-        let status: MonthlyPayment['status'];
-        if (daysUntilDue <= 5) {
-          status = 'due-soon';
-        } else {
-          status = 'upcoming';
-        }
-
-        const minimumPaid = !isLoan && (
-          (debt.monthlyPayment === 0 && paidAmount > 0) ||
-          (debt.monthlyPayment > 0 && roundCurrency(paidAmount) >= roundCurrency(debt.monthlyPayment))
+        const freq = debt.paymentFrequency || 'Monthly';
+        const allDebtPayments = paymentResponse.payments.filter(
+          p => p.debtId == debt.id && (p.debtType === debt.type || String(p.debtType) === String(isLoan ? 0 : 1))
         );
 
-        monthlyPayments.push({
-          id: debt.id,
-          name: debt.name,
-          type: isLoan ? 'Loan' : 'Credit Card',
-          amount: dueAmount,
-          minimumPayment: !isLoan && debt.monthlyPayment > 0 ? debt.monthlyPayment : null,
-          minimumPaid,
-          isAutopay: debt.isAutopay,
-          currentBalance: debt.currentBalance,
-          paidAmount,
-          dueDate,
-          nextDueDate: new Date(currentYear, currentMonth + 1, dueDay),
-          daysUntilDue,
-          status
-        });
+        const dueDates = this.getDueDatesInMonth(debt, currentYear, currentMonth, monthEnd);
+
+        for (const dueDate of dueDates) {
+          const windowStart = new Date(dueDate.getTime() - 7 * 86400000);
+          const windowEnd = new Date(dueDate.getTime() + 7 * 86400000);
+          const paidAmount = freq === 'Monthly'
+            ? sumCurrency(allDebtPayments.filter(p => new Date(p.paymentDate) >= this.getCycleStart(debt.dueDay ?? 1, now)).map(p => p.amountPaid))
+            : sumCurrency(allDebtPayments.filter(p => { const d = new Date(p.paymentDate); return d >= windowStart && d <= windowEnd; }).map(p => p.amountPaid));
+
+          const paymentAmount = debt.perPaymentAmount;
+          const hasActivePromo = !isLoan && debt.promoAprPercent === 0 && debt.promoEndDate && new Date(debt.promoEndDate) > now;
+          const dueAmount = isLoan ? paymentAmount : (hasActivePromo ? paymentAmount : debt.currentBalance);
+
+          const isPaid = roundCurrency(paidAmount) >= roundCurrency(dueAmount);
+          if (isPaid) continue;
+
+          let daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          if (daysUntilDue < -30 || daysUntilDue > 30) continue;
+
+          let status: MonthlyPayment['status'];
+          if (daysUntilDue < 0) {
+            status = 'due-soon';
+          } else if (daysUntilDue <= 5) {
+            status = 'due-soon';
+          } else {
+            status = 'upcoming';
+          }
+
+          const minimumPaid = !isLoan && (
+            (paymentAmount === 0 && paidAmount > 0) ||
+            (paymentAmount > 0 && roundCurrency(paidAmount) >= roundCurrency(paymentAmount))
+          );
+
+          monthlyPayments.push({
+            id: debt.id,
+            name: debt.name,
+            type: isLoan ? 'Loan' : 'Credit Card',
+            amount: dueAmount,
+            minimumPayment: !isLoan && paymentAmount > 0 ? paymentAmount : null,
+            minimumPaid,
+            isAutopay: debt.isAutopay,
+            currentBalance: debt.currentBalance,
+            paidAmount,
+            dueDate,
+            nextDueDate: dueDates[dueDates.length - 1] || dueDate,
+            daysUntilDue,
+            status
+          });
+        }
       }
 
       monthlyPayments.sort((a, b) => a.daysUntilDue - b.daysUntilDue);
@@ -355,6 +364,30 @@ export class MonthlyPaymentsComponent implements OnInit {
       this.loading.set(false);
       this.cdr.detectChanges();
     });
+  }
+
+  private getDueDatesInMonth(debt: DebtItem, year: number, month: number, monthEnd: Date): Date[] {
+    const freq = debt.paymentFrequency || 'Monthly';
+    if (freq === 'Monthly') {
+      const day = Math.min(debt.dueDay ?? 1, monthEnd.getDate());
+      return [new Date(year, month, day)];
+    }
+    const interval = freq === 'Biweekly' ? 14 : 7;
+    const anchor = debt.startDate ? new Date(debt.startDate) : new Date(year, month, debt.dueDay ?? 1);
+    const monthStart = new Date(year, month, 1);
+    const dates: Date[] = [];
+    let current = new Date(anchor);
+    while (current <= monthEnd) {
+      if (current >= monthStart) dates.push(new Date(current));
+      current = new Date(current.getTime() + interval * 86400000);
+    }
+    current = new Date(anchor.getTime() - interval * 86400000);
+    while (current >= monthStart) {
+      dates.push(new Date(current));
+      current = new Date(current.getTime() - interval * 86400000);
+    }
+    dates.sort((a, b) => a.getTime() - b.getTime());
+    return dates.length > 0 ? dates : [new Date(year, month, Math.min(debt.dueDay ?? 1, monthEnd.getDate()))];
   }
 
   private getCycleStart(dueDay: number, now: Date): Date {

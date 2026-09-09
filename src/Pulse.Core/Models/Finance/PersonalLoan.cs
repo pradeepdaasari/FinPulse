@@ -34,6 +34,16 @@ public class PersonalLoan
 
     public int? FundedBankAccountId { get; set; }
 
+    public DateTime? NextPaymentDate { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public decimal MonthlyEquivalentPayment => PaymentFrequency switch
+    {
+        PaymentFrequency.Weekly => MonthlyPayment * 52 / 12,
+        PaymentFrequency.Biweekly => MonthlyPayment * 26 / 12,
+        _ => MonthlyPayment
+    };
+
     public string? UserId { get; set; }
 
     public DateTime CreatedAt { get; set; }

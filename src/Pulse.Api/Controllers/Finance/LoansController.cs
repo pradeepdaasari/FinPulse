@@ -39,7 +39,7 @@ public class LoansController : ControllerBase
         {
             l.Id, l.LenderName, l.OriginalAmount, l.CurrentBalance, l.AprPercent,
             l.DurationMonths, l.StartDate, l.MonthlyPayment, l.DueDay, l.LoanType,
-            l.IsAutopay, l.PaymentFrequency, l.FundedBankAccountId,
+            l.IsAutopay, l.PaymentFrequency, l.FundedBankAccountId, l.NextPaymentDate,
             FundedBankAccountName = l.FundedBankAccountId.HasValue && bankNames.ContainsKey(l.FundedBankAccountId.Value)
                 ? bankNames[l.FundedBankAccountId.Value] : null,
             l.CreatedAt, l.UpdatedAt
@@ -64,7 +64,7 @@ public class LoansController : ControllerBase
         {
             loan.Id, loan.LenderName, loan.OriginalAmount, loan.CurrentBalance, loan.AprPercent,
             loan.DurationMonths, loan.StartDate, loan.MonthlyPayment, loan.DueDay, loan.LoanType,
-            loan.IsAutopay, loan.PaymentFrequency, loan.FundedBankAccountId,
+            loan.IsAutopay, loan.PaymentFrequency, loan.FundedBankAccountId, loan.NextPaymentDate,
             FundedBankAccountName = bankName,
             loan.CreatedAt, loan.UpdatedAt
         });
@@ -91,6 +91,7 @@ public class LoansController : ControllerBase
             IsAutopay = dto.IsAutopay,
             PaymentFrequency = dto.PaymentFrequency,
             FundedBankAccountId = dto.FundedBankAccountId,
+            NextPaymentDate = dto.NextPaymentDate,
             UserId = UserId
         };
 
@@ -151,6 +152,7 @@ public class LoansController : ControllerBase
         loan.IsAutopay = dto.IsAutopay;
         loan.PaymentFrequency = dto.PaymentFrequency;
         loan.FundedBankAccountId = dto.FundedBankAccountId;
+        loan.NextPaymentDate = dto.NextPaymentDate;
 
         if (oldFundedAccountId != dto.FundedBankAccountId || oldOriginalAmount != dto.OriginalAmount)
         {

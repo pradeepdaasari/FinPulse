@@ -14,4 +14,8 @@ public class DebtItemDto
     public string? SubType { get; set; }
     public decimal? PromoAprPercent { get; set; }
     public DateTime? PromoEndDate { get; set; }
+    public DateTime? NextPaymentDate { get; set; }
+    public string PaymentFrequency { get; set; } = "Monthly";
+    public DateTime? StartDate { get; set; }
+    public decimal PerPaymentAmount { get; set; }
 }

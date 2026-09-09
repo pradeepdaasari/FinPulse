@@ -83,6 +83,12 @@ import { FundingSourceService } from '../../../core/services/funding-source.serv
               <span class="label">Frequency</span>
               <span class="value">{{ loan()!.paymentFrequency }}</span>
             </div>
+            @if (loan()!.nextPaymentDate) {
+              <div class="detail-item">
+                <span class="label">Next Payment Date</span>
+                <span class="value" [class.deferred-value]="isDeferred()">{{ loan()!.nextPaymentDate | localDate:'mediumDate' }}</span>
+              </div>
+            }
           </div>
         </mat-card-content>
       </mat-card>
@@ -183,6 +189,7 @@ import { FundingSourceService } from '../../../core/services/funding-source.serv
     }
     .history-count { color: var(--color-text-secondary); }
     .amount-cell { font-weight: 600; color: var(--color-success); }
+    .deferred-value { color: #e65100; }
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
     }
@@ -216,6 +223,10 @@ export class LoanDetailComponent implements OnInit {
     if (f === 'Weekly') return 'Weekly Payment';
     if (f === 'Biweekly') return 'Biweekly Payment';
     return 'Monthly Payment';
+  });
+  isDeferred = computed(() => {
+    const d = this.loan()?.nextPaymentDate;
+    return !!d && new Date(d) > new Date();
   });
   dueDayDisplay = computed(() => {
     const l = this.loan();

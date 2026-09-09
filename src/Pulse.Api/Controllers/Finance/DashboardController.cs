@@ -32,12 +32,13 @@ public class DashboardController : ControllerBase
     [HttpGet("summary")]
     public async Task<ActionResult<DashboardSummaryDto>> GetSummary()
     {
-        var loans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
+        var allLoans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
         var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
+        var loans = allLoans.Where(l => l.NextPaymentDate == null || l.NextPaymentDate <= DateTime.UtcNow).ToList();
 
-        var totalDebt = loans.Sum(l => l.CurrentBalance) + cards.Sum(c => c.CurrentBalance);
-        var totalMonthlyPayment = loans.Sum(l => l.MonthlyPayment) + cards.Sum(c => c.MinimumPayment);
-        var numberOfDebts = loans.Count + cards.Count;
+        var totalDebt = allLoans.Sum(l => l.CurrentBalance) + cards.Sum(c => c.CurrentBalance);
+        var totalMonthlyPayment = loans.Sum(l => l.MonthlyEquivalentPayment) + cards.Sum(c => c.MinimumPayment);
+        var numberOfDebts = allLoans.Count + cards.Count;
 
         // Calculate estimated debt-free date (max of all individual payoff dates)
         var payoffDates = new List<DateTime>();
@@ -136,7 +137,10 @@ public class DashboardController : ControllerBase
     [HttpGet("countdown")]
     public async Task<ActionResult<DebtFreeCountdownDto>> GetCountdown()
     {
-        var loans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
+        var loans = await _db.PersonalLoans
+            .Where(l => l.UserId == UserId)
+            .Where(l => l.NextPaymentDate == null || l.NextPaymentDate <= DateTime.UtcNow)
+            .ToListAsync();
         var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
 
         var projections = new List<DebtPayoffProjectionDto>();
@@ -154,7 +158,7 @@ public class DashboardController : ControllerBase
                 DebtName = loan.LenderName,
                 DebtType = loan.LoanType.ToString(),
                 CurrentBalance = loan.CurrentBalance,
-                MonthlyPayment = loan.MonthlyPayment,
+                MonthlyPayment = loan.MonthlyEquivalentPayment,
                 ProjectedPayoffDate = payoffDate,
                 RemainingMonths = remainingMonths,
                 ProgressPercent = Math.Round(Math.Max(0, Math.Min(100, progress)), 1)
