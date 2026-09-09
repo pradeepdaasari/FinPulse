@@ -30,6 +30,7 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<TradingSetup> TradingSetups => Set<TradingSetup>();
     public DbSet<ChecklistItem> ChecklistItems => Set<ChecklistItem>();
     public DbSet<PreMarketNote> PreMarketNotes => Set<PreMarketNote>();
+    public DbSet<PreMarketTemplate> PreMarketTemplates => Set<PreMarketTemplate>();
     public DbSet<TradeEntry> TradeEntries => Set<TradeEntry>();
     public DbSet<ChecklistResponse> ChecklistResponses => Set<ChecklistResponse>();
     public DbSet<TradingRule> TradingRules => Set<TradingRule>();
@@ -37,6 +38,8 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<DailyLimits> DailyLimits => Set<DailyLimits>();
     public DbSet<TradingWisdom> TradingWisdoms => Set<TradingWisdom>();
     public DbSet<CommissionSchedule> CommissionSchedules => Set<CommissionSchedule>();
+    public DbSet<TradingGoal> TradingGoals => Set<TradingGoal>();
+    public DbSet<TradingGoalSnapshot> TradingGoalSnapshots => Set<TradingGoalSnapshot>();
 
     // Health & Fitness
     public DbSet<HealthMetric> HealthMetrics => Set<HealthMetric>();
@@ -247,6 +250,29 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.MaxLoss).HasPrecision(18, 2);
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => new { e.UserId, e.Date });
+        });
+
+        // PreMarketTemplate — one per user
+        modelBuilder.Entity<PreMarketTemplate>(entity =>
+        {
+            entity.HasIndex(e => e.UserId).IsUnique();
+        });
+
+        // TradingGoal
+        modelBuilder.Entity<TradingGoal>(entity =>
+        {
+            entity.Property(e => e.TargetValue).HasPrecision(18, 2);
+            entity.HasIndex(e => e.UserId);
+        });
+
+        // TradingGoalSnapshot
+        modelBuilder.Entity<TradingGoalSnapshot>(entity =>
+        {
+            entity.Property(e => e.CurrentValue).HasPrecision(18, 2);
+            entity.Property(e => e.TargetValue).HasPrecision(18, 2);
+            entity.Property(e => e.Percentage).HasPrecision(18, 2);
+            entity.HasIndex(e => new { e.UserId, e.GoalId, e.PeriodStart }).IsUnique();
+            entity.HasOne(e => e.Goal).WithMany().HasForeignKey(e => e.GoalId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // TradeEntry

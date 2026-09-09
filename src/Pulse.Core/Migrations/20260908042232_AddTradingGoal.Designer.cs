@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Pulse.Core.Data;
 
@@ -11,9 +12,11 @@ using Pulse.Core.Data;
 namespace Pulse.Core.Migrations
 {
     [DbContext(typeof(PulseDbContext))]
-    partial class PulseDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260908042232_AddTradingGoal")]
+    partial class AddTradingGoal
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1693,57 +1696,6 @@ namespace Pulse.Core.Migrations
                     b.ToTable("TradingGoals");
                 });
 
-            modelBuilder.Entity("Pulse.Core.Models.Trading.TradingGoalSnapshot", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Achieved")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("CurrentValue")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("GoalId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Percentage")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("PeriodStart")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("TargetValue")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Timeframe")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GoalId");
-
-                    b.HasIndex("UserId", "GoalId", "PeriodStart")
-                        .IsUnique();
-
-                    b.ToTable("TradingGoalSnapshots");
-                });
-
             modelBuilder.Entity("Pulse.Core.Models.Trading.TradingRule", b =>
                 {
                     b.Property<int>("Id")
@@ -2090,17 +2042,6 @@ namespace Pulse.Core.Migrations
                     b.Navigation("LinkedExpense");
 
                     b.Navigation("Setup");
-                });
-
-            modelBuilder.Entity("Pulse.Core.Models.Trading.TradingGoalSnapshot", b =>
-                {
-                    b.HasOne("Pulse.Core.Models.Trading.TradingGoal", "Goal")
-                        .WithMany()
-                        .HasForeignKey("GoalId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Goal");
                 });
 
             modelBuilder.Entity("Pulse.Core.Models.CreditCard", b =>

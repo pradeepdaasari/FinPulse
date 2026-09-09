@@ -137,9 +137,24 @@ import { routeFadeAnimation } from './route-animations';
                   <span class="ios-nav-label">Dashboard</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
+                <a class="ios-nav-item" routerLink="/trading/analytics" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-teal"><mat-icon>insights</mat-icon></span>
+                  <span class="ios-nav-label">Analytics</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/trading/goals" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-green"><mat-icon>flag</mat-icon></span>
+                  <span class="ios-nav-label">Goals</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
                 <a class="ios-nav-item" routerLink="/trading/premarket" routerLinkActive="active-link" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-amber"><mat-icon>wb_twilight</mat-icon></span>
                   <span class="ios-nav-label">Pre-Market</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item" routerLink="/trading/premarket/template" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-amber"><mat-icon>auto_fix_high</mat-icon></span>
+                  <span class="ios-nav-label">Pre-Market Template</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
                 <a class="ios-nav-item" routerLink="/trading/checklist" routerLinkActive="active-link" (click)="onNavClick()">
@@ -934,7 +949,10 @@ export class NavShellComponent implements OnInit, OnDestroy {
     '/health/workout': "Today's Workout",
     '/health/progress': 'Progress & PRs',
     '/trading': 'Dashboard',
+    '/trading/analytics': 'Trading Analytics',
+    '/trading/goals': 'Trading Goals',
     '/trading/premarket': 'Pre-Market Plan',
+    '/trading/premarket/template': 'Pre-Market Template',
     '/trading/checklist': 'Trade Checklist',
     '/trading/journal': 'Trade Journal',
     '/trading/calendar': 'Trading Calendar',

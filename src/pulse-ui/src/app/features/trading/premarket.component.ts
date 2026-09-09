@@ -8,9 +8,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatChipsModule } from '@angular/material/chips';
+import { RouterModule } from '@angular/router';
 import { TradingService } from '../../core/services/trading.service';
 import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
-import { PreMarketNote, MarketBias, MentalState } from '../../core/models/trading.model';
+import { PreMarketNote, PreMarketTemplate, MarketBias, MentalState } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
 import { RichTextEditorComponent } from '../../shared/rich-text-editor.component';
 import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
@@ -22,7 +23,8 @@ import { toLocalDateString } from '../../core/utils/date-utils';
   imports: [
     CommonModule, ReactiveFormsModule, MatCardModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatSliderModule, MatChipsModule,
-    CurrencyPipe, DatePipe, RichTextEditorComponent, SkeletonLoaderComponent, PullToRefreshDirective
+    CurrencyPipe, DatePipe, RichTextEditorComponent, SkeletonLoaderComponent, PullToRefreshDirective,
+    RouterModule
   ],
   template: `
     <div appPullToRefresh (refresh)="loadData()">
@@ -177,6 +179,18 @@ import { toLocalDateString } from '../../core/utils/date-utils';
               </mat-form-field>
             </div>
           </div>
+        </div>
+
+        <!-- Template Actions -->
+        <div class="template-row">
+          @if (hasTemplate()) {
+            <button mat-stroked-button type="button" class="template-btn" (click)="loadTemplate()">
+              <mat-icon>auto_fix_high</mat-icon> Load Template
+            </button>
+          }
+          <a mat-stroked-button routerLink="/trading/premarket/template" class="template-btn">
+            <mat-icon>settings</mat-icon> {{ hasTemplate() ? 'Edit Template' : 'Create Template' }}
+          </a>
         </div>
 
         <!-- Save -->
@@ -334,6 +348,14 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     .limit-slider { display: flex; align-items: center; gap: 8px; }
     .limit-value { font-size: 1.1rem; font-weight: 700; color: var(--color-primary); min-width: 24px; text-align: center; }
 
+    .template-row {
+      display: flex; gap: 8px; justify-content: center; align-items: center;
+      margin-top: var(--spacing-sm); padding: 10px 0;
+      border-top: 1px dashed var(--color-border);
+    }
+    .template-btn { font-size: 0.82rem; }
+    .template-btn mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 2px; }
+
     .save-row { display: flex; justify-content: center; margin-top: var(--spacing-md); }
     .save-row button { padding: 0 32px; }
     .save-row button mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
@@ -391,6 +413,8 @@ export class PremarketComponent implements OnInit {
   streak = signal(0);
   recentBias = signal('—');
   recentMentalStates = signal<MentalState[]>([]);
+  hasTemplate = signal(false);
+  private template = signal<PreMarketTemplate | null>(null);
 
   form = this.fb.group({
     mentalState: ['green' as MentalState, Validators.required],
@@ -409,6 +433,10 @@ export class PremarketComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.tradingService.getPreMarketTemplate().subscribe({
+      next: (t) => { this.template.set(t); this.hasTemplate.set(true); },
+      error: () => {}
+    });
     this.loadData();
   }
 
@@ -433,7 +461,13 @@ export class PremarketComponent implements OnInit {
       },
       error: () => {
         this.editingId.set(null);
-        this.form.reset({ mentalState: 'green', marketBias: 'neutral', maxTrades: 3, maxLoss: 500 });
+        const t = this.template();
+        this.form.reset({
+          mentalState: 'green', marketBias: 'neutral', maxTrades: 3, maxLoss: 500,
+          keyLevels: t?.keyLevels || '',
+          catalysts: t?.catalysts || '',
+          plan: t?.plan || ''
+        });
         this.loading.set(false);
         this.cdr.detectChanges();
       }
@@ -510,6 +544,18 @@ export class PremarketComponent implements OnInit {
       maxTrades: note.maxTrades,
       maxLoss: note.maxLoss
     });
+  }
+
+  loadTemplate(): void {
+    const t = this.template();
+    if (!t) return;
+    this.form.patchValue({
+      keyLevels: t.keyLevels || '',
+      catalysts: t.catalysts || '',
+      plan: t.plan || ''
+    });
+    this.notify.success('Template loaded');
+    this.cdr.detectChanges();
   }
 
   private calculateStats(notes: PreMarketNote[]): void {

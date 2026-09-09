@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Pulse.Core.Data;
@@ -17,13 +18,30 @@ namespace Pulse.Api.Controllers.Finance;
 public class TradingController : ControllerBase
 {
     private readonly PulseDbContext _db;
+    private readonly UserManager<ApplicationUser> _userManager;
 
-    public TradingController(PulseDbContext db)
+    public TradingController(PulseDbContext db, UserManager<ApplicationUser> userManager)
     {
         _db = db;
+        _userManager = userManager;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+    private DateTime GetUserLocalDate()
+    {
+        var user = _userManager.FindByIdAsync(UserId).Result;
+        if (user?.PreferredTimezone != null)
+        {
+            try
+            {
+                var tz = TimeZoneInfo.FindSystemTimeZoneById(user.PreferredTimezone);
+                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+            }
+            catch { }
+        }
+        return DateTime.UtcNow.Date;
+    }
 
     // ─── Setups ───────────────────────────────────────────
 
@@ -128,7 +146,7 @@ public class TradingController : ControllerBase
     [HttpGet("premarket/today")]
     public async Task<ActionResult> GetTodayNote()
     {
-        var today = DateTime.UtcNow.Date;
+        var today = GetUserLocalDate();
         var note = await _db.PreMarketNotes.FirstOrDefaultAsync(n => n.UserId == UserId && n.Date.Date == today);
         if (note == null) return NotFound();
         return Ok(note);
@@ -161,6 +179,33 @@ public class TradingController : ControllerBase
 
         await _db.SaveChangesAsync();
         return Ok(note);
+    }
+
+    // ─── Pre-Market Template ─────────────────────────────
+
+    [HttpGet("premarket/template")]
+    public async Task<ActionResult> GetPreMarketTemplate()
+    {
+        var template = await _db.PreMarketTemplates.FirstOrDefaultAsync(t => t.UserId == UserId);
+        if (template == null) return NotFound();
+        return Ok(template);
+    }
+
+    [HttpPut("premarket/template")]
+    public async Task<ActionResult> SavePreMarketTemplate([FromBody] PreMarketTemplate input)
+    {
+        var template = await _db.PreMarketTemplates.FirstOrDefaultAsync(t => t.UserId == UserId);
+        if (template == null)
+        {
+            template = new PreMarketTemplate { UserId = UserId };
+            _db.PreMarketTemplates.Add(template);
+        }
+        template.KeyLevels = input.KeyLevels;
+        template.Catalysts = input.Catalysts;
+        template.Plan = input.Plan;
+        template.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return Ok(template);
     }
 
     // ─── Trade Entries ────────────────────────────────────
@@ -484,7 +529,7 @@ public class TradingController : ControllerBase
     [HttpGet("reviews/today")]
     public async Task<ActionResult> GetTodayReview()
     {
-        var today = DateTime.UtcNow.Date;
+        var today = GetUserLocalDate();
         var review = await _db.DailyReviews.FirstOrDefaultAsync(r => r.UserId == UserId && r.Date.Date == today);
         if (review == null) return NotFound();
         return Ok(review);
@@ -563,7 +608,7 @@ public class TradingController : ControllerBase
             .ToListAsync();
 
         var closedTrades = trades.Where(t => t.Pnl.HasValue).ToList();
-        var today = DateTime.UtcNow.Date;
+        var today = GetUserLocalDate();
 
         var stats = new
         {
@@ -615,7 +660,7 @@ public class TradingController : ControllerBase
             .ToListAsync();
 
         var closed = trades.Where(t => t.Pnl.HasValue).ToList();
-        var today = DateTime.UtcNow.Date;
+        var today = GetUserLocalDate();
         var wins = closed.Where(t => t.Pnl > 0).ToList();
         var losses = closed.Where(t => t.Pnl <= 0).ToList();
         var avgWin = wins.Count > 0 ? wins.Average(t => t.NetPnl ?? t.Pnl!.Value) : 0m;
@@ -691,6 +736,31 @@ public class TradingController : ControllerBase
             .Select(g => new
             {
                 OptionType = g.Key,
+                Pnl = g.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+                Trades = g.Count(),
+                Wins = g.Count(t => t.Pnl > 0),
+                WinRate = g.Count() == 0 ? 0m : Math.Round((decimal)g.Count(t => t.Pnl > 0) / g.Count() * 100, 1),
+                AvgPnl = Math.Round(g.Average(t => t.NetPnl ?? t.Pnl ?? 0), 2)
+            }).ToList();
+
+        // By spread type
+        var bySpreadType = closed.Where(t => !string.IsNullOrEmpty(t.SpreadType))
+            .GroupBy(t => t.SpreadType!)
+            .Select(g => new
+            {
+                SpreadType = g.Key,
+                Pnl = g.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+                Trades = g.Count(),
+                Wins = g.Count(t => t.Pnl > 0),
+                WinRate = g.Count() == 0 ? 0m : Math.Round((decimal)g.Count(t => t.Pnl > 0) / g.Count() * 100, 1),
+                AvgPnl = Math.Round(g.Average(t => t.NetPnl ?? t.Pnl ?? 0), 2)
+            }).ToList();
+
+        // By direction (long/short)
+        var byDirection = closed.GroupBy(t => t.Direction ?? "long")
+            .Select(g => new
+            {
+                Direction = g.Key,
                 Pnl = g.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
                 Trades = g.Count(),
                 Wins = g.Count(t => t.Pnl > 0),
@@ -890,14 +960,313 @@ public class TradingController : ControllerBase
             ByInstrument = byInstrument,
             BySetup = bySetup,
             ByOptionType = byOptionType,
+            BySpreadType = bySpreadType,
+            ByDirection = byDirection,
             TimeOfDay = timeOfDay
         });
+    }
+
+    // ─── Trading Goals ──────────────────────────────────
+
+    [HttpGet("goals")]
+    public async Task<ActionResult> GetGoals()
+    {
+        var goals = await _db.TradingGoals
+            .Where(g => g.UserId == UserId)
+            .OrderBy(g => g.Timeframe).ThenBy(g => g.Metric)
+            .ToListAsync();
+        return Ok(goals);
+    }
+
+    [HttpPost("goals")]
+    public async Task<ActionResult> CreateGoal([FromBody] TradingGoal goal)
+    {
+        goal.UserId = UserId;
+        _db.TradingGoals.Add(goal);
+        await _db.SaveChangesAsync();
+        return Ok(goal);
+    }
+
+    [HttpPut("goals/{id}")]
+    public async Task<ActionResult> UpdateGoal(int id, [FromBody] TradingGoal input)
+    {
+        var goal = await _db.TradingGoals.FirstOrDefaultAsync(g => g.Id == id && g.UserId == UserId);
+        if (goal == null) return NotFound();
+        goal.Metric = input.Metric;
+        goal.Operator = input.Operator;
+        goal.TargetValue = input.TargetValue;
+        goal.Timeframe = input.Timeframe;
+        goal.IsActive = input.IsActive;
+        await _db.SaveChangesAsync();
+        return Ok(goal);
+    }
+
+    [HttpDelete("goals/{id}")]
+    public async Task<ActionResult> DeleteGoal(int id)
+    {
+        var goal = await _db.TradingGoals.FirstOrDefaultAsync(g => g.Id == id && g.UserId == UserId);
+        if (goal == null) return NotFound();
+        _db.TradingGoals.Remove(goal);
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    [HttpGet("goals/progress")]
+    public async Task<ActionResult> GetGoalProgress([FromQuery] string timeframe = "daily")
+    {
+        var goals = await _db.TradingGoals
+            .Where(g => g.UserId == UserId && g.IsActive && g.Timeframe == timeframe)
+            .ToListAsync();
+
+        if (goals.Count == 0) return Ok(new List<object>());
+
+        var today = GetUserLocalDate();
+        DateTime from;
+        DateTime to = today.AddDays(1);
+
+        switch (timeframe)
+        {
+            case "weekly":
+                from = today.AddDays(-(int)today.DayOfWeek + 1);
+                break;
+            case "monthly":
+                from = new DateTime(today.Year, today.Month, 1);
+                break;
+            default:
+                from = today;
+                break;
+        }
+
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var fromUtc = TimeZoneHelper.ToUtc(from, tz);
+        var toUtc = TimeZoneHelper.ToUtc(to, tz);
+
+        var trades = await _db.TradeEntries
+            .Where(t => t.UserId == UserId && t.Date >= fromUtc && t.Date < toUtc)
+            .ToListAsync();
+
+        var closed = trades.Where(t => t.Pnl.HasValue).ToList();
+        var wins = closed.Where(t => t.Pnl > 0).ToList();
+        var losses = closed.Where(t => t.Pnl <= 0).ToList();
+
+        var metrics = new Dictionary<string, decimal>
+        {
+            ["netPnl"] = closed.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+            ["totalTrades"] = trades.Count,
+            ["winRate"] = closed.Count == 0 ? 0m : Math.Round((decimal)wins.Count / closed.Count * 100, 1),
+            ["maxLoss"] = closed.Count == 0 ? 0m : Math.Abs(closed.Min(t => t.NetPnl ?? t.Pnl ?? 0)),
+            ["profitFactor"] = losses.Sum(t => Math.Abs(t.NetPnl ?? t.Pnl ?? 0)) == 0 ? 0m :
+                Math.Round(wins.Sum(t => t.NetPnl ?? t.Pnl ?? 0) / Math.Max(Math.Abs(losses.Sum(t => t.NetPnl ?? t.Pnl ?? 0)), 0.01m), 2),
+            ["avgWinLossRatio"] = losses.Count == 0 || wins.Count == 0 ? 0m :
+                Math.Round(wins.Average(t => t.NetPnl ?? t.Pnl ?? 0) / Math.Max(Math.Abs(losses.Average(t => t.NetPnl ?? t.Pnl ?? 0)), 0.01m), 2),
+            ["checklistCompliance"] = trades.Count == 0 ? 0m : Math.Round((decimal)trades.Count(t => t.ChecklistCompleted) / trades.Count * 100, 1),
+            ["maxConsecutiveLosses"] = CalculateMaxConsecutiveLosses(closed)
+        };
+
+        var results = goals.Select(g =>
+        {
+            var current = metrics.GetValueOrDefault(g.Metric, 0m);
+            var achieved = g.Operator == "gte" ? current >= g.TargetValue : current <= g.TargetValue;
+            decimal percentage;
+            if (g.TargetValue == 0)
+                percentage = achieved ? 100m : 0m;
+            else if (g.Operator == "gte")
+                percentage = Math.Min(Math.Round(current / g.TargetValue * 100, 1), 100m);
+            else
+                percentage = current <= g.TargetValue ? 100m : Math.Max(Math.Round((1 - (current - g.TargetValue) / Math.Max(g.TargetValue, 0.01m)) * 100, 1), 0m);
+
+            return new
+            {
+                Goal = g,
+                CurrentValue = current,
+                Achieved = achieved,
+                Percentage = Math.Max(percentage, 0m)
+            };
+        }).ToList();
+
+        // Auto-snapshot: save period results when period has ended
+        foreach (var r in results)
+        {
+            var periodEnd = timeframe switch
+            {
+                "weekly" => from.AddDays(7),
+                "monthly" => from.AddMonths(1),
+                _ => from.AddDays(1)
+            };
+
+            if (today >= periodEnd) continue; // only snapshot completed periods via history endpoint
+
+            // Snapshot current period if not already captured
+            var existing = await _db.TradingGoalSnapshots
+                .AnyAsync(s => s.UserId == UserId && s.GoalId == r.Goal.Id && s.PeriodStart == from);
+            if (!existing)
+            {
+                _db.TradingGoalSnapshots.Add(new TradingGoalSnapshot
+                {
+                    UserId = UserId,
+                    GoalId = r.Goal.Id,
+                    Timeframe = timeframe,
+                    PeriodStart = from,
+                    CurrentValue = r.CurrentValue,
+                    TargetValue = r.Goal.TargetValue,
+                    Achieved = r.Achieved,
+                    Percentage = r.Percentage,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+        }
+        await _db.SaveChangesAsync();
+
+        return Ok(results);
+    }
+
+    [HttpGet("goals/history")]
+    public async Task<ActionResult> GetGoalHistory([FromQuery] int goalId, [FromQuery] int periods = 8, [FromQuery] string? fromDate = null)
+    {
+        var goal = await _db.TradingGoals.FirstOrDefaultAsync(g => g.Id == goalId && g.UserId == UserId);
+        if (goal == null) return NotFound();
+
+        var today = GetUserLocalDate();
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+
+        // If fromDate is provided, compute periods from that date to today
+        if (!string.IsNullOrEmpty(fromDate) && DateTime.TryParse(fromDate, out var startFrom))
+        {
+            periods = goal.Timeframe switch
+            {
+                "weekly" => (int)Math.Ceiling((today - startFrom.Date).TotalDays / 7) + 1,
+                "monthly" => ((today.Year - startFrom.Year) * 12 + today.Month - startFrom.Month) + 1,
+                _ => (int)(today - startFrom.Date).TotalDays + 1
+            };
+            periods = Math.Max(periods, 1);
+            periods = Math.Min(periods, 365);
+        }
+
+        // Backfill missing snapshots for past periods
+        var periodStarts = new List<DateTime>();
+        for (int i = periods - 1; i >= 0; i--)
+        {
+            var start = goal.Timeframe switch
+            {
+                "weekly" => today.AddDays(-(int)today.DayOfWeek + 1).AddDays(-7 * i),
+                "monthly" => new DateTime(today.Year, today.Month, 1).AddMonths(-i),
+                _ => today.AddDays(-i)
+            };
+            periodStarts.Add(start);
+        }
+
+        var minDate = periodStarts.Count > 0 ? periodStarts[0] : today.AddDays(-periods);
+        var existingSnapshots = await _db.TradingGoalSnapshots
+            .Where(s => s.UserId == UserId && s.GoalId == goalId && s.PeriodStart >= minDate)
+            .OrderByDescending(s => s.PeriodStart)
+            .ToListAsync();
+
+        var snapshotMap = existingSnapshots.ToDictionary(s => s.PeriodStart);
+        var needsCompute = periodStarts.Where(ps => !snapshotMap.ContainsKey(ps) && ps < today).ToList();
+
+        foreach (var periodStart in needsCompute)
+        {
+            var periodEnd = goal.Timeframe switch
+            {
+                "weekly" => periodStart.AddDays(7),
+                "monthly" => periodStart.AddMonths(1),
+                _ => periodStart.AddDays(1)
+            };
+            var fromUtc2 = TimeZoneHelper.ToUtc(periodStart, tz);
+            var toUtc2 = TimeZoneHelper.ToUtc(periodEnd, tz);
+
+            var periodTrades = await _db.TradeEntries
+                .Where(t => t.UserId == UserId && t.Date >= fromUtc2 && t.Date < toUtc2)
+                .ToListAsync();
+
+            var periodClosed = periodTrades.Where(t => t.Pnl.HasValue).ToList();
+            var periodWins = periodClosed.Where(t => t.Pnl > 0).ToList();
+            var periodLosses = periodClosed.Where(t => t.Pnl <= 0).ToList();
+
+            var metricVal = goal.Metric switch
+            {
+                "netPnl" => periodClosed.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+                "totalTrades" => periodTrades.Count,
+                "winRate" => periodClosed.Count == 0 ? 0m : Math.Round((decimal)periodWins.Count / periodClosed.Count * 100, 1),
+                "maxLoss" => periodClosed.Count == 0 ? 0m : Math.Abs(periodClosed.Min(t => t.NetPnl ?? t.Pnl ?? 0)),
+                "profitFactor" => periodLosses.Sum(t => Math.Abs(t.NetPnl ?? t.Pnl ?? 0)) == 0 ? 0m :
+                    Math.Round(periodWins.Sum(t => t.NetPnl ?? t.Pnl ?? 0) / Math.Max(Math.Abs(periodLosses.Sum(t => t.NetPnl ?? t.Pnl ?? 0)), 0.01m), 2),
+                "maxConsecutiveLosses" => CalculateMaxConsecutiveLosses(periodClosed),
+                "avgWinLossRatio" => periodLosses.Count == 0 || periodWins.Count == 0 ? 0m :
+                    Math.Round(periodWins.Average(t => t.NetPnl ?? t.Pnl ?? 0) / Math.Max(Math.Abs(periodLosses.Average(t => t.NetPnl ?? t.Pnl ?? 0)), 0.01m), 2),
+                "checklistCompliance" => periodTrades.Count == 0 ? 0m : Math.Round((decimal)periodTrades.Count(t => t.ChecklistCompleted) / periodTrades.Count * 100, 1),
+                _ => 0m
+            };
+
+            var achieved = goal.Operator == "gte" ? metricVal >= goal.TargetValue : metricVal <= goal.TargetValue;
+            decimal pct;
+            if (goal.TargetValue == 0) pct = achieved ? 100m : 0m;
+            else if (goal.Operator == "gte") pct = Math.Min(Math.Round(metricVal / goal.TargetValue * 100, 1), 100m);
+            else pct = metricVal <= goal.TargetValue ? 100m : Math.Max(Math.Round((1 - (metricVal - goal.TargetValue) / Math.Max(goal.TargetValue, 0.01m)) * 100, 1), 0m);
+
+            var snap = new TradingGoalSnapshot
+            {
+                UserId = UserId,
+                GoalId = goalId,
+                Timeframe = goal.Timeframe,
+                PeriodStart = periodStart,
+                CurrentValue = metricVal,
+                TargetValue = goal.TargetValue,
+                Achieved = achieved,
+                Percentage = Math.Max(pct, 0m),
+                CreatedAt = DateTime.UtcNow
+            };
+            _db.TradingGoalSnapshots.Add(snap);
+            snapshotMap[periodStart] = snap;
+        }
+
+        if (needsCompute.Count > 0) await _db.SaveChangesAsync();
+
+        // Build streak
+        var ordered = periodStarts.Select(ps => snapshotMap.GetValueOrDefault(ps)).Where(s => s != null).OrderByDescending(s => s!.PeriodStart).ToList();
+        int streak = 0;
+        foreach (var s in ordered)
+        {
+            if (s!.Achieved) streak++;
+            else break;
+        }
+
+        return Ok(new
+        {
+            GoalId = goalId,
+            Streak = streak,
+            Snapshots = periodStarts
+                .Where(ps => snapshotMap.ContainsKey(ps))
+                .Select(ps => snapshotMap[ps])
+                .OrderBy(s => s.PeriodStart)
+                .Select(s => new
+                {
+                    s.PeriodStart,
+                    s.CurrentValue,
+                    s.TargetValue,
+                    s.Achieved,
+                    s.Percentage
+                })
+                .ToList()
+        });
+    }
+
+    private static int CalculateMaxConsecutiveLosses(List<TradeEntry> closed)
+    {
+        int max = 0, current = 0;
+        foreach (var t in closed.OrderBy(t => t.Date))
+        {
+            if (t.Pnl <= 0) { current++; max = Math.Max(max, current); }
+            else current = 0;
+        }
+        return max;
     }
 
     [HttpGet("weekly-focus")]
     public async Task<ActionResult> GetWeeklyFocus()
     {
-        var weekStart = DateTime.UtcNow.Date.AddDays(-(int)DateTime.UtcNow.DayOfWeek + 1);
+        var localDate = GetUserLocalDate();
+        var weekStart = localDate.AddDays(-(int)localDate.DayOfWeek + 1);
         var rule = await _db.TradingRules
             .Where(r => r.UserId == UserId && r.IsActive)
             .OrderBy(r => r.OrderIndex)
@@ -917,7 +1286,8 @@ public class TradingController : ControllerBase
     [HttpGet("weekly-summary")]
     public async Task<ActionResult> GetWeeklySummary([FromQuery] string? weekStart)
     {
-        var start = DateTime.TryParse(weekStart, out var ws) ? ws.Date : DateTime.UtcNow.Date.AddDays(-(int)DateTime.UtcNow.DayOfWeek + 1);
+        var localDate = GetUserLocalDate();
+        var start = DateTime.TryParse(weekStart, out var ws) ? ws.Date : localDate.AddDays(-(int)localDate.DayOfWeek + 1);
         var end = start.AddDays(7);
 
         var trades = await _db.TradeEntries
@@ -963,7 +1333,8 @@ public class TradingController : ControllerBase
     {
         var weeks = count ?? 4;
         var summaries = new List<object>();
-        var currentWeekStart = DateTime.UtcNow.Date.AddDays(-(int)DateTime.UtcNow.DayOfWeek + 1);
+        var localDate = GetUserLocalDate();
+        var currentWeekStart = localDate.AddDays(-(int)localDate.DayOfWeek + 1);
 
         for (int i = 0; i < weeks; i++)
         {
@@ -1045,7 +1416,7 @@ public class TradingController : ControllerBase
 
         decimal commissionRate, regFeeRate;
 
-        var effectiveDate = tradeDate?.Date ?? DateTime.UtcNow.Date;
+        var effectiveDate = tradeDate?.Date ?? GetUserLocalDate();
         var schedule = await _db.CommissionSchedules
             .Where(s => s.BankAccountId == bankAccountId.Value
                      && s.UserId == UserId
