@@ -40,6 +40,14 @@ export interface PreMarketNote {
   updatedAt?: string;
 }
 
+export interface PreMarketTemplate {
+  id: number;
+  keyLevels?: string;
+  catalysts?: string;
+  plan?: string;
+  updatedAt?: string;
+}
+
 export type MarketBias = 'bullish' | 'bearish' | 'neutral' | 'no-trade';
 export type MentalState = 'green' | 'yellow' | 'red';
 
@@ -256,6 +264,8 @@ export interface TradingDashboard {
   byInstrument: (BreakdownRow & { instrument: string })[];
   bySetup: (BreakdownRow & { setupId: number; setupName: string })[];
   byOptionType: (BreakdownRow & { optionType: string })[];
+  bySpreadType: (BreakdownRow & { spreadType: string })[];
+  byDirection: (BreakdownRow & { direction: string })[];
   timeOfDay: (BreakdownRow & { bucket: string })[];
   expectancy: number;
   equityCurve: { date: string; cumPnl: number; drawdown: number }[];
@@ -272,4 +282,34 @@ export interface TradingDashboard {
   tradesWithRisk: number;
   byEmotion: (BreakdownRow & { emotion: string })[];
   byMistakeTag: (BreakdownRow & { tag: string })[];
+}
+
+export interface TradingGoal {
+  id: number;
+  metric: string;
+  operator: string;
+  targetValue: number;
+  timeframe: string;
+  isActive: boolean;
+}
+
+export interface GoalProgress {
+  goal: TradingGoal;
+  currentValue: number;
+  achieved: boolean;
+  percentage: number;
+}
+
+export interface GoalSnapshot {
+  periodStart: string;
+  currentValue: number;
+  targetValue: number;
+  achieved: boolean;
+  percentage: number;
+}
+
+export interface GoalHistory {
+  goalId: number;
+  streak: number;
+  snapshots: GoalSnapshot[];
 }

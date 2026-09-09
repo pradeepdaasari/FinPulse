@@ -120,8 +120,23 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'trading/goals',
+    loadComponent: () => import('./features/trading/trading-goals.component').then(m => m.TradingGoalsComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'trading/analytics',
+    loadComponent: () => import('./features/trading/trading-analytics.component').then(m => m.TradingAnalyticsComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'trading/premarket',
     loadComponent: () => import('./features/trading/premarket.component').then(m => m.PremarketComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'trading/premarket/template',
+    loadComponent: () => import('./features/trading/premarket-template.component').then(m => m.PremarketTemplateComponent),
     canActivate: [authGuard]
   },
   {

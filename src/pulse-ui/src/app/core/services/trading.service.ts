@@ -3,9 +3,10 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
-  TradingSetup, TradingSetupSummary, PreMarketNote, TradeEntry,
+  TradingSetup, TradingSetupSummary, PreMarketNote, PreMarketTemplate, TradeEntry,
   TradingRule, DailyReview, DailyLimits, TradingStats, TradingWisdom,
-  WisdomCategory, WeeklyFocus, WeeklySummary, TradingDashboard
+  WisdomCategory, WeeklyFocus, WeeklySummary, TradingDashboard,
+  TradingGoal, GoalProgress, GoalHistory
 } from '../models/trading.model';
 
 @Injectable({ providedIn: 'root' })
@@ -56,6 +57,15 @@ export class TradingService {
 
   updatePreMarketNote(id: number, note: Partial<PreMarketNote>): Observable<PreMarketNote> {
     return this.http.put<PreMarketNote>(`${this.baseUrl}/premarket/${id}`, note);
+  }
+
+  // --- Pre-Market Template ---
+  getPreMarketTemplate(): Observable<PreMarketTemplate> {
+    return this.http.get<PreMarketTemplate>(`${this.baseUrl}/premarket/template`);
+  }
+
+  savePreMarketTemplate(template: Partial<PreMarketTemplate>): Observable<PreMarketTemplate> {
+    return this.http.put<PreMarketTemplate>(`${this.baseUrl}/premarket/template`, template);
   }
 
   // --- Trade Entries ---
@@ -174,5 +184,33 @@ export class TradingService {
 
   getWisdomByCategory(category: WisdomCategory): Observable<TradingWisdom[]> {
     return this.http.get<TradingWisdom[]>(`${this.baseUrl}/wisdom`, { params: new HttpParams().set('category', category) });
+  }
+
+  // --- Goals ---
+  getGoals(): Observable<TradingGoal[]> {
+    return this.http.get<TradingGoal[]>(`${this.baseUrl}/goals`);
+  }
+
+  createGoal(goal: Partial<TradingGoal>): Observable<TradingGoal> {
+    return this.http.post<TradingGoal>(`${this.baseUrl}/goals`, goal);
+  }
+
+  updateGoal(id: number, goal: Partial<TradingGoal>): Observable<TradingGoal> {
+    return this.http.put<TradingGoal>(`${this.baseUrl}/goals/${id}`, goal);
+  }
+
+  deleteGoal(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/goals/${id}`);
+  }
+
+  getGoalProgress(timeframe: string): Observable<GoalProgress[]> {
+    return this.http.get<GoalProgress[]>(`${this.baseUrl}/goals/progress`, { params: new HttpParams().set('timeframe', timeframe) });
+  }
+
+  getGoalHistory(goalId: number, periods?: number, fromDate?: string): Observable<GoalHistory> {
+    let params = new HttpParams().set('goalId', goalId);
+    if (periods) params = params.set('periods', periods);
+    if (fromDate) params = params.set('fromDate', fromDate);
+    return this.http.get<GoalHistory>(`${this.baseUrl}/goals/history`, { params });
   }
 }
