@@ -16,13 +16,14 @@ import { PaymentService } from '../../../core/services/payment.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { toLocalDateString } from '../../../core/utils/date-utils';
 import { DailyExpenseService } from '../../../core/services/daily-expense.service';
+import { MoneyMovementService } from '../../../core/services/money-movement.service';
 import { CreditCard } from '../../../core/models/credit-card.model';
 import { DailyExpense } from '../../../core/models/daily-expense.model';
+import { MoneyMovement, MovementType } from '../../../core/models/money-movement.model';
 import { PayoffEntry } from '../../../core/models/dashboard.model';
 import { PaymentHistory } from '../../../core/models/payment-history.model';
 import { sumCurrency } from '../../../core/utils/currency';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
-import { EntityMovementsComponent } from '../../../shared/entity-movements.component';
 import { FundingSourceService } from '../../../core/services/funding-source.service';
 
 interface CardTransaction {
@@ -35,10 +36,18 @@ interface CardTransaction {
   amount: number;
 }
 
+interface CardActivityItem {
+  kind: 'transaction' | 'movement';
+  date: string;
+  balance: number;
+  txn?: CardTransaction;
+  movement?: MoneyMovement;
+}
+
 @Component({
   selector: 'app-card-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatPaginatorModule, MatTooltipModule, MatChipsModule, CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe, SkeletonLoaderComponent, EntityMovementsComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatPaginatorModule, MatTooltipModule, MatChipsModule, CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe, SkeletonLoaderComponent],
   template: `
     @if (loading()) {
       <app-skeleton type="card"></app-skeleton>
@@ -115,9 +124,9 @@ interface CardTransaction {
         </mat-card-content>
       </mat-card>
 
-      <!-- Transactions Section -->
+      <!-- Activity Section -->
       <div class="section-header">
-        <h3>Transactions</h3>
+        <h3>Activity</h3>
         <div class="txn-filters">
           <button mat-stroked-button [class.active-filter]="txnMonth() === null" (click)="setTxnMonth(null)">All</button>
           @for (m of availableMonths(); track m.key) {
@@ -125,80 +134,140 @@ interface CardTransaction {
           }
         </div>
       </div>
-      @if (transactions().length > 0) {
+      @if (activityItems().length > 0) {
         <mat-card class="txn-card">
           <div class="txn-summary">
             <span class="txn-total-charge">Charges: <strong>-{{ totalCharges() | currency }}</strong></span>
             @if (totalPayments() > 0) {
               <span class="txn-total-payment">Payments: <strong>+{{ totalPayments() | currency }}</strong></span>
             }
-            <span class="txn-count">{{ transactions().length }} transaction{{ transactions().length !== 1 ? 's' : '' }}</span>
+            <span class="txn-count">{{ activityItems().length }} items</span>
           </div>
           <!-- Desktop table -->
           <div class="table-wrapper desktop-only">
-            <table mat-table [dataSource]="transactions()">
+            <table mat-table [dataSource]="activityItems()">
               <ng-container matColumnDef="date">
                 <th mat-header-cell *matHeaderCellDef>Date</th>
-                <td mat-cell *matCellDef="let t">{{ t.date | date:'MMM d, y' }}</td>
+                <td mat-cell *matCellDef="let item">
+                  @if (item.kind === 'transaction') { {{ item.txn.date | date:'MMM d, y' }} }
+                  @else { {{ item.movement.movementDate | date:'MMM d, y' }} }
+                </td>
               </ng-container>
               <ng-container matColumnDef="description">
                 <th mat-header-cell *matHeaderCellDef>Description</th>
-                <td mat-cell *matCellDef="let t">
-                  <div class="txn-desc">
-                    <span class="txn-name">{{ t.description }}</span>
-                    @if (t.merchant) { <span class="txn-merchant">{{ t.merchant }}</span> }
-                  </div>
+                <td mat-cell *matCellDef="let item">
+                  @if (item.kind === 'transaction') {
+                    <div class="txn-desc">
+                      <span class="txn-name">{{ item.txn.description }}</span>
+                      @if (item.txn.merchant) { <span class="txn-merchant">{{ item.txn.merchant }}</span> }
+                    </div>
+                  } @else {
+                    <div class="txn-desc">
+                      <span class="txn-name movement-flow-cell">
+                        {{ item.movement.sourceName }} <mat-icon class="flow-arrow-inline">arrow_forward</mat-icon> {{ item.movement.destinationName }}
+                      </span>
+                      @if (item.movement.note) { <span class="txn-merchant">{{ item.movement.note }}</span> }
+                    </div>
+                  }
                 </td>
               </ng-container>
               <ng-container matColumnDef="category">
                 <th mat-header-cell *matHeaderCellDef>Category</th>
-                <td mat-cell *matCellDef="let t">{{ t.categoryName || '—' }}</td>
+                <td mat-cell *matCellDef="let item">
+                  @if (item.kind === 'transaction') { {{ item.txn.categoryName || '—' }} }
+                  @else { — }
+                </td>
               </ng-container>
               <ng-container matColumnDef="type">
                 <th mat-header-cell *matHeaderCellDef>Type</th>
-                <td mat-cell *matCellDef="let t">
-                  <span class="type-badge"
-                    [class.type-expense]="t.transactionType === 'Expense'"
-                    [class.type-refund]="t.transactionType === 'Refund'"
-                    [class.type-payment]="t.transactionType === 'Payment'">
-                    {{ t.transactionType }}
-                  </span>
+                <td mat-cell *matCellDef="let item">
+                  @if (item.kind === 'transaction') {
+                    <span class="type-badge"
+                      [class.type-expense]="item.txn.transactionType === 'Expense'"
+                      [class.type-refund]="item.txn.transactionType === 'Refund'"
+                      [class.type-payment]="item.txn.transactionType === 'Payment'">
+                      {{ item.txn.transactionType }}
+                    </span>
+                  } @else {
+                    <span class="type-badge type-flow">
+                      <mat-icon class="flow-badge-icon">sync_alt</mat-icon>
+                      {{ movementLabel(item.movement.movementType) }}
+                    </span>
+                  }
                 </td>
               </ng-container>
               <ng-container matColumnDef="amount">
                 <th mat-header-cell *matHeaderCellDef>Amount</th>
-                <td mat-cell *matCellDef="let t"
-                  [class.txn-charge]="t.transactionType === 'Expense'"
-                  [class.txn-refund]="t.transactionType === 'Refund'"
-                  [class.txn-payment]="t.transactionType === 'Payment'">
-                  @if (t.transactionType === 'Refund' || t.transactionType === 'Payment') { +{{ t.amount | currency }} }
-                  @else { -{{ t.amount | currency }} }
+                <td mat-cell *matCellDef="let item"
+                  [class.txn-charge]="(item.kind === 'transaction' && item.txn.transactionType === 'Expense') || (item.kind === 'movement' && !isMovementIncoming(item.movement))"
+                  [class.txn-refund]="(item.kind === 'transaction' && item.txn.transactionType === 'Refund') || (item.kind === 'movement' && isMovementIncoming(item.movement))"
+                  [class.txn-payment]="item.kind === 'transaction' && item.txn.transactionType === 'Payment'">
+                  @if (item.kind === 'transaction') {
+                    @if (item.txn.transactionType === 'Refund' || item.txn.transactionType === 'Payment') { +{{ item.txn.amount | currency }} }
+                    @else { -{{ item.txn.amount | currency }} }
+                  } @else {
+                    @if (isMovementIncoming(item.movement)) { +{{ item.movement.amount | currency }} }
+                    @else { -{{ item.movement.amount | currency }} }
+                  }
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="balance">
+                <th mat-header-cell *matHeaderCellDef>Balance</th>
+                <td mat-cell *matCellDef="let item" class="balance-col"
+                    [class.balance-positive]="item.balance <= 0"
+                    [class.balance-negative]="item.balance > 0">
+                  {{ item.balance | currency }}
                 </td>
               </ng-container>
               <tr mat-header-row *matHeaderRowDef="txnColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: txnColumns;"></tr>
+              <tr mat-row *matRowDef="let row; columns: txnColumns;" [class.movement-row]="row.kind === 'movement'"></tr>
             </table>
           </div>
           <!-- Mobile list -->
           <div class="txn-mobile-list mobile-only">
-            @for (t of transactions(); track t.id) {
-              <div class="txn-row">
-                <div class="txn-row-left">
-                  <div class="txn-dot" [class.dot-refund]="t.transactionType === 'Refund'" [class.dot-payment]="t.transactionType === 'Payment'"></div>
-                  <div>
-                    <div class="txn-name">{{ t.description }}</div>
-                    <div class="txn-meta">{{ t.date | date:'MMM d' }}{{ t.categoryName ? ' · ' + t.categoryName : '' }}{{ t.transactionType === 'Payment' ? ' · Payment' : '' }}</div>
+            @for (item of activityItems(); track item.kind === 'transaction' ? 'txn-' + item.txn!.id : 'mv-' + item.movement!.id) {
+              @if (item.kind === 'transaction') {
+                <div class="txn-row">
+                  <div class="txn-row-left">
+                    <div class="txn-dot" [class.dot-refund]="item.txn!.transactionType === 'Refund'" [class.dot-payment]="item.txn!.transactionType === 'Payment'"></div>
+                    <div>
+                      <div class="txn-name">{{ item.txn!.description }}</div>
+                      <div class="txn-meta">{{ item.txn!.date | date:'MMM d' }}{{ item.txn!.categoryName ? ' · ' + item.txn!.categoryName : '' }}{{ item.txn!.transactionType === 'Payment' ? ' · Payment' : '' }}</div>
+                    </div>
+                  </div>
+                  <div class="txn-right-col">
+                    <span [class.txn-charge]="item.txn!.transactionType === 'Expense'" [class.txn-refund]="item.txn!.transactionType === 'Refund'" [class.txn-payment]="item.txn!.transactionType === 'Payment'">
+                      @if (item.txn!.transactionType === 'Refund' || item.txn!.transactionType === 'Payment') { +{{ item.txn!.amount | currency }} } @else { -{{ item.txn!.amount | currency }} }
+                    </span>
+                    <span class="txn-balance-mobile" [class.balance-positive]="item.balance <= 0" [class.balance-negative]="item.balance > 0">{{ item.balance | currency }}</span>
                   </div>
                 </div>
-                <span [class.txn-charge]="t.transactionType === 'Expense'" [class.txn-refund]="t.transactionType === 'Refund'" [class.txn-payment]="t.transactionType === 'Payment'">
-                  @if (t.transactionType === 'Refund' || t.transactionType === 'Payment') { +{{ t.amount | currency }} } @else { -{{ t.amount | currency }} }
-                </span>
-              </div>
+              } @else {
+                <div class="txn-row movement-mobile-row">
+                  <div class="txn-row-left">
+                    <div class="txn-dot dot-flow-card"></div>
+                    <div>
+                      <div class="txn-name">{{ movementLabel(item.movement!.movementType) }}</div>
+                      <div class="txn-meta">
+                        {{ item.movement!.movementDate | date:'MMM d' }} · {{ item.movement!.sourceName }} → {{ item.movement!.destinationName }}
+                        @if (item.movement!.isAutoGenerated) { · Auto }
+                      </div>
+                    </div>
+                  </div>
+                  <div class="txn-right-col">
+                    <span [class.txn-refund]="isMovementIncoming(item.movement!)" [class.txn-charge]="!isMovementIncoming(item.movement!)">
+                      @if (isMovementIncoming(item.movement!)) { +{{ item.movement!.amount | currency }} }
+                      @else { -{{ item.movement!.amount | currency }} }
+                    </span>
+                    <span class="txn-balance-mobile" [class.balance-positive]="item.balance <= 0" [class.balance-negative]="item.balance > 0">{{ item.balance | currency }}</span>
+                  </div>
+                </div>
+              }
             }
           </div>
         </mat-card>
       } @else {
-        <div class="empty-txn"><mat-icon>receipt_long</mat-icon><span>No transactions for this period</span></div>
+        <div class="empty-txn"><mat-icon>receipt_long</mat-icon><span>No activity for this period</span></div>
       }
 
       @if (paymentHistory().length > 0) {
@@ -329,7 +398,6 @@ interface CardTransaction {
         </mat-card>
       }
 
-      <app-entity-movements entityType="CreditCard" [entityId]="card()!.id" />
     }
   `,
   styles: [`
@@ -410,15 +478,31 @@ interface CardTransaction {
     .txn-desc { display: flex; flex-direction: column; }
     .txn-name { font-weight: 500; }
     .txn-merchant { font-size: 0.75rem; color: var(--color-text-muted); }
-    .txn-charge { font-weight: 700; color: var(--color-action-delete, #f44336); }
-    .txn-refund { font-weight: 700; color: var(--color-success); }
+    .txn-charge { font-weight: 700; color: #c62828 !important; }
+    .txn-refund { font-weight: 700; color: #2e7d32 !important; }
     .type-badge { font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-full); }
     .type-expense { background: #fce4ec; color: #c62828; }
     .type-refund { background: #e8f5e9; color: #2e7d32; }
     .type-payment { background: #e3f2fd; color: #1565c0; }
-    .txn-payment { font-weight: 700; color: #1565c0; }
+    .txn-payment { font-weight: 700; color: #1565c0 !important; }
     .txn-total-payment strong { color: var(--color-success); }
     .dot-payment { background: #1565c0 !important; }
+    .type-flow {
+      background: rgba(0,150,136,0.1); color: #00796b;
+      display: inline-flex; align-items: center; gap: 3px;
+    }
+    .flow-badge-icon { font-size: 11px; width: 11px; height: 11px; }
+    .movement-flow-cell { display: inline-flex; align-items: center; gap: 4px; }
+    .flow-arrow-inline { font-size: 14px; width: 14px; height: 14px; opacity: 0.5; }
+    .flow-amount { font-weight: 700; color: var(--color-stat-purple); }
+    .movement-row { background: color-mix(in srgb, var(--color-stat-purple-bg) 20%, transparent); }
+    .movement-mobile-row { border-left: 3px solid rgba(0,150,136,0.4); }
+    .dot-flow-card { background: #00796b !important; }
+    .balance-col { font-weight: 600; font-variant-numeric: tabular-nums; font-size: 0.85rem; }
+    .balance-positive { color: #2e7d32 !important; }
+    .balance-negative { color: #c62828 !important; }
+    .txn-right-col { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
+    .txn-balance-mobile { font-size: 0.68rem; color: var(--color-text-muted); font-weight: 500; font-variant-numeric: tabular-nums; }
     .empty-txn { display: flex; align-items: center; gap: 10px; padding: 24px 0; color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: var(--spacing-lg); }
     .empty-txn mat-icon { font-size: 22px; width: 22px; height: 22px; }
     .desktop-only { display: block; }
@@ -526,6 +610,7 @@ export class CardDetailComponent implements OnInit {
   private router = inject(Router);
   private cardService = inject(CreditCardService);
   private expenseService = inject(DailyExpenseService);
+  private movementService = inject(MoneyMovementService);
   private dialog = inject(MatDialog);
   private paymentService = inject(PaymentService);
   private notify = inject(NotificationService);
@@ -536,9 +621,10 @@ export class CardDetailComponent implements OnInit {
   timeline = signal<PayoffEntry[]>([]);
   paymentHistory = signal<PaymentHistory[]>([]);
   allTransactions = signal<DailyExpense[]>([]);
+  allMovements = signal<MoneyMovement[]>([]);
   totalPaid = signal(0);
   loading = signal(true);
-  txnMonth = signal<string | null>(null); // 'YYYY-MM' or null for all
+  txnMonth = signal<string | null>(null);
 
   allCombined = computed(() => {
     const expenses: CardTransaction[] = this.allTransactions().map(t => ({
@@ -569,22 +655,49 @@ export class CardDetailComponent implements OnInit {
     return all.filter(t => t.date.slice(0, 7) === month);
   });
 
+  allActivityCombined = computed<CardActivityItem[]>(() => {
+    const cardId = this.card()?.id;
+    const numCardId = cardId ? parseInt(cardId, 10) : undefined;
+    const currentBal = this.card()?.currentBalance ?? 0;
+    const txnIdSet = new Set(this.allTransactions().map(t => t.id));
+    const payIdSet = new Set(this.paymentHistory().map(p => p.id));
+    const txnItems = this.allCombined().map(t => ({ kind: 'transaction' as const, date: t.date, balance: 0, txn: t }));
+    const mvItems = this.allMovements()
+      .filter(m => (!m.relatedExpenseId || !txnIdSet.has(m.relatedExpenseId))
+                 && (!m.relatedPaymentId || !payIdSet.has(m.relatedPaymentId)))
+      .map(m => ({ kind: 'movement' as const, date: m.movementDate, balance: 0, movement: m }));
+    const sorted = [...txnItems, ...mvItems].sort((a, b) => b.date.localeCompare(a.date));
+    let bal = currentBal;
+    for (const item of sorted) {
+      item.balance = bal;
+      bal -= this.getCardBalanceDelta(item, numCardId);
+    }
+    return sorted;
+  });
+
+  activityItems = computed(() => {
+    const month = this.txnMonth();
+    const all = this.allActivityCombined();
+    if (!month) return all;
+    return all.filter(item => item.date.slice(0, 7) === month);
+  });
+
   totalCharges = computed(() =>
-    this.transactions()
-      .filter(t => t.transactionType === 'Expense')
-      .reduce((s, t) => s + t.amount, 0)
+    this.activityItems()
+      .filter(a => a.kind === 'transaction' && a.txn!.transactionType === 'Expense')
+      .reduce((s, a) => s + a.txn!.amount, 0)
   );
 
   totalPayments = computed(() =>
-    this.transactions()
-      .filter(t => t.transactionType === 'Payment')
-      .reduce((s, t) => s + t.amount, 0)
+    this.activityItems()
+      .filter(a => a.kind === 'transaction' && a.txn!.transactionType === 'Payment')
+      .reduce((s, a) => s + a.txn!.amount, 0)
   );
 
   availableMonths = computed(() => {
     const seen = new Set<string>();
-    return this.allCombined()
-      .map(t => t.date.slice(0, 7))
+    return this.allActivityCombined()
+      .map(a => a.date.slice(0, 7))
       .filter(m => { if (seen.has(m)) return false; seen.add(m); return true; })
       .sort((a, b) => b.localeCompare(a))
       .slice(0, 6)
@@ -594,7 +707,7 @@ export class CardDetailComponent implements OnInit {
   timelineColumns = ['month', 'date', 'payment', 'principal', 'interest', 'remainingBalance'];
   paymentColumns = ['paymentDate', 'amountPaid', 'fromAccount', 'notes', 'actions'];
   private accountNameMap = new Map<number, string>();
-  txnColumns = ['date', 'description', 'category', 'type', 'amount'];
+  txnColumns = ['date', 'description', 'category', 'type', 'amount', 'balance'];
 
   getUtilization(): number {
     const c = this.card();
@@ -652,6 +765,12 @@ export class CardDetailComponent implements OnInit {
         if (sorted.some(t => t.date.slice(0, 7) === curMonth)) {
           this.txnMonth.set(curMonth);
         }
+        this.cdr.detectChanges();
+      }
+    });
+    this.movementService.getAll({ entityType: 'CreditCard', entityId: numId }).subscribe({
+      next: (movements) => {
+        this.allMovements.set(movements);
         this.cdr.detectChanges();
       }
     });
@@ -754,5 +873,34 @@ export class CardDetailComponent implements OnInit {
   getAccountName(accountId?: number): string {
     if (!accountId) return 'External';
     return this.accountNameMap.get(accountId) || 'Unknown';
+  }
+
+  isMovementIncoming(m: MoneyMovement): boolean {
+    const cardId = this.card()?.id ? parseInt(this.card()!.id, 10) : undefined;
+    return m.destinationId === cardId;
+  }
+
+  private getCardBalanceDelta(item: CardActivityItem, cardId?: number): number {
+    if (item.kind === 'transaction') {
+      const t = item.txn!;
+      switch (t.transactionType) {
+        case 'Payment': case 'Refund': return -t.amount;
+        default: return t.amount;
+      }
+    } else {
+      const m = item.movement!;
+      if (m.destinationId === cardId) return m.amount;
+      if (m.sourceId === cardId) return -m.amount;
+      return 0;
+    }
+  }
+
+  movementLabel(type: MovementType): string {
+    const labels: Record<string, string> = {
+      LoanFunding: 'Funding', LoanPayment: 'Loan Payment', CardPayment: 'Card Payment',
+      Transfer: 'Transfer', Deposit: 'Deposit', Withdrawal: 'Withdrawal',
+      TradePnl: 'Trade P&L', TradeFee: 'Trade Fee'
+    };
+    return labels[type] || type;
   }
 }

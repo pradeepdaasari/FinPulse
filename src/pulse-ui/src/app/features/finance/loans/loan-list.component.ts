@@ -134,16 +134,16 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
             <th mat-header-cell *matHeaderCellDef>Actions</th>
             <td mat-cell *matCellDef="let loan">
               <div class="action-group">
-                <button mat-icon-button class="action-btn action-pay" (click)="recordPayment(loan)" matTooltip="Record Payment">
+                <button mat-icon-button class="action-btn action-pay" (click)="$event.stopPropagation(); recordPayment(loan)" matTooltip="Record Payment">
                   <mat-icon>payments</mat-icon>
                 </button>
-                <button mat-icon-button class="action-btn action-edit" (click)="editLoan(loan)" matTooltip="Edit">
+                <button mat-icon-button class="action-btn action-edit" (click)="$event.stopPropagation(); editLoan(loan)" matTooltip="Edit">
                   <mat-icon>edit</mat-icon>
                 </button>
-                <button mat-icon-button class="action-btn action-view" (click)="viewLoan(loan.id)" matTooltip="View Details">
+                <button mat-icon-button class="action-btn action-view" (click)="$event.stopPropagation(); viewLoan(loan.id)" matTooltip="View Details">
                   <mat-icon>visibility</mat-icon>
                 </button>
-                <button mat-icon-button class="action-btn action-delete" (click)="deleteLoan(loan)" matTooltip="Delete">
+                <button mat-icon-button class="action-btn action-delete" (click)="$event.stopPropagation(); deleteLoan(loan)" matTooltip="Delete">
                   <mat-icon>delete</mat-icon>
                 </button>
               </div>
@@ -151,7 +151,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="viewLoan(row.id)" class="clickable-row"></tr>
         </table>
         </div>
       </mat-card>
@@ -250,6 +250,8 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .stat-label { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px; }
 
     /* Table */
+    .clickable-row { cursor: pointer; transition: background var(--transition-fast); }
+    .clickable-row:hover { background: var(--color-surface-hover); }
     mat-card {
       overflow: hidden;
       padding: 0 !important;

@@ -150,16 +150,16 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
             <th mat-header-cell *matHeaderCellDef>Actions</th>
             <td mat-cell *matCellDef="let card">
               <div class="action-group">
-                <button mat-icon-button class="action-btn action-pay" (click)="recordPayment(card)" matTooltip="Record Payment">
+                <button mat-icon-button class="action-btn action-pay" (click)="$event.stopPropagation(); recordPayment(card)" matTooltip="Record Payment">
                   <mat-icon>payments</mat-icon>
                 </button>
-                <button mat-icon-button class="action-btn action-edit" (click)="updateBalance(card)" matTooltip="Update Balance">
+                <button mat-icon-button class="action-btn action-edit" (click)="$event.stopPropagation(); updateBalance(card)" matTooltip="Update Balance">
                   <mat-icon>edit</mat-icon>
                 </button>
-                <button mat-icon-button class="action-btn action-view" (click)="viewCard(card.id)" matTooltip="View Details">
+                <button mat-icon-button class="action-btn action-view" (click)="$event.stopPropagation(); viewCard(card.id)" matTooltip="View Details">
                   <mat-icon>visibility</mat-icon>
                 </button>
-                <button mat-icon-button class="action-btn action-delete" (click)="deleteCard(card)" matTooltip="Delete">
+                <button mat-icon-button class="action-btn action-delete" (click)="$event.stopPropagation(); deleteCard(card)" matTooltip="Delete">
                   <mat-icon>delete</mat-icon>
                 </button>
               </div>
@@ -168,6 +168,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+              (click)="viewCard(row.id)" class="clickable-row"
               [class.row-healthy]="getUtilization(row) <= 30"
               [class.row-warning]="getUtilization(row) > 30 && getUtilization(row) <= 70"
               [class.row-danger]="getUtilization(row) > 70"></tr>
@@ -282,6 +283,8 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       -webkit-overflow-scrolling: touch;
     }
     table { width: 100%; min-width: 550px; }
+    .clickable-row { cursor: pointer; transition: background var(--transition-fast); }
+    .clickable-row:hover { background: var(--color-surface-hover); }
     tr.mat-mdc-row { border-left: 3px solid transparent; }
     tr.row-healthy { border-left-color: var(--color-success); }
     tr.row-warning { border-left-color: var(--color-warning); }
