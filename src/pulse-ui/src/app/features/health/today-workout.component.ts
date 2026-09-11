@@ -184,7 +184,7 @@ interface PlanDay {
         @if (isToday() && !detailMode() && !customMode()) {
           <div class="toggle-detail">
             <button mat-stroked-button (click)="detailMode.set(true)">
-              <mat-icon>edit_note</mat-icon> Log with detailed sets & weights
+              <mat-icon>edit</mat-icon> Log with detailed sets & weights
             </button>
           </div>
         }

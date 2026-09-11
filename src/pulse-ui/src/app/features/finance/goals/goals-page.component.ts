@@ -57,7 +57,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                   <mat-icon>edit</mat-icon>
                 </button>
                 <button mat-icon-button color="warn" (click)="deleteGoal(goal)" aria-label="Delete">
-                  <mat-icon>delete</mat-icon>
+                  <mat-icon>delete_outline</mat-icon>
                 </button>
               </div>
             </div>
@@ -82,7 +82,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
 
             @if (getProgress(goal) < 100) {
               <button mat-stroked-button class="contribute-btn" (click)="quickContribute(goal)">
-                <mat-icon>add_circle</mat-icon> Add Money
+                <mat-icon>add</mat-icon> Add Money
               </button>
             } @else {
               <div class="goal-complete-badge">

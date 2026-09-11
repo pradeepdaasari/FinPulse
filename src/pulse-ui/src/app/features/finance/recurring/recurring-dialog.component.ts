@@ -51,7 +51,7 @@ import { Observable } from 'rxjs';
             <span class="txn-label">Expense</span>
           </div>
           <div class="txn-icon-item" [class.active]="form.value.transactionType === 1" (click)="form.patchValue({transactionType: 1}); onTypeChange()">
-            <div class="txn-circle income"><mat-icon>add_circle_outline</mat-icon></div>
+            <div class="txn-circle income"><mat-icon>add</mat-icon></div>
             <span class="txn-label">Income</span>
           </div>
         </div>

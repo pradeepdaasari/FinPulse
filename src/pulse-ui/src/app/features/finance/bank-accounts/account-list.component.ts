@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { BankAccountService } from '../../../core/services/bank-account.service';
@@ -17,7 +18,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
 @Component({
   selector: 'app-account-list',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, CurrencyPipe, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatTooltipModule, CurrencyPipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadAccounts()">
     <div class="header-row">
@@ -79,6 +80,15 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
             </div>
           </div>
         }
+        @if (excludedCount() > 0) {
+          <div class="stat-card stat-muted">
+            <mat-icon>pause_circle</mat-icon>
+            <div class="stat-content">
+              <span class="stat-value">{{ excludedBalance() | currency:'USD':'symbol':'1.0-0' }}</span>
+              <span class="stat-label">Excluded ({{ excludedCount() }})</span>
+            </div>
+          </div>
+        }
       </div>
 
       <!-- Desktop table -->
@@ -91,6 +101,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
               <div class="acct-name-cell">
                 <mat-icon class="acct-icon" [class.icon-checking]="a.accountType === 'Checking'" [class.icon-savings]="a.accountType === 'Savings'" [class.icon-brokerage]="a.accountType === 'Brokerage'" [class.icon-cash]="a.accountType === 'Cash'">{{ getAccountIcon(a.accountType) }}</mat-icon>
                 <span class="acct-name-text">{{ a.accountName }}</span>
+                @if (a.isExcluded) { <span class="excluded-badge"><mat-icon class="excluded-badge-icon">pause_circle</mat-icon> Excluded</span> }
               </div>
             </td>
           </ng-container>
@@ -115,18 +126,21 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
             <th mat-header-cell *matHeaderCellDef>Actions</th>
             <td mat-cell *matCellDef="let a">
               <div class="action-group">
+                <button mat-icon-button class="action-btn action-park" (click)="$event.stopPropagation(); toggleExcluded(a)" [matTooltip]="a.isExcluded ? 'Include in total' : 'Exclude from total'">
+                  <mat-icon>{{ a.isExcluded ? 'play_circle' : 'pause_circle' }}</mat-icon>
+                </button>
                 <button mat-icon-button class="action-btn action-edit" (click)="$event.stopPropagation(); editAccount(a)">
                   <mat-icon>edit</mat-icon>
                 </button>
                 <button mat-icon-button class="action-btn action-delete" (click)="$event.stopPropagation(); deleteAccount(a)">
-                  <mat-icon>delete</mat-icon>
+                  <mat-icon>delete_outline</mat-icon>
                 </button>
               </div>
             </td>
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="viewAccount(row)" class="clickable-row"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="viewAccount(row)" class="clickable-row" [class.excluded-row]="row.isExcluded"></tr>
         </table>
         </div>
       </mat-card>
@@ -134,7 +148,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       <!-- Mobile cards -->
       <div class="mobile-cards">
         @for (a of accounts(); track a.id) {
-          <div class="account-card" (click)="viewAccount(a)">
+          <div class="account-card" [class.excluded-card]="a.isExcluded" (click)="viewAccount(a)">
             <div class="ac-left">
               <div class="ac-icon" [class.icon-checking]="a.accountType === 'Checking'" [class.icon-savings]="a.accountType === 'Savings'" [class.icon-brokerage]="a.accountType === 'Brokerage'" [class.icon-cash]="a.accountType === 'Cash'">
                 <mat-icon>{{ getAccountIcon(a.accountType) }}</mat-icon>
@@ -143,9 +157,21 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
             <div class="ac-mid">
               <span class="ac-name">{{ a.accountName }}</span>
               <span class="ac-type-pill" [class.acct-checking]="a.accountType === 'Checking'" [class.acct-savings]="a.accountType === 'Savings'" [class.acct-brokerage]="a.accountType === 'Brokerage'" [class.acct-cash]="a.accountType === 'Cash'">{{ a.accountType }}</span>
+              @if (a.isExcluded) { <span class="ac-excluded-pill">Parked</span> }
             </div>
             <div class="ac-right">
               <span class="ac-balance">{{ a.currentBalance | currency }}</span>
+              <div class="ac-actions">
+                <button mat-icon-button class="action-btn action-park" (click)="$event.stopPropagation(); toggleExcluded(a)">
+                  <mat-icon>{{ a.isExcluded ? 'play_circle' : 'pause_circle' }}</mat-icon>
+                </button>
+                <button mat-icon-button class="action-btn action-edit" (click)="$event.stopPropagation(); editAccount(a)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button class="action-btn action-delete" (click)="$event.stopPropagation(); deleteAccount(a)">
+                  <mat-icon>delete_outline</mat-icon>
+                </button>
+              </div>
             </div>
           </div>
         }
@@ -172,19 +198,26 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-sm);
     }
     .stat-card mat-icon {
-      font-size: 24px; width: 44px; height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px;
+      font-size: 28px; width: 28px; height: 28px;
+      padding: 10px; border-radius: 12px;
     }
     .stat-green mat-icon { color: var(--color-stat-green); background: var(--color-stat-green-bg); }
     .stat-blue mat-icon { color: var(--color-stat-blue); background: var(--color-stat-blue-bg); }
     .stat-purple mat-icon { color: var(--color-stat-purple); background: var(--color-stat-purple-bg); }
     .stat-amber mat-icon { color: var(--color-stat-amber); background: var(--color-stat-amber-bg); }
     .stat-orange mat-icon { color: #e65100; background: #fff3e0; }
+    .stat-muted mat-icon { color: var(--color-text-muted); background: rgba(0,0,0,0.06); }
     .stat-content { display: flex; flex-direction: column; }
     .stat-value { font-size: 1.2rem; font-weight: 700; color: var(--color-text); }
     .stat-label { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px; }
 
     .clickable-row { cursor: pointer; transition: background var(--transition-fast); }
     .clickable-row:hover { background: var(--color-surface-hover); }
+    .excluded-row { opacity: 0.5; }
+    .excluded-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 0.65rem; font-weight: 600; color: var(--color-text-muted); background: rgba(0,0,0,0.06); padding: 2px 8px; border-radius: var(--radius-full); margin-left: 8px; }
+    .excluded-badge-icon { font-size: 14px; width: 14px; height: 14px; }
+    .action-park { color: var(--color-text-muted) !important; }
+    .action-park:hover { background: rgba(0,0,0,0.06) !important; }
     mat-card { overflow: hidden; padding: 0 !important; }
     .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table { width: 100%; min-width: 400px; }
@@ -243,6 +276,12 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       padding: 2px 8px; border-radius: var(--radius-full); width: fit-content;
     }
     .ac-balance { font-weight: 700; font-size: 1.05rem; color: var(--color-success); }
+    .ac-actions { display: flex; gap: 2px; justify-content: flex-end; margin-top: 4px; }
+    .ac-actions .action-btn { width: 34px; height: 34px; }
+    .ac-actions .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .ac-right { display: flex; flex-direction: column; align-items: flex-end; }
+    .excluded-card { opacity: 0.5; }
+    .ac-excluded-pill { display: inline-block; font-size: 0.6rem; font-weight: 600; padding: 1px 6px; border-radius: var(--radius-full); background: rgba(0,0,0,0.06); color: var(--color-text-muted); }
 
     /* Empty State */
     .empty-state { text-align: center; padding: 48px 24px; }
@@ -262,7 +301,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       .mobile-cards { display: block; }
       .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
       .stat-card { padding: 12px 10px; gap: 8px; }
-      .stat-card mat-icon { font-size: 22px; width: 22px; height: 22px; padding: 8px; border-radius: 10px; }
+      .stat-card mat-icon { font-size: 22px; width: 22px; height: 22px; padding: 11px; border-radius: 10px; }
       .stat-value { font-size: 1rem; }
       .header-row button { display: none; }
       .action-btn { min-width: 44px; min-height: 44px; }
@@ -300,11 +339,13 @@ export class AccountListComponent implements OnInit {
   loading = signal(true);
   displayedColumns = ['accountName', 'accountType', 'currentBalance', 'actions'];
 
-  totalBalance = signal(0);
+  totalBalance = computed(() => this.accounts().filter(a => !a.isExcluded).reduce((sum, a) => sum + a.currentBalance, 0));
   checkingCount = computed(() => this.accounts().filter(a => a.accountType === 'Checking').length);
   savingsCount = computed(() => this.accounts().filter(a => a.accountType === 'Savings').length);
   brokerageCount = computed(() => this.accounts().filter(a => a.accountType === 'Brokerage').length);
   cashCount = computed(() => this.accounts().filter(a => a.accountType === 'Cash').length);
+  excludedCount = computed(() => this.accounts().filter(a => a.isExcluded).length);
+  excludedBalance = computed(() => this.accounts().filter(a => a.isExcluded).reduce((sum, a) => sum + a.currentBalance, 0));
 
   ngOnInit(): void {
     this.loadAccounts();
@@ -314,7 +355,6 @@ export class AccountListComponent implements OnInit {
     this.accountService.getAll().subscribe({
       next: (accounts) => {
         this.accounts.set(accounts);
-        this.totalBalance.set(accounts.reduce((sum, a) => sum + a.currentBalance, 0));
         this.loading.set(false);
         this.cdr.detectChanges();
       },
@@ -366,6 +406,17 @@ export class AccountListComponent implements OnInit {
         this.notify.error(err.error?.message || 'Failed to delete account');
         this.cdr.detectChanges();
       }
+    });
+  }
+
+  toggleExcluded(account: BankAccount): void {
+    this.accountService.toggleExcluded(account.id).subscribe({
+      next: (updated) => {
+        this.accounts.update(list => list.map(a => a.id === updated.id ? updated : a));
+        this.notify.success(updated.isExcluded ? 'Account excluded from total' : 'Account included in total');
+        this.cdr.detectChanges();
+      },
+      error: () => this.notify.error('Failed to update account')
     });
   }
 

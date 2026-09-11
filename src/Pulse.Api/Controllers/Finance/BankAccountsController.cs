@@ -57,6 +57,7 @@ public class BankAccountsController : ControllerBase
             FuturesCommissionPerContract = dto.FuturesCommissionPerContract,
             OptionsRegFeePerContract = dto.OptionsRegFeePerContract,
             FuturesRegFeePerContract = dto.FuturesRegFeePerContract,
+            IsExcluded = dto.IsExcluded,
             UserId = UserId
         };
 
@@ -83,7 +84,20 @@ public class BankAccountsController : ControllerBase
         account.FuturesCommissionPerContract = dto.FuturesCommissionPerContract;
         account.OptionsRegFeePerContract = dto.OptionsRegFeePerContract;
         account.FuturesRegFeePerContract = dto.FuturesRegFeePerContract;
+        account.IsExcluded = dto.IsExcluded;
 
+        await _db.SaveChangesAsync();
+
+        return Ok(account);
+    }
+
+    [HttpPatch("{id}/excluded")]
+    public async Task<ActionResult<BankAccount>> ToggleExcluded(int id)
+    {
+        var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == id && a.UserId == UserId);
+        if (account is null) return NotFound();
+
+        account.IsExcluded = !account.IsExcluded;
         await _db.SaveChangesAsync();
 
         return Ok(account);

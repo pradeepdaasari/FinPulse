@@ -156,7 +156,7 @@ import { TagSummary } from '../../../core/models/daily-expense.model';
     .tag-dates mat-icon { font-size: 16px; width: 16px; height: 16px; }
     .tag-count { margin-left: 20px; }
     .empty-state { text-align: center; padding: var(--spacing-xl) !important; }
-    .empty-state mat-icon { font-size: 48px; height: 48px; width: 48px; opacity: 0.4; }
+    .empty-state mat-icon { font-size: 32px; height: 32px; width: 32px; opacity: 0.4; }
     .tag-help { text-align: left; max-width: 400px; margin: var(--spacing-md) auto 0; }
     .tag-help h4 { margin: 0 0 8px; font-size: 0.9rem; }
     .tag-help ul { margin: 0; padding-left: 20px; font-size: 0.85rem; color: var(--color-text-secondary); }

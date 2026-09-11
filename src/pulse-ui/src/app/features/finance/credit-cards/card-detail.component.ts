@@ -504,7 +504,7 @@ interface CardActivityItem {
     .txn-right-col { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
     .txn-balance-mobile { font-size: 0.68rem; color: var(--color-text-muted); font-weight: 500; font-variant-numeric: tabular-nums; }
     .empty-txn { display: flex; align-items: center; gap: 10px; padding: 24px 0; color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: var(--spacing-lg); }
-    .empty-txn mat-icon { font-size: 22px; width: 22px; height: 22px; }
+    .empty-txn mat-icon { font-size: 32px; width: 32px; height: 32px; }
     .desktop-only { display: block; }
     .mobile-only { display: none; }
     .txn-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--color-border); }
