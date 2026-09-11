@@ -50,6 +50,7 @@ import { CommissionChangeDialogComponent, CommissionChangeDialogData } from './c
               <mat-option value="Checking">Checking</mat-option>
               <mat-option value="Savings">Savings</mat-option>
               <mat-option value="Brokerage">Brokerage</mat-option>
+              <mat-option value="Cash">Cash</mat-option>
             </mat-select>
           </mat-form-field>
 

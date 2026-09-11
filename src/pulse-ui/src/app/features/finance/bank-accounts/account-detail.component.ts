@@ -1,5 +1,6 @@
 import { Component, inject, signal, computed, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,12 +16,21 @@ import { CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
 import { BankAccountService } from '../../../core/services/bank-account.service';
 import { DailyExpenseService } from '../../../core/services/daily-expense.service';
+import { MoneyMovementService } from '../../../core/services/money-movement.service';
 import { BankAccount, CommissionSchedule } from '../../../core/models/bank-account.model';
 import { DailyExpense } from '../../../core/models/daily-expense.model';
+import { MoneyMovement, MovementType } from '../../../core/models/money-movement.model';
 import { NotificationService } from '../../../core/services/notification.service';
 import { toLocalDateString } from '../../../core/utils/date-utils';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
-import { EntityMovementsComponent } from '../../../shared/entity-movements.component';
+
+interface ActivityItem {
+  kind: 'transaction' | 'movement';
+  date: string;
+  balance: number;
+  txn?: DailyExpense;
+  movement?: MoneyMovement;
+}
 
 @Component({
   selector: 'app-account-detail',
@@ -29,7 +39,7 @@ import { EntityMovementsComponent } from '../../../shared/entity-movements.compo
     FormsModule, MatCardModule, MatIconModule, MatButtonModule, MatButtonToggleModule,
     MatTableModule, MatTooltipModule,
     MatDatepickerModule, MatFormFieldModule, MatInputModule,
-    CurrencyPipe, DatePipe, LocalDatePipe, SkeletonLoaderComponent, EntityMovementsComponent
+    CurrencyPipe, DatePipe, LocalDatePipe, SkeletonLoaderComponent
   ],
   template: `
     @if (loading()) {
@@ -63,7 +73,8 @@ import { EntityMovementsComponent } from '../../../shared/entity-movements.compo
                 <span class="acct-type-badge"
                       [class.acct-checking]="account()!.accountType === 'Checking'"
                       [class.acct-savings]="account()!.accountType === 'Savings'"
-                      [class.acct-brokerage]="account()!.accountType === 'Brokerage'">
+                      [class.acct-brokerage]="account()!.accountType === 'Brokerage'"
+                      [class.acct-cash]="account()!.accountType === 'Cash'">
                   {{ account()!.accountType }}
                 </span>
               </span>
@@ -74,7 +85,7 @@ import { EntityMovementsComponent } from '../../../shared/entity-movements.compo
             </div>
             <div class="detail-item">
               <span class="label">Transactions</span>
-              <span class="value">{{ allTransactions().length }}</span>
+              <span class="value">{{ account()!.accountType === 'Brokerage' ? allTransactions().length : allTransactions().filter(t => !t.linkedToTrade).length }}</span>
             </div>
             <div class="detail-item">
               <span class="label">Added On</span>
@@ -127,10 +138,10 @@ import { EntityMovementsComponent } from '../../../shared/entity-movements.compo
         </mat-card>
       }
 
-      <!-- Transaction History -->
-      @if (allTransactions().length > 0) {
+      <!-- Activity History -->
+      @if (allActivity().length > 0) {
         <div class="txn-header-row">
-          <h3 class="section-title">Transaction History</h3>
+          <h3 class="section-title">Activity</h3>
           <div class="period-controls">
             <mat-button-toggle-group [value]="period()" (change)="onPeriodChange($event.value)" hideSingleSelectionIndicator>
               <mat-button-toggle value="1m">1M</mat-button-toggle>
@@ -174,56 +185,77 @@ import { EntityMovementsComponent } from '../../../shared/entity-movements.compo
                 <span class="summary-val transfer">{{ totalTransfer() | currency }}</span>
               </span>
             </div>
-            <span class="history-count">{{ transactions().length }} transactions</span>
+            <span class="history-count">{{ activity().length }} items</span>
           </div>
 
           <!-- Desktop Table -->
           <div class="table-wrapper desktop-only">
-            <table mat-table [dataSource]="transactions()">
+            <table mat-table [dataSource]="activity()">
               <ng-container matColumnDef="date">
                 <th mat-header-cell *matHeaderCellDef>Date</th>
-                <td mat-cell *matCellDef="let t">{{ t.date | date:'MMM d, h:mm a' }}</td>
+                <td mat-cell *matCellDef="let item">
+                  @if (item.kind === 'transaction') { {{ item.txn.date | date:'MMM d, h:mm a' }} }
+                  @else { {{ item.movement.movementDate | date:'MMM d, y' }} }
+                </td>
               </ng-container>
               <ng-container matColumnDef="description">
                 <th mat-header-cell *matHeaderCellDef>Description</th>
-                <td mat-cell *matCellDef="let t">
-                  {{ t.description }}
-                  @if (t.merchant) {
-                    <span class="merchant-text">· {{ t.merchant }}</span>
+                <td mat-cell *matCellDef="let item">
+                  @if (item.kind === 'transaction') {
+                    {{ item.txn.description }}
+                    @if (item.txn.merchant) {
+                      <span class="merchant-text">· {{ item.txn.merchant }}</span>
+                    }
+                  } @else {
+                    <span class="movement-flow-cell">
+                      {{ item.movement.sourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon> {{ item.movement.destinationName }}
+                    </span>
+                    @if (item.movement.note) {
+                      <span class="merchant-text">· {{ item.movement.note }}</span>
+                    }
                   }
                 </td>
               </ng-container>
               <ng-container matColumnDef="type">
                 <th mat-header-cell *matHeaderCellDef>Type</th>
-                <td mat-cell *matCellDef="let t">
-                  <span class="type-badge"
-                        [class.type-expense]="t.transactionType === 'Expense' || !t.transactionType"
-                        [class.type-income]="t.transactionType === 'Income'"
-                        [class.type-transfer]="t.transactionType === 'Transfer'"
-                        [class.type-refund]="t.transactionType === 'Refund'"
-                        [class.type-card]="t.transactionType === 'CardPayment'">
-                    {{ t.transactionType || 'Expense' }}
-                  </span>
+                <td mat-cell *matCellDef="let item">
+                  @if (item.kind === 'transaction') {
+                    <span class="type-badge"
+                          [class.type-expense]="item.txn.transactionType === 'Expense' || !item.txn.transactionType"
+                          [class.type-income]="item.txn.transactionType === 'Income'"
+                          [class.type-transfer]="item.txn.transactionType === 'Transfer'"
+                          [class.type-refund]="item.txn.transactionType === 'Refund'"
+                          [class.type-card]="item.txn.transactionType === 'CardPayment'">
+                      {{ item.txn.transactionType || 'Expense' }}
+                    </span>
+                  } @else {
+                    <span class="type-badge type-flow">
+                      <mat-icon class="flow-badge-icon">sync_alt</mat-icon>
+                      {{ movementLabel(item.movement.movementType) }}
+                    </span>
+                  }
                 </td>
               </ng-container>
               <ng-container matColumnDef="source">
                 <th mat-header-cell *matHeaderCellDef>Source</th>
-                <td mat-cell *matCellDef="let t">
-                  @if (t.transactionType === 'Transfer' && t.fundingSourceName && t.toFundingSourceName) {
+                <td mat-cell *matCellDef="let item">
+                  @if (item.kind === 'movement') {
+                    —
+                  } @else if (item.txn.transactionType === 'Transfer' && item.txn.fundingSourceName && item.txn.toFundingSourceName) {
                     <span class="source-cell transfer-source">
-                      <mat-icon class="source-icon">{{ getSourceIcon(t.fundingSourceId, t.fundingSourceType) }}</mat-icon>
-                      {{ t.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon> {{ t.toFundingSourceName }}
+                      <mat-icon class="source-icon">{{ getSourceIcon(item.txn.fundingSourceId, item.txn.fundingSourceType) }}</mat-icon>
+                      {{ item.txn.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon> {{ item.txn.toFundingSourceName }}
                     </span>
-                  } @else if (t.transactionType === 'CardPayment' && t.fundingSourceName && t.toFundingSourceName) {
+                  } @else if (item.txn.transactionType === 'CardPayment' && item.txn.fundingSourceName && item.txn.toFundingSourceName) {
                     <span class="source-cell card-payment-source">
-                      <mat-icon class="source-icon">{{ getSourceIcon(t.fundingSourceId, t.fundingSourceType) }}</mat-icon>
-                      {{ t.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon>
-                      <mat-icon class="source-icon">credit_card</mat-icon> {{ t.toFundingSourceName }}
+                      <mat-icon class="source-icon">{{ getSourceIcon(item.txn.fundingSourceId, item.txn.fundingSourceType) }}</mat-icon>
+                      {{ item.txn.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon>
+                      <mat-icon class="source-icon">credit_card</mat-icon> {{ item.txn.toFundingSourceName }}
                     </span>
-                  } @else if (t.fundingSourceName) {
+                  } @else if (item.txn.fundingSourceName) {
                     <span class="source-cell">
-                      <mat-icon class="source-icon">{{ getSourceIcon(t.fundingSourceId, t.fundingSourceType) }}</mat-icon>
-                      {{ t.fundingSourceName }}
+                      <mat-icon class="source-icon">{{ getSourceIcon(item.txn.fundingSourceId, item.txn.fundingSourceType) }}</mat-icon>
+                      {{ item.txn.fundingSourceName }}
                     </span>
                   } @else {
                     —
@@ -232,78 +264,130 @@ import { EntityMovementsComponent } from '../../../shared/entity-movements.compo
               </ng-container>
               <ng-container matColumnDef="category">
                 <th mat-header-cell *matHeaderCellDef>Category</th>
-                <td mat-cell *matCellDef="let t">{{ t.categoryName || '—' }}</td>
+                <td mat-cell *matCellDef="let item">
+                  @if (item.kind === 'transaction') { {{ item.txn.categoryName || '—' }} }
+                  @else { — }
+                </td>
               </ng-container>
               <ng-container matColumnDef="amount">
                 <th mat-header-cell *matHeaderCellDef>Amount</th>
-                <td mat-cell *matCellDef="let t" class="amount-cell"
-                    [class.income-amount]="t.transactionType === 'Income' || t.transactionType === 'Refund'"
-                    [class.transfer-amount]="t.transactionType === 'Transfer'"
-                    [class.card-amount]="t.transactionType === 'CardPayment'">
-                  @if (t.transactionType === 'Income' || t.transactionType === 'Refund') { +{{ t.amount | currency }} }
-                  @else if (t.transactionType === 'Transfer') { ⇔ {{ t.amount | currency }} }
-                  @else { -{{ t.amount | currency }} }
+                <td mat-cell *matCellDef="let item" class="amount-cell"
+                    [class.income-amount]="(item.kind === 'transaction' && (item.txn.transactionType === 'Income' || item.txn.transactionType === 'Refund')) || (item.kind === 'transaction' && item.txn.transactionType === 'Transfer' && item.txn.toFundingSourceId === account()!.id) || (item.kind === 'movement' && isMovementIncoming(item.movement, account()!.id))"
+                    [class.expense-amount]="(item.kind === 'transaction' && (item.txn.transactionType === 'Expense' || !item.txn.transactionType || item.txn.transactionType === 'CardPayment' || item.txn.transactionType === 'LoanPayment')) || (item.kind === 'transaction' && item.txn.transactionType === 'Transfer' && item.txn.fundingSourceId === account()!.id) || (item.kind === 'movement' && !isMovementIncoming(item.movement, account()!.id))">
+                  @if (item.kind === 'transaction') {
+                    @if (item.txn.transactionType === 'Income' || item.txn.transactionType === 'Refund') { +{{ item.txn.amount | currency }} }
+                    @else if (item.txn.transactionType === 'Transfer' && item.txn.toFundingSourceId === account()!.id) { +{{ item.txn.amount | currency }} }
+                    @else if (item.txn.transactionType === 'Transfer') { -{{ item.txn.amount | currency }} }
+                    @else { -{{ item.txn.amount | currency }} }
+                  } @else {
+                    @if (isMovementIncoming(item.movement, account()!.id)) { +{{ item.movement.amount | currency }} }
+                    @else { -{{ item.movement.amount | currency }} }
+                  }
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="balance">
+                <th mat-header-cell *matHeaderCellDef>Balance</th>
+                <td mat-cell *matCellDef="let item" class="balance-col"
+                    [class.balance-positive]="item.balance >= 0"
+                    [class.balance-negative]="item.balance < 0">
+                  {{ item.balance | currency }}
                 </td>
               </ng-container>
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef></th>
-                <td mat-cell *matCellDef="let t">
-                  <button mat-icon-button (click)="editTransaction(t)" matTooltip="Edit">
-                    <mat-icon>edit</mat-icon>
-                  </button>
+                <td mat-cell *matCellDef="let item">
+                  @if (item.kind === 'transaction' && !item.txn!.linkedToTrade) {
+                    <button mat-icon-button (click)="editTransaction(item.txn)" matTooltip="Edit">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  }
+                  @if (item.kind === 'transaction' && item.txn!.linkedToTrade) {
+                    <span class="auto-trade-badge" matTooltip="Linked to trade journal — edit/delete from Trading">
+                      <mat-icon class="auto-trade-icon">link</mat-icon> Trade
+                    </span>
+                  }
                 </td>
               </ng-container>
               <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns;" [class.movement-row]="row.kind === 'movement'"></tr>
             </table>
           </div>
 
           <!-- Mobile Cards -->
           <div class="mobile-feed">
-            @for (t of transactions(); track t.id) {
-              <div class="txn-card" (click)="editTransaction(t)">
-                <div class="txn-dot"
-                     [class.dot-income]="t.transactionType === 'Income'"
-                     [class.dot-transfer]="t.transactionType === 'Transfer'"
-                     [class.dot-refund]="t.transactionType === 'Refund'"
-                     [class.dot-card]="t.transactionType === 'CardPayment'">
-                  <mat-icon>{{ getTxnIcon(t) }}</mat-icon>
-                </div>
-                <div class="txn-mid">
-                  <span class="txn-desc">{{ t.description }}</span>
-                  <span class="txn-meta">
-                    {{ t.transactionType || 'Expense' }} · {{ t.date | date:'MMM d, h:mm a' }}{{ t.categoryName ? ' · ' + t.categoryName : '' }}
-                  </span>
-                  @if (t.fundingSourceName) {
-                    <span class="txn-source">
-                      <mat-icon class="txn-source-icon">{{ getSourceIcon(t.fundingSourceId, t.fundingSourceType) }}</mat-icon>
-                      {{ t.fundingSourceName }}
-                      @if (t.transactionType === 'Transfer' && t.toFundingSourceName) {
-                        → {{ t.toFundingSourceName }}
-                      }
+            @for (item of activity(); track item.kind === 'transaction' ? 'txn-' + item.txn!.id : 'mv-' + item.movement!.id) {
+              @if (item.kind === 'transaction') {
+                <div class="txn-card" [class.auto-trade-card]="item.txn!.linkedToTrade" (click)="!item.txn!.linkedToTrade && editTransaction(item.txn!)">
+                  <div class="txn-dot"
+                       [class.dot-income]="item.txn!.transactionType === 'Income'"
+                       [class.dot-transfer]="item.txn!.transactionType === 'Transfer'"
+                       [class.dot-refund]="item.txn!.transactionType === 'Refund'"
+                       [class.dot-card]="item.txn!.transactionType === 'CardPayment'">
+                    <mat-icon>{{ getTxnIcon(item.txn!) }}</mat-icon>
+                  </div>
+                  <div class="txn-mid">
+                    <span class="txn-desc">{{ item.txn!.description }}</span>
+                    <span class="txn-meta">
+                      {{ item.txn!.transactionType || 'Expense' }} · {{ item.txn!.date | date:'MMM d, h:mm a' }}{{ item.txn!.categoryName ? ' · ' + item.txn!.categoryName : '' }}
                     </span>
-                  }
+                    @if (item.txn!.fundingSourceName) {
+                      <span class="txn-source">
+                        <mat-icon class="txn-source-icon">{{ getSourceIcon(item.txn!.fundingSourceId, item.txn!.fundingSourceType) }}</mat-icon>
+                        {{ item.txn!.fundingSourceName }}
+                        @if (item.txn!.transactionType === 'Transfer' && item.txn!.toFundingSourceName) {
+                          → {{ item.txn!.toFundingSourceName }}
+                        }
+                      </span>
+                    }
+                    @if (item.txn!.linkedToTrade) {
+                      <span class="auto-trade-badge"><mat-icon class="auto-trade-icon">link</mat-icon> Trade</span>
+                    }
+                  </div>
+                  <div class="txn-right">
+                    <span class="txn-amount"
+                          [class.income-amount]="item.txn!.transactionType === 'Income' || item.txn!.transactionType === 'Refund' || (item.txn!.transactionType === 'Transfer' && item.txn!.toFundingSourceId === account()!.id)"
+                          [class.expense-amount]="item.txn!.transactionType === 'Expense' || !item.txn!.transactionType || item.txn!.transactionType === 'CardPayment' || item.txn!.transactionType === 'LoanPayment' || (item.txn!.transactionType === 'Transfer' && item.txn!.fundingSourceId === account()!.id)">
+                      @if (item.txn!.transactionType === 'Income' || item.txn!.transactionType === 'Refund' || (item.txn!.transactionType === 'Transfer' && item.txn!.toFundingSourceId === account()!.id)) { +{{ item.txn!.amount | currency }} }
+                      @else { -{{ item.txn!.amount | currency }} }
+                    </span>
+                    <span class="txn-balance-mobile" [class.balance-positive]="item.balance >= 0" [class.balance-negative]="item.balance < 0">{{ item.balance | currency }}</span>
+                  </div>
                 </div>
-                <div class="txn-right">
-                  <span class="txn-amount"
-                        [class.income-amount]="t.transactionType === 'Income' || t.transactionType === 'Refund'"
-                        [class.transfer-amount]="t.transactionType === 'Transfer'">
-                    @if (t.transactionType === 'Income' || t.transactionType === 'Refund') { +{{ t.amount | currency }} }
-                    @else { -{{ t.amount | currency }} }
-                  </span>
+              } @else {
+                <div class="txn-card movement-card">
+                  <div class="txn-dot dot-flow">
+                    <mat-icon>{{ movementIcon(item.movement!.movementType) }}</mat-icon>
+                  </div>
+                  <div class="txn-mid">
+                    <span class="txn-desc">{{ movementLabel(item.movement!.movementType) }}</span>
+                    <span class="txn-meta">
+                      Money Flow · {{ item.movement!.movementDate | date:'MMM d, y' }}
+                      @if (item.movement!.isAutoGenerated) { · Auto }
+                    </span>
+                    <span class="txn-source">
+                      {{ item.movement!.sourceName }} → {{ item.movement!.destinationName }}
+                    </span>
+                  </div>
+                  <div class="txn-right">
+                    <span class="txn-amount"
+                          [class.income-amount]="isMovementIncoming(item.movement!, account()!.id)"
+                          [class.expense-amount]="!isMovementIncoming(item.movement!, account()!.id)">
+                      @if (isMovementIncoming(item.movement!, account()!.id)) { +{{ item.movement!.amount | currency }} }
+                      @else { -{{ item.movement!.amount | currency }} }
+                    </span>
+                    <span class="txn-balance-mobile" [class.balance-positive]="item.balance >= 0" [class.balance-negative]="item.balance < 0">{{ item.balance | currency }}</span>
+                  </div>
                 </div>
-              </div>
+              }
             }
           </div>
         </mat-card>
       } @else {
         <div class="empty-history">
           <mat-icon>receipt_long</mat-icon>
-          <p>No transactions recorded for this account yet.</p>
+          <p>No activity recorded for this account yet.</p>
         </div>
       }
-
-      <app-entity-movements entityType="BankAccount" [entityId]="account()!.id" />
     }
   `,
   styles: [`
@@ -335,6 +419,7 @@ import { EntityMovementsComponent } from '../../../shared/entity-movements.compo
     .acct-checking { background: var(--color-stat-blue-bg); color: var(--color-stat-blue); }
     .acct-savings { background: var(--color-stat-green-bg); color: var(--color-stat-green); }
     .acct-brokerage { background: var(--color-stat-purple-bg); color: var(--color-stat-purple); }
+    .acct-cash { background: #fff3e0; color: #e65100; }
 
     /* Section Title */
     .section-title { font-size: 1rem; font-weight: 700; margin: 0; }
@@ -378,9 +463,12 @@ import { EntityMovementsComponent } from '../../../shared/entity-movements.compo
     .card-payment-source { color: var(--color-stat-purple); }
     .merchant-text { color: var(--color-text-muted); font-size: 0.85rem; }
     .amount-cell { font-weight: 700; font-variant-numeric: tabular-nums; }
-    .income-amount { color: var(--color-success); }
-    .transfer-amount { color: var(--color-primary); }
+    .income-amount { color: #2e7d32 !important; }
+    .expense-amount { color: #c62828 !important; }
+    .transfer-amount { color: #1565c0 !important; }
     .card-amount { color: var(--color-stat-purple); }
+    .balance-positive { color: #2e7d32 !important; }
+    .balance-negative { color: #c62828 !important; }
 
     /* Type Badge */
     .type-badge {
@@ -393,6 +481,17 @@ import { EntityMovementsComponent } from '../../../shared/entity-movements.compo
     .type-transfer { background: var(--color-stat-blue-bg); color: var(--color-primary); }
     .type-refund { background: var(--color-stat-amber-bg); color: var(--color-warning); }
     .type-card { background: var(--color-stat-purple-bg); color: var(--color-stat-purple); }
+    .type-flow {
+      background: rgba(0,150,136,0.1); color: #00796b;
+      display: inline-flex; align-items: center; gap: 3px;
+    }
+    .flow-badge-icon { font-size: 11px; width: 11px; height: 11px; }
+    .movement-flow-cell { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; }
+    .flow-amount { color: var(--color-stat-purple); }
+    .movement-row { background: color-mix(in srgb, var(--color-stat-purple-bg) 20%, transparent); }
+    .movement-card { border-left: 3px solid rgba(0,150,136,0.4); }
+    .dot-flow { background: rgba(0,150,136,0.1); }
+    .dot-flow mat-icon { color: #00796b; }
 
     /* Mobile Feed */
     .mobile-feed { display: none; }
@@ -402,6 +501,10 @@ import { EntityMovementsComponent } from '../../../shared/entity-movements.compo
       cursor: pointer; transition: background var(--transition-fast);
     }
     .txn-card:active { background: var(--color-surface-hover); }
+    .txn-card.auto-trade-card { cursor: default; opacity: 0.7; }
+    .txn-card.auto-trade-card:active { background: none; }
+    .auto-trade-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--color-primary); font-weight: 500; white-space: nowrap; }
+    .auto-trade-icon { font-size: 16px; width: 16px; height: 16px; }
     .txn-dot {
       width: 36px; height: 36px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
@@ -421,8 +524,12 @@ import { EntityMovementsComponent } from '../../../shared/entity-movements.compo
     .txn-meta { display: block; font-size: 0.7rem; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .txn-source { display: flex; align-items: center; gap: 3px; font-size: 0.68rem; color: var(--color-text-muted); margin-top: 1px; }
     .txn-source-icon { font-size: 12px; width: 12px; height: 12px; opacity: 0.7; }
-    .txn-right { flex-shrink: 0; text-align: right; }
+    .txn-right { flex-shrink: 0; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
     .txn-amount { font-weight: 700; font-size: 0.9rem; }
+    .txn-balance-mobile { font-size: 0.68rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+    .txn-balance-mobile.balance-positive { color: #2e7d32; }
+    .txn-balance-mobile.balance-negative { color: #c62828; }
+    .balance-col { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--color-text-secondary); font-size: 0.85rem; }
 
     /* Empty */
     .empty-history {
@@ -485,15 +592,17 @@ export class AccountDetailComponent implements OnInit {
   private router = inject(Router);
   private accountService = inject(BankAccountService);
   private expenseService = inject(DailyExpenseService);
+  private movementService = inject(MoneyMovementService);
   private dialog = inject(MatDialog);
   private notify = inject(NotificationService);
   private cdr = inject(ChangeDetectorRef);
 
   account = signal<BankAccount | null>(null);
   allTransactions = signal<DailyExpense[]>([]);
+  allMovements = signal<MoneyMovement[]>([]);
   commissionHistory = signal<CommissionSchedule[]>([]);
   loading = signal(true);
-  displayedColumns = ['date', 'description', 'type', 'source', 'category', 'amount', 'actions'];
+  displayedColumns = ['date', 'description', 'type', 'source', 'category', 'amount', 'balance', 'actions'];
 
   period = signal<string>('3m');
   customFrom: Date | null = null;
@@ -518,19 +627,39 @@ export class AccountDetailComponent implements OnInit {
     return { from, to };
   });
 
-  transactions = computed(() => {
-    const all = this.allTransactions();
+  allActivity = computed<ActivityItem[]>(() => {
+    const accountId = this.account()?.id;
+    const currentBal = this.account()?.currentBalance ?? 0;
+    const txnIds = new Set(this.allTransactions().map(t => t.id));
+    const txnItems = this.allTransactions().map(t => ({ kind: 'transaction' as const, date: t.date, balance: 0, txn: t }));
+    const mvItems = this.allMovements()
+      .filter(m => !m.relatedExpenseId || !txnIds.has(m.relatedExpenseId))
+      .map(m => ({ kind: 'movement' as const, date: m.movementDate, balance: 0, movement: m }));
+    const sorted = [...txnItems, ...mvItems].sort((a, b) => b.date.localeCompare(a.date));
+    let bal = currentBal;
+    for (const item of sorted) {
+      item.balance = bal;
+      bal -= this.getBalanceDelta(item, accountId);
+    }
+    return sorted;
+  });
+
+  activity = computed(() => {
+    const all = this.allActivity();
+    const isBrokerage = this.account()?.accountType === 'Brokerage';
+    const filtered = isBrokerage ? all : all.filter(item => !(item.kind === 'transaction' && item.txn?.linkedToTrade));
     const range = this.dateRange();
-    if (!range) return all;
-    return all.filter(t => {
-      const d = new Date(t.date);
+    if (!range) return filtered;
+    return filtered.filter(item => {
+      const d = new Date(item.date);
       return d >= range.from && d <= range.to;
     });
   });
 
-  totalIncome = computed(() => this.transactions().filter(t => t.transactionType === 'Income' || t.transactionType === 'Refund').reduce((s, t) => s + t.amount, 0));
-  totalExpense = computed(() => this.transactions().filter(t => t.transactionType === 'Expense' || !t.transactionType).reduce((s, t) => s + t.amount, 0));
-  totalTransfer = computed(() => this.transactions().filter(t => t.transactionType === 'Transfer').reduce((s, t) => s + t.amount, 0));
+  private txnOnly = computed(() => this.activity().filter(a => a.kind === 'transaction').map(a => a.txn!));
+  totalIncome = computed(() => this.txnOnly().filter(t => t.transactionType === 'Income' || t.transactionType === 'Refund').reduce((s, t) => s + t.amount, 0));
+  totalExpense = computed(() => this.txnOnly().filter(t => t.transactionType === 'Expense' || !t.transactionType).reduce((s, t) => s + t.amount, 0));
+  totalTransfer = computed(() => this.txnOnly().filter(t => t.transactionType === 'Transfer').reduce((s, t) => s + t.amount, 0));
 
   ngOnInit(): void {
     this.loadAccount();
@@ -542,6 +671,7 @@ export class AccountDetailComponent implements OnInit {
       next: (account) => {
         this.account.set(account);
         this.loadTransactions(id);
+        this.loadMovements(id);
         if (account.accountType === 'Brokerage') {
           this.loadCommissionHistory(id);
         }
@@ -555,9 +685,15 @@ export class AccountDetailComponent implements OnInit {
   }
 
   private loadTransactions(accountId: number): void {
-    this.expenseService.getExpenses({ fundingSourceId: accountId, allTime: true }).subscribe({
-      next: (txns) => {
-        this.allTransactions.set(txns);
+    forkJoin({
+      fromAccount: this.expenseService.getExpenses({ fundingSourceId: accountId, allTime: true }),
+      toAccount: this.expenseService.getExpenses({ toFundingSourceId: accountId, allTime: true })
+    }).subscribe({
+      next: ({ fromAccount, toAccount }) => {
+        const seenIds = new Set(fromAccount.map(t => t.id));
+        const merged = [...fromAccount, ...toAccount.filter(t => !seenIds.has(t.id))];
+        merged.sort((a, b) => b.date.localeCompare(a.date));
+        this.allTransactions.set(merged);
         this.loading.set(false);
         this.cdr.detectChanges();
       },
@@ -673,6 +809,7 @@ export class AccountDetailComponent implements OnInit {
       switch (acct.accountType) {
         case 'Savings': return 'savings';
         case 'Brokerage': return 'trending_up';
+        case 'Cash': return 'wallet';
         default: return 'account_balance';
       }
     }
@@ -687,5 +824,55 @@ export class AccountDetailComponent implements OnInit {
       case 'CardPayment': return 'credit_card';
       default: return 'arrow_upward';
     }
+  }
+
+  private getBalanceDelta(item: ActivityItem, accountId?: number): number {
+    if (item.kind === 'transaction') {
+      const t = item.txn!;
+      switch (t.transactionType) {
+        case 'Income': case 'Refund': return t.amount;
+        case 'Transfer':
+          if (t.fundingSourceId === accountId) return -t.amount;
+          if (t.toFundingSourceId === accountId) return t.amount;
+          return 0;
+        default: return -t.amount;
+      }
+    } else {
+      const m = item.movement!;
+      if (m.sourceId === accountId) return -m.amount;
+      if (m.destinationId === accountId) return m.amount;
+      return 0;
+    }
+  }
+
+  private loadMovements(accountId: number): void {
+    this.movementService.getAll({ entityType: 'BankAccount', entityId: accountId }).subscribe({
+      next: (movements) => {
+        this.allMovements.set(movements);
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  isMovementIncoming(m: MoneyMovement, accountId: number): boolean {
+    return m.destinationId === accountId;
+  }
+
+  movementLabel(type: MovementType): string {
+    const labels: Record<string, string> = {
+      LoanFunding: 'Funding', LoanPayment: 'Loan Payment', CardPayment: 'Card Payment',
+      Transfer: 'Transfer', Deposit: 'Deposit', Withdrawal: 'Withdrawal',
+      TradePnl: 'Trade P&L', TradeFee: 'Trade Fee'
+    };
+    return labels[type] || type;
+  }
+
+  movementIcon(type: MovementType): string {
+    const icons: Record<string, string> = {
+      LoanFunding: 'account_balance', LoanPayment: 'payments', CardPayment: 'credit_card',
+      Transfer: 'sync_alt', Deposit: 'arrow_downward', Withdrawal: 'arrow_upward',
+      TradePnl: 'trending_up', TradeFee: 'receipt'
+    };
+    return icons[type] || 'swap_horiz';
   }
 }

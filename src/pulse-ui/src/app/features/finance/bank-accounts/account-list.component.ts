@@ -70,6 +70,15 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
             <span class="stat-label">Brokerage</span>
           </div>
         </div>
+        @if (cashCount() > 0) {
+          <div class="stat-card stat-orange">
+            <mat-icon>wallet</mat-icon>
+            <div class="stat-content">
+              <span class="stat-value">{{ cashCount() }}</span>
+              <span class="stat-label">Cash</span>
+            </div>
+          </div>
+        }
       </div>
 
       <!-- Desktop table -->
@@ -80,7 +89,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
             <th mat-header-cell *matHeaderCellDef>Account Name</th>
             <td mat-cell *matCellDef="let a">
               <div class="acct-name-cell">
-                <mat-icon class="acct-icon" [class.icon-checking]="a.accountType === 'Checking'" [class.icon-savings]="a.accountType === 'Savings'" [class.icon-brokerage]="a.accountType === 'Brokerage'">{{ getAccountIcon(a.accountType) }}</mat-icon>
+                <mat-icon class="acct-icon" [class.icon-checking]="a.accountType === 'Checking'" [class.icon-savings]="a.accountType === 'Savings'" [class.icon-brokerage]="a.accountType === 'Brokerage'" [class.icon-cash]="a.accountType === 'Cash'">{{ getAccountIcon(a.accountType) }}</mat-icon>
                 <span class="acct-name-text">{{ a.accountName }}</span>
               </div>
             </td>
@@ -92,7 +101,8 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
               <span class="acct-type-badge"
                     [class.acct-checking]="a.accountType === 'Checking'"
                     [class.acct-savings]="a.accountType === 'Savings'"
-                    [class.acct-brokerage]="a.accountType === 'Brokerage'">{{ a.accountType }}</span>
+                    [class.acct-brokerage]="a.accountType === 'Brokerage'"
+                    [class.acct-cash]="a.accountType === 'Cash'">{{ a.accountType }}</span>
             </td>
           </ng-container>
 
@@ -105,10 +115,10 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
             <th mat-header-cell *matHeaderCellDef>Actions</th>
             <td mat-cell *matCellDef="let a">
               <div class="action-group">
-                <button mat-icon-button class="action-btn action-edit" (click)="editAccount(a)">
+                <button mat-icon-button class="action-btn action-edit" (click)="$event.stopPropagation(); editAccount(a)">
                   <mat-icon>edit</mat-icon>
                 </button>
-                <button mat-icon-button class="action-btn action-delete" (click)="deleteAccount(a)">
+                <button mat-icon-button class="action-btn action-delete" (click)="$event.stopPropagation(); deleteAccount(a)">
                   <mat-icon>delete</mat-icon>
                 </button>
               </div>
@@ -126,13 +136,13 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
         @for (a of accounts(); track a.id) {
           <div class="account-card" (click)="viewAccount(a)">
             <div class="ac-left">
-              <div class="ac-icon" [class.icon-checking]="a.accountType === 'Checking'" [class.icon-savings]="a.accountType === 'Savings'" [class.icon-brokerage]="a.accountType === 'Brokerage'">
+              <div class="ac-icon" [class.icon-checking]="a.accountType === 'Checking'" [class.icon-savings]="a.accountType === 'Savings'" [class.icon-brokerage]="a.accountType === 'Brokerage'" [class.icon-cash]="a.accountType === 'Cash'">
                 <mat-icon>{{ getAccountIcon(a.accountType) }}</mat-icon>
               </div>
             </div>
             <div class="ac-mid">
               <span class="ac-name">{{ a.accountName }}</span>
-              <span class="ac-type-pill" [class.acct-checking]="a.accountType === 'Checking'" [class.acct-savings]="a.accountType === 'Savings'" [class.acct-brokerage]="a.accountType === 'Brokerage'">{{ a.accountType }}</span>
+              <span class="ac-type-pill" [class.acct-checking]="a.accountType === 'Checking'" [class.acct-savings]="a.accountType === 'Savings'" [class.acct-brokerage]="a.accountType === 'Brokerage'" [class.acct-cash]="a.accountType === 'Cash'">{{ a.accountType }}</span>
             </div>
             <div class="ac-right">
               <span class="ac-balance">{{ a.currentBalance | currency }}</span>
@@ -153,7 +163,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     /* Summary Stats */
     .stats-row {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: var(--spacing-sm);
       margin-bottom: var(--spacing-md);
     }
@@ -168,6 +178,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .stat-blue mat-icon { color: var(--color-stat-blue); background: var(--color-stat-blue-bg); }
     .stat-purple mat-icon { color: var(--color-stat-purple); background: var(--color-stat-purple-bg); }
     .stat-amber mat-icon { color: var(--color-stat-amber); background: var(--color-stat-amber-bg); }
+    .stat-orange mat-icon { color: #e65100; background: #fff3e0; }
     .stat-content { display: flex; flex-direction: column; }
     .stat-value { font-size: 1.2rem; font-weight: 700; color: var(--color-text); }
     .stat-label { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px; }
@@ -183,6 +194,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .icon-checking { color: var(--color-stat-blue); }
     .icon-savings { color: var(--color-stat-green); }
     .icon-brokerage { color: var(--color-stat-purple); }
+    .icon-cash { color: #e65100; }
     .acct-name-text { font-weight: 500; }
     .acct-type-badge {
       display: inline-block; font-size: 0.7rem; font-weight: 600;
@@ -191,6 +203,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .acct-checking { background: var(--color-stat-blue-bg); color: var(--color-stat-blue); }
     .acct-savings { background: var(--color-stat-green-bg); color: var(--color-stat-green); }
     .acct-brokerage { background: var(--color-stat-purple-bg); color: var(--color-stat-purple); }
+    .acct-cash { background: #fff3e0; color: #e65100; }
 
     /* Action Buttons */
     .action-group { display: flex; gap: 2px; }
@@ -220,6 +233,8 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .ac-icon.icon-savings mat-icon { color: var(--color-stat-green); }
     .ac-icon.icon-brokerage { background: var(--color-stat-purple-bg); }
     .ac-icon.icon-brokerage mat-icon { color: var(--color-stat-purple); }
+    .ac-icon.icon-cash { background: #fff3e0; }
+    .ac-icon.icon-cash mat-icon { color: #e65100; }
     .ac-icon mat-icon { font-size: 22px; width: 22px; height: 22px; }
     .ac-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
     .ac-name { font-weight: 600; font-size: 0.9rem; }
@@ -289,6 +304,7 @@ export class AccountListComponent implements OnInit {
   checkingCount = computed(() => this.accounts().filter(a => a.accountType === 'Checking').length);
   savingsCount = computed(() => this.accounts().filter(a => a.accountType === 'Savings').length);
   brokerageCount = computed(() => this.accounts().filter(a => a.accountType === 'Brokerage').length);
+  cashCount = computed(() => this.accounts().filter(a => a.accountType === 'Cash').length);
 
   ngOnInit(): void {
     this.loadAccounts();
@@ -357,6 +373,7 @@ export class AccountListComponent implements OnInit {
     switch (type) {
       case 'Savings': return 'savings';
       case 'Brokerage': return 'trending_up';
+      case 'Cash': return 'wallet';
       default: return 'account_balance';
     }
   }

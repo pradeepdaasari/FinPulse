@@ -4,5 +4,6 @@ public enum BankAccountType
 {
     Checking,
     Savings,
-    Brokerage
+    Brokerage,
+    Cash
 }
