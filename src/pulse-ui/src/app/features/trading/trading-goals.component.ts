@@ -198,7 +198,7 @@ interface MetricDef {
                       @if (s.achieved) {
                         <mat-icon class="snap-icon snap-pass">check_circle</mat-icon>
                       } @else if (isLoss(s, p.goal)) {
-                        <mat-icon class="snap-icon snap-danger">cancel</mat-icon>
+                        <mat-icon class="snap-icon snap-danger">close</mat-icon>
                       } @else {
                         <mat-icon class="snap-icon snap-warn">warning</mat-icon>
                       }

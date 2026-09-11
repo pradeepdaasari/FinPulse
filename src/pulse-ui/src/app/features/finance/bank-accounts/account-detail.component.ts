@@ -52,13 +52,14 @@ interface ActivityItem {
             <mat-icon>arrow_back</mat-icon> Bank Accounts
           </button>
           <h2>{{ account()!.accountName }}</h2>
+          @if (account()!.isExcluded) { <span class="excluded-header-badge"><mat-icon class="excluded-header-icon">pause_circle</mat-icon> Excluded</span> }
         </div>
         <div class="detail-actions">
           <button mat-stroked-button (click)="editAccount()">
             <mat-icon>edit</mat-icon> Edit
           </button>
           <button mat-stroked-button color="warn" (click)="deleteAccount()">
-            <mat-icon>delete</mat-icon> Delete
+            <mat-icon>delete_outline</mat-icon> Delete
           </button>
         </div>
       </div>
@@ -412,6 +413,8 @@ interface ActivityItem {
     .label { font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; }
     .value { font-size: 1rem; font-weight: 600; }
     .balance-value { font-size: 1.3rem; font-weight: 700; color: var(--color-success); }
+    .excluded-header-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted); background: rgba(0,0,0,0.06); padding: 3px 10px; border-radius: var(--radius-full); margin-left: 8px; vertical-align: middle; }
+    .excluded-header-icon { font-size: 16px; width: 16px; height: 16px; }
     .acct-type-badge {
       display: inline-block; font-size: 0.72rem; font-weight: 600;
       padding: 3px 10px; border-radius: var(--radius-full);
@@ -535,7 +538,7 @@ interface ActivityItem {
     .empty-history {
       text-align: center; padding: 48px 24px; color: var(--color-text-muted);
     }
-    .empty-history mat-icon { font-size: 48px; width: 48px; height: 48px; opacity: 0.4; }
+    .empty-history mat-icon { font-size: 32px; width: 32px; height: 32px; opacity: 0.4; }
     .empty-history p { margin-top: 12px; }
 
     /* Commission History */

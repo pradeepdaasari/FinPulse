@@ -144,7 +144,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                   <mat-icon>visibility</mat-icon>
                 </button>
                 <button mat-icon-button class="action-btn action-delete" (click)="$event.stopPropagation(); deleteLoan(loan)" matTooltip="Delete">
-                  <mat-icon>delete</mat-icon>
+                  <mat-icon>delete_outline</mat-icon>
                 </button>
               </div>
             </td>
@@ -200,7 +200,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                 <mat-icon>edit</mat-icon>
               </button>
               <button mat-icon-button class="action-btn action-delete" (click)="deleteLoan(loan)">
-                <mat-icon>delete</mat-icon>
+                <mat-icon>delete_outline</mat-icon>
               </button>
             </div>
           </div>
@@ -385,7 +385,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       .mobile-cards { display: block; }
       .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
       .stat-card { padding: 12px 10px; gap: 8px; }
-      .stat-card mat-icon { font-size: 22px; width: 22px; height: 22px; padding: 8px; border-radius: 10px; }
+      .stat-card mat-icon { font-size: 22px; width: 22px; height: 22px; padding: 11px; border-radius: 10px; }
       .stat-value { font-size: 1rem; }
       table { min-width: 0; }
       .mat-column-aprPercent,

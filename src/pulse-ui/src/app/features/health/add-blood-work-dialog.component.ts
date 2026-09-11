@@ -40,7 +40,7 @@ import { BloodWorkResult } from '../../core/models/blood-work.model';
 
       <h3 class="results-header">
         Test Results
-        <button mat-icon-button (click)="addResult()"><mat-icon>add_circle</mat-icon></button>
+        <button mat-icon-button (click)="addResult()"><mat-icon>add</mat-icon></button>
       </h3>
 
       <div class="results-list">

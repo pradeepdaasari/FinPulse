@@ -19,4 +19,6 @@ public class BankAccountCreateDto
     public decimal? FuturesCommissionPerContract { get; set; }
     public decimal? OptionsRegFeePerContract { get; set; }
     public decimal? FuturesRegFeePerContract { get; set; }
+
+    public bool IsExcluded { get; set; }
 }

@@ -194,7 +194,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
                   <mat-icon>edit</mat-icon> Edit
                 </button>
                 <button class="m-action-pill danger" (click)="deleteCategory(parent)">
-                  <mat-icon>delete</mat-icon> Delete
+                  <mat-icon>delete_outline</mat-icon> Delete
                 </button>
                 <button class="m-action-pill primary" (click)="startMobileAdd(parent.id)">
                   <mat-icon>add</mat-icon> Subcategory
@@ -222,7 +222,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
                         <mat-icon>edit</mat-icon>
                       </button>
                       <button class="m-action-btn danger" (click)="deleteCategory(child)">
-                        <mat-icon>delete</mat-icon>
+                        <mat-icon>delete_outline</mat-icon>
                       </button>
                     }
                   </div>
@@ -536,7 +536,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
                       <mat-icon>edit</mat-icon>
                     </button>
                     <button mat-icon-button color="warn" (click)="deleteCategory(parent)" matTooltip="Delete">
-                      <mat-icon>delete</mat-icon>
+                      <mat-icon>delete_outline</mat-icon>
                     </button>
                     <button mat-button color="primary" (click)="startAddChild(parent.id)">
                       <mat-icon>add</mat-icon> Add Subcategory
@@ -635,7 +635,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
                             <mat-icon>edit</mat-icon>
                           </button>
                           <button mat-icon-button color="warn" (click)="deleteCategory(child)" matTooltip="Delete">
-                            <mat-icon>delete</mat-icon>
+                            <mat-icon>delete_outline</mat-icon>
                           </button>
                         }
                       </div>

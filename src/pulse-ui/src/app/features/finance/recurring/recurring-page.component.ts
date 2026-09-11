@@ -212,7 +212,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                   <mat-icon>edit</mat-icon>
                 </button>
                 <button mat-icon-button class="action-btn action-delete" (click)="deleteItem(r)">
-                  <mat-icon>delete</mat-icon>
+                  <mat-icon>delete_outline</mat-icon>
                 </button>
               </div>
             </td>
@@ -258,7 +258,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                   <mat-icon>edit</mat-icon>
                 </button>
                 <button mat-icon-button class="action-btn action-delete" (click)="deleteItem(r)">
-                  <mat-icon>delete</mat-icon>
+                  <mat-icon>delete_outline</mat-icon>
                 </button>
               </div>
             </div>

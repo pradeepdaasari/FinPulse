@@ -23,6 +23,8 @@ public class BankAccount
     public decimal? OptionsRegFeePerContract { get; set; }
     public decimal? FuturesRegFeePerContract { get; set; }
 
+    public bool IsExcluded { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }

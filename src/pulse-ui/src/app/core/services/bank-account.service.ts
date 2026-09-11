@@ -29,6 +29,10 @@ export class BankAccountService {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
 
+  toggleExcluded(id: number): Observable<BankAccount> {
+    return this.http.patch<BankAccount>(`${this.baseUrl}/${id}/excluded`, {});
+  }
+
   getCommissionHistory(accountId: number): Observable<CommissionSchedule[]> {
     return this.http.get<CommissionSchedule[]>(`${this.baseUrl}/${accountId}/commissions`);
   }

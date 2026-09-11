@@ -100,7 +100,7 @@ interface WisdomItem {
                   <span class="rule-text" [innerHTML]="rule.text"></span>
                   <div class="rule-actions">
                     <button mat-icon-button (click)="editRule(rule)"><mat-icon>edit</mat-icon></button>
-                    <button mat-icon-button color="warn" (click)="deleteRule(rule)"><mat-icon>delete</mat-icon></button>
+                    <button mat-icon-button color="warn" (click)="deleteRule(rule)"><mat-icon>delete_outline</mat-icon></button>
                   </div>
                 </div>
               }

@@ -95,7 +95,7 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
           <mat-icon>check_circle</mat-icon> Compliant
         </button>
         <button mat-stroked-button [class.active-chip]="filter() === 'non-compliant'" (click)="filter.set('non-compliant')">
-          <mat-icon>cancel</mat-icon> Non-Compliant
+          <mat-icon>close</mat-icon> Non-Compliant
         </button>
       </div>
       <button mat-raised-button color="primary" (click)="openAddTrade()">

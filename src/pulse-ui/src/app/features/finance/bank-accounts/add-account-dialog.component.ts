@@ -8,6 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { BankAccountService } from '../../../core/services/bank-account.service';
 import { BankAccount } from '../../../core/models/bank-account.model';
 import { CommissionChangeDialogComponent, CommissionChangeDialogData } from './commission-change-dialog.component';
@@ -24,7 +25,8 @@ import { CommissionChangeDialogComponent, CommissionChangeDialogData } from './c
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatSlideToggleModule
   ],
   template: `
     <div class="dialog-header">
@@ -61,6 +63,12 @@ import { CommissionChangeDialogComponent, CommissionChangeDialogData } from './c
           </mat-form-field>
         </div>
 
+        <div class="excluded-toggle">
+          <mat-slide-toggle formControlName="isExcluded" color="primary">
+            <span class="excluded-toggle-label">Exclude from total</span>
+            <span class="excluded-toggle-hint">Balance won't count toward your total</span>
+          </mat-slide-toggle>
+        </div>
         @if (form.value.accountType === 'Brokerage') {
           <div class="fees-section">
             <div class="fees-header">
@@ -156,6 +164,13 @@ import { CommissionChangeDialogComponent, CommissionChangeDialogData } from './c
       margin-top: 8px;
     }
     .fees-hint mat-icon { font-size: 14px; width: 14px; height: 14px; color: var(--color-stat-purple); }
+    .excluded-toggle {
+      padding: 12px 14px; border-radius: var(--radius-md);
+      border: 1px solid var(--color-border); margin-bottom: 4px;
+    }
+    .excluded-toggle mat-slide-toggle { width: 100%; }
+    .excluded-toggle-label { display: block; font-size: 0.85rem; font-weight: 600; }
+    .excluded-toggle-hint { display: block; font-size: 0.7rem; color: var(--color-text-muted); margin-top: 2px; }
     .dialog-actions {
       padding: 12px 24px 16px !important;
       border-top: 1px solid var(--color-border);
@@ -198,7 +213,8 @@ export class AddAccountDialogComponent implements OnInit {
     optionsCommission: [null as number | null],
     optionsRegFee: [null as number | null],
     futuresCommission: [null as number | null],
-    futuresRegFee: [null as number | null]
+    futuresRegFee: [null as number | null],
+    isExcluded: [false]
   });
 
   ngOnInit(): void {
@@ -210,7 +226,8 @@ export class AddAccountDialogComponent implements OnInit {
         optionsCommission: this.data.optionsCommissionPerContract ?? null,
         optionsRegFee: this.data.optionsRegFeePerContract ?? null,
         futuresCommission: this.data.futuresCommissionPerContract ?? null,
-        futuresRegFee: this.data.futuresRegFeePerContract ?? null
+        futuresRegFee: this.data.futuresRegFeePerContract ?? null,
+        isExcluded: this.data.isExcluded ?? false
       });
     }
   }
@@ -227,7 +244,8 @@ export class AddAccountDialogComponent implements OnInit {
       optionsCommissionPerContract: value.optionsCommission ?? undefined,
       futuresCommissionPerContract: value.futuresCommission ?? undefined,
       optionsRegFeePerContract: value.optionsRegFee ?? undefined,
-      futuresRegFeePerContract: value.futuresRegFee ?? undefined
+      futuresRegFeePerContract: value.futuresRegFee ?? undefined,
+      isExcluded: value.isExcluded ?? false
     };
 
     const req$ = this.editMode

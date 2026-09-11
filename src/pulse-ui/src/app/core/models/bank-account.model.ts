@@ -9,6 +9,7 @@ export interface BankAccount {
   futuresCommissionPerContract?: number;
   optionsRegFeePerContract?: number;
   futuresRegFeePerContract?: number;
+  isExcluded: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -21,6 +22,7 @@ export interface BankAccountCreate {
   futuresCommissionPerContract?: number;
   optionsRegFeePerContract?: number;
   futuresRegFeePerContract?: number;
+  isExcluded?: boolean;
 }
 
 export interface CommissionSchedule {

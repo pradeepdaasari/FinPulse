@@ -112,7 +112,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
           <div class="summary-card stat-manual">
             <div class="summary-item">
               <div class="stat-icon-pill amber-pill">
-                <mat-icon>edit_note</mat-icon>
+                <mat-icon>edit</mat-icon>
               </div>
               <div class="stat-content">
                 <span class="summary-value">{{ summary().manualCount }}</span>
@@ -191,7 +191,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                   <th mat-header-cell *matHeaderCellDef></th>
                   <td mat-cell *matCellDef="let m">
                     <button mat-icon-button class="action-delete" (click)="deleteMovement(m)" aria-label="Delete">
-                        <mat-icon>delete</mat-icon>
+                        <mat-icon>delete_outline</mat-icon>
                       </button>
                   </td>
                 </ng-container>
@@ -229,7 +229,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                 }
                 <div class="movement-card-actions">
                   <button mat-icon-button class="action-delete" (click)="deleteMovement(m)" aria-label="Delete">
-                    <mat-icon>delete</mat-icon>
+                    <mat-icon>delete_outline</mat-icon>
                   </button>
                 </div>
               </div>
