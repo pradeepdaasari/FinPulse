@@ -6,6 +6,13 @@ export interface FundingSource {
   name: string;
   currentBalance: number;
   accountType?: string;
+  usageCount?: number;
+}
+
+export interface SourceUsage {
+  type: string;
+  id: number;
+  count: number;
 }
 
 export interface FundingSourcesResponse {

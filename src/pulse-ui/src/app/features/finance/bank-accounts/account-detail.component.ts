@@ -793,13 +793,9 @@ export class AccountDetailComponent implements OnInit {
         width: '480px', maxWidth: '95vw', data: { expense: txn }
       });
       ref.afterClosed().subscribe(result => {
-        if (result) {
-          if (result.id) {
-            this.expenseService.update(result.id, result).subscribe({
-              next: () => { this.notify.success('Transaction updated'); this.loadAccount(); },
-              error: () => this.notify.error('Failed to update')
-            });
-          }
+        if (result?.saved) {
+          this.notify.success('Transaction updated');
+          this.loadAccount();
         }
       });
     });

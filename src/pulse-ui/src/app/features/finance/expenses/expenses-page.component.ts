@@ -175,6 +175,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                       <ng-container matColumnDef="amount">
                         <th mat-header-cell *matHeaderCellDef mat-sort-header>Amount</th>
                         <td mat-cell *matCellDef="let e" [class.amount-cell]="true"
+                            [class.expense-amount]="e.transactionType === 'Expense' || !e.transactionType"
                             [class.income-amount]="e.transactionType === 'Income'"
                             [class.transfer-amount]="e.transactionType === 'Transfer'"
                             [class.refund-amount]="e.transactionType === 'Refund'"
@@ -247,6 +248,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                         </div>
                         <div class="txn-right">
                           <span class="txn-amount"
+                                [class.expense-amount]="e.transactionType === 'Expense' || !e.transactionType"
                                 [class.income-amount]="e.transactionType === 'Income'"
                                 [class.transfer-amount]="e.transactionType === 'Transfer'"
                                 [class.refund-amount]="e.transactionType === 'Refund'"
@@ -433,9 +435,10 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table { width: 100%; min-width: 700px; }
     .amount-cell { font-weight: 600; }
-    .income-amount { color: var(--color-success); }
-    .transfer-amount { color: var(--color-primary); }
-    .refund-amount { color: var(--color-success); font-style: italic; }
+    .expense-amount { color: #c62828 !important; }
+    .income-amount { color: var(--color-success) !important; }
+    .transfer-amount { color: var(--color-primary) !important; }
+    .refund-amount { color: var(--color-success) !important; font-style: italic; }
     .card-payment-amount { color: var(--color-accent); }
 
     /* Type badge */
@@ -792,18 +795,12 @@ export class ExpensesPageComponent implements OnInit {
       if (!result) return;
       if (result.loanPayment) {
         this.notify.success(`${result.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} payment recorded for ${result.debtName}`);
+        this.loadData();
         return;
       }
-      if (result.splits) {
-        this.expenseService.createSplit(result.splits).subscribe({
-          next: () => { this.notify.success('Transaction saved'); this.loadData(); },
-          error: (err) => this.notify.error(err.error?.message || 'Failed to save transaction')
-        });
-      } else {
-        this.expenseService.create(result).subscribe({
-          next: () => { this.notify.success('Transaction saved'); this.loadData(); },
-          error: (err) => this.notify.error(err.error?.message || 'Failed to save transaction')
-        });
+      if (result.saved) {
+        this.notify.success(result.isEdit ? 'Transaction updated' : 'Transaction saved');
+        this.loadData();
       }
     });
   }
@@ -811,36 +808,30 @@ export class ExpensesPageComponent implements OnInit {
   addExpenseForCategory(categoryId: number): void {
     const data: ExpenseDialogData = { expense: null, prefilledCategoryId: categoryId };
     const ref = this.dialog.open(AddExpenseDialogComponent, { data, panelClass: 'expense-dialog-panel' });
-    ref.afterClosed().subscribe((result: DailyExpenseCreate | undefined) => {
-      if (!result) return;
-      this.expenseService.create(result).subscribe({
-        next: () => { this.notify.success('Transaction saved'); this.loadData(); },
-        error: (err) => this.notify.error(err.error?.message || 'Failed to save transaction')
-      });
+    ref.afterClosed().subscribe((result: any) => {
+      if (!result?.saved) return;
+      this.notify.success('Transaction saved');
+      this.loadData();
     });
   }
 
   duplicateExpense(expense: DailyExpense): void {
     const data: ExpenseDialogData = { expense: null, prefill: expense };
     const ref = this.dialog.open(AddExpenseDialogComponent, { data, panelClass: 'expense-dialog-panel' });
-    ref.afterClosed().subscribe((result: DailyExpenseCreate | undefined) => {
-      if (!result) return;
-      this.expenseService.create(result).subscribe({
-        next: () => { this.notify.success('Transaction saved'); this.loadData(); },
-        error: (err) => this.notify.error(err.error?.message || 'Failed to save transaction')
-      });
+    ref.afterClosed().subscribe((result: any) => {
+      if (!result?.saved) return;
+      this.notify.success('Transaction saved');
+      this.loadData();
     });
   }
 
   editExpense(expense: DailyExpense): void {
     const data: ExpenseDialogData = { expense };
     const ref = this.dialog.open(AddExpenseDialogComponent, { data, panelClass: 'expense-dialog-panel' });
-    ref.afterClosed().subscribe((result: DailyExpenseCreate | undefined) => {
-      if (!result) return;
-      this.expenseService.update(expense.id, result).subscribe({
-        next: () => { this.notify.success('Transaction updated'); this.loadData(); },
-        error: (err) => this.notify.error(err.error?.message || 'Failed to update transaction')
-      });
+    ref.afterClosed().subscribe((result: any) => {
+      if (!result?.saved) return;
+      this.notify.success('Transaction updated');
+      this.loadData();
     });
   }
 

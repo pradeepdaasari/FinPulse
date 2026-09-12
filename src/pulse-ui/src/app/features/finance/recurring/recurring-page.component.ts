@@ -558,7 +558,7 @@ export class RecurringPageComponent implements OnInit {
       fundingSourceType: item.fundingSourceType as FundingSourceType | null,
       fundingSourceId: item.fundingSourceId
     };
-    const data: ExpenseDialogData = { expense: null, prefill };
+    const data: ExpenseDialogData = { expense: null, prefill, returnPayload: true };
     const ref = this.dialog.open(AddExpenseDialogComponent, { data, panelClass: 'expense-dialog-panel' });
     ref.afterClosed().subscribe((result: DailyExpenseCreate | undefined) => {
       if (!result) return;
