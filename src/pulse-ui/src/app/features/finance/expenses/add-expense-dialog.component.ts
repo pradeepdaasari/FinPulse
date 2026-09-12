@@ -898,6 +898,7 @@ export class AddExpenseDialogComponent implements OnInit {
   savingLoanPayment = signal(false);
   cardMinPayments = new Map<number, number>();
   private sourceUsageMap = new Map<string, number>();
+  private categoryUsageMap = new Map<number, number>();
   allSources = signal<FundingSource[]>([]);
   filteredSources = signal<FundingSource[]>([]);
   bankAccountSources = signal<FundingSource[]>([]);
@@ -1032,6 +1033,9 @@ export class AddExpenseDialogComponent implements OnInit {
     this.expenseService.getSourceUsage().subscribe(usage => {
       for (const u of usage) this.sourceUsageMap.set(`${u.type}:${u.id}`, u.count);
     });
+    this.expenseService.getCategoryUsage().subscribe(usage => {
+      for (const u of usage) this.categoryUsageMap.set(u.categoryId, u.count);
+    });
     this.fundingSourceService.getAll().subscribe(sources => {
       this.allSources.set(sources);
       this.filterSources();
@@ -1119,7 +1123,21 @@ export class AddExpenseDialogComponent implements OnInit {
   private loadCategories(): void {
     const type = this.form.value.transactionType === 'Income' ? 'Income' : 'Expense';
     this.categoryService.getAll(type).subscribe(cats => {
-      this.categories.set(cats);
+      const sorted = cats.map(parent => {
+        const children = [...(parent.children || [])].sort((a, b) => {
+          const aCount = this.categoryUsageMap.get(a.id) ?? 0;
+          const bCount = this.categoryUsageMap.get(b.id) ?? 0;
+          if (bCount !== aCount) return bCount - aCount;
+          return a.name.localeCompare(b.name);
+        });
+        const totalUsage = children.reduce((sum, c) => sum + (this.categoryUsageMap.get(c.id) ?? 0), 0)
+          + (this.categoryUsageMap.get(parent.id) ?? 0);
+        return { ...parent, children, _totalUsage: totalUsage };
+      }).sort((a, b) => {
+        if (b._totalUsage !== a._totalUsage) return b._totalUsage - a._totalUsage;
+        return a.name.localeCompare(b.name);
+      });
+      this.categories.set(sorted);
       const currentId = this.form.value.categoryId;
       if (currentId) {
         this.categoryInputCtrl.setValue(currentId as any, { emitEvent: false });

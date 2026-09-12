@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, inject, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ViewChild, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -111,8 +111,9 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                                 [class.type-income]="e.transactionType === 'Income'"
                                 [class.type-transfer]="e.transactionType === 'Transfer'"
                                 [class.type-refund]="e.transactionType === 'Refund'"
-                                [class.type-card]="e.transactionType === 'CardPayment'">
-                            {{ e.transactionType || 'Expense' }}
+                                [class.type-card]="e.transactionType === 'CardPayment'"
+                                [class.type-loan]="e.transactionType === 'LoanPayment'">
+                            {{ e.transactionType === 'LoanPayment' ? 'Loan Payment' : e.transactionType === 'CardPayment' ? 'Card Payment' : (e.transactionType || 'Expense') }}
                           </span>
                         </td>
                       </ng-container>
@@ -162,6 +163,12 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                               {{ e.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon>
                               <mat-icon class="source-icon">credit_card</mat-icon> {{ e.toFundingSourceName }}
                             </span>
+                          } @else if (e.transactionType === 'LoanPayment' && e.fundingSourceName && e.toFundingSourceName) {
+                            <span class="source-cell loan-payment-source">
+                              <mat-icon class="source-icon">{{ getSourceIcon(e.fundingSourceId, e.fundingSourceType) }}</mat-icon>
+                              {{ e.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon>
+                              <mat-icon class="source-icon">account_balance</mat-icon> {{ e.toFundingSourceName }}
+                            </span>
                           } @else if (e.fundingSourceName) {
                             <span class="source-cell">
                               <mat-icon class="source-icon">{{ getSourceIcon(e.fundingSourceId, e.fundingSourceType) }}</mat-icon>
@@ -179,18 +186,24 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                             [class.income-amount]="e.transactionType === 'Income'"
                             [class.transfer-amount]="e.transactionType === 'Transfer'"
                             [class.refund-amount]="e.transactionType === 'Refund'"
-                            [class.card-payment-amount]="e.transactionType === 'CardPayment'">
+                            [class.card-payment-amount]="e.transactionType === 'CardPayment'"
+                            [class.loan-payment-amount]="e.transactionType === 'LoanPayment'">
                           @if (e.transactionType === 'Income') { +{{ e.amount | currency }} }
                           @else if (e.transactionType === 'Transfer') { ⇔ {{ e.amount | currency }} }
                           @else if (e.transactionType === 'Refund') { ↩ {{ e.amount | currency }} }
                           @else if (e.transactionType === 'CardPayment') { 💳 {{ e.amount | currency }} }
+                          @else if (e.transactionType === 'LoanPayment') { 🏦 {{ e.amount | currency }} }
                           @else { {{ e.amount | currency }} }
                         </td>
                       </ng-container>
                       <ng-container matColumnDef="actions">
                         <th mat-header-cell *matHeaderCellDef></th>
                         <td mat-cell *matCellDef="let e">
-                          @if (e.linkedToTrade) {
+                          @if (e.source === 'payment') {
+                            <span class="auto-trade-badge" matTooltip="Payment — manage from Cards/Loans section">
+                              <mat-icon class="auto-trade-icon">{{ e.transactionType === 'CardPayment' ? 'credit_card' : 'account_balance' }}</mat-icon> Payment
+                            </span>
+                          } @else if (e.linkedToTrade) {
                             <span class="auto-trade-badge" matTooltip="Linked to trade journal — edit/delete from Trading">
                               <mat-icon class="auto-trade-icon">link</mat-icon> Trade
                             </span>
@@ -213,7 +226,8 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                           [class.row-income]="row.transactionType === 'Income'"
                           [class.row-transfer]="row.transactionType === 'Transfer'"
                           [class.row-refund]="row.transactionType === 'Refund'"
-                          [class.row-card]="row.transactionType === 'CardPayment'"></tr>
+                          [class.row-card]="row.transactionType === 'CardPayment'"
+                          [class.row-loan]="row.transactionType === 'LoanPayment'"></tr>
                     </table>
                   </div>
                 </mat-card-content>
@@ -225,12 +239,13 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                   <div class="date-group">
                     <div class="date-header">{{ group.label }}</div>
                     @for (e of group.items; track e.id) {
-                      <div class="txn-card" (click)="!e.linkedToTrade && editExpense(e)" [class.auto-trade-card]="e.linkedToTrade">
+                      <div class="txn-card" (click)="!e.linkedToTrade && e.source !== 'payment' && editExpense(e)" [class.auto-trade-card]="e.linkedToTrade || e.source === 'payment'">
                         <div class="txn-left">
                           <div class="txn-cat-dot" [class.dot-income]="e.transactionType === 'Income'"
                                [class.dot-transfer]="e.transactionType === 'Transfer'"
                                [class.dot-refund]="e.transactionType === 'Refund'"
-                               [class.dot-card]="e.transactionType === 'CardPayment'">
+                               [class.dot-card]="e.transactionType === 'CardPayment'"
+                               [class.dot-loan]="e.transactionType === 'LoanPayment'">
                             <mat-icon>{{ getCategoryIcon(e) }}</mat-icon>
                           </div>
                         </div>
@@ -242,7 +257,8 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                                   [class.type-income]="e.transactionType === 'Income'"
                                   [class.type-transfer]="e.transactionType === 'Transfer'"
                                   [class.type-refund]="e.transactionType === 'Refund'"
-                                  [class.type-card]="e.transactionType === 'CardPayment'">{{ e.transactionType || 'Expense' }}</span>
+                                  [class.type-card]="e.transactionType === 'CardPayment'"
+                                  [class.type-loan]="e.transactionType === 'LoanPayment'">{{ e.transactionType === 'LoanPayment' ? 'Loan Payment' : e.transactionType === 'CardPayment' ? 'Card Payment' : (e.transactionType || 'Expense') }}</span>
                             · {{ e.date | date:'shortTime' }}{{ e.categoryName ? ' · ' + e.categoryName : '' }}{{ e.merchant ? ' · ' + e.merchant : '' }}
                           </span>
                         </div>
@@ -252,10 +268,13 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                                 [class.income-amount]="e.transactionType === 'Income'"
                                 [class.transfer-amount]="e.transactionType === 'Transfer'"
                                 [class.refund-amount]="e.transactionType === 'Refund'"
-                                [class.card-payment-amount]="e.transactionType === 'CardPayment'">
+                                [class.card-payment-amount]="e.transactionType === 'CardPayment'"
+                                [class.loan-payment-amount]="e.transactionType === 'LoanPayment'">
                             @if (e.transactionType === 'Income') { +{{ e.amount | currency }} }
                             @else if (e.transactionType === 'Transfer') { {{ e.amount | currency }} }
                             @else if (e.transactionType === 'Refund') { +{{ e.amount | currency }} }
+                            @else if (e.transactionType === 'CardPayment') { 💳 {{ e.amount | currency }} }
+                            @else if (e.transactionType === 'LoanPayment') { 🏦 {{ e.amount | currency }} }
                             @else { -{{ e.amount | currency }} }
                           </span>
                         </div>
@@ -307,6 +326,29 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                 </div>
               </div>
             </div>
+
+            @if (insight(); as ins) {
+              <div class="insight-banner" [class]="'insight-' + ins.level">
+                <div class="insight-icon-wrap">
+                  <mat-icon>{{ ins.icon }}</mat-icon>
+                </div>
+                <div class="insight-body">
+                  <span class="insight-title">{{ ins.title }}</span>
+                  <span class="insight-text">{{ ins.message }}</span>
+                </div>
+              </div>
+            }
+
+            @if (overBudgetCategories().length > 0) {
+              <div class="alert-chips">
+                @for (cat of overBudgetCategories(); track cat.categoryId) {
+                  <span class="alert-chip">
+                    <mat-icon>warning</mat-icon>
+                    {{ cat.categoryName }}: {{ (-cat.remaining) | currency }} over
+                  </span>
+                }
+              </div>
+            }
 
             @if (summary().length > 0) {
               <div class="summary-list">
@@ -440,6 +482,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     .transfer-amount { color: var(--color-primary) !important; }
     .refund-amount { color: var(--color-success) !important; font-style: italic; }
     .card-payment-amount { color: var(--color-accent); }
+    .loan-payment-amount { color: var(--color-stat-purple); }
 
     /* Type badge */
     .type-badge {
@@ -457,6 +500,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     .type-transfer { background: var(--color-stat-blue-bg); color: var(--color-primary); }
     .type-refund { background: var(--color-stat-amber-bg); color: var(--color-warning); }
     .type-card { background: var(--color-stat-purple-bg); color: var(--color-stat-purple); }
+    .type-loan { background: #e8eaf6; color: #3949ab; }
 
     /* Row left border by type */
     tr.mat-mdc-row { border-left: 3px solid transparent; }
@@ -465,6 +509,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     tr.row-transfer { border-left-color: var(--color-primary); }
     tr.row-refund { border-left-color: var(--color-warning); }
     tr.row-card { border-left-color: var(--color-stat-purple); }
+    tr.row-loan { border-left-color: #3949ab; }
 
     .cat-chip {
       display: inline-flex;
@@ -483,6 +528,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     .source-icon { font-size: 16px; width: 16px; height: 16px; opacity: 0.7; }
     .transfer-source { color: var(--color-primary); }
     .card-payment-source { color: var(--color-accent); }
+    .loan-payment-source { color: #3949ab; }
     .arrow-icon { font-size: 14px; width: 14px; height: 14px; }
     .tag-badge {
       display: inline-block;
@@ -495,6 +541,43 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
       font-weight: 500;
       vertical-align: middle;
     }
+
+    /* Insight Banner */
+    .insight-banner {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 18px; margin-bottom: var(--spacing-sm);
+      border-radius: var(--radius-md); border-left: 4px solid;
+    }
+    .insight-success { background: var(--color-stat-green-bg); border-left-color: var(--color-success); }
+    .insight-info { background: var(--color-stat-blue-bg); border-left-color: var(--color-primary); }
+    .insight-warn { background: var(--color-stat-amber-bg); border-left-color: var(--color-warning); }
+    .insight-danger { background: var(--color-stat-red-bg); border-left-color: var(--color-danger); }
+    .insight-icon-wrap {
+      width: 38px; height: 38px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .insight-success .insight-icon-wrap { background: rgba(52,199,89,0.15); }
+    .insight-success .insight-icon-wrap mat-icon { color: var(--color-success); }
+    .insight-info .insight-icon-wrap { background: rgba(0,122,255,0.15); }
+    .insight-info .insight-icon-wrap mat-icon { color: var(--color-primary); }
+    .insight-warn .insight-icon-wrap { background: rgba(255,149,0,0.15); }
+    .insight-warn .insight-icon-wrap mat-icon { color: var(--color-warning); }
+    .insight-danger .insight-icon-wrap { background: rgba(255,59,48,0.15); }
+    .insight-danger .insight-icon-wrap mat-icon { color: var(--color-danger); }
+    .insight-icon-wrap mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .insight-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .insight-title { font-weight: 700; font-size: 0.88rem; }
+    .insight-text { font-size: 0.82rem; color: var(--color-text-secondary); line-height: 1.4; }
+
+    /* Over-budget Alert Chips */
+    .alert-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--spacing-sm); }
+    .alert-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 12px; border-radius: var(--radius-full);
+      background: var(--color-stat-red-bg); color: var(--color-danger);
+      font-size: 0.76rem; font-weight: 600; white-space: nowrap;
+    }
+    .alert-chip mat-icon { font-size: 14px; width: 14px; height: 14px; }
 
     /* Mobile card feed */
     .mobile-feed { display: none; }
@@ -549,6 +632,8 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     .txn-cat-dot.dot-refund mat-icon { color: var(--color-warning); }
     .txn-cat-dot.dot-card { background: var(--color-stat-purple-bg); }
     .txn-cat-dot.dot-card mat-icon { color: var(--color-stat-purple); }
+    .txn-cat-dot.dot-loan { background: #e8eaf6; }
+    .txn-cat-dot.dot-loan mat-icon { color: #3949ab; }
     .txn-mid { flex: 1; min-width: 0; }
     .txn-desc { display: block; font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
     .txn-meta { display: block; font-size: 0.8rem; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
@@ -600,6 +685,50 @@ export class ExpensesPageComponent implements OnInit {
   totalBudgeted = signal(0);
   totalSpent = signal(0);
   totalRemaining = signal(0);
+
+  overBudgetCategories = computed(() =>
+    this.summary().filter(s => s.remaining < 0).sort((a, b) => a.remaining - b.remaining)
+  );
+
+  insight = computed(() => {
+    const budgeted = this.totalBudgeted();
+    const spent = this.totalSpent();
+    if (budgeted <= 0) return null;
+
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const dayOfMonth = now.getDate();
+    const monthProgress = dayOfMonth / daysInMonth;
+    const spentPercent = spent / budgeted;
+    const paceRatio = spentPercent / monthProgress;
+    const remaining = budgeted - spent;
+    const daysLeft = daysInMonth - dayOfMonth;
+    const dailyBudgetLeft = daysLeft > 0 ? remaining / daysLeft : 0;
+
+    if (spent === 0) {
+      return { level: 'success', icon: 'rocket_launch', title: 'Fresh start!', message: `You have ${this.fmtCurrency(budgeted)} budgeted this month. Make every dollar count.` };
+    }
+    if (spentPercent >= 1) {
+      return { level: 'danger', icon: 'account_balance_wallet', title: 'Budget exceeded', message: `You've spent ${this.fmtCurrency(spent - budgeted)} over budget. Focus on essentials for the rest of the month.` };
+    }
+    if (spentPercent >= 0.9) {
+      return { level: 'warn', icon: 'speed', title: 'Almost at limit', message: `Only ${this.fmtCurrency(remaining)} left with ${daysLeft} days to go. That's ${this.fmtCurrency(dailyBudgetLeft)}/day — you've got this.` };
+    }
+    if (paceRatio > 1.15) {
+      return { level: 'warn', icon: 'trending_up', title: 'Spending ahead of pace', message: `You're ${Math.round((paceRatio - 1) * 100)}% ahead of pace. Slow down a bit — ${this.fmtCurrency(dailyBudgetLeft)}/day keeps you on track.` };
+    }
+    if (paceRatio < 0.7 && monthProgress > 0.25) {
+      return { level: 'success', icon: 'emoji_events', title: 'Great discipline!', message: `You're well under pace — ${this.fmtCurrency(remaining)} remaining with ${daysLeft} days left. Keep it up!` };
+    }
+    if (paceRatio <= 1.15) {
+      return { level: 'info', icon: 'check_circle', title: 'On track', message: `You're right on pace. ${this.fmtCurrency(dailyBudgetLeft)}/day available for the next ${daysLeft} days.` };
+    }
+    return null;
+  });
+
+  private fmtCurrency(val: number): string {
+    return val.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+  }
 
   viewMode = signal<'month' | 'range'>('month');
   rangeStartDate: Date | null = null;
@@ -700,6 +829,7 @@ export class ExpensesPageComponent implements OnInit {
       case 'Transfer': return 'swap_horiz';
       case 'Refund': return 'undo';
       case 'CardPayment': return 'credit_card';
+      case 'LoanPayment': return 'account_balance';
       default: return 'shopping_cart';
     }
   }

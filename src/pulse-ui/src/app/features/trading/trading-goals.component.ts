@@ -100,6 +100,7 @@ interface MetricDef {
         <div class="summary-info">
           <span class="summary-count">{{ achievedCount() }}/{{ progress().length }} goals achieved</span>
           <span class="summary-period">{{ timeframeLabel() }}</span>
+          <span class="summary-range">{{ timeframeRange() }}</span>
         </div>
       </div>
     }
@@ -352,6 +353,7 @@ interface MetricDef {
     }
     .summary-count { font-size: 1rem; font-weight: 700; display: block; }
     .summary-period { font-size: 0.8rem; color: var(--color-text-muted); text-transform: capitalize; }
+    .summary-range { font-size: 0.78rem; font-weight: 600; color: var(--color-primary); display: block; margin-top: 2px; }
 
     /* Goals Grid */
     .goals-grid { display: grid; grid-template-columns: 1fr; gap: var(--spacing-sm); }
@@ -527,6 +529,28 @@ export class TradingGoalsComponent implements OnInit {
       case 'daily': return 'Today';
       case 'weekly': return 'This Week';
       case 'monthly': return 'This Month';
+      default: return '';
+    }
+  });
+  timeframeRange = computed(() => {
+    const now = new Date();
+    const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    switch (this.timeframe()) {
+      case 'daily':
+        return now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+      case 'weekly': {
+        const day = now.getDay();
+        const start = new Date(now);
+        start.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        return `${fmt(start)} – ${fmt(end)}`;
+      }
+      case 'monthly': {
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        return `${fmt(start)} – ${fmt(end)}`;
+      }
       default: return '';
     }
   });
@@ -878,8 +902,9 @@ export class TradingGoalsComponent implements OnInit {
     if (timeframe === 'weekly') {
       const end = new Date(d);
       end.setDate(end.getDate() + 6);
-      return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+      return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
     }
-    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${lastDay.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
   }
 }

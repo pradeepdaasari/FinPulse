@@ -89,19 +89,43 @@ public class ExpenseController : ControllerBase
             .ThenByDescending(e => e.CreatedAt)
             .ToListAsync();
 
+        // Fetch payment histories for the same date range and merge into results
+        var paymentQuery = _db.PaymentHistories.Where(p => p.UserId == UserId);
+        if (dateFrom.HasValue && dateTo.HasValue)
+        {
+            var fromUtc = TimeZoneHelper.ToUtc(dateFrom.Value, tz);
+            var toUtc = TimeZoneHelper.ToUtc(dateTo.Value.Date.AddDays(1), tz);
+            paymentQuery = paymentQuery.Where(p => p.PaymentDate >= fromUtc && p.PaymentDate < toUtc);
+        }
+        else if (!allTime)
+        {
+            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+            var targetYear = year ?? now.Year;
+            var targetMonth = month ?? now.Month;
+            var (startUtc, endUtc) = TimeZoneHelper.MonthRangeUtc(targetYear, targetMonth, tz);
+            paymentQuery = paymentQuery.Where(p => p.PaymentDate >= startUtc && p.PaymentDate < endUtc);
+        }
+        var payments = await paymentQuery.OrderByDescending(p => p.PaymentDate).ToListAsync();
+
         var bankAccountIds = expenses
             .Where(e => e.FundingSourceType == FundingSourceType.BankAccount && e.FundingSourceId.HasValue)
             .Select(e => e.FundingSourceId!.Value)
             .Union(expenses.Where(e => e.TransactionType == TransactionType.Transfer && e.ToFundingSourceId.HasValue).Select(e => e.ToFundingSourceId!.Value))
+            .Union(payments.Where(p => p.FromAccountId.HasValue).Select(p => p.FromAccountId!.Value))
             .Distinct();
         var creditCardIds = expenses
             .Where(e => e.FundingSourceType == FundingSourceType.CreditCard && e.FundingSourceId.HasValue)
             .Select(e => e.FundingSourceId!.Value)
             .Union(expenses.Where(e => e.TransactionType == TransactionType.CardPayment && e.ToFundingSourceId.HasValue).Select(e => e.ToFundingSourceId!.Value))
+            .Union(payments.Where(p => p.DebtType == DebtType.CreditCard).Select(p => p.DebtId))
             .Distinct();
+        var loanIds = payments.Where(p => p.DebtType == DebtType.PersonalLoan).Select(p => p.DebtId).Distinct().ToList();
 
         var bankNames = await _db.BankAccounts.Where(a => bankAccountIds.Contains(a.Id)).ToDictionaryAsync(a => a.Id, a => a.AccountName);
         var cardNames = await _db.CreditCards.Where(c => creditCardIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.CardName);
+        var loanNames = loanIds.Count > 0
+            ? await _db.PersonalLoans.Where(l => loanIds.Contains(l.Id)).ToDictionaryAsync(l => l.Id, l => l.LenderName)
+            : new Dictionary<int, string>();
 
         var expenseIds = expenses.Select(e => e.Id).ToList();
         var tradeLinkedIds = await _db.TradeEntries
@@ -109,7 +133,7 @@ public class ExpenseController : ControllerBase
             .Select(t => t.LinkedExpenseId!.Value)
             .ToHashSetAsync();
 
-        var result = expenses.Select(e => new
+        var expenseResults = expenses.Select(e => new
         {
             e.Id,
             e.Date,
@@ -135,8 +159,45 @@ public class ExpenseController : ControllerBase
             e.TagType,
             LinkedToTrade = tradeLinkedIds.Contains(e.Id),
             e.CreatedAt,
-            e.UpdatedAt
+            e.UpdatedAt,
+            Source = "expense"
         });
+
+        var paymentResults = payments.Select(p => new
+        {
+            Id = -p.Id,
+            Date = p.PaymentDate,
+            CategoryId = (int?)null,
+            CategoryName = (string?)null,
+            CategoryIcon = (string?)null,
+            ParentCategoryName = (string?)null,
+            Amount = p.AmountPaid,
+            Description = p.DebtType == DebtType.CreditCard
+                ? $"Card Payment – {cardNames.GetValueOrDefault(p.DebtId, "Card")}"
+                : $"Loan Payment – {loanNames.GetValueOrDefault(p.DebtId, "Loan")}",
+            Merchant = (string?)null,
+            TransactionType = p.DebtType == DebtType.CreditCard ? "CardPayment" : "LoanPayment",
+            FundingSourceType = p.FromAccountId.HasValue ? "BankAccount" : (string?)null,
+            FundingSourceId = p.FromAccountId,
+            FundingSourceName = p.FromAccountId.HasValue ? bankNames.GetValueOrDefault(p.FromAccountId.Value) : null,
+            ToFundingSourceId = (int?)p.DebtId,
+            ToFundingSourceName = p.DebtType == DebtType.CreditCard
+                ? cardNames.GetValueOrDefault(p.DebtId)
+                : loanNames.GetValueOrDefault(p.DebtId),
+            SplitGroupId = (string?)null,
+            Tag = (string?)null,
+            TagType = (string?)null,
+            LinkedToTrade = false,
+            CreatedAt = p.PaymentDate,
+            UpdatedAt = (DateTime?)null,
+            Source = "payment"
+        });
+
+        var result = expenseResults.Select(e => (e.Date, Item: (object)e))
+            .Concat(paymentResults.Select(p => (p.Date, Item: (object)p)))
+            .OrderByDescending(x => x.Date)
+            .Select(x => x.Item)
+            .ToList();
 
         return Ok(result);
     }
@@ -315,6 +376,17 @@ public class ExpenseController : ControllerBase
             .Where(e => e.UserId == UserId && e.FundingSourceId != null && e.FundingSourceType != null)
             .GroupBy(e => new { e.FundingSourceType, e.FundingSourceId })
             .Select(g => new { type = g.Key.FundingSourceType!.Value.ToString(), id = g.Key.FundingSourceId!.Value, count = g.Count() })
+            .ToListAsync();
+        return Ok(usage);
+    }
+
+    [HttpGet("category-usage")]
+    public async Task<ActionResult<List<object>>> GetCategoryUsage()
+    {
+        var usage = await _db.DailyExpenses
+            .Where(e => e.UserId == UserId && e.CategoryId != null)
+            .GroupBy(e => e.CategoryId)
+            .Select(g => new { categoryId = g.Key!.Value, count = g.Count() })
             .ToListAsync();
         return Ok(usage);
     }
