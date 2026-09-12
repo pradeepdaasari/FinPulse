@@ -32,6 +32,7 @@ export interface ExpenseDialogData {
   prefill?: Partial<DailyExpense>;
   preselectedType?: string;
   preselectedDebtKey?: string;
+  returnPayload?: boolean;
 }
 
 @Component({
@@ -478,8 +479,8 @@ export interface ExpenseDialogData {
 
     <mat-dialog-actions align="end" class="dialog-actions">
       <button mat-stroked-button mat-dialog-close class="cancel-btn">Cancel</button>
-      <button mat-raised-button color="primary" class="save-btn" (click)="save()" [disabled]="form.invalid || loading() || savingLoanPayment() || (splitMode() && !splitTotalValid()) || ((form.value.transactionType === 'LoanPayment' || form.value.transactionType === 'CardPayment') && !selectedDebt())">
-        @if (savingLoanPayment()) {
+      <button mat-raised-button color="primary" class="save-btn" (click)="save()" [disabled]="form.invalid || loading() || saving() || savingLoanPayment() || (splitMode() && !splitTotalValid()) || ((form.value.transactionType === 'LoanPayment' || form.value.transactionType === 'CardPayment') && !selectedDebt())">
+        @if (saving() || savingLoanPayment()) {
           <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
           Saving...
         } @else {
@@ -896,6 +897,7 @@ export class AddExpenseDialogComponent implements OnInit {
   loanPaymentMode = signal<'full' | 'minimum' | 'custom'>('full');
   savingLoanPayment = signal(false);
   cardMinPayments = new Map<number, number>();
+  private sourceUsageMap = new Map<string, number>();
   allSources = signal<FundingSource[]>([]);
   filteredSources = signal<FundingSource[]>([]);
   bankAccountSources = signal<FundingSource[]>([]);
@@ -1027,6 +1029,9 @@ export class AddExpenseDialogComponent implements OnInit {
     });
 
     this.loadCategories();
+    this.expenseService.getSourceUsage().subscribe(usage => {
+      for (const u of usage) this.sourceUsageMap.set(`${u.type}:${u.id}`, u.count);
+    });
     this.fundingSourceService.getAll().subscribe(sources => {
       this.allSources.set(sources);
       this.filterSources();
@@ -1123,10 +1128,17 @@ export class AddExpenseDialogComponent implements OnInit {
     });
   }
 
+  private sortByUsage = (a: FundingSource, b: FundingSource): number => {
+    const aCount = this.sourceUsageMap.get(`${a.type}:${a.id}`) ?? 0;
+    const bCount = this.sourceUsageMap.get(`${b.type}:${b.id}`) ?? 0;
+    if (bCount !== aCount) return bCount - aCount;
+    return a.name.localeCompare(b.name);
+  };
+
   private filterSources(): void {
     const txnType = this.form.value.transactionType;
-    const banks = this.allSources().filter(s => s.type === 'BankAccount').sort((a, b) => a.name.localeCompare(b.name));
-    const cards = this.allSources().filter(s => s.type === 'CreditCard').sort((a, b) => a.name.localeCompare(b.name));
+    const banks = this.allSources().filter(s => s.type === 'BankAccount').sort(this.sortByUsage);
+    const cards = this.allSources().filter(s => s.type === 'CreditCard').sort(this.sortByUsage);
     this.bankAccountSources.set(banks);
     this.creditCardSources.set(cards);
     this.updateToAccounts();
@@ -1134,7 +1146,7 @@ export class AddExpenseDialogComponent implements OnInit {
     if (txnType === 'Income') {
       this.filteredSources.set(banks);
     } else {
-      this.filteredSources.set([...this.allSources()].sort((a, b) => a.name.localeCompare(b.name)));
+      this.filteredSources.set([...this.allSources()].sort(this.sortByUsage));
     }
   }
 
@@ -1257,6 +1269,8 @@ export class AddExpenseDialogComponent implements OnInit {
     return new Date(naiveUtc.getTime() + offsetMs);
   }
 
+  saving = signal(false);
+
   save(): void {
     const val = this.form.value;
     const isTransfer = val.transactionType === 'Transfer';
@@ -1313,7 +1327,22 @@ export class AddExpenseDialogComponent implements OnInit {
           tagType: val.tag ? resolvedTagType : null
         };
       });
-      this.dialogRef.close({ splits });
+      if (this.data?.returnPayload) {
+        this.dialogRef.close({ splits });
+        return;
+      }
+      this.saving.set(true);
+      this.expenseService.createSplit(splits).subscribe({
+        next: () => {
+          this.merchantService.invalidateCache();
+          this.dialogRef.close({ saved: true });
+        },
+        error: (err: any) => {
+          this.saving.set(false);
+          this.notify.error(err?.error?.message || 'Failed to save transaction');
+          this.cdr.detectChanges();
+        }
+      });
       return;
     }
 
@@ -1330,6 +1359,28 @@ export class AddExpenseDialogComponent implements OnInit {
       tag: val.tag || null,
       tagType: val.tag ? resolvedTagType : null
     };
-    this.dialogRef.close(expense);
+
+    if (this.data?.returnPayload) {
+      this.dialogRef.close(expense);
+      return;
+    }
+
+    this.saving.set(true);
+    const isEdit = !!this.data?.expense;
+    const save$ = isEdit
+      ? this.expenseService.update(this.data!.expense!.id, expense)
+      : this.expenseService.create(expense);
+
+    save$.subscribe({
+      next: () => {
+        this.merchantService.invalidateCache();
+        this.dialogRef.close({ saved: true, isEdit });
+      },
+      error: (err: any) => {
+        this.saving.set(false);
+        this.notify.error(err?.error?.message || `Failed to ${isEdit ? 'update' : 'save'} transaction`);
+        this.cdr.detectChanges();
+      }
+    });
   }
 }

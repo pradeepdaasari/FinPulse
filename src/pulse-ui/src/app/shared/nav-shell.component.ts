@@ -1123,16 +1123,8 @@ export class NavShellComponent implements OnInit, OnDestroy {
           this.notify.success(`${result.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} payment recorded for ${result.debtName}`);
           return;
         }
-        if (result.splits) {
-          this.expenseService.createSplit(result.splits).subscribe({
-            next: () => this.notify.success('Transaction saved'),
-            error: (err) => this.notify.error(err.error?.message || 'Failed to save transaction')
-          });
-        } else {
-          this.expenseService.create(result).subscribe({
-            next: () => this.notify.success('Transaction saved'),
-            error: (err) => this.notify.error(err.error?.message || 'Failed to save transaction')
-          });
+        if (result.saved) {
+          this.notify.success(result.isEdit ? 'Transaction updated' : 'Transaction saved');
         }
       });
     });

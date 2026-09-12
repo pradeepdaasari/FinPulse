@@ -289,11 +289,34 @@ public class ExpenseController : ControllerBase
     {
         var descriptions = await _db.DailyExpenses
             .Where(e => e.UserId == UserId && e.Description != null && e.Description != "")
-            .Select(e => e.Description)
-            .Distinct()
-            .OrderBy(d => d)
+            .GroupBy(e => e.Description)
+            .OrderByDescending(g => g.Count())
+            .Select(g => g.Key)
             .ToListAsync();
         return Ok(descriptions);
+    }
+
+    [HttpGet("merchants")]
+    public async Task<ActionResult<List<string>>> GetMerchants()
+    {
+        var merchants = await _db.DailyExpenses
+            .Where(e => e.UserId == UserId && e.Merchant != null && e.Merchant != "")
+            .GroupBy(e => e.Merchant)
+            .OrderByDescending(g => g.Count())
+            .Select(g => g.Key)
+            .ToListAsync();
+        return Ok(merchants);
+    }
+
+    [HttpGet("source-usage")]
+    public async Task<ActionResult<List<object>>> GetSourceUsage()
+    {
+        var usage = await _db.DailyExpenses
+            .Where(e => e.UserId == UserId && e.FundingSourceId != null && e.FundingSourceType != null)
+            .GroupBy(e => new { e.FundingSourceType, e.FundingSourceId })
+            .Select(g => new { type = g.Key.FundingSourceType!.Value.ToString(), id = g.Key.FundingSourceId!.Value, count = g.Count() })
+            .ToListAsync();
+        return Ok(usage);
     }
 
     [HttpGet("tag-types")]
