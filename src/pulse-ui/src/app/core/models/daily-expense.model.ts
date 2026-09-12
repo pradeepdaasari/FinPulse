@@ -23,6 +23,7 @@ export interface DailyExpense {
   linkedToTrade: boolean;
   createdAt: string;
   updatedAt: string;
+  source?: 'expense' | 'payment';
 }
 
 export interface DailyExpenseCreate {

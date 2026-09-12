@@ -50,6 +50,10 @@ export class DailyExpenseService {
     return this.http.get<SourceUsage[]>(`${this.baseUrl}/source-usage`);
   }
 
+  getCategoryUsage(): Observable<{ categoryId: number; count: number }[]> {
+    return this.http.get<{ categoryId: number; count: number }[]>(`${this.baseUrl}/category-usage`);
+  }
+
   getTags(): Observable<string[]> {
     return this.http.get<string[]>(`${this.baseUrl}/tags`);
   }
