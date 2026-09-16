@@ -365,7 +365,14 @@ import { routeFadeAnimation } from './route-animations';
   `,
   styles: [`
     .shell-container {
+      height: 100dvh;
       height: 100vh;
+    }
+
+    @supports (height: 100dvh) {
+      .shell-container {
+        height: 100dvh;
+      }
     }
 
     .sidenav {
@@ -409,7 +416,7 @@ import { routeFadeAnimation } from './route-animations';
       overflow-y: auto;
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
-      height: calc(100vh - 60px);
+      height: calc(100dvh - 60px);
     }
 
     .ios-section {
@@ -631,14 +638,35 @@ import { routeFadeAnimation } from './route-animations';
     }
 
     :host ::ng-deep .mat-sidenav-content {
-      scrollbar-gutter: stable;
       overscroll-behavior-y: contain;
+    }
+
+    @media (min-width: 1200px) {
+      :host ::ng-deep .mat-sidenav-content {
+        scrollbar-gutter: stable;
+      }
     }
 
     .content-area {
       position: relative;
       padding: 24px 32px;
-      min-height: calc(100vh - 52px);
+      min-height: calc(100dvh - 52px);
+    }
+
+    @media (max-width: 1199px) {
+      .content-area {
+        padding: 20px;
+      }
+      .user-email {
+        display: none;
+      }
+      .user-info {
+        padding: 4px;
+        background: none;
+      }
+      .search-trigger .search-kbd {
+        display: none;
+      }
     }
 
     @media (max-width: 768px) {
@@ -648,15 +676,7 @@ import { routeFadeAnimation } from './route-animations';
       .toolbar-title {
         font-size: var(--text-base);
       }
-      .user-email {
-        display: none;
-      }
-      .user-info {
-        padding: 4px;
-        background: none;
-      }
-      .search-trigger .search-hint,
-      .search-trigger .search-kbd {
+      .search-trigger .search-hint {
         display: none;
       }
       .search-trigger {
@@ -966,7 +986,7 @@ export class NavShellComponent implements OnInit, OnDestroy {
   };
 
   constructor() {
-    this.breakpointObserver.observe(['(max-width: 768px)']).subscribe(result => {
+    this.breakpointObserver.observe(['(max-width: 1199px)']).subscribe(result => {
       this.isMobile.set(result.matches);
     });
 

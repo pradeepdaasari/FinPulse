@@ -571,6 +571,10 @@ interface ActivityItem {
       .header-row { flex-direction: column; align-items: flex-start; }
       .summary-stats { gap: 14px; }
     }
+    @media (max-width: 1199px) {
+      .desktop-only { display: none !important; }
+      .mobile-feed { display: block; }
+    }
     @media (max-width: 599px) {
       .desktop-only { display: none !important; }
       .mobile-feed { display: block; }
@@ -633,10 +637,15 @@ export class AccountDetailComponent implements OnInit {
   allActivity = computed<ActivityItem[]>(() => {
     const accountId = this.account()?.id;
     const currentBal = this.account()?.currentBalance ?? 0;
-    const txnIds = new Set(this.allTransactions().map(t => t.id));
-    const txnItems = this.allTransactions().map(t => ({ kind: 'transaction' as const, date: t.date, balance: 0, txn: t }));
+    const txns = this.allTransactions();
+    const txnIds = new Set(txns.map(t => t.id));
+    const paymentIds = new Set(txns.filter(t => t.source === 'payment' && t.id < 0).map(t => -t.id));
+    const txnItems = txns.map(t => ({ kind: 'transaction' as const, date: t.date, balance: 0, txn: t }));
     const mvItems = this.allMovements()
-      .filter(m => !m.relatedExpenseId || !txnIds.has(m.relatedExpenseId))
+      .filter(m =>
+        (!m.relatedExpenseId || !txnIds.has(m.relatedExpenseId)) &&
+        (!m.relatedPaymentId || !paymentIds.has(m.relatedPaymentId))
+      )
       .map(m => ({ kind: 'movement' as const, date: m.movementDate, balance: 0, movement: m }));
     const sorted = [...txnItems, ...mvItems].sort((a, b) => b.date.localeCompare(a.date));
     let bal = currentBal;
