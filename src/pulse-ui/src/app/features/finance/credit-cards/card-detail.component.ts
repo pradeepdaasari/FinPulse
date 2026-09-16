@@ -572,6 +572,12 @@ interface CardActivityItem {
       color: var(--color-danger, #f44336);
     }
 
+    @media (max-width: 1199px) {
+      .desktop-only { display: none !important; }
+      .mobile-only { display: block !important; }
+      .mobile-cards { display: block !important; }
+    }
+
     @media (max-width: 599px) {
       .desktop-only { display: none !important; }
       .mobile-only { display: block !important; }
@@ -627,7 +633,10 @@ export class CardDetailComponent implements OnInit {
   txnMonth = signal<string | null>(null);
 
   allCombined = computed(() => {
-    const expenses: CardTransaction[] = this.allTransactions().map(t => ({
+    const payIds = new Set(this.paymentHistory().map(p => p.id));
+    const expenses: CardTransaction[] = this.allTransactions()
+      .filter(t => !(t.source === 'payment' && t.id < 0 && payIds.has(-t.id)))
+      .map(t => ({
       id: t.id,
       date: t.date,
       description: t.description,

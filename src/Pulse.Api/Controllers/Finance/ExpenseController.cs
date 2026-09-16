@@ -105,6 +105,14 @@ public class ExpenseController : ControllerBase
             var (startUtc, endUtc) = TimeZoneHelper.MonthRangeUtc(targetYear, targetMonth, tz);
             paymentQuery = paymentQuery.Where(p => p.PaymentDate >= startUtc && p.PaymentDate < endUtc);
         }
+        if (fundingSourceId.HasValue && fundingSourceType == "BankAccount")
+            paymentQuery = paymentQuery.Where(p => p.FromAccountId == fundingSourceId.Value);
+        else if (fundingSourceType == "CreditCard")
+            paymentQuery = paymentQuery.Where(p => false);
+
+        if (toFundingSourceId.HasValue)
+            paymentQuery = paymentQuery.Where(p => p.DebtId == toFundingSourceId.Value);
+
         var payments = await paymentQuery.OrderByDescending(p => p.PaymentDate).ToListAsync();
 
         var bankAccountIds = expenses

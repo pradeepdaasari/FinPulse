@@ -644,6 +644,10 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     @media (max-width: 768px) {
       .stats-row { grid-template-columns: repeat(2, 1fr); }
     }
+    @media (max-width: 1199px) {
+      .desktop-only { display: none !important; }
+      .mobile-feed { display: block; }
+    }
     @media (max-width: 599px) {
       .expenses-header { flex-direction: column; align-items: stretch; gap: 6px; }
       .view-toggle { margin-right: 0; align-self: center; }

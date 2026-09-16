@@ -533,6 +533,10 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     @media (max-width: 768px) {
       .stat-cards { grid-template-columns: repeat(2, 1fr); }
     }
+    @media (max-width: 1199px) {
+      .desktop-only { display: none !important; }
+      .mobile-only { display: block; }
+    }
     @media (max-width: 599px) {
       .stat-cards { grid-template-columns: repeat(2, 1fr); gap: 8px; }
       .stat-card { padding: 12px; gap: 10px; }

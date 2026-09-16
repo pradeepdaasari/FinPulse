@@ -228,6 +228,11 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
     .bar-fill { height: 100%; background: var(--color-primary); border-radius: 4px; transition: width 0.3s; }
     .bar-value { font-size: 0.75rem; font-weight: 600; min-width: 50px; }
 
+    @media (max-width: 1199px) {
+      .desktop-only { display: none !important; }
+      .mobile-cards { display: block; }
+    }
+
     @media (max-width: 599px) {
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .desktop-only { display: none !important; }

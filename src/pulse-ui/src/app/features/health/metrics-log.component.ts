@@ -283,6 +283,11 @@ import { NotificationService } from '../../core/services/notification.service';
       .stats-row { grid-template-columns: repeat(2, 1fr); }
     }
 
+    @media (max-width: 1199px) {
+      .desktop-only { display: none !important; }
+      .mobile-cards { display: block; }
+    }
+
     @media (max-width: 599px) {
       .desktop-only { display: none !important; }
       .mobile-cards { display: block; }

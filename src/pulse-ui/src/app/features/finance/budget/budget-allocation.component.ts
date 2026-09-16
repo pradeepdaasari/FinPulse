@@ -372,6 +372,11 @@ import { BudgetAllocation } from '../../../core/models/budget.model';
     }
 
     /* Responsive */
+    @media (max-width: 1199px) {
+      .desktop-only { display: none; }
+      .mobile-only { display: block; }
+    }
+
     @media (max-width: 599px) {
       .income-stats {
         grid-template-columns: repeat(2, 1fr);

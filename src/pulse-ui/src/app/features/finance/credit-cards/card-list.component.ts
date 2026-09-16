@@ -425,6 +425,10 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       .header-row { flex-direction: column; align-items: flex-start; }
       .stats-row { grid-template-columns: repeat(2, 1fr); }
     }
+    @media (max-width: 1199px) {
+      .desktop-only { display: none !important; }
+      .mobile-cards { display: block; }
+    }
     @media (max-width: 599px) {
       .desktop-only { display: none !important; }
       .mobile-cards { display: block; }

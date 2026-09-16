@@ -407,6 +407,10 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
     .empty-state p { color: var(--color-text-secondary); margin: 0 0 20px; font-size: 0.9rem; }
 
     .desktop-only { display: block; }
+    @media (max-width: 1199px) {
+      .desktop-only { display: none !important; }
+      .mobile-feed { display: block; }
+    }
     @media (max-width: 599px) {
       .stats-row { grid-template-columns: repeat(2, 1fr); }
       .controls-row { flex-direction: column; align-items: stretch; }

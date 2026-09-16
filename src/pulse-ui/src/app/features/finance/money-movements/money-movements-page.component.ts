@@ -448,6 +448,10 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
 
     /* --- Mobile cards (iOS native feel) --- */
     .mobile-cards { display: none; }
+    @media (max-width: 1199px) {
+      .desktop-table { display: none !important; }
+      .mobile-cards { display: block; }
+    }
     @media (max-width: 599px) {
       .desktop-table { display: none !important; }
       .mobile-cards { display: block; }

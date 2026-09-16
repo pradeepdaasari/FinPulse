@@ -430,6 +430,9 @@ interface CalendarDay {
       .summary-grid { grid-template-columns: repeat(2, 1fr); }
       .hero-card { grid-column: span 2; }
     }
+    @media (max-width: 1199px) {
+      .desktop-only { display: none; }
+    }
     @media (max-width: 599px) {
       .calendar-page { padding: 8px; }
       .day-cell { min-height: 56px; padding: 5px; }
