@@ -295,8 +295,8 @@ import { routeFadeAnimation } from './route-animations';
 
     </mat-sidenav-container>
     <button mat-fab class="global-fab" [class.kb-hidden]="keyboardOpen()" [class.fab-hidden]="hideGlobalFab()"
-      [matMenuTriggerFor]="isPhone() ? null : fabMenu"
-      (click)="isPhone() && openQuickExpense()"
+      [matMenuTriggerFor]="isMobile() ? null : fabMenu"
+      (click)="isMobile() && openQuickExpense()"
       aria-label="Quick actions">
       <mat-icon>add</mat-icon>
     </button>
