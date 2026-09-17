@@ -263,12 +263,7 @@ import { routeFadeAnimation } from './route-animations';
           <div class="route-progress-bar"><div class="route-progress-fill"></div></div>
         }
         <mat-toolbar class="app-toolbar">
-          @if (isMobile() && !isPhone()) {
-            <button mat-icon-button (click)="sidenav.toggle()" aria-label="Toggle menu">
-              <mat-icon>menu</mat-icon>
-            </button>
-          }
-          @if (isPhone()) {
+          @if (isMobile()) {
             <a class="mobile-brand" routerLink="/dashboard">
               <mat-icon class="mobile-brand-icon">monitor_heart</mat-icon>
             </a>
@@ -336,7 +331,7 @@ import { routeFadeAnimation } from './route-animations';
       </button>
     </mat-menu>
 
-    @if (isPhone()) {
+    @if (isMobile()) {
       <nav class="bottom-tabs" [class.kb-hidden]="keyboardOpen()" role="navigation" aria-label="Main navigation">
         <a class="tab-item" [class.tab-active]="activeModule() === 'finance' && !isExpensesRoute()" routerLink="/dashboard">
           <mat-icon class="tab-ic-blue">dashboard</mat-icon>
@@ -690,17 +685,7 @@ import { routeFadeAnimation } from './route-animations';
       display: none;
     }
 
-    @media (max-width: 599px) {
-      .shell-container, :host ::ng-deep .mat-sidenav-content {
-        overflow-x: hidden;
-      }
-      .sidenav {
-        width: 300px;
-        background: var(--color-bg);
-        border-right: none;
-        box-shadow: 0 0 40px rgba(0,0,0,0.2);
-        z-index: 1002 !important;
-      }
+    @media (max-width: 1199px) {
       .mobile-brand {
         display: flex;
         align-items: center;
@@ -718,6 +703,19 @@ import { routeFadeAnimation } from './route-animations';
         width: 20px !important;
         height: 20px !important;
         color: var(--color-primary);
+      }
+    }
+
+    @media (max-width: 599px) {
+      .shell-container, :host ::ng-deep .mat-sidenav-content {
+        overflow-x: hidden;
+      }
+      .sidenav {
+        width: 300px;
+        background: var(--color-bg);
+        border-right: none;
+        box-shadow: 0 0 40px rgba(0,0,0,0.2);
+        z-index: 1002 !important;
       }
       .content-area {
         padding: 14px 14px;
@@ -894,10 +892,21 @@ import { routeFadeAnimation } from './route-animations';
       border-radius: 14px;
     }
 
-    @media (max-width: 599px) {
+    @media (max-width: 1199px) {
       .global-fab {
         bottom: calc(52px + env(safe-area-inset-bottom, 0px) + 16px);
         right: 20px;
+      }
+      .content-area {
+        padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px) + 20px) !important;
+      }
+      .ios-nav-scroll {
+        padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px) + 20px);
+      }
+    }
+
+    @media (max-width: 599px) {
+      .global-fab {
         width: 52px !important;
         height: 52px !important;
       }
@@ -905,12 +914,6 @@ import { routeFadeAnimation } from './route-animations';
         font-size: 24px !important;
         width: 24px !important;
         height: 24px !important;
-      }
-      .content-area {
-        padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px) + 20px) !important;
-      }
-      .ios-nav-scroll {
-        padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px) + 20px);
       }
     }
   `]
