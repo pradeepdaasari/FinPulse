@@ -137,7 +137,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
                     [class.violated]="violatedRules().includes(rule.id)"
                     (click)="toggleViolation(rule.id)">
               <mat-icon>{{ violatedRules().includes(rule.id) ? 'close' : 'check' }}</mat-icon>
-              {{ rule.text }}
+              {{ stripHtml(rule.text) }}
             </button>
           }
         </div>
@@ -357,6 +357,10 @@ export class ReviewComponent implements OnInit {
     if (!t.length) return 0;
     return Math.round((t.filter(x => x.checklistCompleted).length / t.length) * 100);
   });
+
+  stripHtml(html: string): string {
+    return html.replace(/<[^>]*>/g, '').trim();
+  }
 
   rules = signal<TradingRule[]>([]);
   recentReviews = signal<DailyReview[]>([]);
