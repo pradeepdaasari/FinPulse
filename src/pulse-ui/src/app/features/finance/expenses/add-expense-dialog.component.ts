@@ -12,6 +12,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { DailyExpense, DailyExpenseCreate, TransactionType, FundingSourceType } from '../../../core/models/daily-expense.model';
 import { toLocalISOString } from '../../../core/utils/date-utils';
 import { Category } from '../../../core/models/category.model';
@@ -41,7 +42,7 @@ export interface ExpenseDialogData {
   imports: [
     CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatDatepickerModule, MatNativeDateModule,
-    MatButtonModule, MatIconModule, MatAutocompleteModule, MatProgressSpinnerModule, MatSlideToggleModule
+    MatButtonModule, MatIconModule, MatAutocompleteModule, MatProgressSpinnerModule, MatSlideToggleModule, MatTooltipModule
   ],
   template: `
     <div class="dialog-banner">
@@ -478,6 +479,11 @@ export interface ExpenseDialogData {
     </mat-dialog-content>
 
     <mat-dialog-actions align="end" class="dialog-actions">
+      @if (data?.expense) {
+        <button mat-stroked-button color="warn" class="delete-btn" (click)="confirmDelete()">
+          <mat-icon>delete_outline</mat-icon> Delete
+        </button>
+      }
       <button mat-stroked-button mat-dialog-close class="cancel-btn">Cancel</button>
       <button mat-raised-button color="primary" class="save-btn" (click)="save()" [disabled]="form.invalid || loading() || saving() || savingLoanPayment() || (splitMode() && !splitTotalValid()) || ((form.value.transactionType === 'LoanPayment' || form.value.transactionType === 'CardPayment') && !selectedDebt())">
         @if (saving() || savingLoanPayment()) {
@@ -740,9 +746,20 @@ export interface ExpenseDialogData {
 
     /* Dialog Actions */
     .dialog-actions {
-      padding: 12px 24px 16px !important;
+      padding: 8px 24px 12px !important;
       border-top: 1px solid var(--color-border);
       gap: 8px;
+    }
+    .delete-btn {
+      color: var(--color-danger) !important;
+      border-color: var(--color-danger) !important;
+      font-weight: 600 !important;
+      border-radius: var(--radius-sm) !important;
+      padding: 0 16px !important;
+      min-height: 38px;
+    }
+    .delete-btn mat-icon {
+      font-size: 18px; width: 18px; height: 18px; margin-right: 4px;
     }
     .split-toggle {
       margin: -4px 0 8px;
@@ -751,13 +768,14 @@ export interface ExpenseDialogData {
     .cancel-btn {
       font-weight: 600 !important;
       border-radius: var(--radius-sm) !important;
-      padding: 0 20px !important;
-      min-height: 40px;
+      padding: 0 16px !important;
+      min-height: 38px;
     }
     .save-btn {
       border-radius: var(--radius-sm) !important;
-      padding: 0 20px !important;
+      padding: 0 16px !important;
       font-weight: 600 !important;
+      min-height: 38px;
       letter-spacing: 0.02em;
     }
     .save-btn mat-icon {
@@ -1288,6 +1306,12 @@ export class AddExpenseDialogComponent implements OnInit {
   }
 
   saving = signal(false);
+
+  confirmDelete(): void {
+    if (confirm('Delete this transaction? This cannot be undone.')) {
+      this.dialogRef.close('delete');
+    }
+  }
 
   save(): void {
     const val = this.form.value;

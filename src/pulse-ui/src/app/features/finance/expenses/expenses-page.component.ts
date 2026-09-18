@@ -963,6 +963,10 @@ export class ExpensesPageComponent implements OnInit {
     const data: ExpenseDialogData = { expense };
     const ref = this.dialog.open(AddExpenseDialogComponent, { data, panelClass: 'expense-dialog-panel' });
     ref.afterClosed().subscribe((result: any) => {
+      if (result === 'delete') {
+        this.deleteExpense(expense);
+        return;
+      }
       if (!result?.saved) return;
       this.notify.success('Transaction updated');
       this.loadData();

@@ -1160,11 +1160,8 @@ export class NavShellComponent implements OnInit, OnDestroy {
         maxWidth: '95vw'
       });
       ref.afterClosed().subscribe((result: any) => {
-        if (result) {
-          this.healthMetricService.create(result).subscribe({
-            next: () => this.notify.success('Metric logged'),
-            error: () => this.notify.error('Failed to save metric')
-          });
+        if (result === true) {
+          this.notify.success('Metric logged');
         }
       });
     });
