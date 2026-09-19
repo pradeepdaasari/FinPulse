@@ -197,50 +197,44 @@ export interface ExpenseDialogData {
         @if (form.value.transactionType === 'Transfer') {
           <mat-form-field appearance="outline">
             <mat-label>From Account</mat-label>
-            <mat-select formControlName="fundingSourceKey" (opened)="bankSearch.set(''); focusInput(fromAcctSearch)">
-              <div class="category-search-box">
-                <mat-icon>search</mat-icon>
-                <input #fromAcctSearch matInput placeholder="Search accounts..." (input)="bankSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
-              </div>
+            <input matInput [formControl]="fromAcctInputCtrl" [matAutocomplete]="fromAcctAuto" (blur)="onFromAcctBlur()" placeholder="Type to search...">
+            <mat-icon matSuffix class="cat-arrow">arrow_drop_down</mat-icon>
+            <mat-autocomplete #fromAcctAuto="matAutocomplete" [displayWith]="displayBankAccount" (optionSelected)="onFromAcctSelected($event)">
               @for (source of filteredBankSources(); track source.id) {
                 <mat-option [value]="'BankAccount:' + source.id">
                   <mat-icon>account_balance</mat-icon>
                   {{ source.name }} ({{ source.currentBalance | currency }})
                 </mat-option>
               }
-            </mat-select>
+            </mat-autocomplete>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>To Account</mat-label>
-            <mat-select formControlName="toFundingSourceKey" (opened)="bankSearch.set(''); focusInput(toAcctSearch)">
-              <div class="category-search-box">
-                <mat-icon>search</mat-icon>
-                <input #toAcctSearch matInput placeholder="Search accounts..." (input)="bankSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
-              </div>
+            <input matInput [formControl]="toAcctInputCtrl" [matAutocomplete]="toAcctAuto" (blur)="onToAcctBlur()" placeholder="Type to search...">
+            <mat-icon matSuffix class="cat-arrow">arrow_drop_down</mat-icon>
+            <mat-autocomplete #toAcctAuto="matAutocomplete" [displayWith]="displayBankAccount" (optionSelected)="onToAcctSelected($event)">
               @for (source of filteredBankSources(); track source.id) {
                 <mat-option [value]="'BankAccount:' + source.id">
                   <mat-icon>account_balance</mat-icon>
                   {{ source.name }} ({{ source.currentBalance | currency }})
                 </mat-option>
               }
-            </mat-select>
+            </mat-autocomplete>
           </mat-form-field>
         } @else if (form.value.transactionType === 'CardPayment') {
           <mat-form-field appearance="outline">
             <mat-label>Select Credit Card</mat-label>
-            <mat-select formControlName="selectedDebtKey" (selectionChange)="onDebtSelected($event.value)" (opened)="cardSearch.set(''); focusInput(cardSearchInput)">
-              <div class="category-search-box">
-                <mat-icon>search</mat-icon>
-                <input #cardSearchInput matInput placeholder="Search cards..." (input)="cardSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
-              </div>
+            <input matInput [formControl]="cardInputCtrl" [matAutocomplete]="cardAuto" (blur)="onCardBlur()" placeholder="Type to search...">
+            <mat-icon matSuffix class="cat-arrow">arrow_drop_down</mat-icon>
+            <mat-autocomplete #cardAuto="matAutocomplete" [displayWith]="displayDebt" (optionSelected)="onCardSelected($event)">
               @for (debt of cardDebts(); track debt.key) {
                 <mat-option [value]="debt.key">
                   <mat-icon>credit_card</mat-icon>
                   {{ debt.name }} — {{ debt.currentBalance | currency }} bal
                 </mat-option>
               }
-            </mat-select>
+            </mat-autocomplete>
           </mat-form-field>
 
           @if (selectedDebt()) {
@@ -281,35 +275,31 @@ export interface ExpenseDialogData {
 
             <mat-form-field appearance="outline">
               <mat-label>From Account</mat-label>
-              <mat-select formControlName="fundingSourceKey" (opened)="bankSearch.set(''); focusInput(cardFromAcctSearch)">
-                <div class="category-search-box">
-                  <mat-icon>search</mat-icon>
-                  <input #cardFromAcctSearch matInput placeholder="Search accounts..." (input)="bankSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
-                </div>
+              <input matInput [formControl]="fromAcctInputCtrl" [matAutocomplete]="fromAcctAutoCard" (blur)="onFromAcctBlur()" placeholder="Type to search...">
+              <mat-icon matSuffix class="cat-arrow">arrow_drop_down</mat-icon>
+              <mat-autocomplete #fromAcctAutoCard="matAutocomplete" [displayWith]="displayBankAccount" (optionSelected)="onFromAcctSelected($event)">
                 @for (source of filteredBankSources(); track source.id) {
                   <mat-option [value]="'BankAccount:' + source.id">
                     <mat-icon>account_balance</mat-icon>
                     {{ source.name }} ({{ source.currentBalance | currency }})
                   </mat-option>
                 }
-              </mat-select>
+              </mat-autocomplete>
             </mat-form-field>
           }
         } @else if (form.value.transactionType === 'LoanPayment') {
           <mat-form-field appearance="outline">
             <mat-label>Select Loan Account</mat-label>
-            <mat-select formControlName="selectedDebtKey" (selectionChange)="onDebtSelected($event.value)" (opened)="loanSearch.set(''); focusInput(loanSearchInput)">
-              <div class="category-search-box">
-                <mat-icon>search</mat-icon>
-                <input #loanSearchInput matInput placeholder="Search loans..." (input)="loanSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
-              </div>
+            <input matInput [formControl]="loanInputCtrl" [matAutocomplete]="loanAuto" (blur)="onLoanBlur()" placeholder="Type to search...">
+            <mat-icon matSuffix class="cat-arrow">arrow_drop_down</mat-icon>
+            <mat-autocomplete #loanAuto="matAutocomplete" [displayWith]="displayDebt" (optionSelected)="onLoanSelected($event)">
               @for (debt of loanDebts(); track debt.key) {
                 <mat-option [value]="debt.key">
                   <mat-icon>account_balance</mat-icon>
                   {{ debt.name }} — {{ debt.currentBalance | currency }} bal
                 </mat-option>
               }
-            </mat-select>
+            </mat-autocomplete>
           </mat-form-field>
 
           @if (selectedDebt()) {
@@ -350,35 +340,31 @@ export interface ExpenseDialogData {
 
             <mat-form-field appearance="outline">
               <mat-label>From Account</mat-label>
-              <mat-select formControlName="fundingSourceKey" (opened)="bankSearch.set(''); focusInput(loanFromAcctSearch)">
-                <div class="category-search-box">
-                  <mat-icon>search</mat-icon>
-                  <input #loanFromAcctSearch matInput placeholder="Search accounts..." (input)="bankSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
-                </div>
+              <input matInput [formControl]="fromAcctInputCtrl" [matAutocomplete]="fromAcctAutoLoan" (blur)="onFromAcctBlur()" placeholder="Type to search...">
+              <mat-icon matSuffix class="cat-arrow">arrow_drop_down</mat-icon>
+              <mat-autocomplete #fromAcctAutoLoan="matAutocomplete" [displayWith]="displayBankAccount" (optionSelected)="onFromAcctSelected($event)">
                 @for (source of filteredBankSources(); track source.id) {
                   <mat-option [value]="'BankAccount:' + source.id">
                     <mat-icon>account_balance</mat-icon>
                     {{ source.name }} ({{ source.currentBalance | currency }})
                   </mat-option>
                 }
-              </mat-select>
+              </mat-autocomplete>
             </mat-form-field>
           }
         } @else {
           <mat-form-field appearance="outline">
             <mat-label>{{ form.value.transactionType === 'Income' ? 'Received into' : form.value.transactionType === 'Refund' ? 'Refunded to' : 'Paid with' }}</mat-label>
-            <mat-select formControlName="fundingSourceKey" (opened)="sourceSearch.set(''); focusInput(sourceSearchInput)">
-              <div class="category-search-box">
-                <mat-icon>search</mat-icon>
-                <input #sourceSearchInput matInput placeholder="Search accounts..." (input)="sourceSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
-              </div>
+            <input matInput [formControl]="sourceInputCtrl" [matAutocomplete]="sourceAuto" (blur)="onSourceBlur()" placeholder="Type to search...">
+            <mat-icon matSuffix class="cat-arrow">arrow_drop_down</mat-icon>
+            <mat-autocomplete #sourceAuto="matAutocomplete" [displayWith]="displaySource" (optionSelected)="onSourceSelected($event)">
               @for (source of filteredSourcesSearched(); track source.type + source.id) {
                 <mat-option [value]="source.type + ':' + source.id">
                   <mat-icon>{{ source.type === 'BankAccount' ? 'account_balance' : 'credit_card' }}</mat-icon>
                   {{ source.name }} ({{ source.currentBalance | currency }})
                 </mat-option>
               }
-            </mat-select>
+            </mat-autocomplete>
           </mat-form-field>
         }
 
@@ -422,18 +408,16 @@ export interface ExpenseDialogData {
 
         <mat-form-field appearance="outline">
           <mat-label>Tag Type (optional)</mat-label>
-          <mat-select formControlName="tagType" (opened)="tagTypeSearch.set(''); focusInput(tagTypeSearchInput)">
-            <div class="category-search-box">
-              <mat-icon>search</mat-icon>
-              <input #tagTypeSearchInput matInput placeholder="Search tag types..." (input)="tagTypeSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
-            </div>
+          <input matInput [formControl]="tagTypeInputCtrl" [matAutocomplete]="tagTypeAuto" (blur)="onTagTypeBlur()" placeholder="Type to search...">
+          <mat-icon matPrefix>category</mat-icon>
+          <mat-icon matSuffix class="cat-arrow">arrow_drop_down</mat-icon>
+          <mat-autocomplete #tagTypeAuto="matAutocomplete" [displayWith]="displayTagType" (optionSelected)="onTagTypeAutoSelected($event)">
             <mat-option [value]="''">-- None --</mat-option>
             @for (tt of filteredTagTypes(); track tt) {
               <mat-option [value]="tt">{{ tt }}</mat-option>
             }
             <mat-option value="__other__">+ New tag type...</mat-option>
-          </mat-select>
-          <mat-icon matPrefix>category</mat-icon>
+          </mat-autocomplete>
         </mat-form-field>
         @if (form.value.tagType === '__other__') {
           <mat-form-field appearance="outline">
@@ -841,6 +825,12 @@ export class AddExpenseDialogComponent implements OnInit {
   categories = signal<Category[]>([]);
   categorySearch = signal('');
   categoryInputCtrl = new FormControl('');
+  sourceInputCtrl = new FormControl('');
+  fromAcctInputCtrl = new FormControl('');
+  toAcctInputCtrl = new FormControl('');
+  cardInputCtrl = new FormControl('');
+  loanInputCtrl = new FormControl('');
+  tagTypeInputCtrl = new FormControl('');
 
   displayCategory = (value: any): string => {
     if (value == null || value === '') return '';
@@ -896,6 +886,91 @@ export class AddExpenseDialogComponent implements OnInit {
       this.categorySearch.set('');
     }, 200);
   }
+
+  displaySource = (value: any): string => {
+    if (!value) return '';
+    const source = this.allSources().find(s => `${s.type}:${s.id}` === value);
+    return source ? `${source.name} ($${source.currentBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })})` : '';
+  };
+  displayBankAccount = (value: any): string => {
+    if (!value) return '';
+    const source = this.bankAccountSources().find(s => `BankAccount:${s.id}` === value);
+    return source ? `${source.name} ($${source.currentBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })})` : '';
+  };
+  displayDebt = (value: any): string => {
+    if (!value) return '';
+    const debt = this.debts().find(d => d.key === value);
+    return debt ? `${debt.name} — $${debt.currentBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })} bal` : '';
+  };
+  displayTagType = (value: any): string => {
+    if (!value || value === '') return '';
+    if (value === '__other__') return '+ New tag type...';
+    return value;
+  };
+
+  onSourceSelected(event: any): void {
+    this.form.patchValue({ fundingSourceKey: event.option.value });
+    this.sourceSearch.set('');
+  }
+  onSourceBlur(): void {
+    setTimeout(() => {
+      this.sourceInputCtrl.setValue(this.form.value.fundingSourceKey || '', { emitEvent: false });
+      this.sourceSearch.set('');
+    }, 200);
+  }
+  onFromAcctSelected(event: any): void {
+    this.form.patchValue({ fundingSourceKey: event.option.value });
+    this.bankSearch.set('');
+  }
+  onFromAcctBlur(): void {
+    setTimeout(() => {
+      this.fromAcctInputCtrl.setValue(this.form.value.fundingSourceKey || '', { emitEvent: false });
+      this.bankSearch.set('');
+    }, 200);
+  }
+  onToAcctSelected(event: any): void {
+    this.form.patchValue({ toFundingSourceKey: event.option.value });
+    this.bankSearch.set('');
+  }
+  onToAcctBlur(): void {
+    setTimeout(() => {
+      this.toAcctInputCtrl.setValue(this.form.value.toFundingSourceKey || '', { emitEvent: false });
+      this.bankSearch.set('');
+    }, 200);
+  }
+  onCardSelected(event: any): void {
+    this.form.patchValue({ selectedDebtKey: event.option.value });
+    this.onDebtSelected(event.option.value);
+    this.cardSearch.set('');
+  }
+  onCardBlur(): void {
+    setTimeout(() => {
+      this.cardInputCtrl.setValue(this.form.value.selectedDebtKey || '', { emitEvent: false });
+      this.cardSearch.set('');
+    }, 200);
+  }
+  onLoanSelected(event: any): void {
+    this.form.patchValue({ selectedDebtKey: event.option.value });
+    this.onDebtSelected(event.option.value);
+    this.loanSearch.set('');
+  }
+  onLoanBlur(): void {
+    setTimeout(() => {
+      this.loanInputCtrl.setValue(this.form.value.selectedDebtKey || '', { emitEvent: false });
+      this.loanSearch.set('');
+    }, 200);
+  }
+  onTagTypeAutoSelected(event: any): void {
+    this.form.patchValue({ tagType: event.option.value });
+    this.tagTypeSearch.set('');
+  }
+  onTagTypeBlur(): void {
+    setTimeout(() => {
+      this.tagTypeInputCtrl.setValue(this.form.value.tagType || '', { emitEvent: false });
+      this.tagTypeSearch.set('');
+    }, 200);
+  }
+  private isKeyPattern(val: string): boolean { return /^(BankAccount|CreditCard|PersonalLoan):\d+$/.test(val); }
   filteredCategories = computed(() => {
     const q = this.categorySearch().toLowerCase();
     if (!q) return this.categories();
@@ -1066,6 +1141,24 @@ export class AddExpenseDialogComponent implements OnInit {
         this.categorySearch.set(val);
       }
     });
+    this.sourceInputCtrl.valueChanges.subscribe(val => {
+      if (typeof val === 'string' && !this.isKeyPattern(val)) this.sourceSearch.set(val);
+    });
+    this.fromAcctInputCtrl.valueChanges.subscribe(val => {
+      if (typeof val === 'string' && !this.isKeyPattern(val)) this.bankSearch.set(val);
+    });
+    this.toAcctInputCtrl.valueChanges.subscribe(val => {
+      if (typeof val === 'string' && !this.isKeyPattern(val)) this.bankSearch.set(val);
+    });
+    this.cardInputCtrl.valueChanges.subscribe(val => {
+      if (typeof val === 'string' && !this.isKeyPattern(val)) this.cardSearch.set(val);
+    });
+    this.loanInputCtrl.valueChanges.subscribe(val => {
+      if (typeof val === 'string' && !this.isKeyPattern(val)) this.loanSearch.set(val);
+    });
+    this.tagTypeInputCtrl.valueChanges.subscribe(val => {
+      if (typeof val === 'string') this.tagTypeSearch.set(val);
+    });
 
     this.loadCategories();
     this.expenseService.getSourceUsage().subscribe(usage => {
@@ -1078,6 +1171,17 @@ export class AddExpenseDialogComponent implements OnInit {
       this.allSources.set(sources);
       this.filterSources();
       this.checkLoaded();
+      const fundingKey = this.form.value.fundingSourceKey;
+      if (fundingKey) {
+        const txnType = this.form.value.transactionType;
+        if (txnType === 'Transfer' || txnType === 'CardPayment' || txnType === 'LoanPayment') {
+          this.fromAcctInputCtrl.setValue(fundingKey, { emitEvent: false });
+        } else {
+          this.sourceInputCtrl.setValue(fundingKey, { emitEvent: false });
+        }
+      }
+      const toKey = this.form.value.toFundingSourceKey;
+      if (toKey) this.toAcctInputCtrl.setValue(toKey, { emitEvent: false });
       this.cdr.detectChanges();
     });
     this.expenseService.getTags().subscribe(tags => {
@@ -1086,7 +1190,13 @@ export class AddExpenseDialogComponent implements OnInit {
       this.checkLoaded();
       this.cdr.detectChanges();
     });
-    this.expenseService.getTagTypes().subscribe(types => { this.tagTypes.set(types); this.checkLoaded(); this.cdr.detectChanges(); });
+    this.expenseService.getTagTypes().subscribe(types => {
+      this.tagTypes.set(types);
+      this.checkLoaded();
+      const initTag = this.form.value.tagType;
+      if (initTag) this.tagTypeInputCtrl.setValue(initTag, { emitEvent: false });
+      this.cdr.detectChanges();
+    });
     this.merchantService.getMerchants().subscribe(merchants => {
       this.filteredMerchants.set(merchants.slice(0, 10));
       this.cdr.detectChanges();
@@ -1102,6 +1212,9 @@ export class AddExpenseDialogComponent implements OnInit {
       if (this.data?.preselectedDebtKey) {
         this.form.patchValue({ selectedDebtKey: this.data.preselectedDebtKey });
         this.onDebtSelected(this.data.preselectedDebtKey);
+        const txnType = this.form.value.transactionType;
+        if (txnType === 'CardPayment') this.cardInputCtrl.setValue(this.data.preselectedDebtKey, { emitEvent: false });
+        else if (txnType === 'LoanPayment') this.loanInputCtrl.setValue(this.data.preselectedDebtKey, { emitEvent: false });
       }
       this.cdr.detectChanges();
     });
@@ -1112,6 +1225,15 @@ export class AddExpenseDialogComponent implements OnInit {
     this.form.get('transactionType')!.valueChanges.subscribe((type) => {
       this.form.patchValue({ categoryId: null });
       this.categoryInputCtrl.setValue('', { emitEvent: false });
+      this.sourceInputCtrl.setValue('', { emitEvent: false });
+      this.fromAcctInputCtrl.setValue('', { emitEvent: false });
+      this.toAcctInputCtrl.setValue('', { emitEvent: false });
+      this.cardInputCtrl.setValue('', { emitEvent: false });
+      this.loanInputCtrl.setValue('', { emitEvent: false });
+      this.sourceSearch.set('');
+      this.bankSearch.set('');
+      this.cardSearch.set('');
+      this.loanSearch.set('');
       this.loadCategories();
       this.filterSources();
       if (type === 'LoanPayment' || type === 'CardPayment') {
