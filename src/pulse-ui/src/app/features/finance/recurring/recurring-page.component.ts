@@ -281,24 +281,24 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     }
     .stat-card {
       display: flex; align-items: center; gap: 12px; padding: 16px;
-      border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-sm);
+      border-radius: var(--radius-md); background: var(--color-surface-solid); border: 1px solid var(--color-border); box-shadow: var(--shadow-xs);
     }
     .stat-card mat-icon {
-      font-size: 24px; width: 44px; height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px;
+      font-size: 26px; width: 26px; height: 26px; padding: 10px; border-radius: var(--radius-sm); box-sizing: content-box; overflow: visible; flex-shrink: 0;
     }
     .stat-blue mat-icon { color: var(--color-stat-blue); background: var(--color-stat-blue-bg); }
     .stat-green mat-icon { color: var(--color-stat-green); background: var(--color-stat-green-bg); }
     .stat-amber mat-icon { color: var(--color-stat-amber); background: var(--color-stat-amber-bg); }
     .stat-purple mat-icon { color: var(--color-stat-purple); background: var(--color-stat-purple-bg); }
     .stat-red mat-icon { color: var(--color-danger); background: var(--color-danger-bg); }
-    .stat-content { display: flex; flex-direction: column; }
-    .stat-value { font-size: 1.2rem; font-weight: 700; color: var(--color-text); }
-    .stat-label { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px; }
+    .stat-content { display: flex; flex-direction: column; min-width: 0; }
+    .stat-value { font-size: 1.25rem; font-weight: var(--weight-bold); color: var(--color-text); letter-spacing: -0.02em; line-height: var(--leading-tight); }
+    .stat-label { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: var(--tracking-wide); margin-top: 2px; }
 
     mat-card { overflow: hidden; padding: 0 !important; }
     .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table { width: 100%; min-width: 600px; }
-    .amount { font-weight: 700; color: var(--color-primary); }
+    .amount { font-weight: var(--weight-bold); color: var(--color-primary); }
     .desc-cell { display: flex; align-items: center; gap: 10px; }
     .cat-icon-wrap {
       width: 36px; height: 36px; border-radius: 10px;
@@ -306,11 +306,11 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       background: var(--color-stat-blue-bg);
     }
     .cat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--color-primary); }
-    .desc-text { font-weight: 500; }
-    .merchant-text { font-size: 0.8rem; color: var(--color-text-secondary); }
-    .toggle-label { font-size: var(--text-xs); font-weight: 500; }
+    .desc-text { font-weight: var(--weight-medium); }
+    .merchant-text { font-size: var(--text-sm); color: var(--color-text-secondary); }
+    .toggle-label { font-size: var(--text-xs); font-weight: var(--weight-medium); }
     .freq-badge {
-      display: inline-block; font-size: 0.68rem; font-weight: 700;
+      display: inline-block; font-size: 0.68rem; font-weight: var(--weight-bold);
       padding: 3px 10px; border-radius: var(--radius-full); white-space: nowrap;
     }
     .freq-daily { background: var(--color-freq-daily-bg); color: var(--color-freq-daily); }
@@ -320,7 +320,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
 
     /* Action Buttons */
     .action-group { display: flex; gap: 2px; }
-    .action-btn { width: 34px; height: 34px; border-radius: 8px !important; }
+    .action-btn { width: 34px; height: 34px; border-radius: var(--radius-xs) !important; transition: background var(--transition-fast) !important; }
     .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .action-edit { color: var(--color-action-edit) !important; }
     .action-edit:hover { background: var(--color-action-edit-bg) !important; }
@@ -330,8 +330,8 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     /* Mobile Cards */
     .mobile-cards { display: none; }
     .rec-card {
-      background: var(--color-surface); border-radius: var(--radius-md);
-      margin-bottom: 10px; padding: 14px; box-shadow: var(--shadow-sm);
+      background: var(--color-surface-solid); border-radius: var(--radius-md);
+      margin-bottom: 10px; padding: 14px; border: 1px solid var(--color-border); box-shadow: var(--shadow-xs);
       border-left: 3px solid var(--color-success);
     }
     .rec-card.rec-paused { border-left-color: var(--color-border); opacity: 0.7; }
@@ -343,27 +343,27 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     }
     .rec-icon-wrap mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); }
     .rec-info { flex: 1; min-width: 0; }
-    .rec-name { display: block; font-weight: 600; font-size: 0.9rem; }
-    .rec-merchant { display: block; font-size: 0.72rem; color: var(--color-text-muted); }
+    .rec-name { display: block; font-weight: var(--weight-semibold); font-size: var(--text-base); }
+    .rec-merchant { display: block; font-size: var(--text-xs); color: var(--color-text-muted); }
     .rec-amount-col { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-    .rec-amount { font-weight: 700; font-size: 1rem; color: var(--color-primary); }
+    .rec-amount { font-weight: var(--weight-bold); font-size: var(--text-base); color: var(--color-primary); }
     .rec-bottom {
       display: flex; align-items: center; justify-content: space-between;
       margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--color-border);
     }
-    .rec-next { font-size: 0.75rem; color: var(--color-text-muted); }
+    .rec-next { font-size: var(--text-xs); color: var(--color-text-muted); }
     .rec-actions { display: flex; align-items: center; gap: 2px; }
 
     /* Due Section */
     .due-section {
-      background: var(--color-surface); border-radius: var(--radius-md);
-      box-shadow: var(--shadow-sm); margin-bottom: var(--spacing-md);
+      background: var(--color-surface-solid); border-radius: var(--radius-md);
+      border: 1px solid var(--color-border); box-shadow: var(--shadow-xs); margin-bottom: var(--spacing-md);
       border-left: 4px solid var(--color-warning);
       overflow: hidden;
     }
     .due-header {
       display: flex; align-items: center; gap: 8px;
-      padding: 12px 16px; font-weight: 600; font-size: 0.9rem;
+      padding: 12px 16px; font-weight: var(--weight-semibold); font-size: var(--text-base);
       background: var(--color-stat-amber-bg); color: var(--color-stat-amber);
     }
     .due-header mat-icon { font-size: 20px; width: 20px; height: 20px; }
@@ -374,16 +374,16 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .due-card:last-child { border-bottom: none; }
     .due-left { display: flex; align-items: center; gap: 12px; }
     .due-icon-wrap { background: var(--color-stat-amber-bg) !important; }
-    .due-date-text { font-size: 0.75rem; color: var(--color-text-muted); }
+    .due-date-text { font-size: var(--text-xs); color: var(--color-text-muted); }
     .due-right { display: flex; align-items: center; gap: 12px; }
-    .due-amount { font-weight: 700; font-size: 1.05rem; }
+    .due-amount { font-weight: var(--weight-bold); font-size: var(--text-lg); }
     .pay-btn { border-radius: var(--radius-sm) !important; font-size: 0.8rem !important; padding: 0 14px !important; }
     .pay-btn mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; }
     .pay-btn-sm { font-size: 0.72rem !important; padding: 0 10px !important; min-height: 30px !important; line-height: 30px !important; border-radius: var(--radius-sm) !important; }
     .pay-btn-sm mat-icon { font-size: 14px; width: 14px; height: 14px; margin-right: 3px; }
-    .due-highlight { color: var(--color-warning); font-weight: 600; }
-    .action-pay { color: var(--color-success) !important; }
-    .action-pay:hover { background: var(--color-stat-green-bg) !important; }
+    .due-highlight { color: var(--color-warning); font-weight: var(--weight-semibold); }
+    .action-pay { color: var(--color-action-pay) !important; }
+    .action-pay:hover { background: var(--color-action-pay-bg) !important; }
     .rec-card.rec-due { border-left-color: var(--color-warning); }
     .rec-card.rec-overdue { border-left-color: var(--color-danger); }
 
@@ -392,15 +392,15 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .overdue-header { background: var(--color-danger-bg); color: var(--color-danger); }
     .overdue-icon-wrap { background: var(--color-danger-bg) !important; }
     .overdue-icon-wrap .cat-icon { color: var(--color-danger) !important; }
-    .overdue-date-text { font-size: 0.75rem; color: var(--color-danger); font-weight: 500; }
+    .overdue-date-text { font-size: var(--text-xs); color: var(--color-danger); font-weight: var(--weight-medium); }
     .overdue-amount { color: var(--color-danger) !important; }
-    .overdue-highlight { color: var(--color-danger); font-weight: 600; }
-    .overdue-badge { font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-full); background: var(--color-danger-bg); color: var(--color-danger); }
+    .overdue-highlight { color: var(--color-danger); font-weight: var(--weight-semibold); }
+    .overdue-badge { font-size: 0.65rem; font-weight: var(--weight-bold); padding: 2px 8px; border-radius: var(--radius-full); background: var(--color-danger-bg); color: var(--color-danger); }
 
     /* Empty State */
     .empty-state { text-align: center; padding: 48px 24px; }
     .empty-icon-wrap {
-      width: 64px; height: 64px; border-radius: 16px;
+      width: 64px; height: 64px; border-radius: var(--radius-md);
       display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;
     }
     .empty-icon-wrap.amber { background: var(--color-stat-amber-bg); }
@@ -419,7 +419,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       .mobile-cards { display: block; }
       .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
       .stat-card { padding: 12px 10px; gap: 8px; }
-      .stat-card mat-icon { font-size: 22px; width: 22px; height: 22px; padding: 8px; border-radius: 10px; }
+      .stat-card mat-icon { font-size: 22px; width: 22px; height: 22px; padding: 8px; border-radius: var(--radius-sm); box-sizing: content-box; overflow: visible; }
       .stat-value { font-size: 1rem; }
       .action-btn { min-width: 44px; min-height: 44px; }
       .pay-btn-sm { min-height: 44px !important; line-height: 44px !important; padding: 0 14px !important; }

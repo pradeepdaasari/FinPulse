@@ -75,17 +75,17 @@ import { Component, input } from '@angular/core';
 
     .skeleton-line, .skeleton-card, .skeleton-circle, .skeleton-chart-area,
     .skeleton-panel, .skeleton-table-header, .skeleton-table-row, .skeleton-list-item {
-      background: var(--color-skeleton, rgba(0, 0, 0, 0.06));
+      background: var(--color-skeleton);
       border-radius: var(--radius-sm);
-      animation: skeleton-pulse 1.5s ease-in-out infinite;
+      animation: skeleton-pulse 1.8s ease-in-out infinite;
     }
 
     .skeleton-line {
-      border-radius: 6px;
+      border-radius: var(--radius-xs);
       margin-bottom: 10px;
-      &.h-sm { height: 12px; }
-      &.h-md { height: 16px; }
-      &.h-lg { height: 24px; }
+      &.h-sm { height: 10px; }
+      &.h-md { height: 14px; }
+      &.h-lg { height: 22px; }
       &.w-10 { width: 10%; }
       &.w-15 { width: 15%; }
       &.w-20 { width: 20%; }
@@ -100,9 +100,9 @@ import { Component, input } from '@angular/core';
 
     .skeleton-card {
       padding: 20px;
-      border-radius: var(--radius-md, 14px);
+      border-radius: var(--radius-md);
       min-height: 120px;
-      margin-bottom: 16px;
+      margin-bottom: var(--spacing-md);
       &.tall { min-height: 280px; }
       &.wide { min-height: 200px; }
       &.chart { min-height: 320px; }
@@ -111,43 +111,43 @@ import { Component, input } from '@angular/core';
     .skeleton-dashboard {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: var(--spacing-md);
     }
 
     .skeleton-panel {
       height: 180px;
-      border-radius: var(--radius-md, 14px);
+      border-radius: var(--radius-md);
     }
 
     .skeleton-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
+      gap: var(--spacing-md);
       @media (max-width: 900px) {
         grid-template-columns: 1fr;
       }
     }
 
     .skeleton-table {
-      border-radius: var(--radius-md, 14px);
+      border-radius: var(--radius-md);
       overflow: hidden;
     }
 
     .skeleton-table-header {
       display: flex;
-      gap: 16px;
-      padding: 16px 20px;
+      gap: var(--spacing-md);
+      padding: 14px 20px;
       opacity: 0.5;
     }
 
     .skeleton-table-row {
       display: flex;
-      gap: 16px;
+      gap: var(--spacing-md);
       padding: 14px 20px;
       background: transparent;
-      border-top: 1px solid var(--color-border, rgba(0,0,0,0.06));
+      border-top: 1px solid var(--color-border);
       animation: none;
-      .skeleton-line { animation: skeleton-pulse 1.5s ease-in-out infinite; }
+      .skeleton-line { animation: skeleton-pulse 1.8s ease-in-out infinite; }
     }
 
     .skeleton-circle {
@@ -165,7 +165,7 @@ import { Component, input } from '@angular/core';
       background: transparent;
       animation: none;
       .skeleton-circle, .skeleton-line {
-        animation: skeleton-pulse 1.5s ease-in-out infinite;
+        animation: skeleton-pulse 1.8s ease-in-out infinite;
       }
     }
 
@@ -174,15 +174,15 @@ import { Component, input } from '@angular/core';
     }
 
     .skeleton-chart-area {
-      margin-top: 16px;
+      margin-top: var(--spacing-md);
       height: 200px;
-      border-radius: var(--radius-sm, 10px);
-      opacity: 0.6;
+      border-radius: var(--radius-sm);
+      opacity: 0.5;
     }
 
     @keyframes skeleton-pulse {
       0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
+      50% { opacity: 0.35; }
     }
   `]
 })

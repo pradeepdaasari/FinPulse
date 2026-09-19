@@ -26,7 +26,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
           <h2 class="page-title">Money Flow</h2>
           <p class="page-subtitle">Track where your money moves</p>
         </div>
-        <button mat-flat-button color="primary" class="add-btn" (click)="addMovement()">
+        <button mat-raised-button color="primary" class="add-btn" (click)="addMovement()">
           <mat-icon>add</mat-icon> Add Movement
         </button>
       </div>
@@ -129,7 +129,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
             </div>
             <h3>No money movements yet</h3>
             <p>Movements are auto-tracked when you record loan or credit card payments. You can also add manual entries.</p>
-            <button mat-flat-button color="primary" (click)="addMovement()">
+            <button mat-raised-button color="primary" (click)="addMovement()">
               <mat-icon>add</mat-icon> Add First Movement
             </button>
           </div>
@@ -190,7 +190,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                 <ng-container matColumnDef="actions">
                   <th mat-header-cell *matHeaderCellDef></th>
                   <td mat-cell *matCellDef="let m">
-                    <button mat-icon-button class="action-delete" (click)="deleteMovement(m)" aria-label="Delete">
+                    <button mat-icon-button class="action-btn action-delete" (click)="deleteMovement(m)" aria-label="Delete">
                         <mat-icon>delete_outline</mat-icon>
                       </button>
                   </td>
@@ -228,7 +228,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                   <div class="movement-card-note">{{ m.note }}</div>
                 }
                 <div class="movement-card-actions">
-                  <button mat-icon-button class="action-delete" (click)="deleteMovement(m)" aria-label="Delete">
+                  <button mat-icon-button class="action-btn action-delete" (click)="deleteMovement(m)" aria-label="Delete">
                     <mat-icon>delete_outline</mat-icon>
                   </button>
                 </div>
@@ -250,18 +250,18 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     }
     .page-title {
       font-size: 1.5rem;
-      font-weight: 700;
+      font-weight: var(--weight-bold);
       margin: 0;
       letter-spacing: -0.02em;
     }
     .page-subtitle {
-      font-size: 0.8125rem;
+      font-size: var(--text-sm);
       color: var(--color-text-muted);
       margin: 2px 0 0;
     }
     .add-btn {
       border-radius: var(--radius-sm) !important;
-      font-weight: 600 !important;
+      font-weight: var(--weight-semibold) !important;
     }
 
     /* --- Filter section --- */
@@ -295,10 +295,10 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       padding: 6px 14px;
       border-radius: 20px;
       border: 1.5px solid var(--color-border);
-      background: var(--color-surface);
+      background: var(--color-surface-solid);
       color: var(--color-text-secondary);
-      font-size: 0.8125rem;
-      font-weight: 500;
+      font-size: var(--text-sm);
+      font-weight: var(--weight-medium);
       white-space: nowrap;
       cursor: pointer;
       transition: all 0.2s ease;
@@ -324,19 +324,19 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       gap: 3px;
     }
     .date-field label {
-      font-size: 0.6875rem;
-      font-weight: 600;
+      font-size: var(--text-xs);
+      font-weight: var(--weight-semibold);
       color: var(--color-text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: var(--tracking-wide);
     }
     .date-field input[type="date"] {
       padding: 7px 10px;
       border-radius: 10px;
       border: 1.5px solid var(--color-border);
-      background: var(--color-surface);
+      background: var(--color-surface-solid);
       color: var(--color-text);
-      font-size: 0.8125rem;
+      font-size: var(--text-sm);
       font-family: inherit;
       outline: none;
       transition: border-color 0.2s ease;
@@ -379,9 +379,10 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     }
     .summary-card {
       padding: 14px 16px;
-      background: var(--color-surface);
-      border-radius: 14px;
-      box-shadow: var(--shadow-sm);
+      background: var(--color-surface-solid);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-xs);
+      border: 1px solid var(--color-border);
     }
     .summary-item {
       display: flex;
@@ -393,7 +394,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       align-items: center;
       justify-content: center;
       padding: 10px;
-      border-radius: 12px;
+      border-radius: var(--radius-sm);
     }
     .stat-icon-pill mat-icon { font-size: 24px; width: 24px; height: 24px; }
     .green-pill { background: var(--color-stat-green-bg); color: var(--color-stat-green); }
@@ -401,8 +402,8 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .purple-pill { background: var(--color-stat-purple-bg); color: var(--color-stat-purple); }
     .amber-pill { background: var(--color-stat-amber-bg); color: var(--color-stat-amber); }
     .stat-content { display: flex; flex-direction: column; gap: 2px; }
-    .summary-label { font-size: 0.6875rem; color: var(--color-text-muted); font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; }
-    .summary-value { font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .summary-label { font-size: var(--text-xs); color: var(--color-text-muted); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-wide); text-transform: uppercase; }
+    .summary-value { font-size: 1.25rem; font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: var(--leading-tight); }
     .stat-total .summary-value { color: var(--color-value-green); }
     .stat-count .summary-value { color: var(--color-value-blue); }
     .stat-auto .summary-value { color: var(--color-value-purple); }
@@ -411,9 +412,9 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     /* --- Desktop table --- */
     .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table { width: 100%; min-width: 600px; }
-    .amount-cell { font-weight: 600; color: var(--color-success); font-variant-numeric: tabular-nums; }
-    .note-cell { color: var(--color-text-secondary); font-size: 0.875rem; }
-    .entity-name { display: flex; align-items: center; gap: 6px; font-size: 0.875rem; }
+    .amount-cell { font-weight: var(--weight-semibold); color: var(--color-success); font-variant-numeric: tabular-nums; }
+    .note-cell { color: var(--color-text-secondary); font-size: var(--text-sm); }
+    .entity-name { display: flex; align-items: center; gap: 6px; font-size: var(--text-sm); }
     .entity-icon { font-size: 18px; width: 18px; height: 18px; color: var(--color-text-muted); }
     .auto-badge {
       font-size: 14px; width: 14px; height: 14px;
@@ -424,26 +425,27 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
 
     .type-badge {
       padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 0.6875rem;
-      font-weight: 600;
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      font-weight: var(--weight-semibold);
       white-space: nowrap;
     }
-    .type-LoanFunding { background: rgba(33,150,243,0.1); color: #1976d2; }
-    .type-LoanPayment { background: rgba(76,175,80,0.1); color: #388e3c; }
-    .type-CardPayment { background: rgba(156,39,176,0.1); color: #7b1fa2; }
-    .type-Transfer { background: rgba(0,150,136,0.1); color: #00796b; }
-    .type-Deposit { background: rgba(255,152,0,0.1); color: #f57c00; }
-    .type-Withdrawal { background: rgba(244,67,54,0.1); color: #d32f2f; }
-    .type-TradePnl { background: rgba(0,122,255,0.1); color: #007AFF; }
-    .type-TradeFee { background: rgba(255,149,0,0.1); color: #c77700; }
+    .type-LoanFunding { background: var(--color-primary-subtle); color: var(--color-primary); }
+    .type-LoanPayment { background: var(--color-success-bg); color: var(--color-success-text); }
+    .type-CardPayment { background: var(--color-stat-purple-bg); color: var(--color-stat-purple); }
+    .type-Transfer { background: var(--color-stat-green-bg); color: var(--color-stat-green); }
+    .type-Deposit { background: var(--color-stat-amber-bg); color: var(--color-stat-amber); }
+    .type-Withdrawal { background: var(--color-danger-bg); color: var(--color-danger-text); }
+    .type-TradePnl { background: var(--color-primary-subtle); color: var(--color-primary); }
+    .type-TradeFee { background: var(--color-warning-bg); color: var(--color-warning-text); }
 
-    .action-delete {
-      color: var(--color-action-delete) !important;
-      width: 34px !important; height: 34px !important;
-      border-radius: 8px !important;
+    .action-btn {
+      width: 34px; height: 34px;
+      border-radius: var(--radius-xs) !important;
+      transition: background var(--transition-fast) !important;
     }
-    .action-delete mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .action-delete { color: var(--color-action-delete) !important; }
     .action-delete:hover { background: var(--color-action-delete-bg) !important; }
 
     /* --- Mobile cards (iOS native feel) --- */
@@ -460,7 +462,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       .stat-icon-pill { padding: 8px; }
       .stat-icon-pill mat-icon { font-size: 20px; width: 20px; height: 20px; }
       .summary-value { font-size: 1rem; }
-      .action-delete { min-width: 44px !important; min-height: 44px !important; }
+      .action-btn { min-width: 44px; min-height: 44px; }
       .date-filter-row { flex-direction: column; align-items: stretch; }
       .date-inputs { width: 100%; }
       .date-field { flex: 1; }
@@ -468,11 +470,12 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     }
 
     .movement-card {
-      background: var(--color-surface);
-      border-radius: 14px;
+      background: var(--color-surface-solid);
+      border-radius: var(--radius-md);
       margin-bottom: 10px;
       padding: 14px 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      box-shadow: var(--shadow-xs);
+      border: 1px solid var(--color-border);
       transition: transform 0.15s ease;
     }
     .movement-card:active {
@@ -481,33 +484,33 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .movement-card-top { display: flex; align-items: center; gap: 12px; }
     .movement-card-icon {
       width: 42px; height: 42px; min-width: 42px;
-      border-radius: 12px;
+      border-radius: var(--radius-sm);
       display: flex; align-items: center; justify-content: center;
     }
     .movement-card-icon mat-icon { font-size: 22px; width: 22px; height: 22px; }
-    .card-icon-LoanFunding { background: rgba(33,150,243,0.1); color: #1976d2; }
-    .card-icon-LoanPayment { background: rgba(76,175,80,0.1); color: #388e3c; }
-    .card-icon-CardPayment { background: rgba(156,39,176,0.1); color: #7b1fa2; }
-    .card-icon-Transfer { background: rgba(0,150,136,0.1); color: #00796b; }
-    .card-icon-Deposit { background: rgba(255,152,0,0.1); color: #f57c00; }
-    .card-icon-Withdrawal { background: rgba(244,67,54,0.1); color: #d32f2f; }
-    .card-icon-TradePnl { background: rgba(0,122,255,0.1); color: #007AFF; }
-    .card-icon-TradeFee { background: rgba(255,149,0,0.1); color: #c77700; }
+    .card-icon-LoanFunding { background: var(--color-primary-subtle); color: var(--color-primary); }
+    .card-icon-LoanPayment { background: var(--color-success-bg); color: var(--color-success-text); }
+    .card-icon-CardPayment { background: var(--color-stat-purple-bg); color: var(--color-stat-purple); }
+    .card-icon-Transfer { background: var(--color-stat-green-bg); color: var(--color-stat-green); }
+    .card-icon-Deposit { background: var(--color-stat-amber-bg); color: var(--color-stat-amber); }
+    .card-icon-Withdrawal { background: var(--color-danger-bg); color: var(--color-danger-text); }
+    .card-icon-TradePnl { background: var(--color-primary-subtle); color: var(--color-primary); }
+    .card-icon-TradeFee { background: var(--color-warning-bg); color: var(--color-warning-text); }
     .movement-card-info { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
     .movement-card-type { display: flex; align-items: center; gap: 6px; }
     .auto-badge-sm { font-size: 14px; width: 14px; height: 14px; color: var(--color-stat-purple); }
     .movement-card-flow {
-      font-size: 0.8125rem; color: var(--color-text-secondary);
+      font-size: var(--text-sm); color: var(--color-text-secondary);
       display: flex; align-items: center; gap: 4px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     .flow-arrow { font-size: 14px; width: 14px; height: 14px; color: var(--color-text-muted); flex-shrink: 0; }
-    .movement-card-date { font-size: 0.75rem; color: var(--color-text-muted); }
-    .movement-card-amount { font-weight: 700; font-size: 1rem; color: var(--color-success); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .movement-card-date { font-size: var(--text-xs); color: var(--color-text-muted); }
+    .movement-card-amount { font-weight: var(--weight-bold); font-size: var(--text-base); color: var(--color-success); white-space: nowrap; font-variant-numeric: tabular-nums; }
     .movement-card-note {
-      font-size: 0.8125rem; color: var(--color-text-secondary);
+      font-size: var(--text-sm); color: var(--color-text-secondary);
       margin-top: 8px; padding-top: 8px;
       border-top: 1px solid var(--color-border);
     }

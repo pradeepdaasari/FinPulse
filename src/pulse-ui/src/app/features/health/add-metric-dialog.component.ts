@@ -6,6 +6,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { FormsModule } from '@angular/forms';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { HealthMetric } from '../../core/models/health-metric.model';
 import { HealthMetricService } from '../../core/services/health-metric.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -21,7 +22,7 @@ interface MetricConfig {
 @Component({
   selector: 'app-add-metric-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule, MatIconModule, FormsModule],
+  imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule, MatIconModule, MatTooltipModule, FormsModule],
   template: `
     <div class="dialog-banner">
       <div class="banner-pattern"></div>
@@ -32,6 +33,17 @@ interface MetricConfig {
         <div>
           <h2 mat-dialog-title>{{ isEdit ? 'Edit' : 'Log' }} Health Metric</h2>
           <p class="dialog-subtitle">{{ isEdit ? 'Update your entry' : 'Track your vitals & progress' }}</p>
+        </div>
+        <span class="banner-spacer"></span>
+        <div class="dialog-header-actions">
+          @if (isEdit) {
+            <button mat-icon-button class="header-delete" (click)="onDelete()" matTooltip="Delete">
+              <mat-icon>delete_outline</mat-icon>
+            </button>
+          }
+          <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+            <mat-icon>close</mat-icon>
+          </button>
         </div>
       </div>
     </div>
@@ -70,14 +82,7 @@ interface MetricConfig {
         </mat-form-field>
       </div>
     </mat-dialog-content>
-    <mat-dialog-actions class="dialog-actions">
-      @if (isEdit) {
-        <button mat-button color="warn" class="delete-btn" (click)="onDelete()">
-          <mat-icon>delete</mat-icon> Delete
-        </button>
-      }
-      <span class="action-spacer"></span>
-      <button mat-button mat-dialog-close class="cancel-btn">Cancel</button>
+    <mat-dialog-actions align="end" class="dialog-actions">
       <button mat-raised-button color="primary" class="save-btn" [disabled]="!selectedType || !value || saving" (click)="save()">
         <mat-icon>check</mat-icon>
         {{ saving ? 'Saving...' : (isEdit ? 'Update' : 'Save') }}
@@ -121,6 +126,31 @@ interface MetricConfig {
       letter-spacing: var(--tracking-tight); color: #fff !important;
     }
     .dialog-subtitle { color: rgba(255, 255, 255, 0.75); font-size: 0.72rem; margin: 2px 0 0; }
+    .banner-spacer { flex: 1; }
+    .dialog-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+      align-self: center;
+    }
+    .header-delete, .header-close {
+      color: rgba(255, 255, 255, 0.9) !important;
+      width: 40px !important;
+      height: 40px !important;
+      padding: 0 !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      border-radius: 50% !important;
+      background: rgba(255, 255, 255, 0.12) !important;
+      border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+    .header-delete:hover { background: rgba(255, 80, 80, 0.3) !important; }
+    .header-close:hover { background: rgba(255, 255, 255, 0.25) !important; }
+    .header-delete mat-icon, .header-close mat-icon {
+      font-size: 20px; width: 20px; height: 20px;
+    }
     .metric-form { display: flex; flex-direction: column; gap: 4px; min-width: 0; width: 100%; padding-top: 4px; }
     .full-width { width: 100%; }
     .value-row { display: flex; align-items: center; gap: 12px; }
@@ -142,11 +172,7 @@ interface MetricConfig {
       padding: 12px 24px 16px !important;
       border-top: 1px solid var(--color-border);
       gap: 8px;
-      display: flex; align-items: center;
     }
-    .action-spacer { flex: 1; }
-    .cancel-btn { font-weight: 500 !important; }
-    .delete-btn mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
     .save-btn {
       border-radius: var(--radius-sm) !important;
       padding: 0 20px !important;
@@ -156,7 +182,8 @@ interface MetricConfig {
     .save-btn mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
 
     @media (max-width: 599px) {
-      .dialog-banner { margin: -16px -16px 16px; padding: 14px 16px 12px; }
+      :host { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+      .dialog-banner { margin: -16px -16px 16px; padding: 14px 16px 12px; flex-shrink: 0; }
       .value-row { flex-wrap: wrap; }
       .value-field { min-width: 100%; }
     }
@@ -198,6 +225,8 @@ export class AddMetricDialogComponent implements OnInit {
       this.value = this.data.value;
       this.measuredAt = this.formatDateLocal(new Date(this.data.measuredAt));
       this.notes = this.data.notes || '';
+    } else {
+      this.selectedType = 'Weight';
     }
   }
 

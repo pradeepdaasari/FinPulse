@@ -10,6 +10,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { CreditCardService } from '../../../core/services/credit-card.service';
 
 @Component({
@@ -26,7 +27,8 @@ import { CreditCardService } from '../../../core/services/credit-card.service';
     MatNativeDateModule,
     MatButtonModule,
     MatSlideToggleModule,
-    MatIconModule
+    MatIconModule,
+    MatTooltipModule
   ],
   template: `
     <div class="dialog-header">
@@ -37,6 +39,10 @@ import { CreditCardService } from '../../../core/services/credit-card.service';
         <h2 mat-dialog-title>Add Credit Card</h2>
         <span class="dialog-subtitle">Track your credit cards</span>
       </div>
+      <span class="header-spacer"></span>
+      <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
     <mat-dialog-content>
       <form [formGroup]="form" class="card-form" (submit)="$event.preventDefault()">
@@ -121,7 +127,6 @@ import { CreditCardService } from '../../../core/services/credit-card.service';
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end" class="dialog-actions">
-      <button mat-stroked-button mat-dialog-close class="cancel-btn">Cancel</button>
       <button mat-flat-button color="primary" class="save-btn" (click)="save()" [disabled]="form.invalid || saving()">
         {{ saving() ? 'Saving...' : 'Add Card' }}
       </button>
@@ -140,6 +145,18 @@ import { CreditCardService } from '../../../core/services/credit-card.service';
     .header-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #6a1b9a; }
     .header-text h2 { margin: 0 !important; padding: 0 !important; font-size: 1.1rem !important; font-weight: 700 !important; }
     .dialog-subtitle { font-size: 0.75rem; color: var(--color-text-secondary); }
+    .header-spacer { flex: 1; }
+    .header-close {
+      color: var(--color-text-muted) !important;
+      width: 34px !important; height: 34px !important;
+      padding: 0 !important;
+      display: inline-flex !important; align-items: center !important; justify-content: center !important;
+      border-radius: 50% !important;
+      background: var(--color-surface-secondary) !important;
+      border: 1px solid var(--color-border) !important;
+    }
+    .header-close:hover { background: var(--color-surface-hover) !important; }
+    .header-close mat-icon { font-size: 18px; width: 18px; height: 18px; }
     mat-dialog-content {
       min-width: 400px;
       max-width: 550px;
@@ -171,12 +188,6 @@ import { CreditCardService } from '../../../core/services/credit-card.service';
       padding: 12px 24px 16px !important;
       border-top: 1px solid var(--color-border);
       gap: 8px;
-    }
-    .cancel-btn {
-      border-radius: var(--radius-sm) !important;
-      padding: 0 20px !important;
-      font-weight: 600 !important;
-      min-height: 40px;
     }
     .save-btn {
       border-radius: var(--radius-sm) !important;

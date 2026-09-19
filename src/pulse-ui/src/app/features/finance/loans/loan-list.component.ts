@@ -231,23 +231,36 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 16px;
+      padding: 14px 16px;
       border-radius: var(--radius-md);
-      background: var(--color-surface);
-      box-shadow: var(--shadow-sm);
+      background: var(--color-surface-solid);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-xs);
+      transition: box-shadow var(--transition-base);
     }
     .stat-card mat-icon {
-      font-size: 28px; width: 28px; height: 28px;
+      font-size: 26px; width: 26px; height: 26px;
       padding: 10px;
-      border-radius: 12px;
+      border-radius: var(--radius-sm);
+      box-sizing: content-box;
+      overflow: visible;
+      flex-shrink: 0;
     }
     .stat-blue mat-icon { color: var(--color-stat-blue); background: var(--color-stat-blue-bg); }
     .stat-green mat-icon { color: var(--color-stat-green); background: var(--color-stat-green-bg); }
     .stat-purple mat-icon { color: var(--color-stat-purple); background: var(--color-stat-purple-bg); }
     .stat-amber mat-icon { color: var(--color-stat-amber); background: var(--color-stat-amber-bg); }
-    .stat-content { display: flex; flex-direction: column; }
-    .stat-value { font-size: 1.2rem; font-weight: 700; color: var(--color-text); }
-    .stat-label { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px; }
+    .stat-content { display: flex; flex-direction: column; min-width: 0; }
+    .stat-value {
+      font-size: 1.25rem; font-weight: var(--weight-bold); color: var(--color-text);
+      letter-spacing: -0.02em; line-height: var(--leading-tight);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .stat-label {
+      font-size: var(--text-xs); font-weight: var(--weight-semibold);
+      color: var(--color-text-muted); margin-top: 2px;
+      text-transform: uppercase; letter-spacing: var(--tracking-wide);
+    }
 
     /* Table */
     .clickable-row { cursor: pointer; transition: background var(--transition-fast); }
@@ -263,28 +276,28 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     table { width: 100%; min-width: 600px; }
     .loan-type-badge {
       display: inline-block;
-      font-size: 0.7rem;
-      font-weight: 600;
+      font-size: var(--text-xs);
+      font-weight: var(--weight-semibold);
       padding: 3px 10px;
       border-radius: var(--radius-full);
       white-space: nowrap;
     }
-    .lender-name { font-weight: 500; }
+    .lender-name { font-weight: var(--weight-medium); }
     .deferred-chip {
-      display: inline-block; font-size: 0.65rem; font-weight: 600;
+      display: inline-block; font-size: var(--text-xs); font-weight: var(--weight-semibold);
       padding: 2px 8px; border-radius: var(--radius-full);
-      background: rgba(245,124,0,0.12); color: #e65100;
+      background: var(--color-warning-bg); color: var(--color-warning-text);
       margin-left: 6px; white-space: nowrap;
     }
     .loan-pills { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
-    .value-balance { font-weight: 700; color: var(--color-text); }
-    .value-monthly { font-weight: 600; color: var(--color-primary); }
+    .value-balance { font-weight: var(--weight-bold); color: var(--color-text); }
+    .value-monthly { font-weight: var(--weight-semibold); color: var(--color-primary); }
 
     /* APR Badge */
     .apr-badge {
       display: inline-block;
-      font-size: 0.75rem;
-      font-weight: 700;
+      font-size: var(--text-xs);
+      font-weight: var(--weight-bold);
       padding: 3px 10px;
       border-radius: var(--radius-full);
     }
@@ -294,7 +307,10 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
 
     /* Action Buttons */
     .action-group { display: flex; gap: 2px; }
-    .action-btn { width: 34px; height: 34px; border-radius: 8px !important; }
+    .action-btn {
+      width: 34px; height: 34px; border-radius: var(--radius-xs) !important;
+      transition: background var(--transition-fast) !important;
+    }
     .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .action-pay { color: var(--color-action-pay) !important; }
     .action-pay:hover { background: var(--color-action-pay-bg) !important; }
@@ -308,39 +324,50 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     /* Mobile Cards */
     .mobile-cards { display: none; }
     .loan-card {
-      background: var(--color-surface);
-      border-radius: var(--radius-lg);
-      margin-bottom: 12px;
+      background: var(--color-surface-solid);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      margin-bottom: 10px;
       padding: 16px;
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-xs);
       cursor: pointer;
       transition: box-shadow var(--transition-fast), transform 0.1s ease;
       -webkit-tap-highlight-color: transparent;
     }
-    .loan-card:active { box-shadow: var(--shadow-md); transform: scale(0.98); }
+    .loan-card:active { box-shadow: var(--shadow-sm); transform: scale(0.98); }
     .loan-top {
       display: flex;
       align-items: center;
       gap: 12px;
     }
     .loan-icon {
-      width: 44px; height: 44px; border-radius: 12px;
+      width: 42px; height: 42px; border-radius: var(--radius-sm);
       display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
     }
     .loan-icon mat-icon { font-size: 22px; width: 22px; height: 22px; }
     .loan-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-    .loan-name { font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .loan-name {
+      font-weight: var(--weight-semibold); font-size: var(--text-sm);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
     .loan-type-pill {
       display: inline-block;
-      font-size: 0.65rem;
-      font-weight: 600;
+      font-size: var(--text-xs);
+      font-weight: var(--weight-semibold);
       padding: 2px 8px;
       border-radius: var(--radius-full);
       width: fit-content;
     }
-    .loan-balance { text-align: right; }
-    .loan-amount { display: block; font-weight: 700; font-size: 1.05rem; }
-    .loan-monthly { display: block; font-size: 0.72rem; color: var(--color-primary); font-weight: 500; }
+    .loan-balance { text-align: right; flex-shrink: 0; }
+    .loan-amount {
+      display: block; font-weight: var(--weight-bold); font-size: 1.05rem;
+      letter-spacing: -0.02em;
+    }
+    .loan-monthly {
+      display: block; font-size: var(--text-xs); color: var(--color-primary);
+      font-weight: var(--weight-medium); margin-top: 2px;
+    }
     .loan-detail-row {
       display: flex;
       justify-content: space-around;
@@ -354,8 +381,12 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       align-items: center;
       gap: 3px;
     }
-    .detail-label { font-size: 0.65rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-    .detail-value { font-size: 0.82rem; font-weight: 600; color: var(--color-text); }
+    .detail-label {
+      font-size: 0.625rem; color: var(--color-text-muted);
+      text-transform: uppercase; letter-spacing: var(--tracking-wide);
+      font-weight: var(--weight-semibold);
+    }
+    .detail-value { font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--color-text); }
     .loan-actions {
       display: flex;
       justify-content: flex-end;
@@ -366,10 +397,10 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     /* Empty State */
     .empty-state {
       text-align: center;
-      padding: 48px 24px;
+      padding: var(--spacing-2xl) var(--spacing-lg);
     }
     .empty-icon-wrap {
-      width: 64px; height: 64px; border-radius: 16px;
+      width: 64px; height: 64px; border-radius: var(--radius-md);
       display: flex; align-items: center; justify-content: center;
       margin: 0 auto 16px;
     }
@@ -389,7 +420,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       .mobile-cards { display: block; }
       .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
       .stat-card { padding: 12px 10px; gap: 8px; }
-      .stat-card mat-icon { font-size: 22px; width: 22px; height: 22px; padding: 11px; border-radius: 10px; }
+      .stat-card mat-icon { font-size: 22px; width: 22px; height: 22px; padding: 8px; border-radius: var(--radius-sm); box-sizing: content-box; overflow: visible; }
       .stat-value { font-size: 1rem; }
       table { min-width: 0; }
       .mat-column-aprPercent,
@@ -404,7 +435,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       width: 52px; height: 52px; border-radius: 50%;
       background: var(--gradient-primary); color: #fff; border: none;
       align-items: center; justify-content: center;
-      box-shadow: 0 4px 16px rgba(0, 122, 255, 0.35); z-index: 100;
+      box-shadow: 0 4px 20px rgba(0, 122, 255, 0.30); z-index: 100;
       cursor: pointer;
       transition: transform var(--transition-fast), box-shadow var(--transition-fast);
     }
@@ -412,12 +443,11 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .mobile-add-fab mat-icon { font-size: 26px; width: 26px; height: 26px; }
     @media (max-width: 599px) {
       .mobile-add-fab {
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 72px); right: 16px;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 76px); right: 16px;
         width: 56px; height: 56px;
       }
       .mobile-add-fab mat-icon { font-size: 28px; width: 28px; height: 28px; }
     }
-
   `]
 })
 export class LoanListComponent implements OnInit {

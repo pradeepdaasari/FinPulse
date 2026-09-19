@@ -11,6 +11,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { toLocalISOString } from '../../../core/utils/date-utils';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { BankAccountService } from '../../../core/services/bank-account.service';
 import { SavingsGoalService } from '../../../core/services/savings-goal.service';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -23,7 +24,7 @@ import { Observable } from 'rxjs';
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
-    MatInputModule, MatSelectModule, MatButtonModule, MatDatepickerModule, MatNativeDateModule, MatIconModule, MatProgressSpinnerModule
+    MatInputModule, MatSelectModule, MatButtonModule, MatDatepickerModule, MatNativeDateModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule
   ],
   template: `
     <div class="dialog-header">
@@ -34,6 +35,10 @@ import { Observable } from 'rxjs';
         <h2 mat-dialog-title>{{ data ? 'Edit' : 'Add' }} Savings Goal</h2>
         <span class="dialog-subtitle">Set and track your goals</span>
       </div>
+      <span class="header-spacer"></span>
+      <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
     <mat-dialog-content>
       @if (loading()) {
@@ -83,7 +88,6 @@ import { Observable } from 'rxjs';
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cancel</button>
       <button mat-raised-button color="primary" [disabled]="form.invalid || loading() || saving()" (click)="save()">
         {{ saving() ? 'Saving...' : (data ? 'Update' : 'Create') }}
       </button>
@@ -102,6 +106,18 @@ import { Observable } from 'rxjs';
     .header-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #2e7d32; }
     .header-text h2 { margin: 0 !important; padding: 0 !important; font-size: 1.1rem !important; font-weight: 700 !important; }
     .dialog-subtitle { font-size: 0.75rem; color: var(--color-text-secondary); }
+    .header-spacer { flex: 1; }
+    .header-close {
+      color: var(--color-text-muted) !important;
+      width: 34px !important; height: 34px !important;
+      padding: 0 !important;
+      display: inline-flex !important; align-items: center !important; justify-content: center !important;
+      border-radius: 50% !important;
+      background: var(--color-surface-secondary) !important;
+      border: 1px solid var(--color-border) !important;
+    }
+    .header-close:hover { background: var(--color-surface-hover) !important; }
+    .header-close mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; padding: 8px 0; }
     .full-width { grid-column: 1 / -1; }
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }

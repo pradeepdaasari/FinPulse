@@ -10,6 +10,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { LoanService } from '../../../core/services/loan.service';
 import { FundingSourceService } from '../../../core/services/funding-source.service';
 import { FundingSource } from '../../../core/models/funding-source.model';
@@ -31,7 +32,8 @@ import { toLocalISOString } from '../../../core/utils/date-utils';
     MatNativeDateModule,
     MatButtonModule,
     MatSlideToggleModule,
-    MatIconModule
+    MatIconModule,
+    MatTooltipModule
   ],
   template: `
     <div class="dialog-header">
@@ -42,6 +44,10 @@ import { toLocalISOString } from '../../../core/utils/date-utils';
         <h2 mat-dialog-title>Add New Loan</h2>
         <span class="dialog-subtitle">Track your loan details</span>
       </div>
+      <span class="header-spacer"></span>
+      <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
     <mat-dialog-content>
       <form [formGroup]="form" class="loan-form" (submit)="$event.preventDefault(); save()">
@@ -133,10 +139,10 @@ import { toLocalISOString } from '../../../core/utils/date-utils';
 
         <mat-form-field>
           <mat-label>Funded to (Bank Account)</mat-label>
-          <mat-select formControlName="fundedBankAccountId" (opened)="bankSearch.set('')">
+          <mat-select formControlName="fundedBankAccountId" (opened)="bankSearch.set(''); focusInput(bankSearchInput)">
             <div class="category-search-box">
               <mat-icon>search</mat-icon>
-              <input matInput placeholder="Search accounts..." (input)="bankSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+              <input #bankSearchInput matInput placeholder="Search accounts..." (input)="bankSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
             </div>
             <mat-option [value]="null">-- None --</mat-option>
             @for (source of filteredBankSources(); track source.id) {
@@ -182,7 +188,6 @@ import { toLocalISOString } from '../../../core/utils/date-utils';
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end" class="dialog-actions">
-      <button mat-stroked-button mat-dialog-close class="cancel-btn">Cancel</button>
       <button mat-flat-button color="primary" class="save-btn" (click)="save()" [disabled]="form.invalid || saving()">
         {{ saving() ? 'Saving...' : 'Add Loan' }}
       </button>
@@ -201,6 +206,18 @@ import { toLocalISOString } from '../../../core/utils/date-utils';
     .header-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #00695c; }
     .header-text h2 { margin: 0 !important; padding: 0 !important; font-size: 1.1rem !important; font-weight: 700 !important; }
     .dialog-subtitle { font-size: 0.75rem; color: var(--color-text-secondary); }
+    .header-spacer { flex: 1; }
+    .header-close {
+      color: var(--color-text-muted) !important;
+      width: 34px !important; height: 34px !important;
+      padding: 0 !important;
+      display: inline-flex !important; align-items: center !important; justify-content: center !important;
+      border-radius: 50% !important;
+      background: var(--color-surface-secondary) !important;
+      border: 1px solid var(--color-border) !important;
+    }
+    .header-close:hover { background: var(--color-surface-hover) !important; }
+    .header-close mat-icon { font-size: 18px; width: 18px; height: 18px; }
     mat-dialog-content {
       min-width: 400px;
       max-width: 550px;
@@ -235,12 +252,6 @@ import { toLocalISOString } from '../../../core/utils/date-utils';
       padding: 12px 24px 16px !important;
       border-top: 1px solid var(--color-border);
       gap: 8px;
-    }
-    .cancel-btn {
-      border-radius: var(--radius-sm) !important;
-      padding: 0 20px !important;
-      font-weight: 600 !important;
-      min-height: 40px;
     }
     .save-btn {
       border-radius: var(--radius-sm) !important;
@@ -288,6 +299,10 @@ export class AddLoanDialogComponent implements OnInit {
     if (freq === 'Weekly') return 'Weekly Payment';
     return 'Monthly EMI';
   });
+
+  focusInput(el: HTMLInputElement): void {
+    setTimeout(() => el.focus(), 0);
+  }
 
   ngOnInit(): void {
     this.fundingSourceService.getAll().subscribe(sources => {

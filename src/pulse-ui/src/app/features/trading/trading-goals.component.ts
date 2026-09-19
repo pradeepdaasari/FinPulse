@@ -43,8 +43,10 @@ interface MetricDef {
       <div class="banner-pattern"></div>
       <div class="banner-content">
         <div class="banner-icon"><mat-icon>flag</mat-icon></div>
-        <h2>Trading Goals</h2>
-        <p class="banner-subtitle">Set targets, track progress automatically</p>
+        <div class="banner-text">
+          <h2>Trading Goals</h2>
+          <p class="banner-subtitle">Set targets, track progress automatically</p>
+        </div>
       </div>
     </div>
 
@@ -129,10 +131,10 @@ interface MetricDef {
                 <button mat-icon-button class="action-btn" (click)="toggleHistory(p.goal.id)">
                   <mat-icon>{{ expandedGoal() === p.goal.id ? 'expand_less' : 'timeline' }}</mat-icon>
                 </button>
-                <button mat-icon-button class="action-btn" (click)="editGoal(p.goal)">
+                <button mat-icon-button class="action-btn action-edit" (click)="editGoal(p.goal)">
                   <mat-icon>edit</mat-icon>
                 </button>
-                <button mat-icon-button class="action-btn" (click)="deleteGoal(p.goal)">
+                <button mat-icon-button class="action-btn action-delete" (click)="deleteGoal(p.goal)">
                   <mat-icon>delete_outline</mat-icon>
                 </button>
               </div>
@@ -288,24 +290,24 @@ interface MetricDef {
   styles: [`
     :host { display: block; }
     .page-banner {
-      position: relative; margin: -24px -24px 24px; padding: 40px 24px 32px;
-      background: var(--gradient-primary); border-radius: 0 0 var(--radius-lg) var(--radius-lg); overflow: hidden;
+      position: relative; margin: -24px -24px 24px; padding: 14px 24px;
+      background: var(--gradient-primary); border-radius: 0 0 var(--radius-xl) var(--radius-xl); overflow: hidden;
     }
     .banner-pattern {
       position: absolute; inset: 0;
-      background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.08) 0%, transparent 50%),
-                  radial-gradient(circle at 80% 20%, rgba(255,255,255,0.06) 0%, transparent 40%);
+      background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.07) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 40%);
     }
-    .banner-content { position: relative; text-align: center; }
+    .banner-content { position: relative; display: flex; align-items: center; gap: 12px; }
     .banner-icon {
-      width: 56px; height: 56px; border-radius: 16px;
-      background: rgba(255,255,255,0.2); backdrop-filter: blur(8px);
+      width: 42px; height: 42px; border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.18);
       display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 12px; border: 1px solid rgba(255,255,255,0.3);
+      flex-shrink: 0; border: 1px solid rgba(255,255,255,0.25);
     }
-    .banner-icon mat-icon { font-size: 28px; width: 28px; height: 28px; color: #fff; }
-    h2 { margin: 0; color: #fff; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
-    .banner-subtitle { color: rgba(255,255,255,0.75); font-size: 0.9rem; margin: 4px 0 0; }
+    .banner-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #fff; }
+    h2 { margin: 0; color: #fff; font-size: 1rem; font-weight: var(--weight-bold); letter-spacing: -0.02em; }
+    .banner-subtitle { color: rgba(255,255,255,0.7); font-size: var(--text-xs); margin: 1px 0 0; }
 
     .timeframe-row { display: flex; justify-content: center; margin-bottom: var(--spacing-sm); }
     ::ng-deep .timeframe-row .mat-button-toggle-group { border-radius: var(--radius-full); overflow: hidden; }
@@ -368,8 +370,12 @@ interface MetricDef {
     .goal-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); }
     .goal-metric { font-weight: 700; font-size: 0.9rem; flex: 1; }
     .goal-actions { display: flex; gap: 0; }
-    .action-btn { width: 32px; height: 32px; }
-    .action-btn mat-icon { font-size: 16px; width: 16px; height: 16px; color: var(--color-text-muted); }
+    .action-btn { width: 34px; height: 34px; border-radius: var(--radius-xs) !important; transition: background var(--transition-fast) !important; }
+    .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .action-edit { color: var(--color-action-edit) !important; }
+    .action-edit:hover { background: var(--color-action-edit-bg) !important; }
+    .action-delete { color: var(--color-action-delete) !important; }
+    .action-delete:hover { background: var(--color-action-delete-bg) !important; }
 
     /* Streak Badge */
     .streak-badge {
@@ -483,7 +489,7 @@ interface MetricDef {
     .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 
     @media (max-width: 599px) {
-      .page-banner { margin: -16px -16px 20px; padding: 32px 16px 24px; }
+      .page-banner { margin: -16px -16px 20px; padding: 12px 16px; }
       .form-row { flex-direction: column; gap: 0; }
       .half-width { width: 100%; }
       .custom-range { flex-direction: column; align-items: stretch; }

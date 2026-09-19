@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { BankAccountService } from '../../../core/services/bank-account.service';
@@ -26,7 +27,8 @@ import { CommissionChangeDialogComponent, CommissionChangeDialogData } from './c
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatSlideToggleModule
+    MatSlideToggleModule,
+    MatTooltipModule
   ],
   template: `
     <div class="dialog-header">
@@ -37,6 +39,10 @@ import { CommissionChangeDialogComponent, CommissionChangeDialogData } from './c
         <h2 mat-dialog-title>{{ editMode ? 'Edit' : 'Add' }} Bank Account</h2>
         <span class="dialog-subtitle">Manage your bank accounts</span>
       </div>
+      <span class="header-spacer"></span>
+      <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
     <mat-dialog-content>
       <form [formGroup]="form" class="account-form" (submit)="$event.preventDefault()">
@@ -113,7 +119,6 @@ import { CommissionChangeDialogComponent, CommissionChangeDialogData } from './c
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end" class="dialog-actions">
-      <button mat-stroked-button mat-dialog-close class="cancel-btn">Cancel</button>
       <button mat-flat-button color="primary" class="save-btn" (click)="save()" [disabled]="form.invalid || saving()">
         {{ saving() ? 'Saving...' : (editMode ? 'Update Account' : 'Add Account') }}
       </button>
@@ -132,6 +137,18 @@ import { CommissionChangeDialogComponent, CommissionChangeDialogData } from './c
     .header-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #1565c0; }
     .header-text h2 { margin: 0 !important; padding: 0 !important; font-size: 1.1rem !important; font-weight: 700 !important; }
     .dialog-subtitle { font-size: 0.75rem; color: var(--color-text-secondary); }
+    .header-spacer { flex: 1; }
+    .header-close {
+      color: var(--color-text-muted) !important;
+      width: 34px !important; height: 34px !important;
+      padding: 0 !important;
+      display: inline-flex !important; align-items: center !important; justify-content: center !important;
+      border-radius: 50% !important;
+      background: var(--color-surface-secondary) !important;
+      border: 1px solid var(--color-border) !important;
+    }
+    .header-close:hover { background: var(--color-surface-hover) !important; }
+    .header-close mat-icon { font-size: 18px; width: 18px; height: 18px; }
     mat-dialog-content { min-width: 350px; max-width: 500px; position: relative; }
     .saving-overlay {
       position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -175,12 +192,6 @@ import { CommissionChangeDialogComponent, CommissionChangeDialogData } from './c
       padding: 12px 24px 16px !important;
       border-top: 1px solid var(--color-border);
       gap: 8px;
-    }
-    .cancel-btn {
-      border-radius: var(--radius-sm) !important;
-      padding: 0 20px !important;
-      font-weight: 600 !important;
-      min-height: 40px;
     }
     .save-btn {
       border-radius: var(--radius-sm) !important;

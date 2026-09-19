@@ -187,29 +187,29 @@ const TIMEZONES: TimezoneOption[] = [
     .page-header mat-icon.page-icon {
       font-size: 28px; width: 28px; height: 28px; color: var(--color-primary);
     }
-    .page-header h2 { margin: 0; font-size: 1.4rem; font-weight: 700; color: var(--color-text); }
+    .page-header h2 { margin: 0; font-size: 1.4rem; font-weight: var(--weight-bold); color: var(--color-text); }
 
     .settings-card { padding: 24px !important; margin-bottom: var(--spacing-md); }
 
     .card-header { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; }
     .card-icon-wrap {
-      width: 42px; height: 42px; min-width: 42px; border-radius: 12px;
+      width: 42px; height: 42px; min-width: 42px; border-radius: var(--radius-sm);
       display: flex; align-items: center; justify-content: center;
     }
     .card-icon-wrap mat-icon { font-size: 22px; width: 22px; height: 22px; }
-    .pay-icon { background: rgba(33,150,243,0.1); color: #1976d2; }
-    .tz-icon { background: rgba(156,39,176,0.1); color: #7b1fa2; }
+    .pay-icon { background: var(--color-stat-blue-bg); color: var(--color-stat-blue); }
+    .tz-icon { background: var(--color-stat-purple-bg); color: var(--color-stat-purple); }
     .card-header-text { flex: 1; }
-    .card-header h3 { margin: 0; font-size: 1.1rem; font-weight: 600; color: var(--color-text); }
+    .card-header h3 { margin: 0; font-size: var(--text-lg); font-weight: var(--weight-semibold); color: var(--color-text); }
     .card-subtitle {
-      color: var(--color-text-muted); font-size: 0.82rem; line-height: 1.5;
+      color: var(--color-text-muted); font-size: var(--text-sm); line-height: var(--leading-normal);
       margin: 4px 0 0;
     }
 
     /* Profile summary (read mode) */
     .profile-summary {
-      background: var(--color-surface-secondary, #f8fafc);
-      border-radius: var(--radius-sm, 8px); padding: 4px 0;
+      background: var(--color-surface-hover);
+      border-radius: var(--radius-sm); padding: 4px 0;
       margin-bottom: 16px;
     }
     .summary-row {
@@ -217,8 +217,8 @@ const TIMEZONES: TimezoneOption[] = [
       padding: 12px 16px; border-bottom: 1px solid var(--color-border);
     }
     .summary-row:last-child { border-bottom: none; }
-    .summary-label { font-size: 0.88rem; color: var(--color-text-muted); font-weight: 500; }
-    .summary-value { font-size: 0.92rem; font-weight: 700; color: var(--color-text); }
+    .summary-label { font-size: var(--text-sm); color: var(--color-text-muted); font-weight: var(--weight-medium); }
+    .summary-value { font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--color-text); }
 
     /* Profile form (edit mode) */
     .form-grid {
@@ -234,7 +234,7 @@ const TIMEZONES: TimezoneOption[] = [
     }
     .card-actions button mat-icon { margin-right: 4px; }
     .card-actions mat-spinner { margin: 0 auto; }
-    .unsaved-hint { font-size: 0.8rem; color: var(--color-warning); font-style: italic; }
+    .unsaved-hint { font-size: var(--text-xs); color: var(--color-warning); font-style: italic; }
 
     @media (max-width: 599px) {
       .settings-card { padding: 16px !important; }

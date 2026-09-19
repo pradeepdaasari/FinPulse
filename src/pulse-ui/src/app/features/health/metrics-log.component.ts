@@ -144,11 +144,11 @@ import { NotificationService } from '../../core/services/notification.service';
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef></th>
                 <td mat-cell *matCellDef="let m">
-                  <button mat-icon-button (click)="editMetric(m)" matTooltip="Edit">
+                  <button mat-icon-button class="action-btn action-edit" (click)="editMetric(m)" matTooltip="Edit">
                     <mat-icon>edit</mat-icon>
                   </button>
-                  <button mat-icon-button color="warn" (click)="confirmDelete(m)" matTooltip="Delete">
-                    <mat-icon>delete</mat-icon>
+                  <button mat-icon-button class="action-btn action-delete" (click)="confirmDelete(m)" matTooltip="Delete">
+                    <mat-icon>delete_outline</mat-icon>
                   </button>
                 </td>
               </ng-container>
@@ -195,11 +195,11 @@ import { NotificationService } from '../../core/services/notification.service';
       text-align: center; padding: var(--spacing-xl) var(--spacing-md);
     }
     .empty-icon-wrap {
-      width: 72px; height: 72px; border-radius: 50%; margin: 0 auto var(--spacing-md);
+      width: 64px; height: 64px; border-radius: var(--radius-md); margin: 0 auto var(--spacing-md);
       display: flex; align-items: center; justify-content: center;
-      background: rgba(21,101,192,0.1);
+      background: var(--color-stat-blue-bg);
     }
-    .empty-icon-wrap mat-icon { font-size: 32px; width: 32px; height: 32px; color: #1565c0; }
+    .empty-icon-wrap mat-icon { font-size: 32px; width: 32px; height: 32px; color: var(--color-stat-blue); }
     .empty-state h3 { margin: 0 0 var(--spacing-xs); font-size: 1.1rem; }
     .empty-state p { color: var(--color-text-muted); margin: 0 auto var(--spacing-md); max-width: 360px; }
 
@@ -221,9 +221,9 @@ import { NotificationService } from '../../core/services/notification.service';
       font-size: 28px; width: 28px; height: 28px;
     }
     .stat-icon.blue { color: var(--color-primary); }
-    .stat-icon.purple { color: #7b1fa2; }
-    .stat-icon.green { color: #2e7d32; }
-    .stat-icon.red { color: #c62828; }
+    .stat-icon.purple { color: var(--color-stat-purple); }
+    .stat-icon.green { color: var(--color-stat-green); }
+    .stat-icon.red { color: var(--color-stat-red); }
     .stat-content { display: flex; flex-direction: column; min-width: 0; }
     .stat-value { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
     .stat-label { font-size: 0.72rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
@@ -253,6 +253,13 @@ import { NotificationService } from '../../core/services/notification.service';
     .metric-value { font-weight: 700; font-variant-numeric: tabular-nums; }
     .metric-unit { font-size: 0.8rem; color: var(--color-text-muted); margin-left: 4px; }
     .notes-text { font-size: 0.85rem; color: var(--color-text-muted); }
+    td.mat-column-actions { white-space: nowrap; text-align: right; }
+    .action-btn { width: 34px; height: 34px; border-radius: var(--radius-xs) !important; transition: background var(--transition-fast) !important; }
+    .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .action-edit { color: var(--color-action-edit) !important; }
+    .action-edit:hover { background: var(--color-action-edit-bg) !important; }
+    .action-delete { color: var(--color-action-delete) !important; }
+    .action-delete:hover { background: var(--color-action-delete-bg) !important; }
 
     /* Mobile Cards */
     .mobile-cards { display: none; }

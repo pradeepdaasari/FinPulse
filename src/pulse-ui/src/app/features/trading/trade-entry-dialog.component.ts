@@ -13,6 +13,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TradingService } from '../../core/services/trading.service';
 import { toLocalISOString } from '../../core/utils/date-utils';
 import { BankAccountService } from '../../core/services/bank-account.service';
@@ -33,7 +34,7 @@ export interface TradeEntryDialogData {
     CommonModule, CurrencyPipe, DecimalPipe, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatDatepickerModule,
     MatButtonModule, MatIconModule, MatButtonToggleModule, MatCheckboxModule, MatProgressSpinnerModule,
-    MatChipsModule, RichTextEditorComponent
+    MatChipsModule, MatTooltipModule, RichTextEditorComponent
   ],
   providers: [provideNativeDateAdapter()],
   template: `
@@ -42,6 +43,10 @@ export interface TradeEntryDialogData {
         <mat-icon>{{ data?.trade ? 'edit' : 'add_chart' }}</mat-icon>
       </div>
       <h2>{{ data?.trade ? 'Edit' : 'Log' }} Trade</h2>
+      <span class="header-spacer"></span>
+      <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
 
     <mat-dialog-content>
@@ -368,7 +373,6 @@ export interface TradeEntryDialogData {
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cancel</button>
       <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid || loading() || saving()">
         <mat-icon>{{ data?.trade ? 'check' : 'save' }}</mat-icon>
         {{ data?.trade ? 'Update' : 'Save Trade' }}
@@ -378,18 +382,31 @@ export interface TradeEntryDialogData {
   styles: [`
     .dialog-header {
       display: flex; align-items: center; gap: 12px;
-      padding: 16px 24px 10px; margin: -24px -24px 0;
+      padding: 18px 24px; margin: -24px -24px 0;
       background: var(--gradient-primary); border-radius: 4px 4px 0 0;
     }
     .header-icon {
       width: 36px; height: 36px; border-radius: 10px;
       background: rgba(255,255,255,0.2); backdrop-filter: blur(6px);
       display: flex; align-items: center; justify-content: center;
-      border: 1px solid rgba(255,255,255,0.3);
+      border: 1px solid rgba(255,255,255,0.3); flex-shrink: 0;
     }
     .header-icon mat-icon { color: #fff; font-size: 20px; width: 20px; height: 20px; }
     .header-icon.edit-mode { background: rgba(255,255,255,0.25); }
-    .dialog-header h2 { margin: 0; color: #fff; font-size: 1.1rem; font-weight: 700; }
+    .dialog-header h2 { margin: 0; color: #fff; font-size: 1.1rem; font-weight: 700; flex: 1; min-width: 0; }
+    .header-spacer { flex: 1; }
+    .header-close {
+      color: rgba(255, 255, 255, 0.9) !important;
+      width: 40px !important; height: 40px !important;
+      padding: 0 !important;
+      display: inline-flex !important; align-items: center !important; justify-content: center !important;
+      border-radius: 50% !important;
+      background: rgba(255, 255, 255, 0.12) !important;
+      border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      flex-shrink: 0 !important;
+    }
+    .header-close:hover { background: rgba(255, 255, 255, 0.25) !important; }
+    .header-close mat-icon { font-size: 20px; width: 20px; height: 20px; }
 
     .trade-form { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding-top: 12px; }
 
@@ -426,18 +443,18 @@ export interface TradeEntryDialogData {
     }
 
     .options-section {
-      border: 1.5px solid var(--color-stat-blue);
+      border: 1px solid color-mix(in srgb, var(--color-stat-blue) 30%, var(--color-border));
       border-radius: var(--radius-md);
       padding: 14px 12px 8px;
       margin: 6px 0 14px;
-      background: color-mix(in srgb, var(--color-stat-blue-bg) 30%, transparent);
+      background: color-mix(in srgb, var(--color-stat-blue-bg) 20%, transparent);
     }
     .options-section .row-2col,
     .options-section .row-3col,
     .options-section .row-4col { margin-bottom: 0; }
 
     .fees-section {
-      border: 1.5px solid var(--color-stat-amber);
+      border: 1px solid color-mix(in srgb, var(--color-stat-amber) 30%, var(--color-border));
       border-radius: var(--radius-md);
       padding: 12px 12px 8px;
       margin: 2px 0 10px;
@@ -518,8 +535,8 @@ export interface TradeEntryDialogData {
       background: rgba(255,255,255,0.7); border-radius: inherit; z-index: 10;
     }
     @media (max-width: 599px) {
-      :host { max-width: 100%; overflow: hidden; }
-      .dialog-header { padding: 14px 16px 8px; margin: -16px -16px 0; }
+      :host { display: flex; flex-direction: column; height: 100%; min-height: 0; max-width: 100%; overflow: hidden; }
+      .dialog-header { padding: 16px 16px; margin: -16px -16px 0; flex-shrink: 0; }
       .trade-form { max-width: 100%; overflow: hidden; box-sizing: border-box; }
       .row-3col { grid-template-columns: 1fr 1fr; }
       .row-4col { grid-template-columns: 1fr 1fr; }

@@ -184,11 +184,11 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
       text-align: center; padding: var(--spacing-lg) var(--spacing-md);
     }
     .empty-icon-wrap {
-      width: 72px; height: 72px; border-radius: 50%; margin: 0 auto var(--spacing-md);
+      width: 64px; height: 64px; border-radius: var(--radius-md); margin: 0 auto var(--spacing-md);
       display: flex; align-items: center; justify-content: center;
     }
-    .empty-icon-wrap.orange { background: rgba(230,81,0,0.1); }
-    .empty-icon-wrap.orange mat-icon { color: #e65100; }
+    .empty-icon-wrap.orange { background: var(--color-stat-amber-bg); }
+    .empty-icon-wrap.orange mat-icon { color: var(--color-stat-amber); }
     .empty-icon-wrap mat-icon { font-size: 32px; width: 32px; height: 32px; }
     .empty-state h3 { margin: 0 0 var(--spacing-xs); font-size: 1.1rem; }
     .empty-state p { color: var(--color-text-muted); margin: 0 auto var(--spacing-md); max-width: 360px; }

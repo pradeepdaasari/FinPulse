@@ -12,6 +12,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { CategoryService } from '../../../core/services/category.service';
 import { RecurringService } from '../../../core/services/recurring.service';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -25,7 +26,7 @@ import { Observable } from 'rxjs';
   imports: [
     CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatButtonModule, MatDatepickerModule,
-    MatNativeDateModule, MatSlideToggleModule, MatButtonToggleModule, MatIconModule, MatProgressSpinnerModule
+    MatNativeDateModule, MatSlideToggleModule, MatButtonToggleModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule
   ],
   template: `
     <div class="dialog-banner">
@@ -37,6 +38,12 @@ import { Observable } from 'rxjs';
         <div>
           <h2 mat-dialog-title>{{ data ? 'Edit' : 'Add' }} Recurring Transaction</h2>
           <p class="dialog-subtitle">Automate your tracking</p>
+        </div>
+        <span class="banner-spacer"></span>
+        <div class="dialog-header-actions">
+          <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+            <mat-icon>close</mat-icon>
+          </button>
         </div>
       </div>
     </div>
@@ -69,10 +76,10 @@ import { Observable } from 'rxjs';
 
         <mat-form-field appearance="outline">
           <mat-label>Category</mat-label>
-          <mat-select [value]="selectedParentId()" (selectionChange)="onParentChange($event.value)">
+          <mat-select [value]="selectedParentId()" (selectionChange)="onParentChange($event.value)" (opened)="parentSearch.set(''); focusInput(parentSearchInput)">
             <div class="search-box">
               <mat-icon>search</mat-icon>
-              <input matInput placeholder="Search..." (input)="parentSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+              <input #parentSearchInput matInput placeholder="Search..." (input)="parentSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
             </div>
             @for (parent of filteredParents(); track parent.id) {
               <mat-option [value]="parent.id">{{ parent.name }}</mat-option>
@@ -82,10 +89,10 @@ import { Observable } from 'rxjs';
 
         <mat-form-field appearance="outline">
           <mat-label>Subcategory</mat-label>
-          <mat-select formControlName="categoryId">
+          <mat-select formControlName="categoryId" (opened)="childSearch.set(''); focusInput(childSearchInput)">
             <div class="search-box">
               <mat-icon>search</mat-icon>
-              <input matInput placeholder="Search..." (input)="childSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+              <input #childSearchInput matInput placeholder="Search..." (input)="childSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
             </div>
             @for (child of filteredChildren(); track child.id) {
               <mat-option [value]="child.id">{{ child.name }}</mat-option>
@@ -130,8 +137,6 @@ import { Observable } from 'rxjs';
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end" class="dialog-actions">
-      <span class="action-spacer"></span>
-      <button mat-button mat-dialog-close class="cancel-btn">Cancel</button>
       <button mat-raised-button color="primary" class="save-btn" [disabled]="form.invalid || loading() || saving()" (click)="save()">
         <mat-icon>{{ data ? 'check' : 'save' }}</mat-icon>
         {{ saving() ? 'Saving...' : (data ? 'Update' : 'Create') }}
@@ -175,6 +180,19 @@ import { Observable } from 'rxjs';
       letter-spacing: var(--tracking-tight); color: #fff !important;
     }
     .dialog-subtitle { color: rgba(255, 255, 255, 0.75); font-size: 0.72rem; margin: 2px 0 0; }
+    .banner-spacer { flex: 1; }
+    .dialog-header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; align-self: center; }
+    .header-close {
+      color: rgba(255, 255, 255, 0.9) !important;
+      width: 40px !important; height: 40px !important;
+      padding: 0 !important;
+      display: inline-flex !important; align-items: center !important; justify-content: center !important;
+      border-radius: 50% !important;
+      background: rgba(255, 255, 255, 0.12) !important;
+      border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+    .header-close:hover { background: rgba(255, 255, 255, 0.25) !important; }
+    .header-close mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .expense-form { display: flex; flex-direction: column; gap: 4px; min-width: 0; width: 100%; }
     .txn-icons { display: flex; justify-content: center; gap: 24px; margin-bottom: 12px; }
     .txn-icon-item {
@@ -216,8 +234,6 @@ import { Observable } from 'rxjs';
       border-top: 1px solid var(--color-border);
       gap: 8px;
     }
-    .action-spacer { flex: 1; }
-    .cancel-btn { font-weight: 500 !important; }
     .save-btn {
       border-radius: var(--radius-sm) !important;
       padding: 0 20px !important;
@@ -227,7 +243,8 @@ import { Observable } from 'rxjs';
     .save-btn mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
     @media (max-width: 599px) {
-      .dialog-banner { margin: -16px -16px 12px; padding: 14px 16px 12px; }
+      :host { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+      .dialog-banner { margin: -16px -16px 12px; padding: 14px 16px 12px; flex-shrink: 0; }
     }
   `]
 })
@@ -324,6 +341,10 @@ export class RecurringDialogComponent implements OnInit {
       this.loading.set(false);
       this.cdr.detectChanges();
     });
+  }
+
+  focusInput(el: HTMLInputElement): void {
+    setTimeout(() => el.focus(), 0);
   }
 
   onParentChange(parentId: number): void {

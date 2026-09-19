@@ -9,6 +9,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { forkJoin } from 'rxjs';
 import { MoneyMovementService } from '../core/services/money-movement.service';
 import { FundingSourceService } from '../core/services/funding-source.service';
@@ -30,7 +31,7 @@ interface EntityOption {
   imports: [
     CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatDatepickerModule, MatNativeDateModule,
-    MatButtonModule, MatIconModule
+    MatButtonModule, MatIconModule, MatTooltipModule
   ],
   template: `
     <div class="dialog-header">
@@ -41,6 +42,10 @@ interface EntityOption {
         <h2 mat-dialog-title>Add Money Movement</h2>
         <span class="dialog-subtitle">Track a manual money flow</span>
       </div>
+      <span class="header-spacer"></span>
+      <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
     <mat-dialog-content>
       <form [formGroup]="form" class="movement-form" (submit)="$event.preventDefault(); save()">
@@ -130,7 +135,6 @@ interface EntityOption {
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end" class="dialog-actions">
-      <button mat-stroked-button mat-dialog-close class="cancel-btn">Cancel</button>
       <button mat-flat-button color="primary" class="save-btn" (click)="save()" [disabled]="form.invalid || saving()">
         {{ saving() ? 'Saving...' : 'Add Movement' }}
       </button>
@@ -149,6 +153,9 @@ interface EntityOption {
     .header-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #00796b; }
     .header-text h2 { margin: 0 !important; padding: 0 !important; font-size: 1.1rem !important; font-weight: 700 !important; }
     .dialog-subtitle { font-size: 0.75rem; color: var(--color-text-secondary); }
+    .header-spacer { flex: 1; }
+    .header-close { color: var(--color-text-muted); }
+    .header-close mat-icon { font-size: 20px; width: 20px; height: 20px; }
     mat-dialog-content { min-width: 400px; max-width: 550px; }
     .movement-form { display: flex; flex-direction: column; gap: var(--spacing-xs); }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md); }

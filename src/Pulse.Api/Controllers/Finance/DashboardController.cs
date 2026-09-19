@@ -264,6 +264,208 @@ public class DashboardController : ControllerBase
         });
     }
 
+    [HttpGet("net-worth-history")]
+    public async Task<ActionResult> GetNetWorthHistory([FromQuery] int weeks = 52)
+    {
+        var today = DateTime.UtcNow.Date;
+        var bankBalance = await _db.BankAccounts.Where(a => a.UserId == UserId).SumAsync(a => a.CurrentBalance);
+        var ccDebt = await _db.CreditCards.Where(c => c.UserId == UserId).SumAsync(c => c.CurrentBalance);
+        var loanDebt = await _db.PersonalLoans.Where(l => l.UserId == UserId).SumAsync(l => l.CurrentBalance);
+
+        // Auto-capture today's snapshot
+        var existsToday = await _db.NetWorthSnapshots
+            .AnyAsync(s => s.UserId == UserId && s.SnapshotDate == today);
+
+        if (!existsToday)
+        {
+            _db.NetWorthSnapshots.Add(new Pulse.Core.Models.NetWorthSnapshot
+            {
+                UserId = UserId,
+                SnapshotDate = today,
+                TotalBankBalance = bankBalance,
+                TotalCreditCardDebt = ccDebt,
+                TotalLoanDebt = loanDebt,
+                NetWorth = bankBalance - ccDebt - loanDebt
+            });
+            await _db.SaveChangesAsync();
+        }
+
+        // Backfill historical snapshots by reconstructing balances from transactions
+        // Reconstruct if yesterday's snapshot is missing (means we haven't done a full backfill yet)
+        var hasYesterday = await _db.NetWorthSnapshots
+            .AnyAsync(s => s.UserId == UserId && s.SnapshotDate == today.AddDays(-1));
+        if (!hasYesterday)
+        {
+            // Remove old interpolated/partial snapshots (keep today's real one)
+            var oldSnapshots = await _db.NetWorthSnapshots
+                .Where(s => s.UserId == UserId && s.SnapshotDate != today)
+                .ToListAsync();
+            _db.NetWorthSnapshots.RemoveRange(oldSnapshots);
+            await _db.SaveChangesAsync();
+
+            var existingDates = new HashSet<DateTime> { today };
+
+            // Current balances per account
+            var bankAccounts = await _db.BankAccounts
+                .Where(a => a.UserId == UserId)
+                .Select(a => new { a.Id, a.CurrentBalance })
+                .ToListAsync();
+            var creditCards = await _db.CreditCards
+                .Where(c => c.UserId == UserId)
+                .Select(c => new { c.Id, c.CurrentBalance })
+                .ToListAsync();
+            var personalLoans = await _db.PersonalLoans
+                .Where(l => l.UserId == UserId)
+                .Select(l => new { l.Id, l.CurrentBalance })
+                .ToListAsync();
+
+            // All payment history for debt reconstruction
+            var payments = await _db.PaymentHistories
+                .Where(p => p.UserId == UserId)
+                .Select(p => new { p.DebtType, p.DebtId, p.AmountPaid, p.PaymentDate, p.FromAccountId })
+                .ToListAsync();
+
+            // All daily expenses for bank account reconstruction
+            var expenses = await _db.DailyExpenses
+                .Where(e => e.UserId == UserId)
+                .Select(e => new { e.Date, e.Amount, e.TransactionType, e.FundingSourceType, e.FundingSourceId, e.ToFundingSourceId })
+                .ToListAsync();
+
+            var cutoffDate = today.AddDays(-weeks * 7);
+            var snapshotsToAdd = new List<Pulse.Core.Models.NetWorthSnapshot>();
+
+            for (var d = cutoffDate; d < today; d = d.AddDays(1))
+            {
+                if (existingDates.Contains(d)) continue;
+
+                // Reconstruct bank balances: current - income after date + expenses after date
+                var totalBank = 0m;
+                foreach (var acct in bankAccounts)
+                {
+                    var bal = acct.CurrentBalance;
+                    var acctExpenses = expenses.Where(e =>
+                        e.Date > d &&
+                        e.FundingSourceType == FundingSourceType.BankAccount &&
+                        e.FundingSourceId == acct.Id);
+
+                    foreach (var e in acctExpenses)
+                    {
+                        if (e.TransactionType == TransactionType.Income)
+                            bal -= e.Amount; // remove income that came after this date
+                        else if (e.TransactionType == TransactionType.Expense || e.TransactionType == null)
+                            bal += e.Amount; // add back expenses that left after this date
+                        else if (e.TransactionType == TransactionType.Transfer)
+                            bal += e.Amount; // add back transfers out
+                    }
+
+                    // Transfers INTO this account after the date
+                    var transfersIn = expenses.Where(e =>
+                        e.Date > d &&
+                        e.TransactionType == TransactionType.Transfer &&
+                        e.ToFundingSourceId == acct.Id);
+                    foreach (var t in transfersIn)
+                        bal -= t.Amount;
+
+                    // Payments made FROM this account reduce bank balance
+                    var paymentsFrom = payments.Where(p =>
+                        p.PaymentDate.Date > d && p.FromAccountId == acct.Id);
+                    foreach (var p in paymentsFrom)
+                        bal += p.AmountPaid; // add back payments that reduced balance after this date
+
+                    // Refunds back to this account after the date
+                    var refunds = expenses.Where(e =>
+                        e.Date > d &&
+                        e.TransactionType == TransactionType.Refund &&
+                        e.FundingSourceType == FundingSourceType.BankAccount &&
+                        e.FundingSourceId == acct.Id);
+                    foreach (var r in refunds)
+                        bal -= r.Amount;
+
+                    totalBank += bal;
+                }
+
+                // Reconstruct credit card balances: current + payments after date
+                var totalCC = 0m;
+                foreach (var card in creditCards)
+                {
+                    var bal = card.CurrentBalance;
+                    var cardPayments = payments.Where(p =>
+                        p.PaymentDate.Date > d &&
+                        p.DebtType == DebtType.CreditCard &&
+                        p.DebtId == card.Id);
+                    foreach (var p in cardPayments)
+                        bal += p.AmountPaid; // balance was higher before these payments
+
+                    // Charges on this card after the date
+                    var charges = expenses.Where(e =>
+                        e.Date > d &&
+                        e.FundingSourceType == FundingSourceType.CreditCard &&
+                        e.FundingSourceId == card.Id &&
+                        (e.TransactionType == TransactionType.Expense || e.TransactionType == null));
+                    foreach (var c in charges)
+                        bal -= c.Amount; // these charges increased balance after the date
+
+                    // Refunds to this card after the date
+                    var ccRefunds = expenses.Where(e =>
+                        e.Date > d &&
+                        e.TransactionType == TransactionType.Refund &&
+                        e.FundingSourceType == FundingSourceType.CreditCard &&
+                        e.FundingSourceId == card.Id);
+                    foreach (var r in ccRefunds)
+                        bal += r.Amount; // refund decreased balance after date
+
+                    totalCC += bal;
+                }
+
+                // Reconstruct loan balances: current + payments after date
+                var totalLoan = 0m;
+                foreach (var loan in personalLoans)
+                {
+                    var bal = loan.CurrentBalance;
+                    var loanPayments = payments.Where(p =>
+                        p.PaymentDate.Date > d &&
+                        p.DebtType == DebtType.PersonalLoan &&
+                        p.DebtId == loan.Id);
+                    foreach (var p in loanPayments)
+                        bal += p.AmountPaid;
+                    totalLoan += bal;
+                }
+
+                snapshotsToAdd.Add(new Pulse.Core.Models.NetWorthSnapshot
+                {
+                    UserId = UserId,
+                    SnapshotDate = d,
+                    TotalBankBalance = totalBank,
+                    TotalCreditCardDebt = totalCC,
+                    TotalLoanDebt = totalLoan,
+                    NetWorth = totalBank - totalCC - totalLoan
+                });
+            }
+
+            if (snapshotsToAdd.Count > 0)
+            {
+                _db.NetWorthSnapshots.AddRange(snapshotsToAdd);
+                await _db.SaveChangesAsync();
+            }
+        }
+
+        var cutoff = today.AddDays(-weeks * 7);
+        var snapshots = await _db.NetWorthSnapshots
+            .Where(s => s.UserId == UserId && s.SnapshotDate >= cutoff)
+            .OrderBy(s => s.SnapshotDate)
+            .Select(s => new
+            {
+                Date = s.SnapshotDate,
+                s.TotalBankBalance,
+                s.TotalCreditCardDebt,
+                s.TotalLoanDebt,
+                s.NetWorth
+            })
+            .ToListAsync();
+
+        return Ok(snapshots);
+    }
+
     private static DateTime GetNextDueDate(int dueDay, DateTime today)
     {
         var thisMonth = new DateTime(today.Year, today.Month, Math.Min(dueDay, DateTime.DaysInMonth(today.Year, today.Month)));

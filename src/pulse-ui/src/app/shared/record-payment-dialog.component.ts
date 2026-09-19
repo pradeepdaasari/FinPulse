@@ -11,6 +11,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { CreditCardService } from '../core/services/credit-card.service';
 import { LoanService } from '../core/services/loan.service';
 import { PaymentService } from '../core/services/payment.service';
@@ -44,7 +45,8 @@ export interface RecordPaymentData {
     MatButtonToggleModule,
     MatIconModule,
     MatSelectModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatTooltipModule
   ],
   template: `
     <div class="dialog-header">
@@ -55,6 +57,10 @@ export interface RecordPaymentData {
         <h2 mat-dialog-title>{{ isEdit ? 'Edit' : 'Record' }} Payment</h2>
         <span class="dialog-subtitle">{{ data.debtName }}</span>
       </div>
+      <span class="header-spacer"></span>
+      <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
     <mat-dialog-content>
       @if (loadingAccounts()) {
@@ -115,7 +121,6 @@ export interface RecordPaymentData {
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cancel</button>
       <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid || saving()">
         @if (saving()) {
           {{ isEdit ? 'Saving...' : 'Recording...' }}
@@ -138,6 +143,9 @@ export interface RecordPaymentData {
     .header-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #2e7d32; }
     .header-text h2 { margin: 0 !important; padding: 0 !important; font-size: 1.1rem !important; font-weight: 700 !important; }
     .dialog-subtitle { font-size: 0.75rem; color: var(--color-text-secondary); }
+    .header-spacer { flex: 1; }
+    .header-close { color: var(--color-text-muted); }
+    .header-close mat-icon { font-size: 20px; width: 20px; height: 20px; }
     mat-dialog-content {
       min-width: 0;
       max-width: 450px;

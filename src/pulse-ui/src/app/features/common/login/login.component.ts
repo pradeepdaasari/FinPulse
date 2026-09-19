@@ -50,7 +50,7 @@ import { AuthService } from '../../../core/services/auth.service';
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
+      min-height: 100dvh;
       background: var(--gradient-login);
       position: relative;
       overflow: hidden;
@@ -58,69 +58,115 @@ import { AuthService } from '../../../core/services/auth.service';
     .login-container::before {
       content: '';
       position: absolute;
-      top: 30%;
+      top: 20%;
       left: 50%;
       transform: translateX(-50%);
-      width: 500px;
-      height: 500px;
-      background: radial-gradient(circle, rgba(0, 122, 255, 0.15) 0%, transparent 70%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(0, 122, 255, 0.12) 0%, rgba(88, 86, 214, 0.06) 40%, transparent 70%);
+      pointer-events: none;
+    }
+    .login-container::after {
+      content: '';
+      position: absolute;
+      bottom: 10%;
+      right: 20%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(88, 86, 214, 0.08) 0%, transparent 70%);
       pointer-events: none;
     }
     .login-card {
-      padding: 48px;
+      padding: 44px 40px;
       text-align: center;
       max-width: 400px;
       width: 90%;
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-float);
+      border-radius: var(--radius-xl) !important;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      background: var(--color-surface-solid) !important;
+      animation: loginCardIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      z-index: 1;
+    }
+    @keyframes loginCardIn {
+      from { opacity: 0; transform: translateY(20px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
     .brand {
-      margin-bottom: 24px;
+      margin-bottom: 28px;
     }
     .brand-icon {
-      font-size: 48px;
-      width: 48px;
-      height: 48px;
-      color: var(--color-primary);
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+      color: #fff;
+      padding: 12px;
+      border-radius: 16px;
+      background: var(--gradient-primary);
+      box-shadow: 0 4px 16px rgba(0, 122, 255, 0.3);
+      box-sizing: content-box;
+      overflow: visible;
     }
     .brand h1 {
-      margin: 12px 0 4px;
-      font-size: 1.5rem;
+      margin: 16px 0 6px;
+      font-size: 1.625rem;
       font-weight: 700;
       letter-spacing: -0.03em;
+      color: var(--color-text);
     }
     .tagline {
       font-size: var(--text-sm);
-      color: var(--color-text-secondary);
+      color: var(--color-text-muted);
       margin: 0;
     }
     .auth-form {
       display: flex;
       flex-direction: column;
-      padding-top: 20px;
+      padding-top: 24px;
       gap: 4px;
     }
     .auth-form mat-form-field {
       width: 100%;
     }
     .auth-form button[type="submit"] {
-      margin-top: 8px;
-      height: 44px;
+      margin-top: 12px;
+      height: 46px;
       border-radius: var(--radius-sm);
       width: 100%;
-      font-size: 15px;
+      font-size: var(--text-base);
+      font-weight: 600;
+      letter-spacing: -0.01em;
     }
     .error-msg {
       color: var(--color-danger);
-      font-size: 13px;
+      font-size: var(--text-xs);
+      font-weight: 500;
       margin: 0 0 8px;
+      padding: 8px 12px;
+      background: var(--color-danger-bg);
+      border-radius: var(--radius-sm);
+      text-align: left;
     }
     .login-quote {
-      color: rgba(255, 255, 255, 0.5);
-      font-size: var(--text-sm);
+      color: rgba(255, 255, 255, 0.4);
+      font-size: var(--text-xs);
       font-style: italic;
-      margin-top: var(--spacing-lg);
+      margin-top: var(--spacing-xl);
       text-align: center;
+      max-width: 300px;
+      line-height: var(--leading-relaxed);
+      animation: fadeIn 0.8s ease-out 0.3s both;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @media (max-width: 599px) {
+      .login-card {
+        padding: 36px 28px;
+        width: 92%;
+      }
     }
   `]
 })

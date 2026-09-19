@@ -469,7 +469,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       display: flex; justify-content: space-between; align-items: flex-start;
       flex-wrap: wrap; gap: 12px; margin-bottom: 20px;
     }
-    .page-title { margin: 0; font-size: 1.5rem; font-weight: 700; color: var(--color-text); }
+    .page-title { margin: 0; font-size: 1.5rem; font-weight: var(--weight-bold); color: var(--color-text); }
     .period-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
     .custom-range { display: flex; align-items: center; gap: 8px; }
     .date-field { width: 130px; }
@@ -482,20 +482,21 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       gap: 12px; margin-bottom: 20px;
     }
     .stat-card {
-      background: var(--color-surface); border-radius: var(--radius-md);
-      padding: 16px; box-shadow: var(--shadow-sm);
+      background: var(--color-surface-solid); border-radius: var(--radius-md);
+      padding: 16px; box-shadow: var(--shadow-xs);
+      border: 1px solid var(--color-border);
       display: flex; flex-direction: column; align-items: center;
       text-align: center; gap: 4px;
     }
-    .stat-value { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .stat-value { font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
     .stat-large { font-size: 1.4rem; }
-    .stat-label { font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
-    .stat-sub { font-size: 0.7rem; color: var(--color-text-muted); }
+    .stat-label { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: var(--tracking-wide); }
+    .stat-sub { font-size: var(--text-xs); color: var(--color-text-muted); }
     .stat-divider { color: var(--color-text-muted); margin: 0 4px; font-weight: 400; }
     .positive { color: var(--color-success); }
     .negative { color: var(--color-danger); }
     .fees-value { color: var(--color-danger); }
-    .fees-sub { color: var(--color-danger); font-weight: 600; }
+    .fees-sub { color: var(--color-danger); font-weight: var(--weight-semibold); }
     .avg-win-loss { display: flex; align-items: baseline; }
     .win-rate-display { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 6px; }
     .win-rate-bar {
@@ -507,23 +508,23 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     /* Mentor Card */
     .mentor-card {
       margin-bottom: 20px; border-radius: var(--radius-md);
-      background: color-mix(in srgb, #f59e0b 8%, var(--color-surface));
-      border-left: 4px solid #f59e0b;
+      background: var(--color-warning-bg);
+      border-left: 4px solid var(--color-warning);
     }
     .mentor-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-    .mentor-icon { color: #f59e0b; }
-    .mentor-title { font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.02em; }
+    .mentor-icon { color: var(--color-warning); }
+    .mentor-title { font-weight: var(--weight-bold); font-size: var(--text-sm); text-transform: uppercase; letter-spacing: var(--tracking-wide); }
     .insight-list {
       margin: 0; padding-left: 20px;
       list-style: none;
     }
     .insight-list li {
-      position: relative; font-size: 0.875rem; line-height: 1.5;
+      position: relative; font-size: var(--text-sm); line-height: var(--leading-normal);
       color: var(--color-text); padding: 4px 0;
     }
     .insight-list li::before {
       content: '\\2022'; position: absolute; left: -16px;
-      color: #f59e0b; font-weight: 700;
+      color: var(--color-warning); font-weight: var(--weight-bold);
     }
 
     /* Chart Card */
@@ -532,8 +533,8 @@ import { toLocalDateString } from '../../core/utils/date-utils';
 
     /* Section Title */
     .section-title {
-      font-size: 0.85rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.03em; color: var(--color-text-muted); margin: 0 0 12px;
+      font-size: var(--text-xs); font-weight: var(--weight-bold); text-transform: uppercase;
+      letter-spacing: var(--tracking-wide); color: var(--color-text-muted); margin: 0 0 12px;
     }
 
     /* Two Column Grid */
@@ -546,18 +547,18 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     .table-card { border-radius: var(--radius-md); }
     .table-scroll { overflow-x: auto; }
     .data-table {
-      width: 100%; border-collapse: collapse; font-size: 0.8rem;
+      width: 100%; border-collapse: collapse; font-size: var(--text-sm);
       font-variant-numeric: tabular-nums;
     }
     .data-table th {
-      text-align: left; padding: 8px 10px; font-weight: 600;
-      color: var(--color-text-muted); font-size: 0.72rem;
-      text-transform: uppercase; letter-spacing: 0.03em;
-      border-bottom: 2px solid var(--color-text-muted);
+      text-align: left; padding: 8px 10px; font-weight: var(--weight-semibold);
+      color: var(--color-text-muted); font-size: var(--text-xs);
+      text-transform: uppercase; letter-spacing: var(--tracking-wide);
+      border-bottom: 2px solid var(--color-border);
     }
-    .data-table td { padding: 8px 10px; border-bottom: 1px solid rgba(128, 128, 128, 0.1); }
-    .data-table tbody tr:nth-child(even) { background: rgba(128, 128, 128, 0.04); }
-    .data-table .col-name { font-weight: 600; }
+    .data-table td { padding: 8px 10px; border-bottom: 1px solid var(--color-border); }
+    .data-table tbody tr:nth-child(even) { background: var(--color-surface-hover); }
+    .data-table .col-name { font-weight: var(--weight-semibold); }
     .best-row { background: rgba(52, 199, 89, 0.08) !important; }
     .worst-row { background: rgba(255, 59, 48, 0.08) !important; }
 
@@ -567,8 +568,8 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
     }
     .option-stat { display: flex; flex-direction: column; align-items: center; text-align: center; }
-    .option-val { font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .option-lbl { font-size: 0.7rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; }
+    .option-val { font-size: 1.1rem; font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
+    .option-lbl { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: var(--tracking-wide); }
 
     /* Today Row */
     .today-row {
@@ -576,23 +577,24 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       gap: 12px; margin-bottom: 20px;
     }
     .today-card {
-      background: var(--color-surface); border-radius: var(--radius-sm);
-      padding: 14px; box-shadow: var(--shadow-sm);
+      background: var(--color-surface-solid); border-radius: var(--radius-md);
+      padding: 14px; box-shadow: var(--shadow-xs);
+      border: 1px solid var(--color-border);
       display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px;
     }
-    .today-val { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .today-lbl { font-size: 0.7rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; }
+    .today-val { font-size: 1.2rem; font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
+    .today-lbl { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: var(--tracking-wide); }
 
     /* Alert Cards */
     .alert-row { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
     .alert-card {
       flex: 1; min-width: 200px; display: flex; align-items: center; gap: 12px;
-      padding: 14px 16px; border-radius: var(--radius-md); font-weight: 600;
+      padding: 14px 16px; border-radius: var(--radius-md); font-weight: var(--weight-semibold);
     }
     .alert-card mat-icon { font-size: 24px; width: 24px; height: 24px; flex-shrink: 0; }
     .alert-content { display: flex; flex-direction: column; gap: 2px; }
-    .alert-title { font-size: 0.85rem; }
-    .alert-cost { font-size: 0.75rem; opacity: 0.8; }
+    .alert-title { font-size: var(--text-sm); }
+    .alert-cost { font-size: var(--text-xs); opacity: 0.8; }
     .revenge-alert {
       background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
       border: 1.5px solid var(--color-danger); color: var(--color-danger);
@@ -612,8 +614,8 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     }
     .r-bar.r-positive { background: var(--color-success); }
     .r-bar.r-negative { background: var(--color-danger); }
-    .r-count { font-size: 0.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .r-label { font-size: 0.65rem; color: var(--color-text-muted); font-weight: 600; text-align: center; }
+    .r-count { font-size: var(--text-sm); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
+    .r-label { font-size: var(--text-xs); color: var(--color-text-muted); font-weight: var(--weight-semibold); text-align: center; }
 
     /* Mobile */
     @media (max-width: 599px) {

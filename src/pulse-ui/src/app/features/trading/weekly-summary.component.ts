@@ -21,8 +21,10 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       <div class="banner-pattern"></div>
       <div class="banner-content">
         <div class="banner-icon"><mat-icon>analytics</mat-icon></div>
-        <h2>Weekly Summary</h2>
-        <p class="banner-subtitle">Learn from your data. Improve every week.</p>
+        <div class="banner-text">
+          <h2>Weekly Summary</h2>
+          <p class="banner-subtitle">Learn from your data. Improve every week.</p>
+        </div>
       </div>
     </div>
 
@@ -272,8 +274,9 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     .page-banner {
       position: relative;
       margin: -24px -24px 24px;
-      padding: 40px 24px 32px;
+      padding: 14px 24px;
       background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      border-radius: 0 0 var(--radius-xl) var(--radius-xl);
       overflow: hidden;
     }
     .banner-pattern {
@@ -282,16 +285,16 @@ import { toLocalDateString } from '../../core/utils/date-utils';
         radial-gradient(circle at 20% 80%, rgba(52, 199, 89, 0.12) 0%, transparent 50%),
         radial-gradient(circle at 80% 20%, rgba(0, 122, 255, 0.1) 0%, transparent 40%);
     }
-    .banner-content { position: relative; text-align: center; }
+    .banner-content { position: relative; display: flex; align-items: center; gap: 12px; }
     .banner-icon {
-      width: 56px; height: 56px; border-radius: 16px;
-      background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px);
+      width: 42px; height: 42px; border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.18);
       display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 12px; border: 1px solid rgba(255, 255, 255, 0.2);
+      flex-shrink: 0; border: 1px solid rgba(255, 255, 255, 0.2);
     }
-    .banner-icon mat-icon { font-size: 28px; width: 28px; height: 28px; color: #4ecdc4; }
-    h2 { margin: 0; color: #fff; font-size: 1.5rem; font-weight: 700; }
-    .banner-subtitle { color: rgba(255, 255, 255, 0.65); font-size: 0.875rem; margin: 4px 0 0; }
+    .banner-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #4ecdc4; }
+    h2 { margin: 0; color: #fff; font-size: 1rem; font-weight: 700; }
+    .banner-subtitle { color: rgba(255, 255, 255, 0.65); font-size: var(--text-xs); margin: 1px 0 0; }
 
     .week-nav {
       display: flex; align-items: center; justify-content: center; gap: 12px;
@@ -450,7 +453,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     .trend-compliance { font-size: 0.65rem; color: var(--color-text-muted); }
 
     @media (max-width: 599px) {
-      .page-banner { margin: -16px -16px 20px; padding: 32px 16px 24px; }
+      .page-banner { margin: -16px -16px 20px; padding: 12px 16px; }
       .grade-banner { flex-direction: column; text-align: center; }
       .grade-right { justify-content: center; }
       .metrics-grid { grid-template-columns: repeat(2, 1fr); }

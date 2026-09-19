@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { BloodWorkService } from '../../core/services/blood-work.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -15,9 +16,14 @@ import { BloodWorkResult } from '../../core/models/blood-work.model';
 @Component({
   selector: 'app-add-blood-work-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, MatAutocompleteModule, MatProgressSpinnerModule, FormsModule],
+  imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, MatAutocompleteModule, MatProgressSpinnerModule, MatTooltipModule, FormsModule],
   template: `
-    <h2 mat-dialog-title>Add Blood Work Report</h2>
+    <div class="dialog-title-row">
+      <h2 mat-dialog-title>Add Blood Work Report</h2>
+      <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
     <mat-dialog-content>
       @if (loading()) {
         <div class="loading-container"><mat-spinner diameter="28"></mat-spinner></div>
@@ -81,13 +87,27 @@ import { BloodWorkResult } from '../../core/models/blood-work.model';
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cancel</button>
       <button mat-flat-button color="primary" [disabled]="!reportDate || results.length === 0 || loading() || saving()" (click)="save()">
         {{ saving() ? 'Saving...' : 'Save Report' }}
       </button>
     </mat-dialog-actions>
   `,
   styles: [`
+    .dialog-title-row {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .dialog-title-row h2 { flex: 1; }
+    .header-close {
+      color: var(--color-text-muted) !important;
+      width: 34px !important; height: 34px !important;
+      padding: 0 !important;
+      display: inline-flex !important; align-items: center !important; justify-content: center !important;
+      border-radius: 50% !important;
+      background: var(--color-surface-secondary) !important;
+      border: 1px solid var(--color-border) !important;
+    }
+    .header-close:hover { background: var(--color-surface-hover) !important; }
+    .header-close mat-icon { font-size: 18px; width: 18px; height: 18px; }
     mat-dialog-content { min-width: 480px; max-height: 65vh; overflow-y: auto; }
     .full-width { width: 100%; }
     .half-width { width: 48%; }

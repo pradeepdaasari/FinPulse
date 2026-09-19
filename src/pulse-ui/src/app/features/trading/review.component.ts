@@ -29,8 +29,10 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
       <div class="banner-pattern"></div>
       <div class="banner-content">
         <div class="banner-icon"><mat-icon>grading</mat-icon></div>
-        <h2>Daily Review</h2>
-        <p class="banner-subtitle">Grade your process, not your P&L</p>
+        <div class="banner-text">
+          <h2>Daily Review</h2>
+          <p class="banner-subtitle">Grade your process, not your P&L</p>
+        </div>
       </div>
     </div>
 
@@ -224,22 +226,22 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
   styles: [`
     :host { display: block; }
     .page-banner {
-      position: relative; margin: -24px -24px 24px; padding: 40px 24px 32px;
+      position: relative; margin: -24px -24px 24px; padding: 14px 24px;
       background: var(--gradient-primary); border-radius: 0 0 var(--radius-lg) var(--radius-lg); overflow: hidden;
     }
     .banner-pattern { position: absolute; inset: 0; background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.08) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.06) 0%, transparent 40%); }
-    .banner-content { position: relative; text-align: center; }
-    .banner-icon { width: 52px; height: 52px; border-radius: 16px; background: rgba(255,255,255,0.2); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; border: 1px solid rgba(255,255,255,0.3); }
-    .banner-icon mat-icon { font-size: 26px; width: 26px; height: 26px; color: #fff; }
-    h2 { margin: 0; color: #fff; font-size: 1.4rem; font-weight: 700; }
-    .banner-subtitle { color: rgba(255,255,255,0.75); font-size: 0.85rem; margin: 4px 0 0; }
+    .banner-content { position: relative; display: flex; align-items: center; gap: 12px; }
+    .banner-icon { width: 42px; height: 42px; border-radius: var(--radius-md); background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.25); }
+    .banner-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #fff; }
+    h2 { margin: 0; color: #fff; font-size: 1rem; font-weight: var(--weight-bold); }
+    .banner-subtitle { color: rgba(255,255,255,0.7); font-size: var(--text-xs); margin: 1px 0 0; }
 
     .date-nav {
       display: flex; align-items: center; justify-content: center; gap: var(--spacing-xs);
       background: var(--color-surface-secondary); border-radius: var(--radius-full);
       padding: 4px; margin-bottom: var(--spacing-md); width: fit-content; margin-left: auto; margin-right: auto;
     }
-    .date-label { font-size: var(--text-sm); font-weight: 600; min-width: 140px; text-align: center; }
+    .date-label { font-size: var(--text-sm); font-weight: var(--weight-semibold); min-width: 140px; text-align: center; }
 
     .summary-card { margin-bottom: var(--spacing-md); }
     .summary-row { display: flex; justify-content: space-around; flex-wrap: wrap; gap: var(--spacing-sm); }
@@ -249,22 +251,22 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     .summary-icon.green { color: var(--color-success); }
     .summary-icon.red { color: var(--color-danger); }
     .summary-icon.purple { color: var(--color-stat-purple); }
-    .summary-value { display: block; font-size: 1.1rem; font-weight: 700; }
-    .summary-label { display: block; font-size: 0.72rem; color: var(--color-text-secondary); text-transform: uppercase; font-weight: 600; }
+    .summary-value { display: block; font-size: 1.1rem; font-weight: var(--weight-bold); }
+    .summary-label { display: block; font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; font-weight: var(--weight-semibold); letter-spacing: var(--tracking-wide); }
 
-    .section-title { font-size: 1rem; font-weight: 700; margin: 0 0 12px; }
-    .section-hint { font-size: 0.8rem; color: var(--color-text-secondary); margin: -8px 0 12px; }
+    .section-title { font-size: var(--text-base); font-weight: var(--weight-bold); margin: 0 0 12px; }
+    .section-hint { font-size: var(--text-sm); color: var(--color-text-muted); margin: -8px 0 12px; }
 
     .grade-section { margin-bottom: var(--spacing-md); }
     .grade-buttons { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 12px; }
     .grade-btn {
       display: flex; flex-direction: column; align-items: center; gap: 4px;
       padding: 16px 8px; border-radius: var(--radius-md); border: 2px solid var(--color-border);
-      cursor: pointer; background: var(--color-surface); transition: all 0.2s;
+      cursor: pointer; background: var(--color-surface-solid); transition: all 0.2s;
     }
     .grade-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
     .grade-letter { font-size: 1.5rem; font-weight: 800; }
-    .grade-desc { font-size: 0.6rem; text-transform: uppercase; font-weight: 600; color: var(--color-text-secondary); }
+    .grade-desc { font-size: 0.6rem; text-transform: uppercase; font-weight: var(--weight-semibold); color: var(--color-text-muted); letter-spacing: var(--tracking-wide); }
     .grade-a .grade-letter { color: var(--color-success); }
     .grade-b .grade-letter { color: var(--color-stat-blue); }
     .grade-c .grade-letter { color: var(--color-warning); }
@@ -272,17 +274,17 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     .grade-f .grade-letter { color: var(--color-danger); }
     .grade-btn.selected { border-color: var(--color-primary); background: var(--color-stat-blue-bg); box-shadow: var(--shadow-md); }
 
-    .rubric { margin-bottom: var(--spacing-md); font-size: 0.8rem; color: var(--color-text-secondary); }
-    .rubric summary { cursor: pointer; font-weight: 600; color: var(--color-primary); }
+    .rubric { margin-bottom: var(--spacing-md); font-size: var(--text-sm); color: var(--color-text-muted); }
+    .rubric summary { cursor: pointer; font-weight: var(--weight-semibold); color: var(--color-primary); }
     .rubric ul { padding-left: 20px; margin: 8px 0 0; }
     .rubric li { margin-bottom: 4px; }
 
     .questions-card { margin-bottom: var(--spacing-md); }
     .question-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--color-border); }
     .question-row:last-child { border-bottom: none; }
-    .question-text { font-size: 0.9rem; font-weight: 500; }
+    .question-text { font-size: var(--text-sm); font-weight: var(--weight-medium); }
     .yn-toggle { display: flex; gap: 6px; }
-    .yn-toggle button { min-width: 50px; font-size: 0.8rem; border-radius: var(--radius-full) !important; }
+    .yn-toggle button { min-width: 50px; font-size: var(--text-sm); border-radius: var(--radius-full) !important; }
     .yn-yes { background: var(--color-stat-green-bg) !important; color: var(--color-success) !important; border-color: var(--color-success) !important; }
     .yn-no { background: var(--color-stat-red-bg) !important; color: var(--color-danger) !important; border-color: var(--color-danger) !important; }
 
@@ -295,43 +297,43 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     .text-fields { display: flex; flex-direction: column; gap: 4px; margin-bottom: var(--spacing-md); }
     .text-fields mat-form-field { width: 100%; }
 
-    .save-btn { width: 100%; padding: 12px !important; font-weight: 700 !important; margin-bottom: var(--spacing-lg); }
+    .save-btn { width: 100%; padding: 12px !important; font-weight: var(--weight-bold) !important; margin-bottom: var(--spacing-lg); }
     .save-btn mat-icon { margin-right: 8px; }
 
     .grade-history { margin-top: var(--spacing-md); }
     .history-grid { display: flex; flex-wrap: wrap; gap: 4px; }
     .history-dot {
       width: 28px; height: 28px; border-radius: 6px; display: flex;
-      align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800;
+      align-items: center; justify-content: center; font-size: var(--text-xs); font-weight: 800;
     }
     .dot-a { background: var(--color-stat-green-bg); color: var(--color-success); }
     .dot-b { background: var(--color-stat-blue-bg); color: var(--color-stat-blue); }
     .dot-c { background: var(--color-stat-amber-bg); color: var(--color-warning); }
-    .dot-d { background: rgba(255, 149, 0, 0.15); color: #e65100; }
+    .dot-d { background: var(--color-stat-amber-bg); color: var(--color-stat-amber); }
     .dot-f { background: var(--color-stat-red-bg); color: var(--color-danger); }
-    .dot-obs { background: var(--color-surface-secondary); color: var(--color-text-secondary); }
+    .dot-obs { background: var(--color-surface-secondary); color: var(--color-text-muted); }
     .dot-obs mat-icon { font-size: 14px; width: 14px; height: 14px; }
 
     .observation-banner { margin-bottom: var(--spacing-md); border-left: 4px solid var(--color-stat-blue); }
     .obs-banner-content { display: flex; align-items: center; gap: 12px; }
     .obs-icon { font-size: 28px; width: 28px; height: 28px; color: var(--color-stat-blue); }
-    .obs-title { display: block; font-size: 1rem; font-weight: 700; }
-    .obs-subtitle { display: block; font-size: 0.8rem; color: var(--color-text-secondary); margin-top: 2px; }
+    .obs-title { display: block; font-size: var(--text-base); font-weight: var(--weight-bold); }
+    .obs-subtitle { display: block; font-size: var(--text-sm); color: var(--color-text-muted); margin-top: 2px; }
 
     .condition-section { margin-bottom: var(--spacing-md); }
     .condition-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
     .condition-btn {
       display: flex; flex-direction: column; align-items: center; gap: 6px;
       padding: 16px 8px; border-radius: var(--radius-md); border: 2px solid var(--color-border);
-      cursor: pointer; background: var(--color-surface); transition: all 0.2s;
-      font-size: 0.8rem; font-weight: 600; color: var(--color-text-secondary);
+      cursor: pointer; background: var(--color-surface-solid); transition: all 0.2s;
+      font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--color-text-muted);
     }
     .condition-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
     .condition-btn.selected { border-color: var(--color-primary); background: var(--color-stat-blue-bg); color: var(--color-primary); }
     .condition-btn mat-icon { font-size: 24px; width: 24px; height: 24px; }
 
     @media (max-width: 599px) {
-      .page-banner { margin: -16px -16px 20px; padding: 32px 16px 24px; }
+      .page-banner { margin: -16px -16px 20px; padding: 10px 16px; }
       .grade-buttons { grid-template-columns: repeat(5, 1fr); gap: 4px; }
       .grade-btn { padding: 12px 4px; }
       .grade-letter { font-size: 1.2rem; }

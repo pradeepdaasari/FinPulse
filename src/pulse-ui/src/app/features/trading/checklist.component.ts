@@ -32,8 +32,10 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
       <div class="banner-pattern"></div>
       <div class="banner-content">
         <div class="banner-icon"><mat-icon>checklist</mat-icon></div>
-        <h2>Trade Checklist</h2>
-        <p class="banner-sub">Every great trade starts with a process</p>
+        <div class="banner-text">
+          <h2>Trade Checklist</h2>
+          <p class="banner-sub">Every great trade starts with a process</p>
+        </div>
       </div>
     </div>
 
@@ -346,7 +348,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     .page-banner {
       position: relative;
       margin: -24px -24px 20px;
-      padding: 32px 24px 24px;
+      padding: 14px 24px;
       background: var(--gradient-primary);
       overflow: hidden;
     }
@@ -355,16 +357,16 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
       background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.08) 0%, transparent 50%),
                   radial-gradient(circle at 80% 20%, rgba(255,255,255,0.06) 0%, transparent 40%);
     }
-    .banner-content { position: relative; text-align: center; }
+    .banner-content { position: relative; display: flex; align-items: center; gap: 12px; }
     .banner-icon {
-      width: 52px; height: 52px; border-radius: 16px;
-      background: rgba(255,255,255,0.2); backdrop-filter: blur(8px);
+      width: 42px; height: 42px; border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.18);
       display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 12px; border: 1px solid rgba(255,255,255,0.3);
+      flex-shrink: 0; border: 1px solid rgba(255,255,255,0.25);
     }
-    .banner-icon mat-icon { font-size: 26px; width: 26px; height: 26px; color: #fff; }
-    h2 { margin: 0; color: #fff; font-size: 1.4rem; font-weight: 700; letter-spacing: -0.01em; }
-    .banner-sub { color: rgba(255,255,255,0.75); font-size: 0.85rem; margin: 4px 0 0; }
+    .banner-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #fff; }
+    h2 { margin: 0; color: #fff; font-size: 1rem; font-weight: var(--weight-bold); letter-spacing: -0.01em; }
+    .banner-sub { color: rgba(255,255,255,0.7); font-size: var(--text-xs); margin: 1px 0 0; }
 
     /* Stats */
     .stats-row {
@@ -373,18 +375,19 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     }
     .stat-card {
       display: flex; align-items: center; gap: 10px;
-      background: var(--color-surface); border-radius: var(--radius-md);
-      padding: 14px; box-shadow: var(--shadow-sm);
+      background: var(--color-surface-solid); border-radius: var(--radius-md);
+      padding: 14px; box-shadow: var(--shadow-xs);
+      border: 1px solid var(--color-border);
     }
-    .stat-card > mat-icon { font-size: 24px; width: 24px; height: 24px; }
-    .stat-card.stat-blue > mat-icon { color: var(--color-stat-blue); }
-    .stat-card.stat-green > mat-icon { color: var(--color-stat-green); }
-    .stat-card.stat-red > mat-icon { color: var(--color-stat-red); }
-    .stat-card.stat-amber > mat-icon { color: var(--color-stat-amber); }
+    .stat-card > mat-icon { font-size: 26px; width: 26px; height: 26px; padding: 10px; border-radius: var(--radius-sm); box-sizing: content-box; overflow: visible; flex-shrink: 0; }
+    .stat-card.stat-blue > mat-icon { color: var(--color-stat-blue); background: var(--color-stat-blue-bg); }
+    .stat-card.stat-green > mat-icon { color: var(--color-stat-green); background: var(--color-stat-green-bg); }
+    .stat-card.stat-red > mat-icon { color: var(--color-stat-red); background: var(--color-stat-red-bg); }
+    .stat-card.stat-amber > mat-icon { color: var(--color-stat-amber); background: var(--color-stat-amber-bg); }
     .stat-content { display: flex; flex-direction: column; min-width: 0; }
-    .stat-value { font-size: 1.1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .stat-label { font-size: 0.7rem; font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.02em; }
-    .status-text { text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-value { font-size: 1.25rem; font-weight: var(--weight-bold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.02em; line-height: var(--leading-tight); }
+    .stat-label { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: var(--tracking-wide); margin-top: 2px; }
+    .status-text { text-transform: uppercase; letter-spacing: var(--tracking-wide); }
 
     /* Blocked/Locked */
     .blocked-card {
@@ -399,7 +402,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     .blocked-icon mat-icon { font-size: 32px; width: 32px; height: 32px; color: #fff; }
     .blocked-icon.red-glow { background: var(--color-danger); box-shadow: 0 4px 20px rgba(255,59,48,0.3); }
     .blocked-icon.amber-glow { background: var(--color-warning); box-shadow: 0 4px 20px rgba(255,149,0,0.3); }
-    .blocked-content h3 { margin: 0 0 8px; font-size: 1.2rem; font-weight: 700; }
+    .blocked-content h3 { margin: 0 0 8px; font-size: 1.2rem; font-weight: var(--weight-bold); }
     .blocked-content p { color: var(--color-text-secondary); margin: 0 0 20px; line-height: 1.5; }
     .calming-quote {
       display: flex; align-items: flex-start; gap: 8px;
@@ -418,19 +421,19 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
       align-items: center; justify-content: center; flex-shrink: 0;
     }
     .mental-icon mat-icon { color: #fff; font-size: 22px; width: 22px; height: 22px; }
-    .mental-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
-    .mental-sub { margin: 2px 0 0; font-size: 0.8rem; color: var(--color-text-secondary); }
+    .mental-header h3 { margin: 0; font-size: 1.1rem; font-weight: var(--weight-bold); }
+    .mental-sub { margin: 2px 0 0; font-size: var(--text-sm); color: var(--color-text-secondary); }
 
     .mental-question { margin-bottom: 24px; }
-    .q-label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 10px; }
+    .q-label { display: block; font-weight: var(--weight-semibold); font-size: var(--text-sm); margin-bottom: 10px; }
     .mental-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
     .mental-buttons.two-col { grid-template-columns: repeat(2, 1fr); }
     .mental-btn {
       display: flex; flex-direction: column; align-items: center; gap: 6px;
       padding: 14px 8px; border-radius: var(--radius-md);
-      border: 2px solid var(--color-border); background: var(--color-surface);
-      cursor: pointer; transition: all 0.2s ease; font-size: 0.78rem;
-      font-weight: 500; text-align: center; color: var(--color-text);
+      border: 2px solid var(--color-border); background: var(--color-surface-solid);
+      cursor: pointer; transition: all 0.2s ease; font-size: var(--text-xs);
+      font-weight: var(--weight-medium); text-align: center; color: var(--color-text);
     }
     .mental-btn:hover { border-color: var(--color-primary); }
     .mental-btn mat-icon { font-size: 24px; width: 24px; height: 24px; }
@@ -441,7 +444,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     .warning-inline {
       display: flex; align-items: flex-start; gap: 8px;
       padding: 10px 14px; margin-top: 10px; border-radius: var(--radius-sm);
-      background: var(--color-stat-red-bg); color: var(--color-danger); font-size: 0.82rem; font-weight: 500;
+      background: var(--color-stat-red-bg); color: var(--color-danger); font-size: var(--text-xs); font-weight: var(--weight-medium);
     }
     .warning-inline.caution { background: var(--color-stat-amber-bg); color: var(--color-warning); }
     .warning-inline mat-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
@@ -477,12 +480,12 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     /* Checklist Card */
     .checklist-card { margin-bottom: var(--spacing-md); }
     .checklist-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-    .checklist-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; flex: 1; }
+    .checklist-header h3 { margin: 0; font-size: 1.1rem; font-weight: var(--weight-bold); flex: 1; }
     .back-btn { font-size: 0.8rem !important; }
     .full-width { width: 100%; }
 
     .checklist-progress { margin-bottom: 16px; }
-    .progress-text { font-size: 0.85rem; font-weight: 600; color: var(--color-text-secondary); }
+    .progress-text { font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--color-text-secondary); }
     .progress-bar {
       height: 6px; background: var(--color-border); border-radius: 3px; margin-top: 6px; overflow: hidden;
     }
@@ -509,7 +512,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     }
     .check-box.checked { background: var(--color-success); border-color: var(--color-success); }
     .check-box.checked mat-icon { color: #fff; font-size: 18px; width: 18px; height: 18px; }
-    .check-label { font-weight: 500; font-size: 0.9rem; }
+    .check-label { font-weight: var(--weight-medium); font-size: var(--text-sm); }
 
     /* Trade Entry */
     .trade-entry {
@@ -517,15 +520,15 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     }
     .entry-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
     .entry-header mat-icon { color: var(--color-success); }
-    .entry-header h4 { margin: 0; font-size: 1rem; font-weight: 700; }
+    .entry-header h4 { margin: 0; font-size: var(--text-base); font-weight: var(--weight-bold); }
     .entry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
     .direction-toggle { display: flex; flex-direction: column; gap: 6px; }
-    .dir-label { font-size: 0.75rem; font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; }
+    .dir-label { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: var(--tracking-wide); }
     .dir-buttons { display: flex; gap: 6px; }
     .dir-btn {
       flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px;
-      padding: 10px; border-radius: var(--radius-sm); font-weight: 600; font-size: 0.85rem;
-      border: 2px solid var(--color-border); background: var(--color-surface);
+      padding: 10px; border-radius: var(--radius-sm); font-weight: var(--weight-semibold); font-size: var(--text-sm);
+      border: 2px solid var(--color-border); background: var(--color-surface-solid);
       cursor: pointer; transition: all 0.2s; color: var(--color-text);
     }
     .dir-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
@@ -539,7 +542,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
       .mental-buttons { grid-template-columns: 1fr; }
       .mental-buttons.two-col { grid-template-columns: 1fr; }
       .entry-grid { grid-template-columns: 1fr; }
-      .page-banner { margin: -16px -16px 16px; padding: 24px 16px 20px; }
+      .page-banner { margin: -16px -16px 16px; padding: 10px 16px; }
     }
   `]
 })

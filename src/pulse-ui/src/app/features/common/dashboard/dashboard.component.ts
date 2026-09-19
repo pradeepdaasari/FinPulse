@@ -173,39 +173,49 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
 
     .dashboard-grid {
       display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-md);
+      margin-top: var(--spacing-md);
     }
     @media (max-width: 1024px) {
       .dashboard-grid { grid-template-columns: 1fr; }
     }
 
     /* Section blocks */
-    .section-block { margin-top: 28px; }
+    .section-block {
+      margin-top: var(--spacing-xl);
+      animation: fadeSlideUp 0.35s ease-out both;
+    }
+    .section-block:nth-child(2) { animation-delay: 0.05s; }
+    .section-block:nth-child(3) { animation-delay: 0.1s; }
     .section-header {
       display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
     .section-title-row { display: flex; align-items: center; gap: 10px; }
-    .section-title-row h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+    .section-title-row h3 {
+      margin: 0; font-size: 1rem; font-weight: 700;
+      letter-spacing: -0.01em;
+    }
     .section-icon-wrap {
-      width: 32px; height: 32px; border-radius: 10px;
+      width: 30px; height: 30px; border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
     }
-    .section-icon-wrap mat-icon { font-size: 18px; width: 18px; height: 18px; color: #fff; }
+    .section-icon-wrap mat-icon { font-size: 17px; width: 17px; height: 17px; color: #fff; }
     .trading-icon { background: var(--color-stat-purple); }
     .health-icon { background: #ff3b5c; }
     .view-all {
       display: flex; align-items: center; gap: 2px;
-      font-size: 0.8rem; font-weight: 600; color: var(--color-primary);
+      font-size: var(--text-xs); font-weight: 600; color: var(--color-primary);
       text-decoration: none; cursor: pointer;
+      transition: opacity var(--transition-fast);
     }
-    .view-all mat-icon { font-size: 16px; width: 16px; height: 16px; }
-    .view-all:hover { opacity: 0.8; }
+    .view-all mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .view-all:hover { opacity: 0.75; }
 
     /* Glance card */
     .glance-card {
-      background: var(--color-surface); border-radius: var(--radius-lg);
+      background: var(--color-surface-solid); border-radius: var(--radius-md);
       border: 1px solid var(--color-border); overflow: hidden;
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-xs);
     }
     .glance-stats-row {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
@@ -218,12 +228,14 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     }
     .glance-stat:last-child { border-right: none; }
     .gs-value {
-      font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums;
+      font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums;
       display: flex; align-items: center; gap: 4px;
+      letter-spacing: -0.02em; line-height: 1.2;
     }
     .gs-label {
-      font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted);
-      text-transform: uppercase; letter-spacing: 0.03em;
+      font-size: 0.625rem; font-weight: 600; color: var(--color-text-muted);
+      text-transform: uppercase; letter-spacing: 0.05em;
+      margin-top: 2px;
     }
     .positive { color: var(--color-success); }
     .negative { color: var(--color-danger); }
@@ -233,12 +245,12 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     /* Alert banner */
     .alert-banner {
       display: flex; align-items: center; gap: 8px;
-      padding: 10px 16px; font-size: 0.8rem; font-weight: 600;
+      padding: 10px 16px; font-size: var(--text-xs); font-weight: 600;
     }
-    .alert-banner mat-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
+    .alert-banner mat-icon { font-size: 16px; width: 16px; height: 16px; flex-shrink: 0; }
     .alert-banner.warn {
-      background: color-mix(in srgb, var(--color-warning) 10%, var(--color-surface));
-      color: var(--color-warning); border-top: 1px solid color-mix(in srgb, var(--color-warning) 20%, transparent);
+      background: var(--color-warning-bg);
+      color: var(--color-warning-text); border-top: 1px solid rgba(255, 149, 0, 0.15);
     }
 
     /* Today workout banner */
@@ -246,26 +258,26 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       display: flex; align-items: center; gap: 10px;
       padding: 12px 16px; text-decoration: none; color: var(--color-text);
       border-top: 1px solid var(--color-border); cursor: pointer;
-      transition: background 0.15s;
+      transition: background var(--transition-fast);
     }
-    .today-banner:hover { background: var(--color-surface-secondary); }
+    .today-banner:hover { background: var(--color-surface-hover); }
     .today-banner mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); flex-shrink: 0; }
-    .today-banner-text { flex: 1; font-size: 0.85rem; font-weight: 600; }
+    .today-banner-text { flex: 1; font-size: var(--text-sm); font-weight: 600; }
     .done-badge {
-      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      font-size: 0.625rem; font-weight: 700; text-transform: uppercase;
       padding: 2px 8px; border-radius: var(--radius-full);
-      background: var(--color-stat-green-bg); color: var(--color-success);
+      background: var(--color-success-bg); color: var(--color-success-text);
     }
-    .banner-chevron { color: var(--color-text-muted) !important; }
+    .banner-chevron { color: var(--color-text-muted) !important; font-size: 16px !important; width: 16px !important; height: 16px !important; }
 
     /* Empty states */
     .empty-state-card {
       display: flex; align-items: center; gap: 12px;
-      padding: 20px; background: var(--color-surface);
-      border-radius: var(--radius-lg); border: 1px dashed var(--color-border);
+      padding: 20px; background: var(--color-surface-solid);
+      border-radius: var(--radius-md); border: 1px dashed var(--color-border-strong);
     }
-    .empty-state-card .empty-icon { font-size: 28px; width: 28px; height: 28px; color: var(--color-text-muted); opacity: 0.4; }
-    .empty-state-card p { margin: 0; font-size: 0.85rem; color: var(--color-text-secondary); }
+    .empty-state-card .empty-icon { font-size: 24px; width: 24px; height: 24px; color: var(--color-text-muted); opacity: 0.35; }
+    .empty-state-card p { margin: 0; font-size: var(--text-sm); color: var(--color-text-secondary); line-height: var(--leading-relaxed); }
     .empty-state-card a { color: var(--color-primary); font-weight: 600; text-decoration: none; }
     .empty-state-card a:hover { text-decoration: underline; }
 
@@ -274,9 +286,9 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     /* Monthly Payments */
     .payments-icon { background: #5AC8FA; }
     .payments-card {
-      background: var(--color-surface); border-radius: var(--radius-lg);
+      background: var(--color-surface-solid); border-radius: var(--radius-md);
       border: 1px solid var(--color-border); overflow: hidden;
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-xs);
     }
 
     /* Mobile */
@@ -286,7 +298,8 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       .glance-stat:nth-child(odd) { border-right: 1px solid var(--color-border); }
       .glance-stat:nth-child(even) { border-right: none; }
       .glance-stat:nth-last-child(-n+2) { border-bottom: none; }
-      .section-block { margin-top: 24px; }
+      .section-block { margin-top: 20px; }
+      .gs-value { font-size: 1.15rem; }
     }
   `]
 })

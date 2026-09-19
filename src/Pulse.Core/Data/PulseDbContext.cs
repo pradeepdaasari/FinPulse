@@ -25,6 +25,7 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<RecurringTransaction> RecurringTransactions => Set<RecurringTransaction>();
     public DbSet<SavingsGoal> SavingsGoals => Set<SavingsGoal>();
     public DbSet<MoneyMovement> MoneyMovements => Set<MoneyMovement>();
+    public DbSet<NetWorthSnapshot> NetWorthSnapshots => Set<NetWorthSnapshot>();
 
     // Trading
     public DbSet<TradingSetup> TradingSetups => Set<TradingSetup>();
@@ -151,6 +152,16 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(e => new { e.Year, e.Month, e.UserId }).IsUnique();
             entity.Property(e => e.TotalDebt).HasPrecision(18, 2);
             entity.Property(e => e.TotalPaidThisMonth).HasPrecision(18, 2);
+        });
+
+        // NetWorthSnapshot
+        modelBuilder.Entity<NetWorthSnapshot>(entity =>
+        {
+            entity.Property(e => e.TotalBankBalance).HasPrecision(18, 2);
+            entity.Property(e => e.TotalCreditCardDebt).HasPrecision(18, 2);
+            entity.Property(e => e.TotalLoanDebt).HasPrecision(18, 2);
+            entity.Property(e => e.NetWorth).HasPrecision(18, 2);
+            entity.HasIndex(e => new { e.UserId, e.SnapshotDate }).IsUnique();
         });
 
         // MoneyMovement

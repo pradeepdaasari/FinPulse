@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 export interface MarkPaidDialogData {
   description: string;
@@ -15,13 +16,17 @@ export interface MarkPaidDialogData {
 @Component({
   selector: 'app-mark-paid-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, MatTooltipModule],
   template: `
     <div class="dialog-header">
       <div class="header-icon">
         <mat-icon>check_circle</mat-icon>
       </div>
       <h2>Mark as Paid</h2>
+      <span class="header-spacer"></span>
+      <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
     <mat-dialog-content>
       <p class="desc">{{ data.description }}</p>
@@ -32,7 +37,6 @@ export interface MarkPaidDialogData {
       </mat-form-field>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cancel</button>
       <button mat-raised-button color="primary" [disabled]="!amount || amount <= 0" (click)="confirm()">
         <mat-icon>check</mat-icon> Confirm
       </button>
@@ -50,6 +54,13 @@ export interface MarkPaidDialogData {
     }
     .header-icon mat-icon { color: var(--color-success); font-size: 20px; width: 20px; height: 20px; }
     h2 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+    .header-spacer { flex: 1; }
+    .header-close {
+      color: var(--color-text-muted) !important;
+      width: 32px !important; height: 32px !important; line-height: 32px !important;
+      flex-shrink: 0;
+    }
+    .header-close mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .desc { color: var(--color-text-muted); font-size: 0.875rem; margin-bottom: 12px; }
     .full-width { width: 100%; }
     mat-dialog-actions button mat-icon { margin-right: 4px; }
