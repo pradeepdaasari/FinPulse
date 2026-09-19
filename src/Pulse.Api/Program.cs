@@ -17,9 +17,12 @@ builder.Services.AddDbContext<PulseDbContext>(options =>
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.Password.RequireDigit = true;
-    options.Password.RequiredLength = 6;
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequireUppercase = false;
+    options.Password.RequiredLength = 8;
+    options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequireUppercase = true;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.AllowedForNewUsers = true;
 })
 .AddEntityFrameworkStores<PulseDbContext>()
 .AddDefaultTokenProviders();
@@ -111,14 +114,6 @@ using (var scope = app.Services.CreateScope())
     if (!await roleManager.RoleExistsAsync("User"))
         await roleManager.CreateAsync(new IdentityRole("User"));
 
-    var adminUser = await userManager.FindByNameAsync("pradeepdasari");
-    if (adminUser == null)
-    {
-        adminUser = new ApplicationUser { UserName = "pradeepdasari", Email = "pradeepdasari@finpulse.app", EmailConfirmed = true };
-        var result = await userManager.CreateAsync(adminUser, "MyDtecoFinance@27");
-        if (result.Succeeded)
-            await userManager.AddToRoleAsync(adminUser, "Admin");
-    }
 }
 
 // Configure the HTTP request pipeline.
