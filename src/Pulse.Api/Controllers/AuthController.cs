@@ -23,7 +23,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login(LoginRequest request)
     {
         var result = await _signInManager.PasswordSignInAsync(
-            request.Username, request.Password, isPersistent: true, lockoutOnFailure: false);
+            request.Username, request.Password, isPersistent: true, lockoutOnFailure: true);
 
         if (result.IsLockedOut)
             return Unauthorized(new { error = "Account is deactivated. Contact administrator." });
