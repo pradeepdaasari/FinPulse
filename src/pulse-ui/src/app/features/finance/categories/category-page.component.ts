@@ -532,10 +532,10 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
                       <mat-icon>close</mat-icon>
                     </button>
                   } @else {
-                    <button mat-icon-button (click)="startEdit(parent)" matTooltip="Edit">
+                    <button mat-icon-button class="action-btn action-edit" (click)="startEdit(parent)" matTooltip="Edit">
                       <mat-icon>edit</mat-icon>
                     </button>
-                    <button mat-icon-button color="warn" (click)="deleteCategory(parent)" matTooltip="Delete">
+                    <button mat-icon-button class="action-btn action-delete" (click)="deleteCategory(parent)" matTooltip="Delete">
                       <mat-icon>delete_outline</mat-icon>
                     </button>
                     <button mat-button color="primary" (click)="startAddChild(parent.id)">
@@ -631,10 +631,10 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
                         } @else {
                           <span class="child-name">{{ child.name }}</span>
                           <mat-chip class="child-chip">{{ child.isFixed ? 'Fixed' : 'Variable' }}</mat-chip>
-                          <button mat-icon-button (click)="startEdit(child)" matTooltip="Edit">
+                          <button mat-icon-button class="action-btn action-edit" (click)="startEdit(child)" matTooltip="Edit">
                             <mat-icon>edit</mat-icon>
                           </button>
-                          <button mat-icon-button color="warn" (click)="deleteCategory(child)" matTooltip="Delete">
+                          <button mat-icon-button class="action-btn action-delete" (click)="deleteCategory(child)" matTooltip="Delete">
                             <mat-icon>delete_outline</mat-icon>
                           </button>
                         }
@@ -709,7 +709,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
     .m-segment.sm { width: auto; }
     .m-seg-btn {
       flex: 1; border: none; background: transparent; padding: 8px 16px;
-      font-size: 0.82rem; font-weight: 600; border-radius: 8px;
+      font-size: var(--text-sm); font-weight: var(--weight-semibold); border-radius: 8px;
       color: var(--color-text-muted); cursor: pointer;
       transition: all 0.2s; -webkit-tap-highlight-color: transparent;
     }
@@ -720,12 +720,12 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
 
     /* Groups */
     .m-group {
-      background: var(--color-surface); border-radius: 14px;
+      background: var(--color-surface-solid); border-radius: var(--radius-md);
       overflow: hidden; margin-bottom: 12px;
-      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border); box-shadow: var(--shadow-xs);
     }
     .m-group-label {
-      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      font-size: 0.68rem; font-weight: var(--weight-bold); text-transform: uppercase;
       letter-spacing: 0.06em; color: var(--color-text-muted);
       padding: 8px 16px 4px;
     }
@@ -739,8 +739,8 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
     }
     .m-parent-header:active { background: var(--color-surface-secondary); }
     .m-parent-info { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-    .m-parent-name { font-size: 0.92rem; font-weight: 600; color: var(--color-text); }
-    .m-parent-meta { font-size: 0.72rem; color: var(--color-text-muted); }
+    .m-parent-name { font-size: var(--text-base); font-weight: var(--weight-semibold); color: var(--color-text); }
+    .m-parent-meta { font-size: var(--text-xs); color: var(--color-text-muted); }
     .m-chevron {
       font-size: 22px; width: 22px; height: 22px;
       color: var(--color-text-muted); transition: transform 0.25s;
@@ -755,7 +755,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
     .m-action-pill {
       display: flex; align-items: center; gap: 4px;
       padding: 6px 12px; border-radius: 20px; border: 1px solid var(--color-border);
-      background: var(--color-surface); font-size: 0.72rem; font-weight: 600;
+      background: var(--color-surface-solid); font-size: var(--text-xs); font-weight: var(--weight-semibold);
       color: var(--color-text-muted); cursor: pointer;
       -webkit-tap-highlight-color: transparent;
     }
@@ -784,9 +784,9 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
     .m-row-icon mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .m-row-icon.sm { width: 28px; height: 28px; min-width: 28px; border-radius: 7px; }
     .m-row-icon.sm mat-icon { font-size: 15px; width: 15px; height: 15px; }
-    .m-row-label { flex: 1; font-size: 0.88rem; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .m-row-label { flex: 1; font-size: var(--text-base); font-weight: var(--weight-medium); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .m-row-chip {
-      font-size: 0.62rem; font-weight: 700; padding: 2px 8px;
+      font-size: 0.62rem; font-weight: var(--weight-bold); padding: 2px 8px;
       border-radius: 20px; background: var(--color-surface-secondary);
       color: var(--color-text-muted); text-transform: uppercase;
       letter-spacing: 0.03em; flex-shrink: 0;
@@ -837,7 +837,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
       padding: 48px 20px; color: var(--color-text-muted);
     }
     .m-empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.3; }
-    .m-empty span { font-size: 0.9rem; font-weight: 600; }
+    .m-empty span { font-size: var(--text-base); font-weight: var(--weight-semibold); }
     .m-empty-hint { font-size: 0.78rem; opacity: 0.6; }
     .m-empty-search {
       display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -853,7 +853,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
     }
     .m-sheet {
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 1200;
-      background: var(--color-surface); border-radius: 20px 20px 0 0;
+      background: var(--color-surface-solid); border-radius: 20px 20px 0 0;
       padding: 12px 20px calc(env(safe-area-inset-bottom, 16px) + 100px);
       box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
       animation: slideUp 0.3s ease-out;
@@ -864,11 +864,11 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
       width: 36px; height: 4px; border-radius: 2px;
       background: var(--color-border); margin: 0 auto 16px;
     }
-    .m-sheet-title { font-size: 1.1rem; font-weight: 700; margin: 0 0 16px; text-align: center; }
+    .m-sheet-title { font-size: var(--text-lg); font-weight: var(--weight-bold); margin: 0 0 16px; text-align: center; }
     .m-sheet-form { display: flex; flex-direction: column; align-items: center; gap: 14px; }
     .m-field { width: 100%; }
     .m-sheet-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; }
-    .m-sheet-save { width: 100%; height: 48px; font-size: 0.9rem; font-weight: 600; border-radius: 12px; }
+    .m-sheet-save { width: 100%; height: 48px; font-size: var(--text-base); font-weight: var(--weight-semibold); border-radius: var(--radius-md); }
 
     /* ═══════ DESKTOP STYLES ═══════ */
     .page-header {
@@ -881,19 +881,25 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
     }
     .stat-card {
       display: flex; align-items: center; gap: 12px; padding: 16px;
-      border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-sm);
+      border-radius: var(--radius-md); background: var(--color-surface-solid); border: 1px solid var(--color-border); box-shadow: var(--shadow-xs);
     }
     .stat-card mat-icon {
-      font-size: 24px; width: 44px; height: 44px; min-width: 44px;
-      display: flex; align-items: center; justify-content: center; border-radius: 12px;
+      font-size: 26px; width: 26px; height: 26px; padding: 10px; border-radius: var(--radius-sm); box-sizing: content-box; overflow: visible; flex-shrink: 0;
     }
     .stat-blue mat-icon { color: var(--color-stat-blue); background: var(--color-stat-blue-bg); }
     .stat-green mat-icon { color: var(--color-stat-green); background: var(--color-stat-green-bg); }
     .stat-amber mat-icon { color: var(--color-stat-amber); background: var(--color-stat-amber-bg); }
     .stat-purple mat-icon { color: var(--color-stat-purple); background: var(--color-stat-purple-bg); }
-    .stat-content { display: flex; flex-direction: column; }
-    .stat-value { font-size: 1.2rem; font-weight: 700; color: var(--color-text); }
-    .stat-label { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px; }
+    .stat-content { display: flex; flex-direction: column; min-width: 0; }
+    .stat-value { font-size: 1.25rem; font-weight: var(--weight-bold); color: var(--color-text); letter-spacing: -0.02em; line-height: var(--leading-tight); }
+    .stat-label { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: var(--tracking-wide); margin-top: 2px; }
+
+    .action-btn { width: 34px; height: 34px; border-radius: var(--radius-xs) !important; transition: background var(--transition-fast) !important; }
+    .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .action-edit { color: var(--color-action-edit) !important; }
+    .action-edit:hover { background: var(--color-action-edit-bg) !important; }
+    .action-delete { color: var(--color-action-delete) !important; }
+    .action-delete:hover { background: var(--color-action-delete-bg) !important; }
 
     .add-form-card { margin-bottom: var(--spacing-md); }
     .inline-form { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -912,7 +918,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
     .parent-badge mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .child-badge { width: 30px; height: 30px; border: 1px solid; }
     .child-badge mat-icon { font-size: 16px; width: 16px; height: 16px; }
-    .cat-label { font-weight: 600; }
+    .cat-label { font-weight: var(--weight-semibold); }
 
     .icon-picker-btn { border: 1px dashed var(--color-border); border-radius: 8px; }
     .icon-groups-picker { max-height: 400px; overflow-y: auto; padding: 4px 8px 8px; max-width: 380px; }
@@ -928,7 +934,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
     }
     .icon-no-results { text-align: center; padding: 20px 8px; color: var(--color-text-muted); font-size: 0.82rem; }
     .icon-group-section { margin-bottom: 4px; }
-    .icon-group-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 6px 4px 2px; }
+    .icon-group-label { font-size: 0.65rem; font-weight: var(--weight-bold); text-transform: uppercase; letter-spacing: 0.06em; padding: 6px 4px 2px; }
     .icon-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
     .icon-grid button { width: 36px; height: 36px; }
     .icon-grid button mat-icon { font-size: 20px; width: 20px; height: 20px; }
@@ -940,7 +946,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
       padding: 10px 16px; border-radius: 10px; transition: background 0.15s;
     }
     .child-row:hover { background: var(--color-surface-hover); }
-    .child-name { flex: 1; font-size: 0.95rem; font-weight: 500; }
+    .child-name { flex: 1; font-size: var(--text-base); font-weight: var(--weight-medium); }
     .child-chip { font-size: 0.75rem; }
     .child-count { margin-left: auto; font-size: 0.85rem; opacity: 0.6; }
 
@@ -955,8 +961,8 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
     .search-field { width: 100%; margin-bottom: var(--spacing-sm); }
     .search-field mat-icon { color: var(--color-text-muted); }
     .search-results {
-      background: var(--color-surface); border-radius: var(--radius-md);
-      box-shadow: var(--shadow-sm); margin-bottom: var(--spacing-md);
+      background: var(--color-surface-solid); border-radius: var(--radius-md);
+      border: 1px solid var(--color-border); box-shadow: var(--shadow-xs); margin-bottom: var(--spacing-md);
       padding: 8px 0; overflow: hidden;
     }
     .search-result-row {
@@ -964,7 +970,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
       padding: 10px 16px; transition: background 0.15s;
     }
     .search-result-row:hover { background: var(--color-surface-hover); }
-    .search-result-name { flex: 1; font-size: 0.9rem; font-weight: 500; }
+    .search-result-name { flex: 1; font-size: var(--text-base); font-weight: var(--weight-medium); }
     .search-result-type { font-size: 0.72rem; }
     .search-no-results {
       display: flex; align-items: center; gap: 8px; justify-content: center;

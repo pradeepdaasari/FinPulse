@@ -2,13 +2,16 @@ import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/c
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { BaseChartDirective } from 'ng2-charts';
+import { ChartConfiguration } from 'chart.js';
 import { DashboardService } from '../../../core/services/dashboard.service';
-import { FinancialSummary } from '../../../core/models/dashboard.model';
+import { FinancialSummary, NetWorthSnapshot } from '../../../core/models/dashboard.model';
 
 @Component({
   selector: 'app-net-worth',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatProgressSpinnerModule, CurrencyPipe],
+  imports: [CommonModule, MatIconModule, MatProgressSpinnerModule, CurrencyPipe, BaseChartDirective, MatButtonToggleModule],
   template: `
     @if (loading()) {
       <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
@@ -93,6 +96,33 @@ import { FinancialSummary } from '../../../core/models/dashboard.model';
               <span class="formula-result" [class.positive]="summary()!.netWorth >= 0" [class.negative]="summary()!.netWorth < 0">
                 {{ summary()!.netWorth | currency:'USD':'symbol':'1.0-0' }}
               </span>
+            </div>
+
+            <!-- Net Worth Trend Chart -->
+            <div class="chart-section">
+              <div class="chart-header">
+                <div class="chart-label">
+                  <mat-icon>show_chart</mat-icon>
+                  <span>Trend</span>
+                </div>
+                <mat-button-toggle-group [value]="chartView()" (change)="onViewChange($event.value)" class="view-toggle">
+                  <mat-button-toggle value="daily">Daily</mat-button-toggle>
+                  <mat-button-toggle value="weekly">Weekly</mat-button-toggle>
+                  <mat-button-toggle value="monthly">Monthly</mat-button-toggle>
+                </mat-button-toggle-group>
+              </div>
+              @if (chartLoading()) {
+                <div class="chart-loading"><mat-spinner diameter="24"></mat-spinner></div>
+              } @else if (chartData()) {
+                <div class="chart-container">
+                  <canvas baseChart [data]="chartData()!" [options]="chartOptions" type="line"></canvas>
+                </div>
+              } @else {
+                <div class="chart-empty">
+                  <mat-icon>timeline</mat-icon>
+                  <span>Data will appear as snapshots are captured daily</span>
+                </div>
+              }
             </div>
           </div>
         }
@@ -215,6 +245,47 @@ import { FinancialSummary } from '../../../core/models/dashboard.model';
     }
     .formula-result { font-weight: 700; }
 
+    .chart-section {
+      border-top: 1px solid var(--color-border);
+      padding-top: 16px;
+    }
+    .chart-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; gap: 8px;
+    }
+    .chart-label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.8125rem; font-weight: 600;
+      color: var(--color-text-secondary);
+    }
+    .chart-label mat-icon {
+      font-size: 16px; width: 16px; height: 16px;
+      color: #6366f1;
+    }
+    .view-toggle {
+      border-radius: var(--radius-sm) !important;
+      overflow: hidden;
+    }
+    .view-toggle .mat-button-toggle-appearance-standard {
+      height: 28px !important;
+    }
+    :host ::ng-deep .view-toggle .mat-button-toggle-label-content {
+      font-size: 0.7rem !important;
+      padding: 0 10px !important;
+      line-height: 28px !important;
+      font-weight: 600;
+    }
+    .chart-container { position: relative; height: 200px; }
+    .chart-loading {
+      display: flex; justify-content: center; align-items: center;
+      height: 120px;
+    }
+    .chart-empty {
+      display: flex; align-items: center; gap: 8px;
+      padding: 16px; color: var(--color-text-muted);
+      font-size: 0.8125rem;
+    }
+    .chart-empty mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
 
     @media (max-width: 599px) {
@@ -223,6 +294,7 @@ import { FinancialSummary } from '../../../core/models/dashboard.model';
       .nw-breakdown { padding: 12px 16px 16px; }
       .breakdown-row { padding-left: 26px; font-size: 0.8rem; }
       .formula-row { font-size: 0.75rem; }
+      .chart-container { height: 160px; }
     }
   `]
 })
@@ -235,10 +307,147 @@ export class NetWorthComponent implements OnInit {
   previousSummary = signal<FinancialSummary | null>(null);
   trend = signal<number>(0);
   expanded = signal(false);
+  chartData = signal<ChartConfiguration<'line'>['data'] | null>(null);
+  chartLoading = signal(false);
+  chartView = signal<'daily' | 'weekly' | 'monthly'>('weekly');
+  private rawSnapshots: NetWorthSnapshot[] = [];
+  private chartFetched = false;
+
+  chartOptions: ChartConfiguration<'line'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => '$' + Number(ctx.parsed.y).toLocaleString()
+        }
+      }
+    },
+    scales: {
+      y: {
+        ticks: {
+          callback: (value) => '$' + Number(value).toLocaleString()
+        }
+      },
+      x: {
+        grid: { display: false }
+      }
+    }
+  };
 
   toggleExpand(): void {
     this.expanded.set(!this.expanded());
+    if (this.expanded() && !this.chartFetched) {
+      this.loadChart();
+    }
     this.cdr.detectChanges();
+  }
+
+  onViewChange(view: 'daily' | 'weekly' | 'monthly'): void {
+    this.chartView.set(view);
+    this.buildChartData();
+    this.cdr.detectChanges();
+  }
+
+  private loadChart(): void {
+    this.chartFetched = true;
+    this.chartLoading.set(true);
+    this.dashboardService.getNetWorthHistory(52).subscribe({
+      next: (snapshots) => {
+        this.rawSnapshots = snapshots;
+        this.buildChartData();
+        this.chartLoading.set(false);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.chartLoading.set(false);
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  private buildChartData(): void {
+    if (this.rawSnapshots.length === 0) {
+      this.chartData.set(null);
+      return;
+    }
+
+    const view = this.chartView();
+    const now = new Date();
+    const cutoffDays = view === 'daily' ? 90 : view === 'weekly' ? 180 : 730;
+
+    const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - cutoffDays);
+    const filtered = this.rawSnapshots.filter(s => new Date(s.date) >= cutoff);
+    if (filtered.length === 0) {
+      this.chartData.set(null);
+      return;
+    }
+
+    const points = view === 'daily'
+      ? this.aggregateDaily(filtered)
+      : view === 'weekly'
+        ? this.aggregateWeekly(filtered)
+        : this.aggregateMonthly(filtered);
+
+    this.chartData.set({
+      labels: points.map(p => p.label),
+      datasets: [{
+        label: 'Net Worth',
+        data: points.map(p => p.value),
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+        fill: true,
+        tension: 0.3,
+        pointBackgroundColor: '#6366f1',
+        pointRadius: points.length > 30 ? 2 : 4,
+        pointHoverRadius: 6
+      }]
+    });
+  }
+
+  private aggregateDaily(snapshots: NetWorthSnapshot[]): { label: string; value: number }[] {
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return snapshots
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map(s => {
+        const d = new Date(s.date);
+        return { label: monthNames[d.getMonth()] + ' ' + d.getDate(), value: s.netWorth };
+      });
+  }
+
+  private aggregateWeekly(snapshots: NetWorthSnapshot[]): { label: string; value: number }[] {
+    const weekMap = new Map<string, NetWorthSnapshot>();
+    for (const s of snapshots) {
+      const d = new Date(s.date);
+      const weekStart = new Date(d);
+      weekStart.setDate(d.getDate() - d.getDay());
+      const key = weekStart.toISOString().slice(0, 10);
+      weekMap.set(key, s);
+    }
+    return Array.from(weekMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, s]) => {
+        const d = new Date(key);
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return { label: monthNames[d.getMonth()] + ' ' + d.getDate(), value: s.netWorth };
+      });
+  }
+
+  private aggregateMonthly(snapshots: NetWorthSnapshot[]): { label: string; value: number }[] {
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthMap = new Map<string, NetWorthSnapshot>();
+    for (const s of snapshots) {
+      const d = new Date(s.date);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      monthMap.set(key, s);
+    }
+    return Array.from(monthMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, s]) => {
+        const d = new Date(s.date);
+        return { label: monthNames[d.getMonth()] + ' ' + d.getFullYear().toString().slice(2), value: s.netWorth };
+      });
   }
 
   ngOnInit(): void {

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, output, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit, output, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -51,14 +51,21 @@ import { ExpenseFilter } from '../../../core/models/daily-expense.model';
 
         <mat-form-field class="filter-field">
           <mat-label>Category</mat-label>
-          <mat-select [(ngModel)]="categoryId">
+          <mat-select [(ngModel)]="categoryId" (opened)="categorySearch.set(''); focusInput(catSearchInput)">
+            <div class="category-search-box">
+              <mat-icon>search</mat-icon>
+              <input #catSearchInput type="text" placeholder="Search categories..."
+                     [value]="categorySearch()"
+                     (input)="categorySearch.set(catSearchInput.value)"
+                     (keydown)="$event.stopPropagation()">
+            </div>
             <mat-option [value]="null">All</mat-option>
-            @for (parent of categories(); track parent.id) {
+            @for (parent of filteredCategories(); track parent.id) {
               <mat-optgroup [label]="parent.name">
-                @for (child of parent.children; track child.id) {
+                @for (child of parent.filteredChildren; track child.id) {
                   <mat-option [value]="child.id">{{ child.name }}</mat-option>
                 }
-                @if (!parent.children || parent.children.length === 0) {
+                @if (parent.showSelf) {
                   <mat-option [value]="parent.id">{{ parent.name }}</mat-option>
                 }
               </mat-optgroup>
@@ -147,6 +154,16 @@ import { ExpenseFilter } from '../../../core/models/daily-expense.model';
       margin-left: 8px;
     }
     .loading-container { display: flex; justify-content: center; align-items: center; padding: 32px 0; }
+    .category-search-box {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 16px; position: sticky; top: 0; z-index: 1;
+      background: var(--color-surface); border-bottom: 1px solid var(--color-border);
+    }
+    .category-search-box mat-icon { color: var(--color-text-muted); font-size: 20px; width: 20px; height: 20px; }
+    .category-search-box input {
+      border: none; outline: none; width: 100%; font-size: var(--text-sm);
+      background: transparent; color: var(--color-text);
+    }
     @media (max-width: 600px) {
       .filter-grid { grid-template-columns: 1fr; }
       .search-field { grid-column: span 1; }
@@ -163,6 +180,26 @@ export class ExpenseFilterBarComponent implements OnInit {
   loading = signal(true);
   private loadCount = 0;
   categories = signal<Category[]>([]);
+  categorySearch = signal('');
+  filteredCategories = computed(() => {
+    const q = this.categorySearch().toLowerCase();
+    if (!q) return this.categories().map(p => ({
+      ...p,
+      filteredChildren: p.children || [],
+      showSelf: !p.children || p.children.length === 0
+    }));
+    return this.categories()
+      .map(p => {
+        const parentMatch = p.name.toLowerCase().includes(q);
+        const filteredChildren = (p.children || []).filter(c => c.name.toLowerCase().includes(q));
+        return {
+          ...p,
+          filteredChildren: parentMatch ? (p.children || []) : filteredChildren,
+          showSelf: parentMatch && (!p.children || p.children.length === 0)
+        };
+      })
+      .filter(p => p.filteredChildren.length > 0 || p.showSelf);
+  });
   allTags = signal<string[]>([]);
   filteredTags = signal<string[]>([]);
   search = '';
@@ -216,6 +253,10 @@ export class ExpenseFilterBarComponent implements OnInit {
     if (this.maxAmount) filter.maxAmount = this.maxAmount;
     if (this.tag) filter.tag = this.tag;
     this.filterChange.emit(filter);
+  }
+
+  focusInput(el: HTMLInputElement): void {
+    setTimeout(() => el.focus(), 0);
   }
 
   clearFilters(): void {

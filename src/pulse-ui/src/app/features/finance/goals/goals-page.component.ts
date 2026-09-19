@@ -53,10 +53,10 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                 }
               </div>
               <div class="goal-actions">
-                <button mat-icon-button (click)="edit(goal)" aria-label="Edit">
+                <button mat-icon-button class="action-btn action-edit" (click)="edit(goal)" aria-label="Edit">
                   <mat-icon>edit</mat-icon>
                 </button>
-                <button mat-icon-button color="warn" (click)="deleteGoal(goal)" aria-label="Delete">
+                <button mat-icon-button class="action-btn action-delete" (click)="deleteGoal(goal)" aria-label="Delete">
                   <mat-icon>delete_outline</mat-icon>
                 </button>
               </div>
@@ -106,8 +106,8 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     }
     .goal-card { padding: var(--spacing-md) !important; transition: border-color 0.2s, background 0.2s; }
     .goal-card.near-complete {
-      background: linear-gradient(135deg, rgba(48, 209, 88, 0.04) 0%, rgba(48, 209, 88, 0.08) 100%) !important;
-      border: 1px solid rgba(48, 209, 88, 0.15);
+      background: linear-gradient(135deg, var(--color-success-bg) 0%, var(--color-success-bg) 100%) !important;
+      border: 1px solid var(--color-success);
     }
     .goal-card.complete {
       border: 2px solid var(--color-success);
@@ -115,15 +115,21 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .goal-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
     .goal-icon { font-size: 2rem; line-height: 1; }
     .goal-title { flex: 1; }
-    .goal-title h3 { margin: 0; font-size: 1.1rem; font-weight: 600; }
-    .linked-badge { font-size: 0.75rem; color: var(--color-text-secondary); }
+    .goal-title h3 { margin: 0; font-size: var(--text-lg); font-weight: var(--weight-semibold); }
+    .linked-badge { font-size: var(--text-xs); color: var(--color-text-secondary); }
     .goal-actions { display: flex; }
+    .action-btn { width: 34px; height: 34px; border-radius: var(--radius-xs) !important; transition: background var(--transition-fast) !important; }
+    .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .action-edit { color: var(--color-action-edit) !important; }
+    .action-edit:hover { background: var(--color-action-edit-bg) !important; }
+    .action-delete { color: var(--color-action-delete) !important; }
+    .action-delete:hover { background: var(--color-action-delete-bg) !important; }
     .goal-amounts { margin-bottom: 8px; }
-    .goal-amounts .current { font-size: 1.1rem; font-weight: 700; color: var(--color-primary); }
-    .goal-amounts .target { font-size: 0.875rem; color: var(--color-text-secondary); margin-left: 4px; }
+    .goal-amounts .current { font-size: var(--text-lg); font-weight: var(--weight-bold); color: var(--color-primary); }
+    .goal-amounts .target { font-size: var(--text-sm); color: var(--color-text-secondary); margin-left: 4px; }
     .goal-footer { display: flex; justify-content: space-between; margin-top: 8px; }
-    .goal-footer .percent { font-weight: 600; font-size: 0.9rem; }
-    .goal-footer .target-date { font-size: 0.8rem; color: var(--color-text-secondary); }
+    .goal-footer .percent { font-weight: var(--weight-semibold); font-size: var(--text-sm); }
+    .goal-footer .target-date { font-size: var(--text-xs); color: var(--color-text-secondary); }
     .goal-complete-badge {
       display: flex;
       align-items: center;
@@ -133,7 +139,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       background: var(--color-success-bg);
       color: var(--color-success);
       font-size: var(--text-xs);
-      font-weight: 600;
+      font-weight: var(--weight-semibold);
       margin-top: 8px;
     }
     .goal-complete-badge mat-icon {
@@ -146,7 +152,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       margin-top: 10px;
       border-color: var(--color-success) !important;
       color: var(--color-success) !important;
-      font-weight: 500;
+      font-weight: var(--weight-medium);
     }
     .contribute-btn mat-icon {
       font-size: 18px;

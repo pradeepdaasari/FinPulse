@@ -101,6 +101,14 @@ export interface FinancialSummaryDebt {
   balance: number;
 }
 
+export interface NetWorthSnapshot {
+  date: string;
+  totalBankBalance: number;
+  totalCreditCardDebt: number;
+  totalLoanDebt: number;
+  netWorth: number;
+}
+
 export interface FinancialSummary {
   totalIncome: number;
   totalExpenses: number;

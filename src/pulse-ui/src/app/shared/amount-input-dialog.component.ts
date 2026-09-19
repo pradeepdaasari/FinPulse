@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 export interface AmountInputDialogData {
   title: string;
@@ -18,13 +19,17 @@ export interface AmountInputDialogData {
 @Component({
   selector: 'app-amount-input-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatDialogModule],
+  imports: [CommonModule, FormsModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatDialogModule, MatTooltipModule],
   template: `
     <div class="amount-header">
       <div class="amount-icon-wrap">
         <mat-icon>{{ data.icon || 'savings' }}</mat-icon>
       </div>
       <h2>{{ data.title }}</h2>
+      <span class="header-spacer"></span>
+      <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
     <mat-dialog-content>
       @if (data.message) {
@@ -37,7 +42,6 @@ export interface AmountInputDialogData {
       </mat-form-field>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-stroked-button (click)="dialogRef.close(null)">Cancel</button>
       <button mat-raised-button color="primary" [disabled]="!amount || amount <= 0" (click)="submit()">
         Add
       </button>
@@ -77,6 +81,9 @@ export interface AmountInputDialogData {
       line-height: 1.5;
     }
     .amount-field { width: 100%; }
+    .header-spacer { flex: 1; }
+    .header-close { color: var(--color-text-muted); }
+    .header-close mat-icon { font-size: 20px; width: 20px; height: 20px; }
   `]
 })
 export class AmountInputDialogComponent {

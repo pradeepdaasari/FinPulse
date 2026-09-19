@@ -269,13 +269,13 @@ interface PlanDay {
       text-align: center; padding: var(--spacing-xl) var(--spacing-md);
     }
     .empty-icon-wrap {
-      width: 72px; height: 72px; border-radius: 50%; margin: 0 auto var(--spacing-md);
+      width: 64px; height: 64px; border-radius: var(--radius-md); margin: 0 auto var(--spacing-md);
       display: flex; align-items: center; justify-content: center;
     }
-    .empty-icon-wrap.green { background: rgba(46,125,50,0.1); }
-    .empty-icon-wrap.green mat-icon { color: #2e7d32; }
-    .empty-icon-wrap.blue { background: rgba(21,101,192,0.1); }
-    .empty-icon-wrap.blue mat-icon { color: #1565c0; }
+    .empty-icon-wrap.green { background: var(--color-stat-green-bg); }
+    .empty-icon-wrap.green mat-icon { color: var(--color-stat-green); }
+    .empty-icon-wrap.blue { background: var(--color-stat-blue-bg); }
+    .empty-icon-wrap.blue mat-icon { color: var(--color-stat-blue); }
     .empty-icon-wrap mat-icon { font-size: 32px; width: 32px; height: 32px; }
     .empty-state h3 { margin: 0 0 var(--spacing-xs); font-size: 1.1rem; }
     .empty-state p { color: var(--color-text-muted); margin: 0 auto var(--spacing-md); max-width: 360px; }

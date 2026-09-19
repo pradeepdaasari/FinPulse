@@ -386,7 +386,10 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       flex-wrap: wrap; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm);
     }
     .month-nav { display: flex; align-items: center; gap: var(--spacing-xs); }
-    .month-label { font-size: 1.15rem; font-weight: 700; min-width: 160px; text-align: center; }
+    .month-label {
+      font-size: var(--text-lg); font-weight: var(--weight-bold);
+      min-width: 160px; text-align: center; letter-spacing: -0.01em;
+    }
     .tab-content { padding: var(--spacing-sm) 0; }
 
     /* Stat Cards */
@@ -396,49 +399,59 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     }
     .stat-card {
       display: flex; align-items: center; gap: 12px;
-      padding: 16px; border-radius: var(--radius-md);
-      background: var(--color-surface); box-shadow: var(--shadow-sm);
+      padding: 14px 16px; border-radius: var(--radius-md);
+      background: var(--color-surface-solid); box-shadow: var(--shadow-xs);
       border: 1px solid var(--color-border);
-      transition: var(--transition-fast);
+      transition: box-shadow var(--transition-base), transform var(--transition-base);
     }
-    .stat-card:hover { box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08)); transform: translateY(-1px); }
+    @media (hover: hover) {
+      .stat-card:hover { box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+    }
     .stat-icon-wrap {
-      width: 44px; height: 44px; border-radius: 12px;
+      width: 42px; height: 42px; border-radius: var(--radius-sm);
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
     .stat-icon-wrap mat-icon { font-size: 22px; width: 22px; height: 22px; }
-    .income-icon { background: rgba(33,150,243,0.12); color: #1976d2; }
-    .budgeted-icon { background: rgba(255,152,0,0.12); color: #f57c00; }
-    .spent-icon { background: rgba(156,39,176,0.12); color: #7b1fa2; }
-    .surplus-icon { background: rgba(76,175,80,0.12); color: #388e3c; }
-    .deficit-icon { background: rgba(244,67,54,0.12); color: #d32f2f; }
+    .income-icon { background: var(--color-stat-blue-bg); color: var(--color-stat-blue); }
+    .budgeted-icon { background: var(--color-stat-amber-bg); color: var(--color-stat-amber); }
+    .spent-icon { background: var(--color-stat-purple-bg); color: var(--color-stat-purple); }
+    .surplus-icon { background: var(--color-success-bg); color: var(--color-success-text); }
+    .deficit-icon { background: var(--color-danger-bg); color: var(--color-danger-text); }
     .stat-info { display: flex; flex-direction: column; min-width: 0; }
-    .stat-value { font-size: 1.15rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .stat-label { font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.03em; font-weight: 500; margin-top: 2px; }
-    .stat-sub { text-transform: none; font-weight: 400; }
-    .stat-card.income .stat-value { color: #1976d2; }
-    .stat-card.budgeted .stat-value { color: #f57c00; }
-    .stat-card.spent .stat-value { color: #7b1fa2; }
-    .stat-card.surplus .stat-value { color: var(--color-success); }
-    .stat-card.deficit .stat-value { color: var(--color-danger); }
-    .stat-card.surplus { border-color: rgba(76,175,80,0.3); background: linear-gradient(135deg, rgba(76,175,80,0.04), transparent); }
-    .stat-card.deficit { border-color: rgba(244,67,54,0.3); background: linear-gradient(135deg, rgba(244,67,54,0.04), transparent); }
+    .stat-value {
+      font-size: 1.15rem; font-weight: var(--weight-bold);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      letter-spacing: -0.02em; line-height: var(--leading-tight);
+    }
+    .stat-label {
+      font-size: var(--text-xs); color: var(--color-text-muted);
+      text-transform: uppercase; letter-spacing: var(--tracking-wide);
+      font-weight: var(--weight-semibold); margin-top: 2px;
+    }
+    .stat-sub { text-transform: none; font-weight: var(--weight-normal); }
+    .stat-card.income .stat-value { color: var(--color-stat-blue); }
+    .stat-card.budgeted .stat-value { color: var(--color-stat-amber); }
+    .stat-card.spent .stat-value { color: var(--color-stat-purple); }
+    .stat-card.surplus .stat-value { color: var(--color-success-text); }
+    .stat-card.deficit .stat-value { color: var(--color-danger-text); }
+    .stat-card.surplus { border-color: rgba(52, 199, 89, 0.25); }
+    .stat-card.deficit { border-color: rgba(255, 59, 48, 0.25); }
 
     /* Overall Progress */
     .overall-progress-section {
-      background: var(--color-surface); border-radius: var(--radius-md);
-      padding: 18px 20px; margin-bottom: var(--spacing-md); box-shadow: var(--shadow-sm);
+      background: var(--color-surface-solid); border-radius: var(--radius-md);
+      padding: 18px 20px; margin-bottom: var(--spacing-md); box-shadow: var(--shadow-xs);
       border: 1px solid var(--color-border);
     }
-    .overall-progress-section.over { border-color: rgba(244,67,54,0.3); }
+    .overall-progress-section.over { border-color: rgba(255, 59, 48, 0.25); }
     .overall-progress-header {
       display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
     }
     .progress-title-row { display: flex; align-items: center; gap: 8px; }
     .progress-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); }
-    .progress-title { font-weight: 700; font-size: 0.95rem; }
-    .progress-amounts { font-size: 0.9rem; font-weight: 600; }
-    .of-label { font-weight: 400; opacity: 0.5; font-size: 0.8rem; }
+    .progress-title { font-weight: var(--weight-bold); font-size: var(--text-base); }
+    .progress-amounts { font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+    .of-label { font-weight: var(--weight-normal); opacity: 0.5; font-size: var(--text-xs); }
     .progress-bar-wrap { margin-bottom: 10px; }
     .progress-bar-wrap ::ng-deep .mdc-linear-progress__bar-inner { border-radius: 4px; }
     .overall-progress-footer {
@@ -446,42 +459,45 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     }
     .remaining-badge {
       display: inline-flex; align-items: center; gap: 6px;
-      font-size: 0.82rem; font-weight: 600;
+      font-size: var(--text-sm); font-weight: var(--weight-semibold);
       padding: 4px 10px; border-radius: var(--radius-full);
     }
     .remaining-icon { font-size: 16px; width: 16px; height: 16px; }
-    .remaining-badge.over-budget { color: var(--color-danger); background: rgba(244,67,54,0.08); }
-    .remaining-badge.under-budget { color: var(--color-success); background: rgba(76,175,80,0.08); }
+    .remaining-badge.over-budget { color: var(--color-danger-text); background: var(--color-danger-bg); }
+    .remaining-badge.under-budget { color: var(--color-success-text); background: var(--color-success-bg); }
     .percent-badge {
-      font-size: 0.85rem; font-weight: 700; padding: 4px 12px;
+      font-size: var(--text-sm); font-weight: var(--weight-bold); padding: 4px 12px;
       border-radius: var(--radius-full); background: var(--color-surface-secondary);
     }
-    .percent-badge.pct-danger { background: rgba(244,67,54,0.1); color: var(--color-danger); }
-    .percent-badge.pct-warn { background: rgba(255,152,0,0.1); color: #f57c00; }
+    .percent-badge.pct-danger { background: var(--color-danger-bg); color: var(--color-danger-text); }
+    .percent-badge.pct-warn { background: var(--color-warning-bg); color: var(--color-warning-text); }
 
     /* Section Blocks */
     .section-block {
-      background: var(--color-surface); border-radius: var(--radius-md);
-      box-shadow: var(--shadow-sm); margin-bottom: var(--spacing-md); overflow: hidden;
+      background: var(--color-surface-solid); border-radius: var(--radius-md);
+      box-shadow: var(--shadow-xs); margin-bottom: var(--spacing-md); overflow: hidden;
       border: 1px solid var(--color-border);
     }
     .section-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 14px 16px; border-bottom: 1px solid var(--color-border);
     }
-    .section-title { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1rem; }
+    .section-title {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: var(--weight-bold); font-size: var(--text-base);
+    }
     .section-icon-wrap {
-      width: 32px; height: 32px; border-radius: 8px;
+      width: 30px; height: 30px; border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
     }
-    .section-icon-wrap mat-icon { font-size: 18px; width: 18px; height: 18px; }
-    .recurring-wrap { background: rgba(156,39,176,0.1); color: #7b1fa2; }
-    .bills-wrap { background: rgba(33,150,243,0.1); color: #1976d2; }
-    .debt-wrap { background: rgba(244,67,54,0.1); color: #d32f2f; }
-    .section-total { font-size: 1rem; font-weight: 800; }
-    .section-total.recurring { color: #7b1fa2; }
-    .section-total.bills { color: #1976d2; }
-    .section-total.debt { color: #d32f2f; }
+    .section-icon-wrap mat-icon { font-size: 17px; width: 17px; height: 17px; }
+    .recurring-wrap { background: var(--color-stat-purple-bg); color: var(--color-stat-purple); }
+    .bills-wrap { background: var(--color-stat-blue-bg); color: var(--color-stat-blue); }
+    .debt-wrap { background: var(--color-danger-bg); color: var(--color-danger-text); }
+    .section-total { font-size: var(--text-base); font-weight: var(--weight-bold); }
+    .section-total.recurring { color: var(--color-stat-purple); }
+    .section-total.bills { color: var(--color-stat-blue); }
+    .section-total.debt { color: var(--color-danger-text); }
 
     /* Category Table */
     .category-table { width: 100%; }
@@ -491,13 +507,13 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
 
     .progress-cell { display: flex; align-items: center; gap: 10px; min-width: 160px; }
     .progress-cell mat-progress-bar { flex: 1; }
-    .progress-percent { font-size: 0.78rem; font-weight: 700; opacity: 0.7; white-space: nowrap; }
+    .progress-percent { font-size: var(--text-xs); font-weight: var(--weight-bold); opacity: 0.7; white-space: nowrap; }
 
     .amounts-cell { display: flex; flex-direction: column; gap: 2px; }
-    .amounts-main { font-size: 0.85rem; font-weight: 500; }
-    .amounts-remaining { font-size: 0.75rem; }
-    .over-budget { color: var(--color-danger); font-weight: 600; }
-    .under-budget { color: var(--color-success); }
+    .amounts-main { font-size: var(--text-sm); font-weight: var(--weight-medium); }
+    .amounts-remaining { font-size: var(--text-xs); }
+    .over-budget { color: var(--color-danger-text); font-weight: var(--weight-semibold); }
+    .under-budget { color: var(--color-success-text); }
 
     /* Mobile Budget Cards */
     .mobile-only { display: none; }
@@ -505,26 +521,26 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       padding: 14px 16px; border-bottom: 1px solid var(--color-border);
     }
     .budget-card:last-child { border-bottom: none; }
-    .budget-card.over { background: color-mix(in srgb, var(--color-danger) 5%, transparent); }
+    .budget-card.over { background: var(--color-danger-bg); }
     .budget-card-top {
       display: flex; align-items: center; justify-content: space-between;
       margin-bottom: 8px;
     }
-    .budget-card-amount { font-size: 0.82rem; font-weight: 500; opacity: 0.8; }
+    .budget-card-amount { font-size: var(--text-sm); font-weight: var(--weight-medium); opacity: 0.8; }
     .budget-card-bottom {
-      display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.78rem;
+      display: flex; justify-content: space-between; margin-top: 6px; font-size: var(--text-xs);
     }
-    .debt-paid { color: var(--color-success); font-weight: 600; }
-    .debt-pending { color: var(--color-warning); font-weight: 500; }
-    .budget-card.debt-done { background: color-mix(in srgb, var(--color-success) 5%, transparent); }
+    .debt-paid { color: var(--color-success-text); font-weight: var(--weight-semibold); }
+    .debt-pending { color: var(--color-warning-text); font-weight: var(--weight-medium); }
+    .budget-card.debt-done { background: var(--color-success-bg); }
 
     /* Paycheck Breakdown */
     .paycheck-card { margin-bottom: var(--spacing-md); }
     .paycheck-card mat-card-title { display: flex; align-items: center; gap: 8px; }
     .paycheck-progress { margin: var(--spacing-md) 0; }
-    .progress-labels { display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.85rem; }
-    .leftover { font-weight: 600; color: var(--color-success); }
-    .leftover.negative { color: var(--color-danger); }
+    .progress-labels { display: flex; justify-content: space-between; margin-top: 4px; font-size: var(--text-sm); }
+    .leftover { font-weight: var(--weight-semibold); color: var(--color-success-text); }
+    .leftover.negative { color: var(--color-danger-text); }
     .expense-table { width: 100%; }
     .autopay-icon, .debt-icon { font-size: 16px; height: 16px; width: 16px; vertical-align: middle; margin-left: 4px; opacity: 0.6; }
     .debt-icon { color: var(--color-accent); }

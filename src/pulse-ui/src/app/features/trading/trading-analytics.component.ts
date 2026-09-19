@@ -30,8 +30,10 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       <div class="banner-pattern"></div>
       <div class="banner-content">
         <div class="banner-icon"><mat-icon>insights</mat-icon></div>
-        <h2>Trading Analytics</h2>
-        <p class="banner-subtitle">Visual breakdowns of your trading performance</p>
+        <div class="banner-text">
+          <h2>Trading Analytics</h2>
+          <p class="banner-subtitle">Visual breakdowns of your trading performance</p>
+        </div>
       </div>
     </div>
 
@@ -239,26 +241,26 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     .page-banner {
       position: relative;
       margin: -24px -24px 24px;
-      padding: 40px 24px 32px;
+      padding: 14px 24px;
       background: var(--gradient-primary);
-      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+      border-radius: 0 0 var(--radius-xl) var(--radius-xl);
       overflow: hidden;
     }
     .banner-pattern {
       position: absolute; inset: 0;
-      background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.08) 0%, transparent 50%),
-                  radial-gradient(circle at 80% 20%, rgba(255,255,255,0.06) 0%, transparent 40%);
+      background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.07) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 40%);
     }
-    .banner-content { position: relative; text-align: center; }
+    .banner-content { position: relative; display: flex; align-items: center; gap: 12px; }
     .banner-icon {
-      width: 56px; height: 56px; border-radius: 16px;
-      background: rgba(255,255,255,0.2); backdrop-filter: blur(8px);
+      width: 42px; height: 42px; border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.18);
       display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 12px; border: 1px solid rgba(255,255,255,0.3);
+      flex-shrink: 0; border: 1px solid rgba(255,255,255,0.25);
     }
-    .banner-icon mat-icon { font-size: 28px; width: 28px; height: 28px; color: #fff; }
-    h2 { margin: 0; color: #fff; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
-    .banner-subtitle { color: rgba(255,255,255,0.75); font-size: 0.9rem; margin: 4px 0 0; }
+    .banner-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #fff; }
+    h2 { margin: 0; color: #fff; font-size: 1rem; font-weight: var(--weight-bold); letter-spacing: -0.02em; }
+    .banner-subtitle { color: rgba(255,255,255,0.7); font-size: var(--text-xs); margin: 1px 0 0; }
 
     .period-row {
       display: flex; justify-content: center; margin-bottom: var(--spacing-lg);
@@ -313,7 +315,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     .heatmap-total { text-align: center; font-weight: 700; padding: 8px 6px; color: var(--color-text-secondary); }
 
     @media (max-width: 599px) {
-      .page-banner { margin: -16px -16px 20px; padding: 32px 16px 24px; }
+      .page-banner { margin: -16px -16px 20px; padding: 12px 16px; }
       .summary-row { grid-template-columns: repeat(2, 1fr); }
       .charts-grid { grid-template-columns: 1fr; }
       .chart-card.chart-wide { grid-column: auto; }

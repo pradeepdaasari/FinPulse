@@ -5,12 +5,13 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { AdminService } from '../../../core/services/admin.service';
 
 @Component({
   selector: 'app-add-user-dialog',
   standalone: true,
-  imports: [FormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule],
+  imports: [FormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, MatTooltipModule],
   template: `
     <div class="dialog-header">
       <div class="header-icon amber">
@@ -20,6 +21,10 @@ import { AdminService } from '../../../core/services/admin.service';
         <h2 mat-dialog-title>Add New User</h2>
         <span class="dialog-subtitle">Create a new account</span>
       </div>
+      <span class="header-spacer"></span>
+      <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
     <mat-dialog-content>
       <form class="dialog-form" (ngSubmit)="submit()">
@@ -41,7 +46,6 @@ import { AdminService } from '../../../core/services/admin.service';
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cancel</button>
       <button mat-raised-button color="primary" (click)="submit()" [disabled]="loading()">
         {{ loading() ? 'Creating...' : 'Create User' }}
       </button>
@@ -60,6 +64,9 @@ import { AdminService } from '../../../core/services/admin.service';
     .header-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #e65100; }
     .header-text h2 { margin: 0 !important; padding: 0 !important; font-size: 1.1rem !important; font-weight: 700 !important; }
     .dialog-subtitle { font-size: 0.75rem; color: var(--color-text-secondary); }
+    .header-spacer { flex: 1; }
+    .header-close { color: var(--color-text-muted); }
+    .header-close mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .dialog-form {
       display: flex;
       flex-direction: column;

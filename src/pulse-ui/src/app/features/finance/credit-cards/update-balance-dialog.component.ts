@@ -10,6 +10,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { CreditCardService } from '../../../core/services/credit-card.service';
 import { CreditCard } from '../../../core/models/credit-card.model';
 
@@ -27,7 +28,8 @@ import { CreditCard } from '../../../core/models/credit-card.model';
     MatDividerModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    MatSlideToggleModule
+    MatSlideToggleModule,
+    MatTooltipModule
   ],
   template: `
     <div class="dialog-header">
@@ -38,6 +40,10 @@ import { CreditCard } from '../../../core/models/credit-card.model';
         <h2>Update Card</h2>
         <span class="card-name">{{ data.cardName }}</span>
       </div>
+      <span class="header-spacer"></span>
+      <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
 
     <mat-divider></mat-divider>
@@ -113,10 +119,6 @@ import { CreditCard } from '../../../core/models/credit-card.model';
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close class="cancel-btn">
-        <mat-icon>close</mat-icon>
-        Cancel
-      </button>
       @if (saving()) {
         <button mat-flat-button color="primary" disabled class="save-btn">
           <mat-icon class="spin">sync</mat-icon>
@@ -214,11 +216,13 @@ import { CreditCard } from '../../../core/models/credit-card.model';
       gap: 8px;
     }
 
-    .cancel-btn {
-      display: flex;
-      align-items: center;
-      gap: 4px;
+    .header-spacer { flex: 1; }
+    .header-close {
+      color: var(--color-text-muted) !important;
+      width: 32px !important; height: 32px !important; line-height: 32px !important;
+      flex-shrink: 0;
     }
+    .header-close mat-icon { font-size: 20px; width: 20px; height: 20px; }
 
     .save-btn {
       display: flex;

@@ -55,6 +55,17 @@ export interface ExpenseDialogData {
           <h2 mat-dialog-title>{{ data?.expense ? 'Edit' : 'Log' }} Transaction</h2>
           <p class="dialog-subtitle">Track every dollar, build better habits</p>
         </div>
+        <span class="banner-spacer"></span>
+        <div class="dialog-header-actions">
+          @if (data?.expense) {
+            <button mat-icon-button class="header-delete" (click)="confirmDelete()" matTooltip="Delete">
+              <mat-icon>delete_outline</mat-icon>
+            </button>
+          }
+          <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
       </div>
     </div>
     <mat-dialog-content>
@@ -186,10 +197,10 @@ export interface ExpenseDialogData {
         @if (form.value.transactionType === 'Transfer') {
           <mat-form-field appearance="outline">
             <mat-label>From Account</mat-label>
-            <mat-select formControlName="fundingSourceKey" (opened)="bankSearch.set('')">
+            <mat-select formControlName="fundingSourceKey" (opened)="bankSearch.set(''); focusInput(fromAcctSearch)">
               <div class="category-search-box">
                 <mat-icon>search</mat-icon>
-                <input matInput placeholder="Search accounts..." (input)="bankSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+                <input #fromAcctSearch matInput placeholder="Search accounts..." (input)="bankSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
               </div>
               @for (source of filteredBankSources(); track source.id) {
                 <mat-option [value]="'BankAccount:' + source.id">
@@ -202,10 +213,10 @@ export interface ExpenseDialogData {
 
           <mat-form-field appearance="outline">
             <mat-label>To Account</mat-label>
-            <mat-select formControlName="toFundingSourceKey" (opened)="bankSearch.set('')">
+            <mat-select formControlName="toFundingSourceKey" (opened)="bankSearch.set(''); focusInput(toAcctSearch)">
               <div class="category-search-box">
                 <mat-icon>search</mat-icon>
-                <input matInput placeholder="Search accounts..." (input)="bankSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+                <input #toAcctSearch matInput placeholder="Search accounts..." (input)="bankSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
               </div>
               @for (source of filteredBankSources(); track source.id) {
                 <mat-option [value]="'BankAccount:' + source.id">
@@ -218,10 +229,10 @@ export interface ExpenseDialogData {
         } @else if (form.value.transactionType === 'CardPayment') {
           <mat-form-field appearance="outline">
             <mat-label>Select Credit Card</mat-label>
-            <mat-select formControlName="selectedDebtKey" (selectionChange)="onDebtSelected($event.value)" (opened)="cardSearch.set('')">
+            <mat-select formControlName="selectedDebtKey" (selectionChange)="onDebtSelected($event.value)" (opened)="cardSearch.set(''); focusInput(cardSearchInput)">
               <div class="category-search-box">
                 <mat-icon>search</mat-icon>
-                <input matInput placeholder="Search cards..." (input)="cardSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+                <input #cardSearchInput matInput placeholder="Search cards..." (input)="cardSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
               </div>
               @for (debt of cardDebts(); track debt.key) {
                 <mat-option [value]="debt.key">
@@ -270,10 +281,10 @@ export interface ExpenseDialogData {
 
             <mat-form-field appearance="outline">
               <mat-label>From Account</mat-label>
-              <mat-select formControlName="fundingSourceKey" (opened)="bankSearch.set('')">
+              <mat-select formControlName="fundingSourceKey" (opened)="bankSearch.set(''); focusInput(cardFromAcctSearch)">
                 <div class="category-search-box">
                   <mat-icon>search</mat-icon>
-                  <input matInput placeholder="Search accounts..." (input)="bankSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+                  <input #cardFromAcctSearch matInput placeholder="Search accounts..." (input)="bankSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
                 </div>
                 @for (source of filteredBankSources(); track source.id) {
                   <mat-option [value]="'BankAccount:' + source.id">
@@ -287,10 +298,10 @@ export interface ExpenseDialogData {
         } @else if (form.value.transactionType === 'LoanPayment') {
           <mat-form-field appearance="outline">
             <mat-label>Select Loan Account</mat-label>
-            <mat-select formControlName="selectedDebtKey" (selectionChange)="onDebtSelected($event.value)" (opened)="loanSearch.set('')">
+            <mat-select formControlName="selectedDebtKey" (selectionChange)="onDebtSelected($event.value)" (opened)="loanSearch.set(''); focusInput(loanSearchInput)">
               <div class="category-search-box">
                 <mat-icon>search</mat-icon>
-                <input matInput placeholder="Search loans..." (input)="loanSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+                <input #loanSearchInput matInput placeholder="Search loans..." (input)="loanSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
               </div>
               @for (debt of loanDebts(); track debt.key) {
                 <mat-option [value]="debt.key">
@@ -339,10 +350,10 @@ export interface ExpenseDialogData {
 
             <mat-form-field appearance="outline">
               <mat-label>From Account</mat-label>
-              <mat-select formControlName="fundingSourceKey" (opened)="bankSearch.set('')">
+              <mat-select formControlName="fundingSourceKey" (opened)="bankSearch.set(''); focusInput(loanFromAcctSearch)">
                 <div class="category-search-box">
                   <mat-icon>search</mat-icon>
-                  <input matInput placeholder="Search accounts..." (input)="bankSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+                  <input #loanFromAcctSearch matInput placeholder="Search accounts..." (input)="bankSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
                 </div>
                 @for (source of filteredBankSources(); track source.id) {
                   <mat-option [value]="'BankAccount:' + source.id">
@@ -356,10 +367,10 @@ export interface ExpenseDialogData {
         } @else {
           <mat-form-field appearance="outline">
             <mat-label>{{ form.value.transactionType === 'Income' ? 'Received into' : form.value.transactionType === 'Refund' ? 'Refunded to' : 'Paid with' }}</mat-label>
-            <mat-select formControlName="fundingSourceKey" (opened)="sourceSearch.set('')">
+            <mat-select formControlName="fundingSourceKey" (opened)="sourceSearch.set(''); focusInput(sourceSearchInput)">
               <div class="category-search-box">
                 <mat-icon>search</mat-icon>
-                <input matInput placeholder="Search accounts..." (input)="sourceSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+                <input #sourceSearchInput matInput placeholder="Search accounts..." (input)="sourceSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
               </div>
               @for (source of filteredSourcesSearched(); track source.type + source.id) {
                 <mat-option [value]="source.type + ':' + source.id">
@@ -411,10 +422,10 @@ export interface ExpenseDialogData {
 
         <mat-form-field appearance="outline">
           <mat-label>Tag Type (optional)</mat-label>
-          <mat-select formControlName="tagType" (opened)="tagTypeSearch.set('')">
+          <mat-select formControlName="tagType" (opened)="tagTypeSearch.set(''); focusInput(tagTypeSearchInput)">
             <div class="category-search-box">
               <mat-icon>search</mat-icon>
-              <input matInput placeholder="Search tag types..." (input)="tagTypeSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+              <input #tagTypeSearchInput matInput placeholder="Search tag types..." (input)="tagTypeSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
             </div>
             <mat-option [value]="''">-- None --</mat-option>
             @for (tt of filteredTagTypes(); track tt) {
@@ -479,12 +490,6 @@ export interface ExpenseDialogData {
     </mat-dialog-content>
 
     <mat-dialog-actions align="end" class="dialog-actions">
-      @if (data?.expense) {
-        <button mat-stroked-button color="warn" class="delete-btn" (click)="confirmDelete()">
-          <mat-icon>delete_outline</mat-icon> Delete
-        </button>
-      }
-      <button mat-stroked-button mat-dialog-close class="cancel-btn">Cancel</button>
       <button mat-raised-button color="primary" class="save-btn" (click)="save()" [disabled]="form.invalid || loading() || saving() || savingLoanPayment() || (splitMode() && !splitTotalValid()) || ((form.value.transactionType === 'LoanPayment' || form.value.transactionType === 'CardPayment') && !selectedDebt())">
         @if (saving() || savingLoanPayment()) {
           <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
@@ -502,8 +507,7 @@ export interface ExpenseDialogData {
     :host { display: block; }
     .dialog-banner {
       position: relative;
-      margin: -24px -24px 12px;
-      padding: 16px 24px 14px;
+      padding: 18px 24px;
       background: var(--gradient-primary);
       overflow: hidden;
     }
@@ -551,6 +555,31 @@ export interface ExpenseDialogData {
       font-size: 0.72rem;
       margin: 2px 0 0;
     }
+    .banner-spacer { flex: 1; }
+    .dialog-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+      align-self: center;
+    }
+    .header-delete, .header-close {
+      color: rgba(255, 255, 255, 0.9) !important;
+      width: 40px !important;
+      height: 40px !important;
+      padding: 0 !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      border-radius: 50% !important;
+      background: rgba(255, 255, 255, 0.12) !important;
+      border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+    .header-delete:hover { background: rgba(255, 80, 80, 0.3) !important; }
+    .header-close:hover { background: rgba(255, 255, 255, 0.25) !important; }
+    .header-delete mat-icon, .header-close mat-icon {
+      font-size: 20px; width: 20px; height: 20px;
+    }
     .expense-form {
       display: flex;
       flex-direction: column;
@@ -580,7 +609,6 @@ export interface ExpenseDialogData {
       text-align: center; white-space: nowrap; transition: color 0.2s ease;
     }
 
-    /* Always-on tinted colors */
     .txn-circle.expense { background: color-mix(in srgb, var(--color-danger) 10%, var(--color-surface-secondary)); }
     .txn-circle.expense mat-icon { color: color-mix(in srgb, var(--color-danger) 60%, var(--color-text-muted)); }
     .txn-circle.income { background: color-mix(in srgb, var(--color-success) 10%, var(--color-surface-secondary)); }
@@ -595,7 +623,6 @@ export interface ExpenseDialogData {
     .txn-circle.loan mat-icon { color: color-mix(in srgb, var(--color-primary) 60%, var(--color-text-muted)); }
     .txn-label { color: var(--color-text-secondary); }
 
-    /* Active state — full saturation + ring + scale */
     .txn-icon-item.active .txn-circle { transform: scale(1.1); }
     .txn-icon-item.active .txn-circle.expense {
       background: var(--color-stat-red-bg);
@@ -671,6 +698,7 @@ export interface ExpenseDialogData {
     .date-time-row { display: flex; gap: 10px; align-items: start; }
     .time-field { width: 130px; min-width: 110px; }
     .cat-arrow { color: var(--color-text-muted); cursor: pointer; }
+    :host ::ng-deep .mat-mdc-form-field input.mat-mdc-input-element { outline: none; box-shadow: none; }
     .merchant-search-icon { color: var(--color-text-muted); font-size: 20px; width: 20px; height: 20px; }
     ::ng-deep .category-autocomplete .mat-mdc-option .mdc-list-item__primary-text {
       width: 100%;
@@ -750,26 +778,9 @@ export interface ExpenseDialogData {
       border-top: 1px solid var(--color-border);
       gap: 8px;
     }
-    .delete-btn {
-      color: var(--color-danger) !important;
-      border-color: var(--color-danger) !important;
-      font-weight: 600 !important;
-      border-radius: var(--radius-sm) !important;
-      padding: 0 16px !important;
-      min-height: 38px;
-    }
-    .delete-btn mat-icon {
-      font-size: 18px; width: 18px; height: 18px; margin-right: 4px;
-    }
     .split-toggle {
       margin: -4px 0 8px;
       font-size: 0.85rem;
-    }
-    .cancel-btn {
-      font-weight: 600 !important;
-      border-radius: var(--radius-sm) !important;
-      padding: 0 16px !important;
-      min-height: 38px;
     }
     .save-btn {
       border-radius: var(--radius-sm) !important;
@@ -783,8 +794,17 @@ export interface ExpenseDialogData {
     }
     .btn-spinner { display: inline-block; margin-right: 6px; vertical-align: middle; }
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
+    @media (max-width: 1024px) {
+      :host { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+      .dialog-banner { flex-shrink: 0; }
+      .txn-icons { gap: 4px; }
+      .txn-circle { width: 42px; height: 42px; }
+      .txn-circle mat-icon { font-size: 20px; width: 20px; height: 20px; }
+      .txn-label { font-size: 0.65rem; }
+      .txn-icon-item.active .txn-circle { transform: scale(1.05); }
+    }
     @media (max-width: 599px) {
-      .dialog-banner { margin: -16px -16px 12px; padding: 14px 16px 12px; }
+      .dialog-banner { padding: 14px 16px 12px; }
       .txn-icons {
         overflow-x: auto; justify-content: flex-start;
         gap: 6px; padding: 6px 4px 10px;
@@ -1306,6 +1326,10 @@ export class AddExpenseDialogComponent implements OnInit {
   }
 
   saving = signal(false);
+
+  focusInput(el: HTMLInputElement): void {
+    setTimeout(() => el.focus(), 0);
+  }
 
   confirmDelete(): void {
     if (confirm('Delete this transaction? This cannot be undone.')) {

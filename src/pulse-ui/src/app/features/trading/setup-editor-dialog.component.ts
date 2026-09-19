@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TradingService } from '../../core/services/trading.service';
 import { TradingSetup, ChecklistItem } from '../../core/models/trading.model';
@@ -21,14 +22,19 @@ export interface SetupEditorData {
   standalone: true,
   imports: [
     CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
-    MatInputModule, MatButtonModule, MatIconModule, MatSlideToggleModule,
+    MatInputModule, MatButtonModule, MatIconModule, MatTooltipModule, MatSlideToggleModule,
     RichTextEditorComponent
   ],
   template: `
-    <h2 mat-dialog-title>
-      <mat-icon class="title-icon">{{ data?.setup ? 'edit' : 'add_circle' }}</mat-icon>
-      {{ data?.setup ? 'Edit Setup' : 'New Setup' }}
-    </h2>
+    <div class="dialog-title-row">
+      <h2 mat-dialog-title>
+        <mat-icon class="title-icon">{{ data?.setup ? 'edit' : 'add_circle' }}</mat-icon>
+        {{ data?.setup ? 'Edit Setup' : 'New Setup' }}
+      </h2>
+      <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
 
     <mat-dialog-content>
       <form [formGroup]="form" class="setup-form" (submit)="$event.preventDefault()">
@@ -72,7 +78,6 @@ export interface SetupEditorData {
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cancel</button>
       <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid || items.invalid || saving()">
         <mat-icon>{{ data?.setup ? 'check' : 'save' }}</mat-icon>
         {{ data?.setup ? 'Update' : 'Create' }}
@@ -80,6 +85,19 @@ export interface SetupEditorData {
     </mat-dialog-actions>
   `,
   styles: [`
+    .dialog-title-row { display: flex; align-items: center; gap: 8px; }
+    .dialog-title-row h2 { flex: 1; }
+    .header-close {
+      color: var(--color-text-muted) !important;
+      width: 34px !important; height: 34px !important;
+      padding: 0 !important;
+      display: inline-flex !important; align-items: center !important; justify-content: center !important;
+      border-radius: 50% !important;
+      background: var(--color-surface-secondary) !important;
+      border: 1px solid var(--color-border) !important;
+    }
+    .header-close:hover { background: var(--color-surface-hover) !important; }
+    .header-close mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .title-icon { vertical-align: middle; margin-right: 8px; color: var(--color-primary); }
     .setup-form { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
     .full-width { width: 100%; }

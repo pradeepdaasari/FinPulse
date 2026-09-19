@@ -32,8 +32,10 @@ interface WisdomItem {
       <div class="banner-pattern"></div>
       <div class="banner-content">
         <div class="banner-icon"><mat-icon>menu_book</mat-icon></div>
-        <h2>Playbook & Rules</h2>
-        <p class="banner-subtitle">Your trading constitution. Follow it religiously.</p>
+        <div class="banner-text">
+          <h2>Playbook & Rules</h2>
+          <p class="banner-subtitle">Your trading constitution. Follow it religiously.</p>
+        </div>
       </div>
     </div>
 
@@ -99,8 +101,8 @@ interface WisdomItem {
                   <mat-icon class="rule-check">rule</mat-icon>
                   <span class="rule-text" [innerHTML]="rule.text"></span>
                   <div class="rule-actions">
-                    <button mat-icon-button (click)="editRule(rule)"><mat-icon>edit</mat-icon></button>
-                    <button mat-icon-button color="warn" (click)="deleteRule(rule)"><mat-icon>delete_outline</mat-icon></button>
+                    <button mat-icon-button class="action-btn action-edit" (click)="editRule(rule)"><mat-icon>edit</mat-icon></button>
+                    <button mat-icon-button class="action-btn action-delete" (click)="deleteRule(rule)"><mat-icon>delete_outline</mat-icon></button>
                   </div>
                 </div>
               }
@@ -179,26 +181,26 @@ interface WisdomItem {
     :host { display: block; }
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
     .page-banner {
-      position: relative; margin: -24px -24px 24px; padding: 40px 24px 32px;
+      position: relative; margin: -24px -24px 24px; padding: 14px 24px;
       background: var(--gradient-primary); border-radius: 0 0 var(--radius-lg) var(--radius-lg); overflow: hidden;
     }
     .banner-pattern { position: absolute; inset: 0; background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.08) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.06) 0%, transparent 40%); }
-    .banner-content { position: relative; text-align: center; }
-    .banner-icon { width: 52px; height: 52px; border-radius: 16px; background: rgba(255,255,255,0.2); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; border: 1px solid rgba(255,255,255,0.3); }
-    .banner-icon mat-icon { font-size: 26px; width: 26px; height: 26px; color: #fff; }
-    h2 { margin: 0; color: #fff; font-size: 1.4rem; font-weight: 700; }
-    .banner-subtitle { color: rgba(255,255,255,0.75); font-size: 0.85rem; margin: 4px 0 0; }
+    .banner-content { position: relative; display: flex; align-items: center; gap: 12px; }
+    .banner-icon { width: 42px; height: 42px; border-radius: var(--radius-md); background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.25); }
+    .banner-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #fff; }
+    h2 { margin: 0; color: #fff; font-size: 1rem; font-weight: var(--weight-bold); }
+    .banner-subtitle { color: rgba(255,255,255,0.7); font-size: var(--text-xs); margin: 1px 0 0; }
 
     /* Streak */
-    .streak-card { margin-bottom: var(--spacing-md); background: var(--color-surface); }
+    .streak-card { margin-bottom: var(--spacing-md); background: var(--color-surface-solid); border: 1px solid var(--color-border); box-shadow: var(--shadow-xs); }
     .streak-hero { text-align: center; padding: 20px 0; }
     .streak-number { display: flex; align-items: center; justify-content: center; gap: 8px; }
     .streak-value { font-size: 4rem; font-weight: 900; color: var(--color-primary); line-height: 1; }
-    .streak-fire { font-size: 36px; width: 36px; height: 36px; color: #ff9500; }
-    .streak-label { display: block; margin-top: 8px; font-size: 0.85rem; color: var(--color-text-secondary); font-weight: 500; }
+    .streak-fire { font-size: 36px; width: 36px; height: 36px; color: var(--color-warning); }
+    .streak-label { display: block; margin-top: 8px; font-size: var(--text-sm); color: var(--color-text-muted); font-weight: var(--weight-medium); }
     .milestones { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
     .milestone {
-      padding: 4px 10px; border-radius: var(--radius-full); font-size: 0.7rem; font-weight: 700;
+      padding: 4px 10px; border-radius: var(--radius-full); font-size: var(--text-xs); font-weight: var(--weight-bold);
       background: var(--color-border); color: var(--color-text-muted);
     }
     .milestone.achieved { background: var(--color-stat-green-bg); color: var(--color-success); }
@@ -207,27 +209,27 @@ interface WisdomItem {
     .focus-card { margin-bottom: var(--spacing-md); border-left: 4px solid var(--color-primary); }
     .focus-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .focus-icon { color: var(--color-primary); }
-    .focus-title { font-weight: 700; font-size: 0.9rem; }
-    .focus-rule { font-size: 1rem; font-weight: 500; margin: 0 0 12px; }
+    .focus-title { font-weight: var(--weight-bold); font-size: var(--text-sm); }
+    .focus-rule { font-size: var(--text-base); font-weight: var(--weight-medium); margin: 0 0 12px; }
     .focus-dots { display: flex; gap: 8px; }
     .focus-dot {
       width: 32px; height: 32px; border-radius: 8px; display: flex;
-      align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700;
+      align-items: center; justify-content: center; font-size: var(--text-xs); font-weight: var(--weight-bold);
       background: var(--color-border); color: var(--color-text-muted);
     }
     .focus-dot.filled { background: var(--color-stat-green-bg); color: var(--color-success); }
 
     /* Sections */
     .section { margin-bottom: var(--spacing-lg); }
-    .section h3 { font-size: 1.1rem; font-weight: 700; margin: 0 0 12px; }
+    .section h3 { font-size: var(--text-base); font-weight: var(--weight-bold); margin: 0 0 12px; }
     .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .empty-hint { color: var(--color-text-secondary); font-size: 0.85rem; font-style: italic; }
+    .empty-hint { color: var(--color-text-muted); font-size: var(--text-sm); font-style: italic; }
 
     /* Rules */
     .rule-category { margin-bottom: 16px; }
     .category-chip {
       display: inline-block; padding: 3px 10px; border-radius: var(--radius-full);
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px;
+      font-size: var(--text-xs); font-weight: var(--weight-bold); text-transform: uppercase; letter-spacing: var(--tracking-wide); margin-bottom: 8px;
     }
     .cat-entry { background: var(--color-stat-green-bg); color: var(--color-success); }
     .cat-exit { background: var(--color-stat-blue-bg); color: var(--color-stat-blue); }
@@ -241,10 +243,14 @@ interface WisdomItem {
       border-radius: var(--radius-sm); margin-bottom: 6px;
     }
     .rule-check { font-size: 18px; width: 18px; height: 18px; color: var(--color-primary); flex-shrink: 0; }
-    .rule-text { flex: 1; font-size: 0.9rem; font-weight: 500; }
+    .rule-text { flex: 1; font-size: var(--text-sm); font-weight: var(--weight-medium); }
     .rule-actions { display: flex; flex-shrink: 0; }
-    .rule-actions button { width: 32px; height: 32px; }
-    .rule-actions mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .action-btn { width: 34px; height: 34px; border-radius: var(--radius-xs) !important; transition: background var(--transition-fast) !important; }
+    .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .action-edit { color: var(--color-action-edit) !important; }
+    .action-edit:hover { background: var(--color-action-edit-bg) !important; }
+    .action-delete { color: var(--color-action-delete) !important; }
+    .action-delete:hover { background: var(--color-action-delete-bg) !important; }
 
     /* Limits */
     .limits-card { margin-bottom: var(--spacing-md); }
@@ -261,12 +267,12 @@ interface WisdomItem {
       border-radius: var(--radius-md); border-left: 3px solid var(--color-primary);
     }
     .wisdom-quote-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); opacity: 0.5; margin-bottom: 4px; }
-    .wisdom-text { font-size: 0.95rem; font-weight: 500; line-height: 1.5; margin: 0 0 8px; font-style: italic; }
+    .wisdom-text { font-size: var(--text-base); font-weight: var(--weight-medium); line-height: var(--leading-relaxed); margin: 0 0 8px; font-style: italic; }
     .wisdom-footer { display: flex; align-items: center; gap: 8px; }
-    .wisdom-author { font-size: 0.8rem; color: var(--color-text-secondary); }
+    .wisdom-author { font-size: var(--text-sm); color: var(--color-text-muted); }
     .wisdom-cat-badge {
       padding: 2px 8px; border-radius: var(--radius-full); font-size: 0.65rem;
-      font-weight: 700; text-transform: uppercase;
+      font-weight: var(--weight-bold); text-transform: uppercase; letter-spacing: var(--tracking-wide);
     }
     .wcat-discipline { background: var(--color-stat-blue-bg); color: var(--color-stat-blue); }
     .wcat-risk { background: var(--color-stat-red-bg); color: var(--color-danger); }
@@ -275,7 +281,7 @@ interface WisdomItem {
     .wcat-process { background: var(--color-stat-green-bg); color: var(--color-success); }
 
     @media (max-width: 599px) {
-      .page-banner { margin: -16px -16px 20px; padding: 32px 16px 24px; }
+      .page-banner { margin: -16px -16px 20px; padding: 10px 16px; }
       .streak-value { font-size: 3rem; }
       .limits-grid { grid-template-columns: 1fr; }
       .rule-actions button { width: 44px; height: 44px; }

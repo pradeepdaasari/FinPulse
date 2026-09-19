@@ -20,8 +20,10 @@ import { NotificationService } from '../../core/services/notification.service';
       <div class="banner-pattern"></div>
       <div class="banner-content">
         <div class="banner-icon"><mat-icon>tune</mat-icon></div>
-        <h2>My Setups</h2>
-        <p class="banner-subtitle">Define your edge. Trade only what you've mastered.</p>
+        <div class="banner-text">
+          <h2>My Setups</h2>
+          <p class="banner-subtitle">Define your edge. Trade only what you've mastered.</p>
+        </div>
       </div>
     </div>
 
@@ -89,11 +91,11 @@ import { NotificationService } from '../../core/services/notification.service';
             }
 
             <div class="setup-actions">
-              <button mat-button (click)="openEditor(setup)">
+              <button mat-button class="action-edit" (click)="openEditor(setup)">
                 <mat-icon>edit</mat-icon> Edit
               </button>
-              <button mat-button color="warn" (click)="deleteSetup(setup)">
-                <mat-icon>delete</mat-icon> Delete
+              <button mat-button class="action-delete" (click)="deleteSetup(setup)">
+                <mat-icon>delete_outline</mat-icon> Delete
               </button>
             </div>
           </div>
@@ -105,7 +107,7 @@ import { NotificationService } from '../../core/services/notification.service';
     :host { display: block; }
 
     .page-banner {
-      position: relative; margin: -24px -24px 24px; padding: 40px 24px 32px;
+      position: relative; margin: -24px -24px 24px; padding: 14px 24px;
       background: var(--gradient-primary); border-radius: 0 0 var(--radius-lg) var(--radius-lg); overflow: hidden;
     }
     .banner-pattern {
@@ -113,16 +115,16 @@ import { NotificationService } from '../../core/services/notification.service';
       background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.08) 0%, transparent 50%),
                   radial-gradient(circle at 80% 20%, rgba(255,255,255,0.06) 0%, transparent 40%);
     }
-    .banner-content { position: relative; text-align: center; }
+    .banner-content { position: relative; display: flex; align-items: center; gap: 12px; }
     .banner-icon {
-      width: 56px; height: 56px; border-radius: 16px;
-      background: rgba(255,255,255,0.2); backdrop-filter: blur(8px);
+      width: 42px; height: 42px; border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.18);
       display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 12px; border: 1px solid rgba(255,255,255,0.3);
+      flex-shrink: 0; border: 1px solid rgba(255,255,255,0.25);
     }
-    .banner-icon mat-icon { font-size: 28px; width: 28px; height: 28px; color: #fff; }
-    h2 { margin: 0; color: #fff; font-size: 1.5rem; font-weight: 700; }
-    .banner-subtitle { color: rgba(255,255,255,0.75); font-size: 0.9rem; margin: 4px 0 0; }
+    .banner-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #fff; }
+    h2 { margin: 0; color: #fff; font-size: 1rem; font-weight: 700; }
+    .banner-subtitle { color: rgba(255,255,255,0.7); font-size: var(--text-xs); margin: 1px 0 0; }
 
     .mentor-tip {
       display: flex; align-items: center; gap: 10px;
@@ -199,9 +201,13 @@ import { NotificationService } from '../../core/services/notification.service';
       display: flex; gap: 8px; margin-top: 12px; border-top: 1px solid var(--color-border); padding-top: 10px;
     }
     .setup-actions button mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .action-edit { color: var(--color-action-edit) !important; }
+    .action-edit:hover { background: var(--color-action-edit-bg) !important; }
+    .action-delete { color: var(--color-action-delete) !important; }
+    .action-delete:hover { background: var(--color-action-delete-bg) !important; }
 
     @media (max-width: 599px) {
-      .page-banner { margin: -16px -16px 20px; padding: 32px 16px 24px; }
+      .page-banner { margin: -16px -16px 20px; padding: 10px 16px; }
       .setups-grid { grid-template-columns: 1fr; }
 
       .header-row button,

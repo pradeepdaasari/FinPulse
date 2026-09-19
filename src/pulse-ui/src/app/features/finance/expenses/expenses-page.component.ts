@@ -102,132 +102,119 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
               <mat-card class="desktop-only">
                 <mat-card-content>
                   <div class="table-wrapper">
-                    <table mat-table [dataSource]="filteredExpenses()" matSort (matSortChange)="sortData($event)">
-                      <ng-container matColumnDef="type">
-                        <th mat-header-cell *matHeaderCellDef>Type</th>
-                        <td mat-cell *matCellDef="let e">
-                          <span class="type-badge"
-                                [class.type-expense]="e.transactionType === 'Expense' || !e.transactionType"
-                                [class.type-income]="e.transactionType === 'Income'"
-                                [class.type-transfer]="e.transactionType === 'Transfer'"
-                                [class.type-refund]="e.transactionType === 'Refund'"
-                                [class.type-card]="e.transactionType === 'CardPayment'"
-                                [class.type-loan]="e.transactionType === 'LoanPayment'">
-                            {{ e.transactionType === 'LoanPayment' ? 'Loan Payment' : e.transactionType === 'CardPayment' ? 'Card Payment' : (e.transactionType || 'Expense') }}
-                          </span>
-                        </td>
-                      </ng-container>
-                      <ng-container matColumnDef="date">
-                        <th mat-header-cell *matHeaderCellDef mat-sort-header>Date</th>
-                        <td mat-cell *matCellDef="let e">{{ e.date | date:'MMM d, h:mm a' }}</td>
-                      </ng-container>
-                      <ng-container matColumnDef="merchant">
-                        <th mat-header-cell *matHeaderCellDef mat-sort-header>Merchant</th>
-                        <td mat-cell *matCellDef="let e">{{ e.merchant || '—' }}</td>
-                      </ng-container>
-                      <ng-container matColumnDef="description">
-                        <th mat-header-cell *matHeaderCellDef>Description</th>
-                        <td mat-cell *matCellDef="let e">
-                          {{ e.description }}
-                          @if (e.tag) {
-                            <span class="tag-badge">{{ e.tag }}</span>
+                    <table class="grouped-table">
+                      <thead>
+                        <tr>
+                          <th>Type</th><th>Time</th><th>Merchant</th><th>Description</th>
+                          <th>Category</th><th>Source</th><th class="col-amount">Amount</th><th class="col-actions"></th>
+                        </tr>
+                      </thead>
+                      @for (group of groupedExpenses(); track group.label) {
+                        <tbody>
+                          <tr class="day-group-row">
+                            <td [attr.colspan]="7" class="day-group-label">{{ group.label }}</td>
+                            <td class="day-group-total" [class.positive]="getDayNet(group.items) > 0" [class.negative]="getDayNet(group.items) < 0">
+                              {{ getDayNet(group.items) >= 0 ? '+' : '' }}{{ getDayNet(group.items) | currency }}
+                            </td>
+                          </tr>
+                          @for (e of group.items; track e.id) {
+                            <tr class="data-row"
+                                [class.row-expense]="e.transactionType === 'Expense' || !e.transactionType"
+                                [class.row-income]="e.transactionType === 'Income'"
+                                [class.row-transfer]="e.transactionType === 'Transfer'"
+                                [class.row-refund]="e.transactionType === 'Refund'"
+                                [class.row-card]="e.transactionType === 'CardPayment'"
+                                [class.row-loan]="e.transactionType === 'LoanPayment'">
+                              <td>
+                                <span class="type-badge"
+                                      [class.type-expense]="e.transactionType === 'Expense' || !e.transactionType"
+                                      [class.type-income]="e.transactionType === 'Income'"
+                                      [class.type-transfer]="e.transactionType === 'Transfer'"
+                                      [class.type-refund]="e.transactionType === 'Refund'"
+                                      [class.type-card]="e.transactionType === 'CardPayment'"
+                                      [class.type-loan]="e.transactionType === 'LoanPayment'">
+                                  {{ e.transactionType === 'LoanPayment' ? 'Loan Payment' : e.transactionType === 'CardPayment' ? 'Card Payment' : (e.transactionType || 'Expense') }}
+                                </span>
+                              </td>
+                              <td>{{ e.date | date:'h:mm a' }}</td>
+                              <td>{{ e.merchant || '—' }}</td>
+                              <td>
+                                {{ e.description }}
+                                @if (e.tag) { <span class="tag-badge">{{ e.tag }}</span> }
+                              </td>
+                              <td>
+                                @if (e.categoryName) {
+                                  <span class="cat-chip" [style.background]="getCategoryBg(e.categoryName)" [style.color]="getCategoryColor(e.categoryName)">
+                                    @if (e.categoryIcon) {
+                                      <mat-icon class="cat-chip-icon" [style.color]="getCategoryColor(e.categoryName)">{{ e.categoryIcon }}</mat-icon>
+                                    }
+                                    {{ e.categoryName }}
+                                  </span>
+                                } @else {
+                                  <span class="cat-chip cat-chip-none">—</span>
+                                }
+                              </td>
+                              <td>
+                                @if (e.transactionType === 'Transfer' && e.fundingSourceName && e.toFundingSourceName) {
+                                  <span class="source-cell transfer-source">
+                                    <mat-icon class="source-icon">{{ getSourceIcon(e.fundingSourceId, e.fundingSourceType) }}</mat-icon>
+                                    {{ e.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon> {{ e.toFundingSourceName }}
+                                  </span>
+                                } @else if (e.transactionType === 'CardPayment' && e.fundingSourceName && e.toFundingSourceName) {
+                                  <span class="source-cell card-payment-source">
+                                    <mat-icon class="source-icon">{{ getSourceIcon(e.fundingSourceId, e.fundingSourceType) }}</mat-icon>
+                                    {{ e.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon>
+                                    <mat-icon class="source-icon">credit_card</mat-icon> {{ e.toFundingSourceName }}
+                                  </span>
+                                } @else if (e.transactionType === 'LoanPayment' && e.fundingSourceName && e.toFundingSourceName) {
+                                  <span class="source-cell loan-payment-source">
+                                    <mat-icon class="source-icon">{{ getSourceIcon(e.fundingSourceId, e.fundingSourceType) }}</mat-icon>
+                                    {{ e.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon>
+                                    <mat-icon class="source-icon">account_balance</mat-icon> {{ e.toFundingSourceName }}
+                                  </span>
+                                } @else if (e.fundingSourceName) {
+                                  <span class="source-cell">
+                                    <mat-icon class="source-icon">{{ getSourceIcon(e.fundingSourceId, e.fundingSourceType) }}</mat-icon>
+                                    {{ e.fundingSourceName }}
+                                  </span>
+                                } @else { — }
+                              </td>
+                              <td [class.amount-cell]="true"
+                                  [class.expense-amount]="e.transactionType === 'Expense' || !e.transactionType"
+                                  [class.income-amount]="e.transactionType === 'Income'"
+                                  [class.transfer-amount]="e.transactionType === 'Transfer'"
+                                  [class.refund-amount]="e.transactionType === 'Refund'"
+                                  [class.card-payment-amount]="e.transactionType === 'CardPayment'"
+                                  [class.loan-payment-amount]="e.transactionType === 'LoanPayment'">
+                                @if (e.transactionType === 'Income') { +{{ e.amount | currency }} }
+                                @else if (e.transactionType === 'Transfer') { ⇔ {{ e.amount | currency }} }
+                                @else if (e.transactionType === 'Refund') { ↩ {{ e.amount | currency }} }
+                                @else if (e.transactionType === 'CardPayment') { 💳 {{ e.amount | currency }} }
+                                @else if (e.transactionType === 'LoanPayment') { 🏦 {{ e.amount | currency }} }
+                                @else { {{ e.amount | currency }} }
+                              </td>
+                              <td>
+                                @if (e.source === 'payment') {
+                                  <span class="auto-trade-badge" matTooltip="Payment — manage from Cards/Loans section">
+                                    <mat-icon class="auto-trade-icon">{{ e.transactionType === 'CardPayment' ? 'credit_card' : 'account_balance' }}</mat-icon> Payment
+                                  </span>
+                                } @else if (e.linkedToTrade) {
+                                  <span class="auto-trade-badge" matTooltip="Linked to trade journal — edit/delete from Trading">
+                                    <mat-icon class="auto-trade-icon">link</mat-icon> Trade
+                                  </span>
+                                } @else {
+                                  <button mat-icon-button class="action-btn action-edit" (click)="editExpense(e)" matTooltip="Edit">
+                                    <mat-icon>edit</mat-icon>
+                                  </button>
+                                  <button mat-icon-button class="action-btn action-delete" (click)="deleteExpense(e)" matTooltip="Delete">
+                                    <mat-icon>delete_outline</mat-icon>
+                                  </button>
+                                }
+                              </td>
+                            </tr>
                           }
-                        </td>
-                      </ng-container>
-                      <ng-container matColumnDef="category">
-                        <th mat-header-cell *matHeaderCellDef mat-sort-header>Category</th>
-                        <td mat-cell *matCellDef="let e">
-                          @if (e.categoryName) {
-                            <span class="cat-chip" [style.background]="getCategoryBg(e.categoryName)" [style.color]="getCategoryColor(e.categoryName)">
-                              @if (e.categoryIcon) {
-                                <mat-icon class="cat-chip-icon" [style.color]="getCategoryColor(e.categoryName)">{{ e.categoryIcon }}</mat-icon>
-                              }
-                              {{ e.categoryName }}
-                            </span>
-                          } @else {
-                            <span class="cat-chip cat-chip-none">—</span>
-                          }
-                        </td>
-                      </ng-container>
-                      <ng-container matColumnDef="source">
-                        <th mat-header-cell *matHeaderCellDef>Source</th>
-                        <td mat-cell *matCellDef="let e">
-                          @if (e.transactionType === 'Transfer' && e.fundingSourceName && e.toFundingSourceName) {
-                            <span class="source-cell transfer-source">
-                              <mat-icon class="source-icon">{{ getSourceIcon(e.fundingSourceId, e.fundingSourceType) }}</mat-icon>
-                              {{ e.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon> {{ e.toFundingSourceName }}
-                            </span>
-                          } @else if (e.transactionType === 'CardPayment' && e.fundingSourceName && e.toFundingSourceName) {
-                            <span class="source-cell card-payment-source">
-                              <mat-icon class="source-icon">{{ getSourceIcon(e.fundingSourceId, e.fundingSourceType) }}</mat-icon>
-                              {{ e.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon>
-                              <mat-icon class="source-icon">credit_card</mat-icon> {{ e.toFundingSourceName }}
-                            </span>
-                          } @else if (e.transactionType === 'LoanPayment' && e.fundingSourceName && e.toFundingSourceName) {
-                            <span class="source-cell loan-payment-source">
-                              <mat-icon class="source-icon">{{ getSourceIcon(e.fundingSourceId, e.fundingSourceType) }}</mat-icon>
-                              {{ e.fundingSourceName }} <mat-icon class="arrow-icon">arrow_forward</mat-icon>
-                              <mat-icon class="source-icon">account_balance</mat-icon> {{ e.toFundingSourceName }}
-                            </span>
-                          } @else if (e.fundingSourceName) {
-                            <span class="source-cell">
-                              <mat-icon class="source-icon">{{ getSourceIcon(e.fundingSourceId, e.fundingSourceType) }}</mat-icon>
-                              {{ e.fundingSourceName }}
-                            </span>
-                          } @else {
-                            —
-                          }
-                        </td>
-                      </ng-container>
-                      <ng-container matColumnDef="amount">
-                        <th mat-header-cell *matHeaderCellDef mat-sort-header>Amount</th>
-                        <td mat-cell *matCellDef="let e" [class.amount-cell]="true"
-                            [class.expense-amount]="e.transactionType === 'Expense' || !e.transactionType"
-                            [class.income-amount]="e.transactionType === 'Income'"
-                            [class.transfer-amount]="e.transactionType === 'Transfer'"
-                            [class.refund-amount]="e.transactionType === 'Refund'"
-                            [class.card-payment-amount]="e.transactionType === 'CardPayment'"
-                            [class.loan-payment-amount]="e.transactionType === 'LoanPayment'">
-                          @if (e.transactionType === 'Income') { +{{ e.amount | currency }} }
-                          @else if (e.transactionType === 'Transfer') { ⇔ {{ e.amount | currency }} }
-                          @else if (e.transactionType === 'Refund') { ↩ {{ e.amount | currency }} }
-                          @else if (e.transactionType === 'CardPayment') { 💳 {{ e.amount | currency }} }
-                          @else if (e.transactionType === 'LoanPayment') { 🏦 {{ e.amount | currency }} }
-                          @else { {{ e.amount | currency }} }
-                        </td>
-                      </ng-container>
-                      <ng-container matColumnDef="actions">
-                        <th mat-header-cell *matHeaderCellDef></th>
-                        <td mat-cell *matCellDef="let e">
-                          @if (e.source === 'payment') {
-                            <span class="auto-trade-badge" matTooltip="Payment — manage from Cards/Loans section">
-                              <mat-icon class="auto-trade-icon">{{ e.transactionType === 'CardPayment' ? 'credit_card' : 'account_balance' }}</mat-icon> Payment
-                            </span>
-                          } @else if (e.linkedToTrade) {
-                            <span class="auto-trade-badge" matTooltip="Linked to trade journal — edit/delete from Trading">
-                              <mat-icon class="auto-trade-icon">link</mat-icon> Trade
-                            </span>
-                          } @else {
-                            <button mat-icon-button (click)="duplicateExpense(e)" matTooltip="Duplicate">
-                              <mat-icon>content_copy</mat-icon>
-                            </button>
-                            <button mat-icon-button (click)="editExpense(e)" matTooltip="Edit">
-                              <mat-icon>edit</mat-icon>
-                            </button>
-                            <button mat-icon-button color="warn" (click)="deleteExpense(e)" matTooltip="Delete">
-                              <mat-icon>delete</mat-icon>
-                            </button>
-                          }
-                        </td>
-                      </ng-container>
-                      <tr mat-header-row *matHeaderRowDef="logColumns"></tr>
-                      <tr mat-row *matRowDef="let row; columns: logColumns;"
-                          [class.row-expense]="row.transactionType === 'Expense' || !row.transactionType"
-                          [class.row-income]="row.transactionType === 'Income'"
-                          [class.row-transfer]="row.transactionType === 'Transfer'"
-                          [class.row-refund]="row.transactionType === 'Refund'"
-                          [class.row-card]="row.transactionType === 'CardPayment'"
-                          [class.row-loan]="row.transactionType === 'LoanPayment'"></tr>
+                        </tbody>
+                      }
                     </table>
                   </div>
                 </mat-card-content>
@@ -237,9 +224,14 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
               <div class="mobile-feed">
                 @for (group of groupedExpenses(); track group.label) {
                   <div class="date-group">
-                    <div class="date-header">{{ group.label }}</div>
+                    <div class="date-header">
+                      <span>{{ group.label }}</span>
+                      <span class="date-total" [class.positive]="getDayNet(group.items) > 0" [class.negative]="getDayNet(group.items) < 0">
+                        {{ getDayNet(group.items) >= 0 ? '+' : '' }}{{ getDayNet(group.items) | currency }}
+                      </span>
+                    </div>
                     @for (e of group.items; track e.id) {
-                      <div class="txn-card" (click)="!e.linkedToTrade && e.source !== 'payment' && editExpense(e)" [class.auto-trade-card]="e.linkedToTrade || e.source === 'payment'">
+                      <div class="txn-card" (click)="onCardClick(e)" [class.auto-trade-card]="e.linkedToTrade || e.source === 'payment'">
                         <div class="txn-left">
                           <div class="txn-cat-dot" [class.dot-income]="e.transactionType === 'Income'"
                                [class.dot-transfer]="e.transactionType === 'Transfer'"
@@ -420,11 +412,11 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
       display: flex;
       align-items: center;
       gap: var(--spacing-xs);
-      background: var(--color-surface-secondary);
+      background: var(--color-surface-hover);
       border-radius: var(--radius-full);
       padding: 4px;
     }
-    .month-label { font-size: var(--text-base); font-weight: 600; min-width: 140px; text-align: center; }
+    .month-label { font-size: var(--text-base); font-weight: var(--weight-semibold); min-width: 140px; text-align: center; }
     .range-nav { display: flex; gap: 8px; align-items: center; }
     .range-field { width: 150px; }
     .range-field .mat-mdc-form-field-infix { padding-top: 8px !important; padding-bottom: 8px !important; }
@@ -440,44 +432,58 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
       display: flex;
       align-items: center;
       gap: 12px;
-      background: var(--color-surface);
+      background: var(--color-surface-solid);
       border-radius: var(--radius-md);
-      padding: 16px;
-      box-shadow: var(--shadow-sm);
+      padding: 14px 16px;
+      box-shadow: var(--shadow-xs);
+      border: 1px solid var(--color-border);
+      transition: box-shadow var(--transition-base);
     }
     .stat-card > mat-icon {
-      font-size: 28px;
-      width: 28px;
-      height: 28px;
+      font-size: 26px;
+      width: 26px;
+      height: 26px;
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      flex-shrink: 0;
+      box-sizing: content-box;
+      overflow: visible;
     }
-    .stat-card.stat-blue > mat-icon { color: var(--color-stat-blue); }
-    .stat-card.stat-green > mat-icon { color: var(--color-stat-green); }
-    .stat-card.stat-red > mat-icon { color: var(--color-stat-red); }
-    .stat-card.stat-amber > mat-icon { color: var(--color-stat-amber); }
-    .stat-card.stat-purple > mat-icon { color: var(--color-stat-purple); }
+    .stat-card.stat-blue > mat-icon { color: var(--color-stat-blue); background: var(--color-stat-blue-bg); }
+    .stat-card.stat-green > mat-icon { color: var(--color-stat-green); background: var(--color-stat-green-bg); }
+    .stat-card.stat-red > mat-icon { color: var(--color-stat-red); background: var(--color-stat-red-bg); }
+    .stat-card.stat-amber > mat-icon { color: var(--color-stat-amber); background: var(--color-stat-amber-bg); }
+    .stat-card.stat-purple > mat-icon { color: var(--color-stat-purple); background: var(--color-stat-purple-bg); }
     .stat-content { display: flex; flex-direction: column; min-width: 0; }
-    .stat-value { font-size: 1.2rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stat-value { font-size: 1.25rem; font-weight: var(--weight-bold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.02em; line-height: var(--leading-tight); }
     .stat-value-danger { color: var(--color-danger); }
-    .stat-label { font-size: 0.75rem; font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.02em; }
+    .stat-label { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: var(--tracking-wide); margin-top: 2px; }
 
     .summary-list { display: flex; flex-direction: column; gap: var(--spacing-sm); }
-    .summary-item { cursor: pointer; transition: box-shadow 0.2s; }
-    .summary-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .summary-item { cursor: pointer; transition: box-shadow var(--transition-base); }
+    .summary-item:hover { box-shadow: var(--shadow-md); }
     .summary-header { display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center; }
-    .cat-name { font-weight: 500; display: flex; align-items: center; gap: 8px; }
+    .cat-name { font-weight: var(--weight-medium); display: flex; align-items: center; gap: 8px; }
     .cat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); }
-    .cat-amounts { font-size: 0.9rem; opacity: 0.8; }
-    .summary-footer { display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.85rem; }
-    .remaining { color: var(--color-success); }
-    .remaining.over { color: var(--color-danger); }
+    .cat-amounts { font-size: var(--text-sm); opacity: 0.8; }
+    .summary-footer { display: flex; justify-content: space-between; margin-top: 4px; font-size: var(--text-sm); }
+    .remaining { color: var(--color-success-text); }
+    .remaining.over { color: var(--color-danger-text); }
     .percent { opacity: 0.6; }
 
     .log-header { display: flex; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm); flex-wrap: wrap; }
-    .expense-count { font-size: 0.9rem; opacity: 0.6; }
+    .expense-count { font-size: var(--text-sm); color: var(--color-text-muted); }
     .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table { width: 100%; min-width: 700px; }
-    .amount-cell { font-weight: 600; }
-    .expense-amount { color: #c62828 !important; }
+    td.mat-column-actions { white-space: nowrap; text-align: right; }
+    .action-btn { width: 34px; height: 34px; border-radius: var(--radius-xs) !important; transition: background var(--transition-fast) !important; }
+    .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .action-edit { color: var(--color-action-edit) !important; }
+    .action-edit:hover { background: var(--color-action-edit-bg) !important; }
+    .action-delete { color: var(--color-action-delete) !important; }
+    .action-delete:hover { background: var(--color-action-delete-bg) !important; }
+    .amount-cell { font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+    .expense-amount { color: var(--color-danger) !important; }
     .income-amount { color: var(--color-success) !important; }
     .transfer-amount { color: var(--color-primary) !important; }
     .refund-amount { color: var(--color-success) !important; font-style: italic; }
@@ -486,59 +492,113 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
 
     /* Type badge */
     .type-badge {
-      display: inline-block;
-      font-size: 0.68rem;
-      font-weight: 600;
-      padding: 3px 8px;
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.625rem;
+      font-weight: var(--weight-semibold);
+      padding: 3px 9px;
       border-radius: var(--radius-full);
       text-transform: uppercase;
-      letter-spacing: 0.02em;
+      letter-spacing: var(--tracking-wide);
+      white-space: nowrap;
+      line-height: 1.3;
+    }
+    .type-expense { background: var(--color-danger-bg); color: var(--color-danger-text); }
+    .type-income { background: var(--color-success-bg); color: var(--color-success-text); }
+    .type-transfer { background: var(--color-primary-subtle); color: var(--color-primary); }
+    .type-refund { background: var(--color-warning-bg); color: var(--color-warning-text); }
+    .type-card { background: var(--color-accent-subtle); color: var(--color-accent); }
+    .type-loan { background: rgba(88, 86, 214, 0.10); color: #5856D6; }
+
+    /* Grouped table */
+    .grouped-table {
+      width: 100%; border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .grouped-table thead th {
+      text-align: left;
+      font-size: var(--text-xs);
+      font-weight: var(--weight-semibold);
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-wide);
+      color: var(--color-text-muted);
+      padding: 10px 16px;
+      border-bottom: 2px solid var(--color-border);
+    }
+    .grouped-table .col-amount { text-align: right; }
+    .grouped-table .col-actions { width: 80px; }
+    .day-group-row {
+      background: var(--color-bg);
+    }
+    .day-group-label {
+      font-size: var(--text-xs);
+      font-weight: var(--weight-bold);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-text-muted);
+      padding: 12px 16px 8px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .day-group-total {
+      font-size: 0.78rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      padding: 12px 16px 8px;
+      border-bottom: 1px solid var(--color-border);
       white-space: nowrap;
     }
-    .type-expense { background: var(--color-stat-red-bg); color: var(--color-danger); }
-    .type-income { background: var(--color-stat-green-bg); color: var(--color-success); }
-    .type-transfer { background: var(--color-stat-blue-bg); color: var(--color-primary); }
-    .type-refund { background: var(--color-stat-amber-bg); color: var(--color-warning); }
-    .type-card { background: var(--color-stat-purple-bg); color: var(--color-stat-purple); }
-    .type-loan { background: #e8eaf6; color: #3949ab; }
+    .day-group-total.positive { color: var(--color-success); }
+    .day-group-total.negative { color: var(--color-danger); }
+    .grouped-table .data-row td {
+      padding: 10px 16px;
+      border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+      vertical-align: middle;
+    }
+    .grouped-table .data-row:last-child td {
+      border-bottom: none;
+    }
+    .grouped-table .data-row:hover td {
+      background: color-mix(in srgb, var(--color-primary) 3%, var(--color-surface));
+    }
 
     /* Row left border by type */
-    tr.mat-mdc-row { border-left: 3px solid transparent; }
+    tr.data-row { border-left: 3px solid transparent; }
     tr.row-expense { border-left-color: var(--color-danger); }
     tr.row-income { border-left-color: var(--color-success); }
     tr.row-transfer { border-left-color: var(--color-primary); }
     tr.row-refund { border-left-color: var(--color-warning); }
-    tr.row-card { border-left-color: var(--color-stat-purple); }
-    tr.row-loan { border-left-color: #3949ab; }
+    tr.row-card { border-left-color: var(--color-accent); }
+    tr.row-loan { border-left-color: #5856D6; }
 
     .cat-chip {
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      font-size: 0.75rem;
-      font-weight: 600;
+      font-size: var(--text-xs);
+      font-weight: var(--weight-semibold);
       padding: 4px 10px;
       border-radius: var(--radius-full);
       white-space: nowrap;
     }
     .cat-chip-icon { font-size: 14px; width: 14px; height: 14px; }
-    .cat-chip-none { background: rgba(0,0,0,0.04); color: var(--color-text-muted); }
+    .cat-chip-none { background: var(--color-surface-hover); color: var(--color-text-muted); }
 
-    .source-cell { display: flex; align-items: center; gap: 4px; font-size: 0.85rem; }
-    .source-icon { font-size: 16px; width: 16px; height: 16px; opacity: 0.7; }
+    .source-cell { display: flex; align-items: center; gap: 4px; font-size: var(--text-sm); }
+    .source-icon { font-size: 16px; width: 16px; height: 16px; opacity: 0.65; }
     .transfer-source { color: var(--color-primary); }
     .card-payment-source { color: var(--color-accent); }
-    .loan-payment-source { color: #3949ab; }
+    .loan-payment-source { color: #5856D6; }
     .arrow-icon { font-size: 14px; width: 14px; height: 14px; }
     .tag-badge {
       display: inline-block;
-      background: rgba(0, 122, 255, 0.08);
+      background: var(--color-primary-subtle);
       color: var(--color-primary);
-      font-size: 0.7rem;
+      font-size: 0.625rem;
       padding: 2px 10px;
       border-radius: var(--radius-full);
       margin-left: 6px;
-      font-weight: 500;
+      font-weight: var(--weight-medium);
       vertical-align: middle;
     }
 
@@ -548,12 +608,12 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
       padding: 14px 18px; margin-bottom: var(--spacing-sm);
       border-radius: var(--radius-md); border-left: 4px solid;
     }
-    .insight-success { background: var(--color-stat-green-bg); border-left-color: var(--color-success); }
-    .insight-info { background: var(--color-stat-blue-bg); border-left-color: var(--color-primary); }
-    .insight-warn { background: var(--color-stat-amber-bg); border-left-color: var(--color-warning); }
-    .insight-danger { background: var(--color-stat-red-bg); border-left-color: var(--color-danger); }
+    .insight-success { background: var(--color-success-bg); border-left-color: var(--color-success); }
+    .insight-info { background: var(--color-info-bg); border-left-color: var(--color-primary); }
+    .insight-warn { background: var(--color-warning-bg); border-left-color: var(--color-warning); }
+    .insight-danger { background: var(--color-danger-bg); border-left-color: var(--color-danger); }
     .insight-icon-wrap {
-      width: 38px; height: 38px; border-radius: 10px;
+      width: 36px; height: 36px; border-radius: var(--radius-sm);
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
     .insight-success .insight-icon-wrap { background: rgba(52,199,89,0.15); }
@@ -566,16 +626,16 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     .insight-danger .insight-icon-wrap mat-icon { color: var(--color-danger); }
     .insight-icon-wrap mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .insight-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-    .insight-title { font-weight: 700; font-size: 0.88rem; }
-    .insight-text { font-size: 0.82rem; color: var(--color-text-secondary); line-height: 1.4; }
+    .insight-title { font-weight: var(--weight-bold); font-size: var(--text-sm); }
+    .insight-text { font-size: var(--text-xs); color: var(--color-text-secondary); line-height: var(--leading-normal); }
 
     /* Over-budget Alert Chips */
     .alert-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--spacing-sm); }
     .alert-chip {
       display: inline-flex; align-items: center; gap: 4px;
       padding: 4px 12px; border-radius: var(--radius-full);
-      background: var(--color-stat-red-bg); color: var(--color-danger);
-      font-size: 0.76rem; font-weight: 600; white-space: nowrap;
+      background: var(--color-danger-bg); color: var(--color-danger-text);
+      font-size: var(--text-xs); font-weight: var(--weight-semibold); white-space: nowrap;
     }
     .alert-chip mat-icon { font-size: 14px; width: 14px; height: 14px; }
 
@@ -584,17 +644,29 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     .desktop-only { display: block; }
     .date-group { margin-bottom: 4px; }
     .date-header {
-      font-size: 0.8rem;
-      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: var(--text-xs);
+      font-weight: var(--weight-bold);
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: var(--color-text-secondary);
+      color: var(--color-text-muted);
       padding: 14px 4px 8px;
       position: sticky;
       top: 0;
       background: var(--color-bg);
       z-index: 2;
     }
+    .date-total {
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+    .date-total.positive { color: var(--color-success); }
+    .date-total.negative { color: var(--color-danger); }
     .txn-card {
       display: flex;
       align-items: center;
@@ -611,35 +683,35 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     .txn-card:active { background: var(--color-surface-hover); }
     .txn-card.auto-trade-card { cursor: default; opacity: 0.7; }
     .txn-card.auto-trade-card:active { background: none; }
-    .auto-trade-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--color-primary); font-weight: 500; white-space: nowrap; }
+    .auto-trade-badge { display: inline-flex; align-items: center; gap: 4px; font-size: var(--text-xs); color: var(--color-primary); font-weight: var(--weight-medium); white-space: nowrap; }
     .auto-trade-icon { font-size: 16px; width: 16px; height: 16px; }
     .txn-cat-dot {
       width: 42px;
       height: 42px;
-      border-radius: 12px;
+      border-radius: var(--radius-sm);
       display: flex;
       align-items: center;
       justify-content: center;
-      background: var(--color-stat-red-bg);
+      background: var(--color-danger-bg);
       flex-shrink: 0;
     }
     .txn-cat-dot mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-danger); }
-    .txn-cat-dot.dot-income { background: var(--color-stat-green-bg); }
+    .txn-cat-dot.dot-income { background: var(--color-success-bg); }
     .txn-cat-dot.dot-income mat-icon { color: var(--color-success); }
-    .txn-cat-dot.dot-transfer { background: var(--color-stat-blue-bg); }
+    .txn-cat-dot.dot-transfer { background: var(--color-primary-subtle); }
     .txn-cat-dot.dot-transfer mat-icon { color: var(--color-primary); }
-    .txn-cat-dot.dot-refund { background: var(--color-stat-amber-bg); }
+    .txn-cat-dot.dot-refund { background: var(--color-warning-bg); }
     .txn-cat-dot.dot-refund mat-icon { color: var(--color-warning); }
-    .txn-cat-dot.dot-card { background: var(--color-stat-purple-bg); }
-    .txn-cat-dot.dot-card mat-icon { color: var(--color-stat-purple); }
-    .txn-cat-dot.dot-loan { background: #e8eaf6; }
-    .txn-cat-dot.dot-loan mat-icon { color: #3949ab; }
+    .txn-cat-dot.dot-card { background: var(--color-accent-subtle); }
+    .txn-cat-dot.dot-card mat-icon { color: var(--color-accent); }
+    .txn-cat-dot.dot-loan { background: rgba(88, 86, 214, 0.10); }
+    .txn-cat-dot.dot-loan mat-icon { color: #5856D6; }
     .txn-mid { flex: 1; min-width: 0; }
-    .txn-desc { display: block; font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
-    .txn-meta { display: block; font-size: 0.8rem; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
-    .txn-type-label { font-weight: 600; font-size: 0.6875rem; padding: 2px 6px; border-radius: var(--radius-full); }
+    .txn-desc { display: block; font-weight: var(--weight-semibold); font-size: var(--text-base); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: var(--leading-snug); }
+    .txn-meta { display: block; font-size: var(--text-xs); color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .txn-type-label { font-weight: var(--weight-semibold); font-size: 0.625rem; padding: 2px 7px; border-radius: var(--radius-full); }
     .txn-right { flex-shrink: 0; text-align: right; }
-    .txn-amount { font-weight: 700; font-size: 1.1rem; letter-spacing: -0.01em; }
+    .txn-amount { font-weight: var(--weight-bold); font-size: 1.0625rem; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 
     @media (max-width: 768px) {
       .stats-row { grid-template-columns: repeat(2, 1fr); }
@@ -654,7 +726,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
       .range-nav { justify-content: center; }
       .range-field { width: 130px; }
       .month-nav { background: transparent; padding: 0; justify-content: center; }
-      .month-label { font-size: 1.05rem; font-weight: 700; min-width: 110px; }
+      .month-label { font-size: var(--text-lg); font-weight: var(--weight-bold); min-width: 110px; }
       .mobile-feed { display: block; }
       .desktop-only { display: none !important; }
       .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -663,7 +735,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
       .stat-value { font-size: 1rem; }
       .log-header { justify-content: center; }
       .log-header button[mat-raised-button] { display: none; }
-      .expense-count { width: 100%; text-align: center; font-size: 0.8rem; }
+      .expense-count { width: 100%; text-align: center; font-size: var(--text-xs); }
       .tab-content { padding: 4px 0; }
     }
   `]
@@ -826,6 +898,14 @@ export class ExpensesPageComponent implements OnInit {
     return 'account_balance';
   }
 
+  getDayNet(items: DailyExpense[]): number {
+    return items.reduce((sum, e) => {
+      if (e.transactionType === 'Income' || e.transactionType === 'Refund') return sum + e.amount;
+      if (e.transactionType === 'Transfer') return sum;
+      return sum - e.amount;
+    }, 0);
+  }
+
   getCategoryIcon(e: DailyExpense): string {
     if (e.categoryIcon) return e.categoryIcon;
     switch (e.transactionType) {
@@ -949,14 +1029,9 @@ export class ExpensesPageComponent implements OnInit {
     });
   }
 
-  duplicateExpense(expense: DailyExpense): void {
-    const data: ExpenseDialogData = { expense: null, prefill: expense };
-    const ref = this.dialog.open(AddExpenseDialogComponent, { data, panelClass: 'expense-dialog-panel' });
-    ref.afterClosed().subscribe((result: any) => {
-      if (!result?.saved) return;
-      this.notify.success('Transaction saved');
-      this.loadData();
-    });
+  onCardClick(expense: DailyExpense): void {
+    if (expense.linkedToTrade || expense.source === 'payment') return;
+    this.editExpense(expense);
   }
 
   editExpense(expense: DailyExpense): void {

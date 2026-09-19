@@ -9,12 +9,13 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
 import { WorkoutPlanService } from '../../core/services/workout-plan.service';
 import { WorkoutPlan, WorkoutPlanDay, PlannedExercise } from '../../core/models/workout-plan.model';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { NotificationService } from '../../core/services/notification.service';
 
 @Component({
   selector: 'app-plan-editor-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, MatCheckboxModule, MatProgressSpinnerModule, FormsModule],
+  imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, MatCheckboxModule, MatProgressSpinnerModule, FormsModule, MatTooltipModule],
   template: `
     <div class="dialog-banner">
       <div class="banner-pattern"></div>
@@ -26,6 +27,10 @@ import { NotificationService } from '../../core/services/notification.service';
           <h2 mat-dialog-title>{{ isEditing ? 'Edit Plan' : 'Create Plan' }}</h2>
           <p class="dialog-subtitle">{{ isEditing ? 'Update your workout routine' : 'Design your weekly routine' }}</p>
         </div>
+        <span class="banner-spacer"></span>
+        <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+          <mat-icon>close</mat-icon>
+        </button>
       </div>
     </div>
     <mat-dialog-content>
@@ -121,7 +126,6 @@ import { NotificationService } from '../../core/services/notification.service';
       }
     </mat-dialog-content>
     <mat-dialog-actions class="dialog-actions">
-      <button mat-button mat-dialog-close class="cancel-btn">Cancel</button>
       <button mat-raised-button color="primary" class="save-btn" [disabled]="!planName || loading() || saving()" (click)="save()">
         <mat-icon>check</mat-icon> Save Plan
       </button>
@@ -161,6 +165,14 @@ import { NotificationService } from '../../core/services/notification.service';
       color: #fff !important;
     }
     .dialog-subtitle { color: rgba(255,255,255,0.75); font-size: 0.72rem; margin: 2px 0 0; }
+    .banner-spacer { flex: 1; }
+    .header-close {
+      color: rgba(255, 255, 255, 0.85) !important;
+      width: 32px !important; height: 32px !important; line-height: 32px !important;
+      flex-shrink: 0;
+    }
+    .header-close:hover { background: rgba(255, 255, 255, 0.15) !important; }
+    .header-close mat-icon { font-size: 20px; width: 20px; height: 20px; }
 
     .plan-form { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; }
     .full-width { width: 100%; }
@@ -255,7 +267,8 @@ import { NotificationService } from '../../core/services/notification.service';
     }
 
     @media (max-width: 599px) {
-      .dialog-banner { margin: -16px -16px 16px; }
+      :host { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+      .dialog-banner { margin: -16px -16px 16px; flex-shrink: 0; }
       .day-chip { width: 40px; height: 40px; font-size: 0.7rem; }
       .ex-card-details { flex-wrap: wrap; }
       .ex-field { min-width: calc(50% - 6px); }

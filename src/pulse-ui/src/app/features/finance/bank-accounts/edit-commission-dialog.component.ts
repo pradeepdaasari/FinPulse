@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { BankAccountService } from '../../../core/services/bank-account.service';
 import { CommissionSchedule } from '../../../core/models/bank-account.model';
 
@@ -32,6 +33,7 @@ export interface EditCommissionDialogData {
     MatIconModule,
     MatProgressSpinnerModule,
     MatCheckboxModule,
+    MatTooltipModule,
     LocalDatePipe
   ],
   template: `
@@ -43,6 +45,10 @@ export interface EditCommissionDialogData {
         <h2 mat-dialog-title>Edit Commission Rates</h2>
         <span class="dialog-subtitle">{{ data.accountName }} · Effective {{ data.schedule.effectiveFrom | localDate:'MMM d, yyyy' }}</span>
       </div>
+      <span class="header-spacer"></span>
+      <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
     <mat-dialog-content>
       <div class="fees-section">
@@ -100,7 +106,6 @@ export interface EditCommissionDialogData {
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       @if (!result()) {
-        <button mat-button mat-dialog-close>Cancel</button>
         <button mat-raised-button color="primary" (click)="save()" [disabled]="saving()">
           @if (saving()) {
             Saving...
@@ -126,6 +131,13 @@ export interface EditCommissionDialogData {
     .header-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #1565c0; }
     .header-text h2 { margin: 0 !important; padding: 0 !important; font-size: 1.1rem !important; font-weight: 700 !important; }
     .dialog-subtitle { font-size: 0.75rem; color: var(--color-text-secondary); }
+    .header-spacer { flex: 1; }
+    .header-close {
+      color: var(--color-text-muted) !important;
+      width: 32px !important; height: 32px !important; line-height: 32px !important;
+      flex-shrink: 0;
+    }
+    .header-close mat-icon { font-size: 20px; width: 20px; height: 20px; }
     mat-dialog-content { min-width: 360px; max-width: 460px; position: relative; }
     .saving-overlay {
       position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
