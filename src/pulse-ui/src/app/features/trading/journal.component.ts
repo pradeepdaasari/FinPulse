@@ -1,4 +1,5 @@
-import { Component, OnInit, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectorRef, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
@@ -313,7 +314,7 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
     .stat-label { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: var(--tracking-wide); margin-top: 2px; }
 
     /* ─── Action Buttons ─── */
-    .action-btn { width: 34px; height: 34px; border-radius: var(--radius-xs) !important; transition: background var(--transition-fast) !important; }
+    .action-btn { min-width: 44px; min-height: 44px; width: 44px; height: 44px; border-radius: var(--radius-xs) !important; transition: background var(--transition-fast) !important; }
     .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .action-edit { color: var(--color-action-edit) !important; }
     .action-edit:hover { background: var(--color-action-edit-bg) !important; }
@@ -456,6 +457,7 @@ export class JournalComponent implements OnInit {
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
   private cdr = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
 
   loading = signal(true);
   trades = signal<TradeEntry[]>([]);
@@ -501,7 +503,10 @@ export class JournalComponent implements OnInit {
   ngOnInit(): void {
     this.updateMonthLabel();
     this.loadTrades();
-    this.tradingService.getSetups().subscribe(s => { this.setups.set(s); this.cdr.detectChanges(); });
+    this.tradingService.getSetups().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (s) => { this.setups.set(s); this.cdr.detectChanges(); },
+      error: () => this.notify.error('Failed to load setups')
+    });
   }
 
   loadTrades(): void {

@@ -262,7 +262,9 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     .date-label { font-size: 0.95rem; font-weight: 600; min-width: 180px; text-align: center; }
 
     .stats-row {
+      display: grid;
       grid-template-columns: repeat(3, 1fr);
+      gap: var(--spacing-sm);
       margin-bottom: var(--spacing-lg);
     }
     .stat-card {
@@ -480,7 +482,8 @@ export class PremarketComponent implements OnInit {
         this.history.set(notes.slice(0, 10));
         this.calculateStats(notes);
         this.cdr.detectChanges();
-      }
+      },
+      error: () => {}
     });
   }
 

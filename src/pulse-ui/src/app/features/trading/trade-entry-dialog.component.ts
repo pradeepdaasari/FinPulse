@@ -17,7 +17,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TradingService } from '../../core/services/trading.service';
 import { toLocalISOString } from '../../core/utils/date-utils';
 import { BankAccountService } from '../../core/services/bank-account.service';
-import { TradeEntry, TradingSetupSummary } from '../../core/models/trading.model';
+import { TradeEntry, TradeDirection, TradingSetupSummary } from '../../core/models/trading.model';
 import { BankAccount } from '../../core/models/bank-account.model';
 import { NotificationService } from '../../core/services/notification.service';
 import { RichTextEditorComponent } from '../../shared/rich-text-editor.component';
@@ -633,15 +633,21 @@ export class TradeEntryDialogComponent implements OnInit {
     if (this.data?.trade?.commissionFees != null || this.data?.trade?.regExchangeFees != null) {
       this.feesManuallyEdited = true;
     }
-    this.accountService.getAll().subscribe(accounts => {
-      const brokerages = accounts.filter(a => a.accountType === 'Brokerage');
-      this.brokerageAccounts.set(brokerages);
-      if (!this.data?.trade && brokerages.length === 1) {
-        this.form.patchValue({ bankAccountId: brokerages[0].id });
+    this.accountService.getAll().subscribe({
+      next: accounts => {
+        const brokerages = accounts.filter(a => a.accountType === 'Brokerage');
+        this.brokerageAccounts.set(brokerages);
+        if (!this.data?.trade && brokerages.length === 1) {
+          this.form.patchValue({ bankAccountId: brokerages[0].id });
+        }
+        this.updateFeeEstimate();
+        this.loading.set(false);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loading.set(false);
+        this.cdr.detectChanges();
       }
-      this.updateFeeEstimate();
-      this.loading.set(false);
-      this.cdr.detectChanges();
     });
   }
 
@@ -769,7 +775,7 @@ export class TradeEntryDialogComponent implements OnInit {
       date: toLocalISOString(d),
       setupId: val.setupId!,
       instrument: val.instrument!,
-      direction: val.direction as any,
+      direction: (val.direction ?? 'long') as TradeDirection,
       entryPrice: val.entryPrice ?? 0,
       exitPrice: val.exitPrice ?? undefined,
       quantity: val.quantity!,

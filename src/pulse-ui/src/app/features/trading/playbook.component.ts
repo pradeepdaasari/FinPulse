@@ -123,21 +123,21 @@ interface WisdomItem {
             <div class="limit-item">
               <mat-form-field appearance="outline">
                 <mat-label>Max Trades / Day</mat-label>
-                <input matInput type="number" inputmode="decimal" [(ngModel)]="maxTrades" min="1" max="20">
+                <input matInput type="number" inputmode="decimal" [ngModel]="maxTrades()" (ngModelChange)="maxTrades.set($event)" min="1" max="20">
                 <mat-icon matPrefix>bar_chart</mat-icon>
               </mat-form-field>
             </div>
             <div class="limit-item">
               <mat-form-field appearance="outline">
                 <mat-label>Max Daily Loss</mat-label>
-                <input matInput type="number" inputmode="decimal" [(ngModel)]="maxLoss" min="0" step="50">
+                <input matInput type="number" inputmode="decimal" [ngModel]="maxLoss()" (ngModelChange)="maxLoss.set($event)" min="0" step="50">
                 <span matTextPrefix>$&nbsp;</span>
               </mat-form-field>
             </div>
             <div class="limit-item">
               <mat-form-field appearance="outline">
                 <mat-label>Stop After N Consecutive Losses</mat-label>
-                <input matInput type="number" inputmode="decimal" [(ngModel)]="stopAfterLosses" min="1" max="10">
+                <input matInput type="number" inputmode="decimal" [ngModel]="stopAfterLosses()" (ngModelChange)="stopAfterLosses.set($event)" min="1" max="10">
                 <mat-icon matPrefix>block</mat-icon>
               </mat-form-field>
             </div>
@@ -303,9 +303,9 @@ export class PlaybookComponent implements OnInit {
   weeklyFocus = signal<WeeklyFocus | null>(null);
   wisdomFilter = signal<WisdomCategory | 'all'>('all');
 
-  maxTrades = 3;
-  maxLoss = 500;
-  stopAfterLosses = 2;
+  maxTrades = signal(3);
+  maxLoss = signal(500);
+  stopAfterLosses = signal(2);
 
   ruleCategories: RuleCategory[] = ['entry', 'exit', 'risk', 'mindset', 'general'];
   wisdomCategories: WisdomCategory[] = ['discipline', 'risk', 'psychology', 'patience', 'process'];
@@ -362,9 +362,9 @@ export class PlaybookComponent implements OnInit {
     });
     this.tradingService.getLimits().subscribe({
       next: l => {
-        this.maxTrades = l.maxTradesPerDay;
-        this.maxLoss = l.maxDailyLoss;
-        this.stopAfterLosses = l.stopAfterConsecutiveLosses;
+        this.maxTrades.set(l.maxTradesPerDay);
+        this.maxLoss.set(l.maxDailyLoss);
+        this.stopAfterLosses.set(l.stopAfterConsecutiveLosses);
       },
       error: () => {}
     });
@@ -399,9 +399,9 @@ export class PlaybookComponent implements OnInit {
 
   saveLimits(): void {
     this.tradingService.updateLimits({
-      maxTradesPerDay: this.maxTrades,
-      maxDailyLoss: this.maxLoss,
-      stopAfterConsecutiveLosses: this.stopAfterLosses
+      maxTradesPerDay: this.maxTrades(),
+      maxDailyLoss: this.maxLoss(),
+      stopAfterConsecutiveLosses: this.stopAfterLosses()
     }).subscribe({
       next: () => this.notify.success('Limits saved'),
       error: () => this.notify.error('Failed to save limits')
@@ -409,6 +409,9 @@ export class PlaybookComponent implements OnInit {
   }
 
   private loadRules(): void {
-    this.tradingService.getRules().subscribe(r => { this.rules.set(r); this.cdr.detectChanges(); });
+    this.tradingService.getRules().subscribe({
+      next: r => { this.rules.set(r); this.cdr.detectChanges(); },
+      error: () => this.notify.error('Failed to load rules')
+    });
   }
 }

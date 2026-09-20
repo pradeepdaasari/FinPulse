@@ -1,10 +1,11 @@
-import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectorRef, DestroyRef } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterModule } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TradingService } from '../../core/services/trading.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { RichTextEditorComponent } from '../../shared/rich-text-editor.component';
@@ -152,6 +153,7 @@ export class PremarketTemplateComponent implements OnInit {
   private fb = inject(FormBuilder);
   private notify = inject(NotificationService);
   private cdr = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
 
   loading = signal(true);
   saving = signal(false);
@@ -167,7 +169,7 @@ export class PremarketTemplateComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
-    this.form.valueChanges.subscribe(v => {
+    this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(v => {
       this.hasContent.set(!!(v.keyLevels || v.catalysts || v.plan));
     });
   }
@@ -215,6 +217,7 @@ export class PremarketTemplateComponent implements OnInit {
   }
 
   clear(): void {
+    if (!confirm('Clear all template fields? This will save immediately.')) return;
     this.form.reset({ keyLevels: '', catalysts: '', plan: '' });
     this.save();
   }

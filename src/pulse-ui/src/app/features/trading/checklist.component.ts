@@ -9,6 +9,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
 import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { TradingService } from '../../core/services/trading.service';
@@ -188,7 +190,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
               <div>
                 <strong>PAUSE — You just took a loss.</strong>
                 <p>Is this next trade from your plan, or from emotion?</p>
-                <mat-checkbox [(ngModel)]="revengeAcknowledged" color="warn">
+                <mat-checkbox [ngModel]="revengeAcknowledged()" (ngModelChange)="revengeAcknowledged.set($event)" color="warn">
                   This trade is part of my plan, not a reaction to my last trade
                 </mat-checkbox>
               </div>
@@ -216,7 +218,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
                   <p>Reduce your position size. Consider only A+ setups today.</p>
                 </div>
               </div>
-              <button mat-raised-button color="primary" (click)="stage.set('checklist')" [disabled]="recentLoss() && !revengeAcknowledged">
+              <button mat-raised-button color="primary" (click)="stage.set('checklist')" [disabled]="recentLoss() && !revengeAcknowledged()">
                 <mat-icon>arrow_forward</mat-icon> Continue to Checklist
               </button>
             } @else {
@@ -227,7 +229,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
                   <p>Stay disciplined. Follow your setup.</p>
                 </div>
               </div>
-              <button mat-raised-button color="primary" (click)="stage.set('checklist')" [disabled]="recentLoss() && !revengeAcknowledged">
+              <button mat-raised-button color="primary" (click)="stage.set('checklist')" [disabled]="recentLoss() && !revengeAcknowledged()">
                 <mat-icon>arrow_forward</mat-icon> Continue to Checklist
               </button>
             }
@@ -567,7 +569,7 @@ export class ChecklistComponent implements OnInit {
   emotionalState = signal<'green' | 'yellow' | 'red' | null>(null);
   isRevenge = signal<boolean | null>(null);
   isUpset = signal<boolean | null>(null);
-  revengeAcknowledged = false;
+  revengeAcknowledged = signal(false);
 
   tradeForm = this.fb.group({
     instrument: ['SPX', Validators.required],
@@ -635,23 +637,17 @@ export class ChecklistComponent implements OnInit {
       error: () => { this.hasPreMarketNote.set(false); this.cdr.detectChanges(); }
     });
 
-    this.tradingService.getSetups().subscribe({
-      next: (setups) => { this.setups.set(setups.filter(s => s.isActive)); this.cdr.detectChanges(); },
-      error: () => {}
+    forkJoin([
+      this.tradingService.getSetups().pipe(catchError(() => of([]))),
+      this.tradingService.getTrades(today, today).pipe(catchError(() => of([]))),
+      this.tradingService.getLimits().pipe(catchError(() => of(this.limits())))
+    ]).subscribe(([setups, trades, limits]) => {
+      this.setups.set((setups as TradingSetupSummary[]).filter(s => s.isActive));
+      this.todayTrades.set(trades as TradeEntry[]);
+      this.limits.set(limits as DailyLimits);
+      this.loading.set(false);
+      this.cdr.detectChanges();
     });
-
-    this.tradingService.getTrades(today, today).subscribe({
-      next: (trades) => { this.todayTrades.set(trades); this.cdr.detectChanges(); },
-      error: () => {}
-    });
-
-    this.tradingService.getLimits().subscribe({
-      next: (limits) => { this.limits.set(limits); this.cdr.detectChanges(); },
-      error: () => {},
-      complete: () => this.loading.set(false)
-    });
-
-    this.loading.set(false);
   }
 
   onSetupSelected(setupId: number): void {
@@ -660,7 +656,8 @@ export class ChecklistComponent implements OnInit {
         this.selectedSetup.set(setup);
         this.checkStates.set(new Array(setup.checklistItems.length).fill(false));
         this.cdr.detectChanges();
-      }
+      },
+      error: () => this.notify.error('Failed to load setup checklist')
     });
   }
 
@@ -696,7 +693,8 @@ export class ChecklistComponent implements OnInit {
     }).subscribe({
       next: () => {
         this.notify.success('Trade logged successfully');
-        this.todayTrades.update(trades => [...trades, {} as TradeEntry]);
+        const todayStr = toLocalDateString(new Date());
+        this.tradingService.getTrades(todayStr, todayStr).subscribe(t => this.todayTrades.set(t));
         this.resetForm();
         this.cdr.detectChanges();
       },
@@ -712,6 +710,6 @@ export class ChecklistComponent implements OnInit {
     this.emotionalState.set(null);
     this.isRevenge.set(null);
     this.isUpset.set(null);
-    this.revengeAcknowledged = false;
+    this.revengeAcknowledged.set(false);
   }
 }

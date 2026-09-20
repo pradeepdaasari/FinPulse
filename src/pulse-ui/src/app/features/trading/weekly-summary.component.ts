@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectorRef, DestroyRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
@@ -8,6 +8,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
 import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { TradingService } from '../../core/services/trading.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WeeklySummary } from '../../core/models/trading.model';
 import { toLocalDateString } from '../../core/utils/date-utils';
 
@@ -459,7 +460,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       .metrics-grid { grid-template-columns: repeat(2, 1fr); }
       .extremes-row { grid-template-columns: 1fr; }
       .time-grid { grid-template-columns: 1fr 1fr; }
-      .day-grid { grid-template-columns: repeat(5, 1fr); }
+      .day-grid { grid-template-columns: repeat(3, 1fr); }
       .day-card { padding: 8px 4px; }
       .day-name { font-size: 0.7rem; }
       .trend-grid { grid-template-columns: repeat(3, 1fr); }
@@ -469,6 +470,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
 export class WeeklySummaryComponent implements OnInit {
   private tradingService = inject(TradingService);
   private cdr = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
 
   loading = signal(true);
   summary = signal<WeeklySummary | null>(null);
@@ -489,7 +491,7 @@ export class WeeklySummaryComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadWeek();
-    this.tradingService.getWeeklySummaries(8).subscribe({
+    this.tradingService.getWeeklySummaries(8).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => { this.pastWeeks.set(data); this.cdr.detectChanges(); },
       error: () => {}
     });

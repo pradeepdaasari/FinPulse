@@ -42,10 +42,10 @@ interface MetricDef {
     <div class="page-banner">
       <div class="banner-pattern"></div>
       <div class="banner-content">
-        <div class="banner-icon"><mat-icon>flag</mat-icon></div>
+        <div class="banner-icon"><mat-icon>tune</mat-icon></div>
         <div class="banner-text">
-          <h2>Trading Goals</h2>
-          <p class="banner-subtitle">Set targets, track progress automatically</p>
+          <h2>Manage Goals</h2>
+          <p class="banner-subtitle">Define targets, track history, refine your edge.</p>
         </div>
       </div>
     </div>
@@ -59,57 +59,21 @@ interface MetricDef {
       </mat-button-toggle-group>
     </div>
 
-    <!-- History Period Range -->
-    <div class="period-row">
-      <div class="period-chips">
-        @for (r of periodRanges; track r.key) {
-          <button class="period-chip" [class.active]="historyRange() === r.key" (click)="onHistoryRangeChange(r.key)">
-            {{ r.label }}
-          </button>
-        }
-      </div>
-      @if (historyRange() === 'custom') {
-        <div class="custom-range">
-          <mat-form-field appearance="outline" class="date-field">
-            <mat-label>From</mat-label>
-            <input matInput [matDatepicker]="fromPicker" [ngModel]="customFrom()" (dateChange)="onCustomFromChange($event.value)">
-            <mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
-            <mat-datepicker #fromPicker></mat-datepicker>
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="date-field">
-            <mat-label>To</mat-label>
-            <input matInput [matDatepicker]="toPicker" [ngModel]="customTo()" (dateChange)="onCustomToChange($event.value)">
-            <mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
-            <mat-datepicker #toPicker></mat-datepicker>
-          </mat-form-field>
-          <button mat-raised-button color="primary" class="apply-btn" (click)="applyCustomRange()">Apply</button>
-        </div>
-      }
-    </div>
-
-    <!-- Summary -->
-    @if (progress().length > 0) {
-      <div class="summary-card" [class.all-achieved]="achievedCount() === progress().length">
-        <div class="summary-ring">
-          <svg viewBox="0 0 36 36" class="ring-svg">
-            <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-            <path class="ring-fill" [class.ring-complete]="achievedCount() === progress().length"
-              [style.stroke-dasharray]="overallPercent() + ', 100'"
-              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-          </svg>
-          <span class="ring-text">{{ overallPercent() }}%</span>
-        </div>
-        <div class="summary-info">
-          <span class="summary-count">{{ achievedCount() }}/{{ progress().length }} goals achieved</span>
-          <span class="summary-period">{{ timeframeLabel() }}</span>
-          <span class="summary-range">{{ timeframeRange() }}</span>
-        </div>
-      </div>
-    }
-
     @if (loading()) {
       <app-skeleton type="card"></app-skeleton>
     } @else {
+
+    <!-- Goals Header -->
+    <div class="section-header">
+      <div class="section-title-row">
+        <span class="section-subtitle">{{ progress().length }} active {{ timeframeLabel() | lowercase }} goals</span>
+      </div>
+      @if (progress().length > 0 && !showForm()) {
+        <button mat-raised-button color="primary" class="section-add-btn" (click)="showForm.set(true)">
+          <mat-icon>add</mat-icon> Add Goal
+        </button>
+      }
+    </div>
 
     <!-- Goals Grid -->
     @if (progress().length > 0) {
@@ -164,7 +128,7 @@ interface MetricDef {
             @if (expandedGoal() === p.goal.id && historyMap().get(p.goal.id); as h) {
               <div class="history-panel">
                 <div class="history-header">
-                  <span class="history-title">{{ getRangeLabel() }} results</span>
+                  <span class="history-title">Recent results</span>
                   @if (h.streak > 0) {
                     <span class="streak-label">
                       <mat-icon>local_fire_department</mat-icon>
@@ -172,23 +136,17 @@ interface MetricDef {
                     </span>
                   }
                 </div>
-
-                <!-- Achievement summary bar -->
                 @if (h.snapshots.length > 0) {
                   <div class="achievement-bar">
                     <span class="ach-label">{{ getAchievedCount(h) }}/{{ h.snapshots.length }} achieved</span>
                     <span class="ach-rate">{{ getAchievedRate(h) }}%</span>
                   </div>
                 }
-
-                <!-- Chart -->
                 @if (h.snapshots.length > 1 && getChartConfig(p.goal, h); as cfg) {
                   <div class="history-chart-wrap">
                     <canvas baseChart [data]="cfg.data" [options]="cfg.options" [type]="cfg.type"></canvas>
                   </div>
                 }
-
-                <!-- Snapshot rows -->
                 <div class="snapshot-list" [class.scrollable]="h.snapshots.length > 8">
                   @for (s of h.snapshots.slice().reverse(); track s.periodStart) {
                     <div class="snapshot-row"
@@ -225,15 +183,6 @@ interface MetricDef {
         <p>Set targets to track your trading discipline</p>
         <button mat-raised-button color="primary" (click)="showForm.set(true)">
           <mat-icon>add</mat-icon> Add Your First Goal
-        </button>
-      </div>
-    }
-
-    <!-- Add Goal Button -->
-    @if (progress().length > 0 && !showForm()) {
-      <div class="add-row">
-        <button mat-raised-button color="primary" (click)="showForm.set(true)">
-          <mat-icon>add</mat-icon> Add Goal
         </button>
       </div>
     }
@@ -284,6 +233,7 @@ interface MetricDef {
         </form>
       </div>
     }
+
     }
     </div>
   `,
@@ -307,55 +257,10 @@ interface MetricDef {
     }
     .banner-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #fff; }
     h2 { margin: 0; color: #fff; font-size: 1rem; font-weight: var(--weight-bold); letter-spacing: -0.02em; }
-    .banner-subtitle { color: rgba(255,255,255,0.7); font-size: var(--text-xs); margin: 1px 0 0; }
+    .banner-subtitle { color: rgba(255,255,255,0.85); font-size: var(--text-xs); margin: 1px 0 0; font-weight: 600; letter-spacing: 0.01em; }
 
-    .timeframe-row { display: flex; justify-content: center; margin-bottom: var(--spacing-sm); }
+    .timeframe-row { display: flex; justify-content: center; margin: var(--spacing-sm) 0; }
     ::ng-deep .timeframe-row .mat-button-toggle-group { border-radius: var(--radius-full); overflow: hidden; }
-
-    /* Period Range Chips */
-    .period-row { margin-bottom: var(--spacing-md); }
-    .period-chips {
-      display: flex; justify-content: center; gap: 6px; flex-wrap: wrap;
-    }
-    .period-chip {
-      padding: 5px 14px; border-radius: var(--radius-full);
-      border: 1px solid var(--color-border); background: var(--color-surface);
-      font-size: 0.78rem; font-weight: 600; cursor: pointer;
-      color: var(--color-text-muted); transition: all 0.2s;
-    }
-    .period-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
-    .period-chip.active {
-      background: var(--color-primary); color: #fff; border-color: var(--color-primary);
-    }
-    .custom-range {
-      display: flex; gap: 8px; align-items: center; justify-content: center;
-      margin-top: 10px; flex-wrap: wrap;
-    }
-    .date-field { width: 140px; }
-    ::ng-deep .date-field .mat-mdc-form-field-infix { padding-top: 8px !important; padding-bottom: 8px !important; min-height: 36px; }
-    ::ng-deep .date-field .mat-mdc-text-field-wrapper { height: auto; }
-    .apply-btn { height: 40px; }
-
-    /* Summary Card */
-    .summary-card {
-      display: flex; align-items: center; gap: 16px;
-      padding: 16px 20px; margin-bottom: var(--spacing-lg);
-      background: var(--color-surface); border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm); border: 1px solid var(--color-border);
-    }
-    .summary-card.all-achieved { border-color: var(--color-success); background: var(--color-stat-green-bg); }
-    .ring-svg { width: 56px; height: 56px; transform: rotate(-90deg); }
-    .ring-bg { fill: none; stroke: var(--color-border); stroke-width: 3; }
-    .ring-fill { fill: none; stroke: var(--color-primary); stroke-width: 3; stroke-linecap: round; transition: stroke-dasharray 0.6s ease; }
-    .ring-fill.ring-complete { stroke: var(--color-success); }
-    .summary-ring { position: relative; width: 56px; height: 56px; flex-shrink: 0; }
-    .ring-text {
-      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-      font-size: 0.75rem; font-weight: 700;
-    }
-    .summary-count { font-size: 1rem; font-weight: 700; display: block; }
-    .summary-period { font-size: 0.8rem; color: var(--color-text-muted); text-transform: capitalize; }
-    .summary-range { font-size: 0.78rem; font-weight: 600; color: var(--color-primary); display: block; margin-top: 2px; }
 
     /* Goals Grid */
     .goals-grid { display: grid; grid-template-columns: 1fr; gap: var(--spacing-sm); }
@@ -370,7 +275,7 @@ interface MetricDef {
     .goal-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); }
     .goal-metric { font-weight: 700; font-size: 0.9rem; flex: 1; }
     .goal-actions { display: flex; gap: 0; }
-    .action-btn { width: 34px; height: 34px; border-radius: var(--radius-xs) !important; transition: background var(--transition-fast) !important; }
+    .action-btn { min-width: 44px; min-height: 44px; width: 44px; height: 44px; border-radius: var(--radius-xs) !important; transition: background var(--transition-fast) !important; }
     .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .action-edit { color: var(--color-action-edit) !important; }
     .action-edit:hover { background: var(--color-action-edit-bg) !important; }
@@ -463,18 +368,26 @@ interface MetricDef {
     .snap-warn { color: var(--color-warning); }
     .snap-danger { color: var(--color-danger); }
 
+    /* Section Header */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: var(--spacing-sm); padding: 0 2px;
+    }
+    .section-title-row { display: flex; align-items: center; gap: 8px; }
+    .section-subtitle { font-size: 0.75rem; color: var(--color-text-muted); }
+    .section-add-btn { height: 36px; font-size: 0.82rem; }
+    .section-add-btn mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
+
     /* Empty State */
     .empty-state { text-align: center; padding: 48px 24px; }
     .empty-icon-wrap {
-      width: 64px; height: 64px; border-radius: 50%; background: var(--color-surface-secondary);
+      width: 72px; height: 72px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--color-stat-blue-bg), var(--color-stat-purple-bg));
       display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;
     }
-    .empty-icon-wrap mat-icon { font-size: 32px; width: 32px; height: 32px; color: var(--color-text-muted); }
-    .empty-state h3 { margin: 0 0 6px; font-size: 1.1rem; }
-    .empty-state p { margin: 0 0 20px; color: var(--color-text-muted); font-size: 0.9rem; }
-
-    .add-row { display: flex; justify-content: center; margin-top: var(--spacing-lg); }
-    .add-row button mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
+    .empty-icon-wrap mat-icon { font-size: 34px; width: 34px; height: 34px; color: var(--color-primary); }
+    .empty-state h3 { margin: 0 0 8px; font-size: 1.15rem; font-weight: 700; }
+    .empty-state p { margin: 0 0 24px; color: var(--color-text-muted); font-size: 0.88rem; max-width: 340px; margin-left: auto; margin-right: auto; line-height: 1.5; }
 
     /* Form */
     .form-card {
@@ -492,8 +405,6 @@ interface MetricDef {
       .page-banner { margin: -16px -16px 20px; padding: 12px 16px; }
       .form-row { flex-direction: column; gap: 0; }
       .half-width { width: 100%; }
-      .custom-range { flex-direction: column; align-items: stretch; }
-      .date-field { width: 100%; }
     }
   `]
 })
@@ -508,7 +419,7 @@ export class TradingGoalsComponent implements OnInit {
   saving = signal(false);
   showForm = signal(false);
   editingId = signal<number | null>(null);
-  timeframe = signal('daily');
+  timeframe = signal('weekly');
   progress = signal<GoalProgress[]>([]);
   expandedGoal = signal<number | null>(null);
   historyMap = signal<Map<number, GoalHistory>>(new Map());
@@ -525,38 +436,11 @@ export class TradingGoalsComponent implements OnInit {
   ];
 
   achievedCount = computed(() => this.progress().filter(p => p.achieved).length);
-  overallPercent = computed(() => {
-    const p = this.progress();
-    if (p.length === 0) return 0;
-    return Math.round(p.reduce((sum, x) => sum + Math.min(x.percentage, 100), 0) / p.length);
-  });
   timeframeLabel = computed(() => {
     switch (this.timeframe()) {
       case 'daily': return 'Today';
       case 'weekly': return 'This Week';
       case 'monthly': return 'This Month';
-      default: return '';
-    }
-  });
-  timeframeRange = computed(() => {
-    const now = new Date();
-    const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    switch (this.timeframe()) {
-      case 'daily':
-        return now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-      case 'weekly': {
-        const day = now.getDay();
-        const start = new Date(now);
-        start.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
-        const end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        return `${fmt(start)} – ${fmt(end)}`;
-      }
-      case 'monthly': {
-        const start = new Date(now.getFullYear(), now.getMonth(), 1);
-        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        return `${fmt(start)} – ${fmt(end)}`;
-      }
       default: return '';
     }
   });
@@ -576,7 +460,7 @@ export class TradingGoalsComponent implements OnInit {
     metric: ['netPnl', Validators.required],
     operator: ['gte', Validators.required],
     targetValue: [0 as number, [Validators.required, Validators.min(0)]],
-    timeframe: ['daily', Validators.required]
+    timeframe: ['weekly', Validators.required]
   });
 
   ngOnInit(): void {

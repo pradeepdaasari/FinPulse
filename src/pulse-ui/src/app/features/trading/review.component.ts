@@ -149,9 +149,9 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     <!-- Text Fields -->
     <div class="text-fields">
       <app-rich-text-editor label="Lessons Learned" placeholder="What did today teach you?" height="100px"
-        [ngModel]="lessonsLearned" (ngModelChange)="lessonsLearned = $event"></app-rich-text-editor>
+        [ngModel]="lessonsLearned()" (ngModelChange)="lessonsLearned.set($event)"></app-rich-text-editor>
       <app-rich-text-editor label="Tomorrow's Focus" placeholder="What ONE thing will you improve tomorrow?" height="80px"
-        [ngModel]="tomorrowFocus" (ngModelChange)="tomorrowFocus = $event"></app-rich-text-editor>
+        [ngModel]="tomorrowFocus()" (ngModelChange)="tomorrowFocus.set($event)"></app-rich-text-editor>
     </div>
 
     <button mat-raised-button color="primary" class="save-btn" (click)="save()" [disabled]="!selectedGrade()">
@@ -189,11 +189,11 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     <!-- Observation Notes -->
     <div class="text-fields">
       <app-rich-text-editor label="Market Observations" placeholder="What patterns did you notice? Key levels? Sector rotations? Setups forming?" height="120px"
-        [ngModel]="marketObservation" (ngModelChange)="marketObservation = $event"></app-rich-text-editor>
+        [ngModel]="marketObservation()" (ngModelChange)="marketObservation.set($event)"></app-rich-text-editor>
       <app-rich-text-editor label="Setups Watched" placeholder="Any setups you tracked but didn't take? Why not?" height="100px"
-        [ngModel]="lessonsLearned" (ngModelChange)="lessonsLearned = $event"></app-rich-text-editor>
+        [ngModel]="lessonsLearned()" (ngModelChange)="lessonsLearned.set($event)"></app-rich-text-editor>
       <app-rich-text-editor label="Tomorrow's Plan" placeholder="What will you watch for tomorrow?" height="80px"
-        [ngModel]="tomorrowFocus" (ngModelChange)="tomorrowFocus = $event"></app-rich-text-editor>
+        [ngModel]="tomorrowFocus()" (ngModelChange)="tomorrowFocus.set($event)"></app-rich-text-editor>
     </div>
 
     <button mat-raised-button color="primary" class="save-btn" (click)="saveObservation()">
@@ -373,9 +373,9 @@ export class ReviewComponent implements OnInit {
   followedRules = signal<boolean | null>(null);
   stoppedAtLimit = signal<boolean | null>(null);
   violatedRules = signal<number[]>([]);
-  lessonsLearned = '';
-  tomorrowFocus = '';
-  marketObservation = '';
+  lessonsLearned = signal('');
+  tomorrowFocus = signal('');
+  marketObservation = signal('');
   selectedCondition = signal<string | null>(null);
 
   marketConditions = [
@@ -416,17 +416,17 @@ export class ReviewComponent implements OnInit {
         const review = r.length > 0 ? r[0] : null;
         this.existingReview.set(review);
         if (review) {
-          this.marketObservation = review.marketObservation ?? '';
-          this.lessonsLearned = review.lessonsLearned ?? '';
-          this.tomorrowFocus = review.improvementNote ?? '';
+          this.marketObservation.set(review.marketObservation ?? '');
+          this.lessonsLearned.set(review.lessonsLearned ?? '');
+          this.tomorrowFocus.set(review.improvementNote ?? '');
           this.selectedCondition.set(review.marketCondition ?? null);
           this.selectedGrade.set((review.grade as any) ?? null);
           this.followedPlan.set(review.followedPlan ?? null);
           this.followedRules.set(review.followedRules ?? null);
         } else {
-          this.marketObservation = '';
-          this.lessonsLearned = '';
-          this.tomorrowFocus = '';
+          this.marketObservation.set('');
+          this.lessonsLearned.set('');
+          this.tomorrowFocus.set('');
           this.selectedCondition.set(null);
           this.selectedGrade.set(null);
           this.followedPlan.set(null);
@@ -448,6 +448,7 @@ export class ReviewComponent implements OnInit {
   nextDay(): void {
     const d = new Date(this.currentDate());
     d.setDate(d.getDate() + 1);
+    if (d > new Date()) return;
     this.currentDate.set(d);
     this.loadData();
   }
@@ -470,9 +471,10 @@ export class ReviewComponent implements OnInit {
       followedRules: this.followedRules() ?? false,
       totalTrades: this.todayTrades().length,
       totalPnl: this.todayPnl(),
+      stoppedAtLimit: this.stoppedAtLimit() ?? false,
       rulesViolated: this.violatedRules(),
-      lessonsLearned: this.lessonsLearned || undefined,
-      improvementNote: this.tomorrowFocus || undefined,
+      lessonsLearned: this.lessonsLearned() || undefined,
+      improvementNote: this.tomorrowFocus() || undefined,
       isObservationOnly: false
     };
     const existing = this.existingReview();
@@ -490,9 +492,9 @@ export class ReviewComponent implements OnInit {
       date: this.formatDate(this.currentDate()),
       isObservationOnly: true,
       marketCondition: this.selectedCondition() || undefined,
-      marketObservation: this.marketObservation || undefined,
-      lessonsLearned: this.lessonsLearned || undefined,
-      improvementNote: this.tomorrowFocus || undefined,
+      marketObservation: this.marketObservation() || undefined,
+      lessonsLearned: this.lessonsLearned() || undefined,
+      improvementNote: this.tomorrowFocus() || undefined,
       grade: null,
       followedPlan: false,
       followedRules: false,

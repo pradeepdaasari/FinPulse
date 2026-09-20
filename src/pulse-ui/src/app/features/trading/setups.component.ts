@@ -7,7 +7,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
 import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
 import { TradingService } from '../../core/services/trading.service';
-import { TradingSetupSummary } from '../../core/models/trading.model';
+import { TradingSetup, TradingSetupSummary } from '../../core/models/trading.model';
 import { SetupEditorDialogComponent } from './setup-editor-dialog.component';
 import { NotificationService } from '../../core/services/notification.service';
 
@@ -251,15 +251,16 @@ export class SetupsComponent implements OnInit {
 
   openEditor(setup: TradingSetupSummary | null): void {
     if (setup) {
-      this.tradingService.getSetup(setup.id).subscribe(fullSetup => {
-        this.openDialog(fullSetup);
+      this.tradingService.getSetup(setup.id).subscribe({
+        next: fullSetup => this.openDialog(fullSetup),
+        error: () => this.notify.error('Failed to load setup details')
       });
     } else {
       this.openDialog(null);
     }
   }
 
-  private openDialog(setup: any): void {
+  private openDialog(setup: TradingSetup | null): void {
     const ref = this.dialog.open(SetupEditorDialogComponent, {
       width: '500px',
       maxWidth: '95vw',

@@ -28,19 +28,17 @@ public class TradingController : ControllerBase
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-    private DateTime GetUserLocalDate()
+    private async Task<DateTime> GetUserLocalDateAsync()
     {
-        var user = _userManager.FindByIdAsync(UserId).Result;
-        if (user?.PreferredTimezone != null)
-        {
-            try
-            {
-                var tz = TimeZoneInfo.FindSystemTimeZoneById(user.PreferredTimezone);
-                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
-            }
-            catch { }
-        }
-        return DateTime.UtcNow.Date;
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+    }
+
+    private static DateTime GetMondayOfWeek(DateTime date)
+    {
+        return date.DayOfWeek == DayOfWeek.Sunday
+            ? date.AddDays(-6)
+            : date.AddDays(-(int)date.DayOfWeek + 1);
     }
 
     // ─── Setups ───────────────────────────────────────────
@@ -82,7 +80,10 @@ public class TradingController : ControllerBase
     [HttpPost("setups")]
     public async Task<ActionResult> CreateSetup([FromBody] TradingSetup setup)
     {
+        setup.Id = 0;
         setup.UserId = UserId;
+        setup.Name = setup.Name?.Trim() ?? "";
+        setup.Description = setup.Description?.Trim();
         _db.TradingSetups.Add(setup);
         await _db.SaveChangesAsync();
         return Ok(setup);
@@ -96,8 +97,8 @@ public class TradingController : ControllerBase
             .FirstOrDefaultAsync(s => s.Id == id && s.UserId == UserId);
         if (setup == null) return NotFound();
 
-        setup.Name = input.Name;
-        setup.Description = input.Description;
+        setup.Name = input.Name?.Trim() ?? "";
+        setup.Description = input.Description?.Trim();
         setup.IsActive = input.IsActive;
 
         _db.ChecklistItems.RemoveRange(setup.ChecklistItems);
@@ -117,6 +118,10 @@ public class TradingController : ControllerBase
     {
         var setup = await _db.TradingSetups.FirstOrDefaultAsync(s => s.Id == id && s.UserId == UserId);
         if (setup == null) return NotFound();
+
+        var tradeCount = await _db.TradeEntries.CountAsync(t => t.SetupId == id && t.UserId == UserId);
+        if (tradeCount > 0) return BadRequest(new { error = $"Cannot delete setup with {tradeCount} existing trade(s). Deactivate it instead." });
+
         _db.TradingSetups.Remove(setup);
         await _db.SaveChangesAsync();
         return NoContent();
@@ -128,8 +133,17 @@ public class TradingController : ControllerBase
     public async Task<ActionResult> GetPreMarketNotes([FromQuery] string? fromDate, [FromQuery] string? toDate)
     {
         var query = _db.PreMarketNotes.Where(n => n.UserId == UserId);
-        if (DateTime.TryParse(fromDate, out var from)) query = query.Where(n => n.Date >= from);
-        if (DateTime.TryParse(toDate, out var to)) query = query.Where(n => n.Date <= to);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        if (DateTime.TryParse(fromDate, out var from))
+        {
+            var fromUtc = TimeZoneHelper.ToUtc(from, tz);
+            query = query.Where(n => n.Date >= fromUtc);
+        }
+        if (DateTime.TryParse(toDate, out var to))
+        {
+            var toUtc = TimeZoneHelper.ToUtc(to.Date.AddDays(1), tz);
+            query = query.Where(n => n.Date < toUtc);
+        }
         var notes = await query.OrderByDescending(n => n.Date).ToListAsync();
         return Ok(notes);
     }
@@ -146,7 +160,7 @@ public class TradingController : ControllerBase
     [HttpGet("premarket/today")]
     public async Task<ActionResult> GetTodayNote()
     {
-        var today = GetUserLocalDate();
+        var today = await GetUserLocalDateAsync();
         var note = await _db.PreMarketNotes.FirstOrDefaultAsync(n => n.UserId == UserId && n.Date.Date == today);
         if (note == null) return NotFound();
         return Ok(note);
@@ -155,7 +169,11 @@ public class TradingController : ControllerBase
     [HttpPost("premarket")]
     public async Task<ActionResult> CreatePreMarketNote([FromBody] PreMarketNote note)
     {
+        note.Id = 0;
         note.UserId = UserId;
+        note.KeyLevels = note.KeyLevels?.Trim();
+        note.Catalysts = note.Catalysts?.Trim();
+        note.Plan = note.Plan?.Trim();
         _db.PreMarketNotes.Add(note);
         await _db.SaveChangesAsync();
         return Ok(note);
@@ -278,6 +296,11 @@ public class TradingController : ControllerBase
     [HttpPost("trades")]
     public async Task<ActionResult> CreateTrade([FromBody] TradeEntryCreateDto input)
     {
+        if (input.Quantity <= 0) return BadRequest(new { error = "Quantity must be greater than zero." });
+        if (string.IsNullOrWhiteSpace(input.Instrument)) return BadRequest(new { error = "Instrument is required." });
+        input.Instrument = input.Instrument.Trim();
+        input.Notes = input.Notes?.Trim();
+
         try
         {
             var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
@@ -343,7 +366,7 @@ public class TradingController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+            return StatusCode(500, new { error = "An error occurred while saving the trade." });
         }
     }
 
@@ -418,7 +441,7 @@ public class TradingController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+            return StatusCode(500, new { error = "An error occurred while updating the trade." });
         }
     }
 
@@ -432,27 +455,41 @@ public class TradingController : ControllerBase
 
         try
         {
-            if (trade.LinkedExpenseId != null)
+            var strategy = _db.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
             {
-                var expense = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == trade.LinkedExpenseId);
-                if (expense != null)
-                {
-                    var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == trade.BankAccountId && a.UserId == UserId);
-                    if (account != null)
-                        ReverseBalance(account, expense.TransactionType, expense.Amount);
-                    _db.DailyExpenses.Remove(expense);
-                }
-            }
+                _db.ChangeTracker.Clear();
+                trade = await _db.TradeEntries.Include(t => t.ChecklistResponses)
+                    .FirstAsync(t => t.Id == id && t.UserId == UserId);
 
-            await RemoveTradeMovements(trade.Id);
-            _db.ChecklistResponses.RemoveRange(trade.ChecklistResponses);
-            _db.TradeEntries.Remove(trade);
-            await _db.SaveChangesAsync();
+                using var transaction = await _db.Database.BeginTransactionAsync();
+
+                if (trade.LinkedExpenseId != null)
+                {
+                    var expense = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == trade.LinkedExpenseId && e.UserId == UserId);
+                    if (expense != null)
+                    {
+                        var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == trade.BankAccountId && a.UserId == UserId);
+                        if (account != null)
+                        {
+                            await _db.Entry(account).ReloadAsync();
+                            ReverseBalance(account, expense.TransactionType, expense.Amount);
+                        }
+                        _db.DailyExpenses.Remove(expense);
+                    }
+                }
+
+                await RemoveTradeMovements(trade.Id);
+                _db.ChecklistResponses.RemoveRange(trade.ChecklistResponses);
+                _db.TradeEntries.Remove(trade);
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+            });
             return NoContent();
         }
-        catch (Exception ex)
+        catch
         {
-            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+            return StatusCode(500, new { error = "An error occurred while deleting the trade." });
         }
     }
 
@@ -471,7 +508,10 @@ public class TradingController : ControllerBase
     [HttpPost("rules")]
     public async Task<ActionResult> CreateRule([FromBody] TradingRule rule)
     {
+        rule.Id = 0;
         rule.UserId = UserId;
+        rule.Text = rule.Text?.Trim() ?? "";
+        rule.Category = rule.Category?.Trim();
         var maxOrder = await _db.TradingRules.Where(r => r.UserId == UserId).MaxAsync(r => (int?)r.OrderIndex) ?? 0;
         rule.OrderIndex = maxOrder + 1;
         _db.TradingRules.Add(rule);
@@ -520,8 +560,17 @@ public class TradingController : ControllerBase
     public async Task<ActionResult> GetReviews([FromQuery] string? fromDate, [FromQuery] string? toDate)
     {
         var query = _db.DailyReviews.Where(r => r.UserId == UserId);
-        if (DateTime.TryParse(fromDate, out var from)) query = query.Where(r => r.Date >= from);
-        if (DateTime.TryParse(toDate, out var to)) query = query.Where(r => r.Date <= to);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        if (DateTime.TryParse(fromDate, out var from))
+        {
+            var fromUtc = TimeZoneHelper.ToUtc(from, tz);
+            query = query.Where(r => r.Date >= fromUtc);
+        }
+        if (DateTime.TryParse(toDate, out var to))
+        {
+            var toUtc = TimeZoneHelper.ToUtc(to.Date.AddDays(1), tz);
+            query = query.Where(r => r.Date < toUtc);
+        }
         var reviews = await query.OrderByDescending(r => r.Date).ToListAsync();
         return Ok(reviews);
     }
@@ -529,7 +578,7 @@ public class TradingController : ControllerBase
     [HttpGet("reviews/today")]
     public async Task<ActionResult> GetTodayReview()
     {
-        var today = GetUserLocalDate();
+        var today = await GetUserLocalDateAsync();
         var review = await _db.DailyReviews.FirstOrDefaultAsync(r => r.UserId == UserId && r.Date.Date == today);
         if (review == null) return NotFound();
         return Ok(review);
@@ -538,7 +587,10 @@ public class TradingController : ControllerBase
     [HttpPost("reviews")]
     public async Task<ActionResult> CreateReview([FromBody] DailyReview review)
     {
+        review.Id = 0;
         review.UserId = UserId;
+        review.LessonsLearned = review.LessonsLearned?.Trim();
+        review.ImprovementNote = review.ImprovementNote?.Trim();
         _db.DailyReviews.Add(review);
         await _db.SaveChangesAsync();
         return Ok(review);
@@ -602,13 +654,19 @@ public class TradingController : ControllerBase
     [HttpGet("stats")]
     public async Task<ActionResult> GetStats([FromQuery] int? days)
     {
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         var cutoff = days.HasValue ? DateTime.UtcNow.AddDays(-days.Value) : DateTime.MinValue;
         var trades = await _db.TradeEntries
             .Where(t => t.UserId == UserId && t.Date >= cutoff)
             .ToListAsync();
 
         var closedTrades = trades.Where(t => t.Pnl.HasValue).ToList();
-        var today = GetUserLocalDate();
+        var today = await GetUserLocalDateAsync();
+
+        var setupIds = trades.Select(t => t.SetupId).Distinct().ToList();
+        var setupNames = await _db.TradingSetups
+            .Where(s => setupIds.Contains(s.Id) && s.UserId == UserId)
+            .ToDictionaryAsync(s => s.Id, s => s.Name);
 
         var stats = new
         {
@@ -619,8 +677,8 @@ public class TradingController : ControllerBase
             CurrentRuleStreak = await GetRuleStreak(),
             LongestRuleStreak = 0,
             AverageGrade = await GetAverageGrade(cutoff),
-            TradesToday = trades.Count(t => t.Date.Date == today),
-            PnlToday = trades.Where(t => t.Date.Date == today).Sum(t => t.Pnl ?? 0),
+            TradesToday = trades.Count(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date == today),
+            PnlToday = trades.Where(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date == today).Sum(t => t.NetPnl ?? t.Pnl ?? 0),
             ChecklistComplianceRate = trades.Count == 0 ? 0m : Math.Round((decimal)trades.Count(t => t.ChecklistCompleted) / trades.Count * 100, 1),
             SetupBreakdown = trades
                 .GroupBy(t => t.SetupId)
@@ -630,7 +688,7 @@ public class TradingController : ControllerBase
                     return new
                     {
                         SetupId = g.Key,
-                        SetupName = _db.TradingSetups.FirstOrDefault(s => s.Id == g.Key)?.Name ?? "Unknown",
+                        SetupName = setupNames.GetValueOrDefault(g.Key, "Unknown"),
                         Trades = g.Count(),
                         WinRate = closed.Count == 0 ? 0m : Math.Round((decimal)closed.Count(t => t.Pnl > 0) / closed.Count * 100, 1),
                         TotalPnl = closed.Sum(t => t.Pnl ?? 0),
@@ -660,7 +718,7 @@ public class TradingController : ControllerBase
             .ToListAsync();
 
         var closed = trades.Where(t => t.Pnl.HasValue).ToList();
-        var today = GetUserLocalDate();
+        var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
         var wins = closed.Where(t => t.Pnl > 0).ToList();
         var losses = closed.Where(t => t.Pnl <= 0).ToList();
         var avgWin = wins.Count > 0 ? wins.Average(t => t.NetPnl ?? t.Pnl!.Value) : 0m;
@@ -932,8 +990,8 @@ public class TradingController : ControllerBase
             WorstDay = dailyPnl.Count == 0 ? 0m : dailyPnl.Min(d => d.Pnl),
             MaxConsecutiveWins = maxConsWins,
             MaxConsecutiveLosses = maxConsLosses,
-            TradesToday = trades.Count(t => t.Date.Date == today),
-            PnlToday = trades.Where(t => t.Date.Date == today).Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+            TradesToday = trades.Count(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date == today),
+            PnlToday = trades.Where(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date == today).Sum(t => t.NetPnl ?? t.Pnl ?? 0),
             ChecklistCompliance = trades.Count == 0 ? 0m : Math.Round((decimal)trades.Count(t => t.ChecklistCompleted) / trades.Count * 100, 1),
             // Equity Curve + Drawdown
             EquityCurve = equityCurve,
@@ -981,6 +1039,7 @@ public class TradingController : ControllerBase
     [HttpPost("goals")]
     public async Task<ActionResult> CreateGoal([FromBody] TradingGoal goal)
     {
+        goal.Id = 0;
         goal.UserId = UserId;
         _db.TradingGoals.Add(goal);
         await _db.SaveChangesAsync();
@@ -1020,14 +1079,14 @@ public class TradingController : ControllerBase
 
         if (goals.Count == 0) return Ok(new List<object>());
 
-        var today = GetUserLocalDate();
+        var today = await GetUserLocalDateAsync();
         DateTime from;
         DateTime to = today.AddDays(1);
 
         switch (timeframe)
         {
             case "weekly":
-                from = today.AddDays(-(int)today.DayOfWeek + 1);
+                from = GetMondayOfWeek(today);
                 break;
             case "monthly":
                 from = new DateTime(today.Year, today.Month, 1);
@@ -1126,7 +1185,7 @@ public class TradingController : ControllerBase
         var goal = await _db.TradingGoals.FirstOrDefaultAsync(g => g.Id == goalId && g.UserId == UserId);
         if (goal == null) return NotFound();
 
-        var today = GetUserLocalDate();
+        var today = await GetUserLocalDateAsync();
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
 
         // If fromDate is provided, compute periods from that date to today
@@ -1148,7 +1207,7 @@ public class TradingController : ControllerBase
         {
             var start = goal.Timeframe switch
             {
-                "weekly" => today.AddDays(-(int)today.DayOfWeek + 1).AddDays(-7 * i),
+                "weekly" => GetMondayOfWeek(today).AddDays(-7 * i),
                 "monthly" => new DateTime(today.Year, today.Month, 1).AddMonths(-i),
                 _ => today.AddDays(-i)
             };
@@ -1162,6 +1221,34 @@ public class TradingController : ControllerBase
             .ToListAsync();
 
         var snapshotMap = existingSnapshots.ToDictionary(s => s.PeriodStart);
+
+        // Recompute past periods where trades may have been added/modified after snapshot was created
+        var staleSnapshots = new List<TradingGoalSnapshot>();
+        foreach (var ps in periodStarts.Where(ps => ps < today && snapshotMap.ContainsKey(ps)))
+        {
+            var snap = snapshotMap[ps];
+            var periodEnd = goal.Timeframe switch
+            {
+                "weekly" => ps.AddDays(7),
+                "monthly" => ps.AddMonths(1),
+                _ => ps.AddDays(1)
+            };
+            var fromUtc = TimeZoneHelper.ToUtc(ps, tz);
+            var toUtc = TimeZoneHelper.ToUtc(periodEnd, tz);
+            var latestTrade = await _db.TradeEntries
+                .Where(t => t.UserId == UserId && t.Date >= fromUtc && t.Date < toUtc)
+                .OrderByDescending(t => t.UpdatedAt)
+                .Select(t => t.UpdatedAt)
+                .FirstOrDefaultAsync();
+            if (latestTrade > snap.CreatedAt)
+            {
+                staleSnapshots.Add(snap);
+                snapshotMap.Remove(ps);
+            }
+        }
+        if (staleSnapshots.Count > 0)
+            _db.TradingGoalSnapshots.RemoveRange(staleSnapshots);
+
         var needsCompute = periodStarts.Where(ps => !snapshotMap.ContainsKey(ps) && ps < today).ToList();
 
         foreach (var periodStart in needsCompute)
@@ -1265,8 +1352,8 @@ public class TradingController : ControllerBase
     [HttpGet("weekly-focus")]
     public async Task<ActionResult> GetWeeklyFocus()
     {
-        var localDate = GetUserLocalDate();
-        var weekStart = localDate.AddDays(-(int)localDate.DayOfWeek + 1);
+        var localDate = await GetUserLocalDateAsync();
+        var weekStart = GetMondayOfWeek(localDate);
         var rule = await _db.TradingRules
             .Where(r => r.UserId == UserId && r.IsActive)
             .OrderBy(r => r.OrderIndex)
@@ -1286,14 +1373,23 @@ public class TradingController : ControllerBase
     [HttpGet("weekly-summary")]
     public async Task<ActionResult> GetWeeklySummary([FromQuery] string? weekStart)
     {
-        var localDate = GetUserLocalDate();
-        var start = DateTime.TryParse(weekStart, out var ws) ? ws.Date : localDate.AddDays(-(int)localDate.DayOfWeek + 1);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var localDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+        var start = DateTime.TryParse(weekStart, out var ws) ? ws.Date : GetMondayOfWeek(localDate);
         var end = start.AddDays(7);
 
+        var startUtc = TimeZoneHelper.ToUtc(start, tz);
+        var endUtc = TimeZoneHelper.ToUtc(end, tz);
+
         var trades = await _db.TradeEntries
-            .Where(t => t.UserId == UserId && t.Date >= start && t.Date < end)
+            .Where(t => t.UserId == UserId && t.Date >= startUtc && t.Date < endUtc)
             .ToListAsync();
         var closed = trades.Where(t => t.Pnl.HasValue).ToList();
+
+        var setupIds = trades.Select(t => t.SetupId).Distinct().ToList();
+        var setupNames = await _db.TradingSetups
+            .Where(s => setupIds.Contains(s.Id) && s.UserId == UserId)
+            .ToDictionaryAsync(s => s.Id, s => s.Name);
 
         var summary = new
         {
@@ -1308,15 +1404,15 @@ public class TradingController : ControllerBase
             LargestWin = closed.Count == 0 ? 0m : closed.Max(t => t.Pnl ?? 0),
             LargestLoss = closed.Count == 0 ? 0m : closed.Min(t => t.Pnl ?? 0),
             ChecklistCompliance = trades.Count == 0 ? 0m : Math.Round((decimal)trades.Count(t => t.ChecklistCompleted) / trades.Count * 100, 1),
-            AverageGrade = await GetAverageGrade(start, end),
-            TradingDays = trades.Select(t => t.Date.Date).Distinct().Count(),
+            AverageGrade = await GetAverageGrade(startUtc, endUtc),
+            TradingDays = trades.Select(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date).Distinct().Count(),
             RuleStreak = await GetRuleStreak(),
             SetupPerformance = trades.GroupBy(t => t.SetupId).Select(g =>
             {
                 var gc = g.Where(t => t.Pnl.HasValue).ToList();
                 var wins = gc.Count(t => t.Pnl > 0);
                 var wr = gc.Count == 0 ? 0m : Math.Round((decimal)wins / gc.Count * 100, 1);
-                return new { SetupId = g.Key, SetupName = _db.TradingSetups.FirstOrDefault(s => s.Id == g.Key)?.Name ?? "Unknown", Trades = g.Count(), Wins = wins, Losses = gc.Count - wins, WinRate = wr, TotalPnl = gc.Sum(t => t.Pnl ?? 0), Grade = wr >= 60 ? "strong" : wr >= 40 ? "neutral" : "weak" };
+                return new { SetupId = g.Key, SetupName = setupNames.GetValueOrDefault(g.Key, "Unknown"), Trades = g.Count(), Wins = wins, Losses = gc.Count - wins, WinRate = wr, TotalPnl = gc.Sum(t => t.Pnl ?? 0), Grade = wr >= 60 ? "strong" : wr >= 40 ? "neutral" : "weak" };
             }).ToList(),
             TimeAnalysis = new List<object>(),
             DayOfWeekAnalysis = new List<object>(),
@@ -1332,17 +1428,26 @@ public class TradingController : ControllerBase
     public async Task<ActionResult> GetWeeklySummaries([FromQuery] int? count)
     {
         var weeks = count ?? 4;
-        var summaries = new List<object>();
-        var localDate = GetUserLocalDate();
-        var currentWeekStart = localDate.AddDays(-(int)localDate.DayOfWeek + 1);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var localDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+        var currentWeekStart = GetMondayOfWeek(localDate);
+        var earliestStart = currentWeekStart.AddDays(-7 * (weeks - 1));
 
+        var startUtc = TimeZoneHelper.ToUtc(earliestStart, tz);
+        var endUtc = TimeZoneHelper.ToUtc(currentWeekStart.AddDays(7), tz);
+
+        var allTrades = await _db.TradeEntries
+            .Where(t => t.UserId == UserId && t.Date >= startUtc && t.Date < endUtc)
+            .ToListAsync();
+
+        var summaries = new List<object>();
         for (int i = 0; i < weeks; i++)
         {
             var start = currentWeekStart.AddDays(-7 * i);
             var end = start.AddDays(7);
-            var trades = await _db.TradeEntries
-                .Where(t => t.UserId == UserId && t.Date >= start && t.Date < end)
-                .ToListAsync();
+            var wStartUtc = TimeZoneHelper.ToUtc(start, tz);
+            var wEndUtc = TimeZoneHelper.ToUtc(end, tz);
+            var trades = allTrades.Where(t => t.Date >= wStartUtc && t.Date < wEndUtc).ToList();
             var closed = trades.Where(t => t.Pnl.HasValue).ToList();
             summaries.Add(new
             {
@@ -1354,7 +1459,7 @@ public class TradingController : ControllerBase
                 WinRate = closed.Count == 0 ? 0m : Math.Round((decimal)closed.Count(t => t.Pnl > 0) / closed.Count * 100, 1),
                 TotalPnl = closed.Sum(t => t.Pnl ?? 0),
                 AveragePnl = closed.Count == 0 ? 0m : Math.Round(closed.Average(t => t.Pnl!.Value), 2),
-                TradingDays = trades.Select(t => t.Date.Date).Distinct().Count()
+                TradingDays = trades.Select(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date).Distinct().Count()
             });
         }
         return Ok(summaries);
@@ -1416,7 +1521,7 @@ public class TradingController : ControllerBase
 
         decimal commissionRate, regFeeRate;
 
-        var effectiveDate = tradeDate?.Date ?? GetUserLocalDate();
+        var effectiveDate = tradeDate?.Date ?? await GetUserLocalDateAsync();
         var schedule = await _db.CommissionSchedules
             .Where(s => s.BankAccountId == bankAccountId.Value
                      && s.UserId == UserId
@@ -1475,9 +1580,6 @@ public class TradingController : ControllerBase
             return;
         }
 
-        var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == trade.BankAccountId && a.UserId == UserId);
-        if (account == null) return;
-
         var isProfit = trade.NetPnl.Value >= 0;
         var amount = Math.Abs(trade.NetPnl.Value);
         var txnType = isProfit ? TransactionType.Income : TransactionType.Expense;
@@ -1488,47 +1590,55 @@ public class TradingController : ControllerBase
         if (!string.IsNullOrEmpty(trade.SpreadType))
             description += $" {trade.SpreadType}";
 
-        if (trade.LinkedExpenseId != null)
+        var strategy = _db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
         {
-            var existing = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == trade.LinkedExpenseId);
-            if (existing != null)
+            _db.ChangeTracker.Clear();
+            trade = await _db.TradeEntries.FirstAsync(t => t.Id == trade.Id);
+            var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == trade.BankAccountId && a.UserId == UserId);
+            if (account == null) return;
+            await _db.Entry(account).ReloadAsync();
+
+            using var transaction = await _db.Database.BeginTransactionAsync();
+
+            if (trade.LinkedExpenseId != null)
             {
-                // Reverse old balance
-                ReverseBalance(account, existing.TransactionType, existing.Amount);
-
-                // Update expense
-                existing.Date = trade.Date;
-                existing.Amount = amount;
-                existing.TransactionType = txnType;
-                existing.CategoryId = categoryId;
-                existing.Description = description;
-
-                // Apply new balance
-                ApplyBalance(account, txnType, amount);
-                await _db.SaveChangesAsync();
-                return;
+                var existing = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == trade.LinkedExpenseId && e.UserId == UserId);
+                if (existing != null)
+                {
+                    ReverseBalance(account, existing.TransactionType, existing.Amount);
+                    existing.Date = trade.Date;
+                    existing.Amount = amount;
+                    existing.TransactionType = txnType;
+                    existing.CategoryId = categoryId;
+                    existing.Description = description;
+                    ApplyBalance(account, txnType, amount);
+                    await _db.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    return;
+                }
             }
-        }
 
-        // Create new linked expense
-        var expense = new DailyExpense
-        {
-            Date = trade.Date,
-            Amount = amount,
-            Description = description,
-            TransactionType = txnType,
-            FundingSourceType = FundingSourceType.BankAccount,
-            FundingSourceId = trade.BankAccountId,
-            CategoryId = categoryId,
-            Tag = "auto-trade",
-            UserId = UserId
-        };
-        _db.DailyExpenses.Add(expense);
-        ApplyBalance(account, txnType, amount);
-        await _db.SaveChangesAsync();
+            var expense = new DailyExpense
+            {
+                Date = trade.Date,
+                Amount = amount,
+                Description = description,
+                TransactionType = txnType,
+                FundingSourceType = FundingSourceType.BankAccount,
+                FundingSourceId = trade.BankAccountId,
+                CategoryId = categoryId,
+                Tag = "auto-trade",
+                UserId = UserId
+            };
+            _db.DailyExpenses.Add(expense);
+            ApplyBalance(account, txnType, amount);
+            await _db.SaveChangesAsync();
 
-        trade.LinkedExpenseId = expense.Id;
-        await _db.SaveChangesAsync();
+            trade.LinkedExpenseId = expense.Id;
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+        });
 
         await SyncTradeMovements(trade);
     }
@@ -1537,18 +1647,30 @@ public class TradingController : ControllerBase
     {
         if (trade.LinkedExpenseId == null) return;
 
-        var expense = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == trade.LinkedExpenseId);
-        if (expense == null) return;
-
-        var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == trade.BankAccountId && a.UserId == UserId);
-        if (account != null)
+        var strategy = _db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
         {
-            ReverseBalance(account, expense.TransactionType, expense.Amount);
-        }
+            _db.ChangeTracker.Clear();
+            trade = await _db.TradeEntries.FirstAsync(t => t.Id == trade.Id);
+            if (trade.LinkedExpenseId == null) return;
 
-        _db.DailyExpenses.Remove(expense);
-        trade.LinkedExpenseId = null;
-        await _db.SaveChangesAsync();
+            var expense = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == trade.LinkedExpenseId && e.UserId == UserId);
+            if (expense == null) return;
+
+            using var transaction = await _db.Database.BeginTransactionAsync();
+
+            var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == trade.BankAccountId && a.UserId == UserId);
+            if (account != null)
+            {
+                await _db.Entry(account).ReloadAsync();
+                ReverseBalance(account, expense.TransactionType, expense.Amount);
+            }
+
+            _db.DailyExpenses.Remove(expense);
+            trade.LinkedExpenseId = null;
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+        });
 
         await RemoveTradeMovements(trade.Id);
     }
