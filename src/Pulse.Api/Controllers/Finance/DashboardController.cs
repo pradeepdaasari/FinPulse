@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Pulse.Core.Data;
 using Pulse.Core.DTOs;
+using Pulse.Core.Models;
 using Pulse.Core.Models.Enums;
 using Pulse.Core.Services;
 
@@ -46,7 +47,8 @@ public class DashboardController : ControllerBase
         foreach (var loan in loans)
         {
             var remainingMonths = _calcService.CalculateRemainingMonths(loan);
-            payoffDates.Add(DateTime.UtcNow.AddMonths(remainingMonths));
+            if (remainingMonths > 0 && remainingMonths < 999)
+                payoffDates.Add(DateTime.UtcNow.AddMonths(remainingMonths));
         }
 
         foreach (var card in cards)
@@ -57,7 +59,8 @@ public class DashboardController : ControllerBase
                 card.MinimumPayment,
                 card.PromoAprPercent,
                 card.PromoEndDate);
-            payoffDates.Add(DateTime.UtcNow.AddMonths(months));
+            if (months > 0)
+                payoffDates.Add(DateTime.UtcNow.AddMonths(months));
         }
 
         var estimatedDebtFreeDate = payoffDates.Count > 0
@@ -70,7 +73,7 @@ public class DashboardController : ControllerBase
 
         foreach (var loan in loans)
         {
-            var dueDate = GetNextDueDate(loan.DueDay, today);
+            var dueDate = GetNextLoanDueDate(loan, today);
             var daysUntilDue = (dueDate - today).Days;
 
             if (daysUntilDue <= 7)
@@ -108,12 +111,17 @@ public class DashboardController : ControllerBase
             }
         }
 
+        var totalInterestPaid = await _db.PaymentHistories
+            .Where(p => p.UserId == UserId && p.InterestAmount.HasValue)
+            .SumAsync(p => p.InterestAmount!.Value);
+
         var summary = new DashboardSummaryDto
         {
             TotalDebt = totalDebt,
             TotalMonthlyPayment = totalMonthlyPayment,
             EstimatedDebtFreeDate = estimatedDebtFreeDate,
             NumberOfDebts = numberOfDebts,
+            TotalInterestPaid = totalInterestPaid,
             UpcomingPayments = upcomingPayments.OrderBy(p => p.DaysUntilDue).ToList()
         };
 
@@ -147,7 +155,7 @@ public class DashboardController : ControllerBase
 
         foreach (var loan in loans)
         {
-            var remainingMonths = _calcService.CalculateRemainingMonths(loan);
+            var remainingMonths = Math.Min(_calcService.CalculateRemainingMonths(loan), 600);
             var payoffDate = DateTime.UtcNow.AddMonths(remainingMonths);
             var progress = loan.OriginalAmount > 0
                 ? (1 - (loan.CurrentBalance / loan.OriginalAmount)) * 100
@@ -167,9 +175,10 @@ public class DashboardController : ControllerBase
 
         foreach (var card in cards)
         {
-            var months = _calcService.CalculatePayoffMonths(
+            var rawMonths = _calcService.CalculatePayoffMonths(
                 card.CurrentBalance, card.AprPercent, card.MinimumPayment,
                 card.PromoAprPercent, card.PromoEndDate);
+            var months = rawMonths < 0 ? 600 : rawMonths;
             var payoffDate = DateTime.UtcNow.AddMonths(months);
 
             projections.Add(new DebtPayoffProjectionDto
@@ -199,10 +208,11 @@ public class DashboardController : ControllerBase
     [HttpGet("financial-summary")]
     public async Task<ActionResult> GetFinancialSummary([FromQuery] int? year, [FromQuery] int? month)
     {
-        var targetYear = year ?? DateTime.UtcNow.Year;
-        var targetMonth = month ?? DateTime.UtcNow.Month;
-        var startDate = new DateTime(targetYear, targetMonth, 1);
-        var endDate = startDate.AddMonths(1);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var targetYear = year ?? now.Year;
+        var targetMonth = month ?? now.Month;
+        var (startDate, endDate) = TimeZoneHelper.MonthRangeUtc(targetYear, targetMonth, tz);
 
         var transactions = await _db.DailyExpenses
             .Include(e => e.Category)
@@ -267,6 +277,7 @@ public class DashboardController : ControllerBase
     [HttpGet("net-worth-history")]
     public async Task<ActionResult> GetNetWorthHistory([FromQuery] int weeks = 52)
     {
+        weeks = Math.Clamp(weeks, 1, 520);
         var today = DateTime.UtcNow.Date;
         var bankBalance = await _db.BankAccounts.Where(a => a.UserId == UserId).SumAsync(a => a.CurrentBalance);
         var ccDebt = await _db.CreditCards.Where(c => c.UserId == UserId).SumAsync(c => c.CurrentBalance);
@@ -296,14 +307,11 @@ public class DashboardController : ControllerBase
             .AnyAsync(s => s.UserId == UserId && s.SnapshotDate == today.AddDays(-1));
         if (!hasYesterday)
         {
-            // Remove old interpolated/partial snapshots (keep today's real one)
-            var oldSnapshots = await _db.NetWorthSnapshots
-                .Where(s => s.UserId == UserId && s.SnapshotDate != today)
+            var existingSnapshotDates = await _db.NetWorthSnapshots
+                .Where(s => s.UserId == UserId)
+                .Select(s => s.SnapshotDate)
                 .ToListAsync();
-            _db.NetWorthSnapshots.RemoveRange(oldSnapshots);
-            await _db.SaveChangesAsync();
-
-            var existingDates = new HashSet<DateTime> { today };
+            var existingDatesSet = new HashSet<DateTime>(existingSnapshotDates);
 
             // Current balances per account
             var bankAccounts = await _db.BankAccounts
@@ -322,7 +330,7 @@ public class DashboardController : ControllerBase
             // All payment history for debt reconstruction
             var payments = await _db.PaymentHistories
                 .Where(p => p.UserId == UserId)
-                .Select(p => new { p.DebtType, p.DebtId, p.AmountPaid, p.PaymentDate, p.FromAccountId })
+                .Select(p => new { p.DebtType, p.DebtId, p.AmountPaid, p.PrincipalAmount, p.PaymentDate, p.FromAccountId })
                 .ToListAsync();
 
             // All daily expenses for bank account reconstruction
@@ -336,7 +344,7 @@ public class DashboardController : ControllerBase
 
             for (var d = cutoffDate; d < today; d = d.AddDays(1))
             {
-                if (existingDates.Contains(d)) continue;
+                if (existingDatesSet.Contains(d)) continue;
 
                 // Reconstruct bank balances: current - income after date + expenses after date
                 var totalBank = 0m;
@@ -427,7 +435,7 @@ public class DashboardController : ControllerBase
                         p.DebtType == DebtType.PersonalLoan &&
                         p.DebtId == loan.Id);
                     foreach (var p in loanPayments)
-                        bal += p.AmountPaid;
+                        bal += p.PrincipalAmount ?? p.AmountPaid;
                     totalLoan += bal;
                 }
 
@@ -464,6 +472,19 @@ public class DashboardController : ControllerBase
             .ToListAsync();
 
         return Ok(snapshots);
+    }
+
+    private static DateTime GetNextLoanDueDate(PersonalLoan loan, DateTime today)
+    {
+        if (loan.PaymentFrequency is PaymentFrequency.Weekly or PaymentFrequency.Biweekly)
+        {
+            var interval = loan.PaymentFrequency == PaymentFrequency.Biweekly ? 14 : 7;
+            var anchor = loan.StartDate.Date;
+            while (anchor < today)
+                anchor = anchor.AddDays(interval);
+            return anchor;
+        }
+        return GetNextDueDate(loan.DueDay, today);
     }
 
     private static DateTime GetNextDueDate(int dueDay, DateTime today)

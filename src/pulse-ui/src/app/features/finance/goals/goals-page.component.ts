@@ -248,15 +248,7 @@ export class GoalsPageComponent implements OnInit {
         data: { title: `Add to "${goal.name}"`, message: `Current: $${goal.currentAmount.toFixed(2)} of $${goal.targetAmount.toFixed(2)}`, defaultValue: 50, icon: 'savings' }
       }).afterClosed().subscribe(amount => {
         if (!amount) return;
-        const updated = {
-          name: goal.name,
-          targetAmount: goal.targetAmount,
-          currentAmount: goal.currentAmount + amount,
-          targetDate: goal.targetDate || undefined,
-          linkedAccountId: goal.linkedAccountId || undefined,
-          icon: goal.icon || undefined
-        };
-        this.service.update(goal.id, updated as any).subscribe({
+        this.service.contribute(goal.id, amount).subscribe({
           next: () => { this.notify.success(`Added $${amount} to ${goal.name}`); this.loadData(); },
           error: () => this.notify.error('Failed to update goal')
         });

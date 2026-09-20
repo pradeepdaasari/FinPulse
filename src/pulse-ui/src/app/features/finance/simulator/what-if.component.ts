@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectorRef, DestroyRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
@@ -7,10 +7,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { Subject, debounceTime } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DebtService } from '../../../core/services/debt.service';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { SimulatorService } from '../../../core/services/simulator.service';
-import { WhatIfResult, ExtraPaymentEntry } from '../../../core/models/simulator.model';
+import { WhatIfResult } from '../../../core/models/simulator.model';
 import { DebtItem } from '../../../core/models/debt-item.model';
 
 interface DebtSlider {
@@ -74,7 +75,7 @@ interface DebtSlider {
                 <span class="stat-icon-pill stat-icon-pill--blue">
                   <mat-icon>schedule</mat-icon>
                 </span>
-                <span class="stat-value">{{ result()!.totalMonthsSaved }}</span>
+                <span class="stat-value">{{ maxMonthsSaved() }}</span>
                 <span class="stat-label">Months Saved</span>
               </div>
               <div class="stat-card stat-card--green">
@@ -101,15 +102,15 @@ interface DebtSlider {
                 </ng-container>
                 <ng-container matColumnDef="monthsSaved">
                   <th mat-header-cell *matHeaderCellDef>Months Saved</th>
-                  <td mat-cell *matCellDef="let p" [class.cell-green]="p.monthsSaved > 0">{{ p.monthsSaved }}</td>
+                  <td mat-cell *matCellDef="let p" [class.cell-green]="p.originalPayoffMonths - p.newPayoffMonths > 0">{{ p.originalPayoffMonths - p.newPayoffMonths }}</td>
                 </ng-container>
                 <ng-container matColumnDef="interestSaved">
                   <th mat-header-cell *matHeaderCellDef>Interest Saved</th>
                   <td mat-cell *matCellDef="let p" class="cell-interest">{{ p.interestSaved | currency }}</td>
                 </ng-container>
-                <ng-container matColumnDef="newPayoffDate">
-                  <th mat-header-cell *matHeaderCellDef>New Payoff Date</th>
-                  <td mat-cell *matCellDef="let p">{{ p.newPayoffDate | localDate:'mediumDate' }}</td>
+                <ng-container matColumnDef="newMonths">
+                  <th mat-header-cell *matHeaderCellDef>New Payoff</th>
+                  <td mat-cell *matCellDef="let p">{{ p.newPayoffMonths }} months</td>
                 </ng-container>
 
                 <tr mat-header-row *matHeaderRowDef="projectionColumns"></tr>
@@ -274,12 +275,18 @@ export class WhatIfComponent implements OnInit {
   result = signal<WhatIfResult | null>(null);
   loadingDebts = signal(true);
   simulating = signal(false);
-  projectionColumns = ['debtName', 'monthsSaved', 'interestSaved', 'newPayoffDate'];
+  projectionColumns = ['debtName', 'monthsSaved', 'interestSaved', 'newMonths'];
+  maxMonthsSaved = computed(() => {
+    const r = this.result();
+    if (!r) return 0;
+    return Math.max(0, ...r.projections.map(p => p.originalPayoffMonths - p.newPayoffMonths));
+  });
 
   private changeSubject = new Subject<void>();
+  private destroyRef = inject(DestroyRef);
 
   ngOnInit(): void {
-    this.changeSubject.pipe(debounceTime(500)).subscribe(() => this.runSimulation());
+    this.changeSubject.pipe(debounceTime(500), takeUntilDestroyed(this.destroyRef)).subscribe(() => this.runSimulation());
 
     this.debtService.getAll().subscribe({
       next: (debts) => {
@@ -304,17 +311,22 @@ export class WhatIfComponent implements OnInit {
   }
 
   private runSimulation(): void {
-    const entries: ExtraPaymentEntry[] = this.debts()
-      .filter(d => d.extraAmount > 0)
-      .map(d => ({ debtId: d.debtId, debtName: d.debtName, extraAmount: d.extraAmount }));
-
-    if (entries.length === 0) {
+    const active = this.debts().filter(d => d.extraAmount > 0);
+    if (active.length === 0) {
       this.result.set(null);
       return;
     }
 
+    const loanExtraPayments: Record<number, number> = {};
+    const cardExtraPayments: Record<number, number> = {};
+    for (const d of active) {
+      const id = Number(d.debtId);
+      if (d.type === 'PersonalLoan') loanExtraPayments[id] = d.extraAmount;
+      else cardExtraPayments[id] = d.extraAmount;
+    }
+
     this.simulating.set(true);
-    this.simulatorService.runWhatIf({ extraPayments: entries }).subscribe({
+    this.simulatorService.runWhatIf({ loanExtraPayments, cardExtraPayments }).subscribe({
       next: (result) => {
         this.result.set(result);
         this.simulating.set(false);

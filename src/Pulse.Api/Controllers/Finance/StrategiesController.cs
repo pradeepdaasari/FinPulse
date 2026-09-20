@@ -30,9 +30,9 @@ public class StrategiesController : ControllerBase
     {
         var loans = await _db.PersonalLoans
             .Where(l => l.UserId == UserId)
-            .Where(l => l.NextPaymentDate == null || l.NextPaymentDate <= DateTime.UtcNow)
+            .Where(l => l.CurrentBalance > 0)
             .ToListAsync();
-        var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
+        var cards = await _db.CreditCards.Where(c => c.UserId == UserId && c.CurrentBalance > 0).ToListAsync();
         var profile = await _db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == UserId);
 
         var snapshots = new List<DebtSnapshotDto>();

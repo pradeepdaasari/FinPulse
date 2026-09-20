@@ -794,7 +794,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
     .m-row-chip.sm { padding: 1px 6px; font-size: 0.58rem; }
 
     .m-action-btn {
-      width: 34px; height: 34px; border: none; border-radius: 8px;
+      min-width: 44px; min-height: 44px; width: 44px; height: 44px; border: none; border-radius: 8px;
       background: transparent; display: flex; align-items: center;
       justify-content: center; cursor: pointer; flex-shrink: 0;
       -webkit-tap-highlight-color: transparent;
@@ -1059,10 +1059,16 @@ export class CategoryPageComponent implements OnInit {
   }
 
   loadCategories(): void {
-    this.categoryService.getAll().subscribe(data => {
-      this.allCategories.set(data);
-      this.loading.set(false);
-      this.cdr.detectChanges();
+    this.categoryService.getAll().subscribe({
+      next: (data) => {
+        this.allCategories.set(data);
+        this.loading.set(false);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loading.set(false);
+        this.cdr.detectChanges();
+      }
     });
   }
 

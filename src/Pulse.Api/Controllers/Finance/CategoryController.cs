@@ -22,7 +22,7 @@ public class CategoryController : ControllerBase
     public async Task<IActionResult> GetAll([FromQuery] string? type)
     {
         var query = _db.CustomCategories
-            .Include(c => c.Children)
+            .Include(c => c.Children.Where(ch => ch.UserId == null || ch.UserId == UserId))
             .Where(c => c.ParentId == null && (c.UserId == null || c.UserId == UserId));
 
         if (!string.IsNullOrEmpty(type) && Enum.TryParse<CategoryType>(type, true, out var catType))
@@ -95,7 +95,7 @@ public class CategoryController : ControllerBase
         var category = new CustomCategory
         {
             Name = dto.Name.Trim(),
-            IsFixed = dto.IsFixed,
+            IsFixed = false,
             Type = dto.Type,
             Icon = dto.Icon,
             UserId = UserId,
@@ -110,7 +110,7 @@ public class CategoryController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] CategoryCreateDto dto)
     {
-        var category = await _db.CustomCategories.FindAsync(id);
+        var category = await _db.CustomCategories.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
         if (category == null) return NotFound();
 
         if (string.IsNullOrWhiteSpace(dto.Name))
@@ -122,7 +122,6 @@ public class CategoryController : ControllerBase
             return Conflict("A category with that name already exists at this level.");
 
         category.Name = dto.Name.Trim();
-        category.IsFixed = dto.IsFixed;
         category.Type = dto.Type;
         category.Icon = dto.Icon;
         category.ParentId = dto.ParentId;
@@ -133,14 +132,18 @@ public class CategoryController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var category = await _db.CustomCategories.FindAsync(id);
+        var category = await _db.CustomCategories.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
         if (category == null) return NotFound();
 
-        var hasChildren = await _db.CustomCategories.AnyAsync(c => c.ParentId == id);
+        var hasChildren = await _db.CustomCategories.AnyAsync(c => c.ParentId == id && (c.UserId == null || c.UserId == UserId));
         if (hasChildren)
             return BadRequest("Cannot delete a category that has subcategories. Remove subcategories first.");
 
-        var budgetExpenses = await _db.BudgetExpenses.Where(e => e.CategoryId == id).ToListAsync();
+        var hasRecurring = await _db.RecurringTransactions.AnyAsync(r => r.CategoryId == id && r.UserId == UserId);
+        if (hasRecurring)
+            return Conflict(new { message = "Cannot delete a category that is used by recurring transactions." });
+
+        var budgetExpenses = await _db.BudgetExpenses.Where(e => e.CategoryId == id && e.UserId == UserId).ToListAsync();
         var dailyExpenses = await _db.DailyExpenses
             .Where(e => e.CategoryId == id && e.UserId == UserId)
             .OrderByDescending(e => e.Date)

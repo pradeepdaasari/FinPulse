@@ -98,6 +98,43 @@ public class SavingsGoalsController : ControllerBase
         return Ok();
     }
 
+    [HttpPost("{id}/contribute")]
+    public async Task<ActionResult> Contribute(int id, [FromBody] ContributeDto dto)
+    {
+        if (dto.Amount <= 0)
+            return BadRequest(new { error = "Contribution amount must be greater than zero." });
+
+        var goal = await _db.SavingsGoals.FirstOrDefaultAsync(g => g.Id == id && g.UserId == UserId);
+        if (goal is null) return NotFound();
+
+        var strategy = _db.Database.CreateExecutionStrategy();
+        try
+        {
+            await strategy.ExecuteAsync(async () =>
+            {
+                await _db.Entry(goal).ReloadAsync();
+                goal.CurrentAmount += dto.Amount;
+
+                if (goal.LinkedAccountId.HasValue)
+                {
+                    var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == goal.LinkedAccountId && a.UserId == UserId);
+                    if (account != null)
+                    {
+                        await _db.Entry(account).ReloadAsync();
+                        account.CurrentBalance += dto.Amount;
+                    }
+                }
+
+                await _db.SaveChangesAsync();
+            });
+            return Ok(new { goal.CurrentAmount });
+        }
+        catch
+        {
+            return StatusCode(500, new { error = "Failed to record contribution. Please try again." });
+        }
+    }
+
     [HttpDelete("{id}")]
     public async Task<ActionResult> Delete(int id)
     {

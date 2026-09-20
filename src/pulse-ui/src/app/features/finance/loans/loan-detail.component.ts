@@ -1,5 +1,5 @@
 import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
-import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -8,14 +8,16 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { LoanService } from '../../../core/services/loan.service';
 import { PaymentService } from '../../../core/services/payment.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PersonalLoan } from '../../../core/models/personal-loan.model';
 import { AmortizationSchedule } from '../../../core/models/dashboard.model';
 import { PaymentHistory } from '../../../core/models/payment-history.model';
-import { sumCurrency } from '../../../core/utils/currency';
 import { AmortizationTableComponent } from './amortization-table.component';
+
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { EntityMovementsComponent } from '../../../shared/entity-movements.component';
 import { FundingSourceService } from '../../../core/services/funding-source.service';
@@ -23,7 +25,7 @@ import { FundingSourceService } from '../../../core/services/funding-source.serv
 @Component({
   selector: 'app-loan-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatTooltipModule, CurrencyPipe, DatePipe, LocalDatePipe, AmortizationTableComponent, SkeletonLoaderComponent, EntityMovementsComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatTooltipModule, MatChipsModule, MatProgressBarModule, CurrencyPipe, DecimalPipe, LocalDatePipe, AmortizationTableComponent, SkeletonLoaderComponent, EntityMovementsComponent],
   template: `
     @if (loading()) {
       <app-skeleton type="card"></app-skeleton>
@@ -34,9 +36,15 @@ import { FundingSourceService } from '../../../core/services/funding-source.serv
             <mat-icon>arrow_back</mat-icon> Back to Loans
           </button>
           <h2>{{ loan()!.lenderName }}</h2>
+          @if (loan()!.isAutopay) {
+            <mat-chip highlighted color="primary"><mat-icon>autorenew</mat-icon> Autopay</mat-chip>
+          }
+          @if (loan()!.rateType === 'Variable') {
+            <mat-chip highlighted color="accent">Variable Rate</mat-chip>
+          }
         </div>
         <div class="detail-actions">
-          <button mat-raised-button color="primary" (click)="recordPayment()" aria-label="Record payment">
+          <button mat-raised-button color="primary" (click)="recordPayment()" aria-label="Record payment" [disabled]="loan()!.currentBalance <= 0">
             <mat-icon>payments</mat-icon> Record Payment
           </button>
           <button mat-stroked-button (click)="editLoan()" aria-label="Edit loan">
@@ -47,6 +55,19 @@ import { FundingSourceService } from '../../../core/services/funding-source.serv
           </button>
         </div>
       </div>
+
+      @if (dueSoonDays() !== null && dueSoonDays()! <= 3 && dueSoonDays()! >= 0) {
+        <div class="due-soon-banner">
+          <mat-icon>warning</mat-icon>
+          @if (dueSoonDays() === 0) {
+            Payment due today!
+          } @else if (dueSoonDays() === 1) {
+            Payment due tomorrow!
+          } @else {
+            Payment due in {{ dueSoonDays() }} days
+          }
+        </div>
+      }
 
       <mat-card class="detail-card">
         <mat-card-content>
@@ -89,6 +110,23 @@ import { FundingSourceService } from '../../../core/services/funding-source.serv
                 <span class="value" [class.deferred-value]="isDeferred()">{{ loan()!.nextPaymentDate | localDate:'mediumDate' }}</span>
               </div>
             }
+            @if (projectedPayoffDate()) {
+              <div class="detail-item">
+                <span class="label">Projected Payoff</span>
+                <span class="value">{{ projectedPayoffDate() | localDate:'mediumDate' }}</span>
+              </div>
+            }
+          </div>
+          <div class="progress-section">
+            <div class="progress-label-row">
+              <span class="label">Payoff Progress</span>
+              <span class="progress-pct">{{ payoffProgress() | number:'1.1-1' }}%</span>
+            </div>
+            <mat-progress-bar mode="determinate" [value]="payoffProgress()"></mat-progress-bar>
+            <div class="progress-amounts">
+              <span>{{ loan()!.originalAmount - loan()!.currentBalance | currency }} paid</span>
+              <span>{{ loan()!.currentBalance | currency }} remaining</span>
+            </div>
           </div>
         </mat-card-content>
       </mat-card>
@@ -97,7 +135,11 @@ import { FundingSourceService } from '../../../core/services/funding-source.serv
         <h3>Payment History</h3>
         <mat-card class="history-card">
           <div class="history-summary">
-            <span>Total Paid: <strong>{{ totalPaid() | currency }}</strong></span>
+            <div class="summary-stats">
+              <div class="stat"><span class="stat-label">Total Paid</span><span class="stat-value">{{ totalPaid() | currency }}</span></div>
+              <div class="stat"><span class="stat-label">Principal</span><span class="stat-value principal-color">{{ totalPrincipalPaid() | currency }}</span></div>
+              <div class="stat"><span class="stat-label">Interest</span><span class="stat-value interest-color">{{ totalInterestPaid() | currency }}</span></div>
+            </div>
             <span class="history-count">{{ paymentHistory().length }} payments</span>
           </div>
           <div class="table-wrapper">
@@ -109,6 +151,14 @@ import { FundingSourceService } from '../../../core/services/funding-source.serv
               <ng-container matColumnDef="amountPaid">
                 <th mat-header-cell *matHeaderCellDef>Amount</th>
                 <td mat-cell *matCellDef="let p" class="amount-cell">{{ p.amountPaid | currency }}</td>
+              </ng-container>
+              <ng-container matColumnDef="principal">
+                <th mat-header-cell *matHeaderCellDef>Principal</th>
+                <td mat-cell *matCellDef="let p" class="principal-color">{{ (p.principalAmount ?? p.amountPaid) | currency }}</td>
+              </ng-container>
+              <ng-container matColumnDef="interest">
+                <th mat-header-cell *matHeaderCellDef>Interest</th>
+                <td mat-cell *matCellDef="let p" class="interest-color">{{ (p.interestAmount ?? 0) | currency }}</td>
               </ng-container>
               <ng-container matColumnDef="fromAccount">
                 <th mat-header-cell *matHeaderCellDef>From Account</th>
@@ -143,6 +193,17 @@ import { FundingSourceService } from '../../../core/services/funding-source.serv
         <h3>Amortization Schedule</h3>
         <app-amortization-table [schedule]="amortizationSchedule()!"></app-amortization-table>
       }
+    } @else {
+      <div class="empty-state">
+        <div class="empty-icon-wrap">
+          <mat-icon>error_outline</mat-icon>
+        </div>
+        <h3>Loan not found</h3>
+        <p>This loan may have been deleted or you don't have access to it.</p>
+        <button mat-raised-button color="primary" (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon> Back to Loans
+        </button>
+      </div>
     }
   `,
   styles: [`
@@ -189,13 +250,31 @@ import { FundingSourceService } from '../../../core/services/funding-source.serv
     }
     .history-count { color: var(--color-text-secondary); }
     .amount-cell { font-weight: 600; color: var(--color-success); }
+    .principal-color { color: #2e7d32; font-weight: 500; }
+    .interest-color { color: #c62828; font-weight: 500; }
     .deferred-value { color: #e65100; }
+    .due-soon-banner {
+      display: flex; align-items: center; gap: 8px; padding: 10px 16px;
+      background: rgba(255,152,0,0.12); color: #e65100; border-radius: var(--radius-sm);
+      font-weight: 600; font-size: 0.875rem; margin-bottom: var(--spacing-md);
+    }
+    .due-soon-banner mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .progress-section { margin-top: var(--spacing-md); padding-top: var(--spacing-md); border-top: 1px solid var(--color-border, rgba(0,0,0,0.08)); }
+    .progress-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .progress-pct { font-weight: 600; font-size: 0.875rem; }
+    .progress-amounts { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--color-text-muted); margin-top: 4px; }
+    .summary-stats { display: flex; gap: var(--spacing-lg); }
+    .stat { display: flex; flex-direction: column; gap: 2px; }
+    .stat-label { font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-value { font-weight: 600; font-size: 0.9rem; }
+    mat-chip mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; }
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
     }
     @media (max-width: 599px) {
       .detail-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
       .detail-actions { flex-wrap: wrap; }
+      .summary-stats { flex-wrap: wrap; gap: var(--spacing-sm); }
       table { min-width: 0; }
     }
   `]
@@ -214,8 +293,40 @@ export class LoanDetailComponent implements OnInit {
   amortizationSchedule = signal<AmortizationSchedule | null>(null);
   paymentHistory = signal<PaymentHistory[]>([]);
   totalPaid = signal(0);
+  totalPrincipalPaid = signal(0);
+  totalInterestPaid = signal(0);
   loading = signal(true);
-  paymentColumns = ['paymentDate', 'amountPaid', 'fromAccount', 'notes', 'actions'];
+  paymentColumns = ['paymentDate', 'amountPaid', 'principal', 'interest', 'fromAccount', 'notes', 'actions'];
+  payoffProgress = computed(() => {
+    const l = this.loan();
+    if (!l || l.originalAmount <= 0) return 0;
+    return Math.max(0, Math.min(100, (1 - l.currentBalance / l.originalAmount) * 100));
+  });
+  dueSoonDays = computed(() => {
+    const l = this.loan();
+    if (!l) return null;
+    if (l.currentBalance <= 0) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const freq = l.paymentFrequency;
+    if (freq === 'Weekly' || freq === 'Biweekly') {
+      const interval = freq === 'Biweekly' ? 14 : 7;
+      const anchor = new Date(l.startDate);
+      anchor.setHours(0, 0, 0, 0);
+      while (anchor < today) anchor.setDate(anchor.getDate() + interval);
+      return Math.floor((anchor.getTime() - today.getTime()) / 86400000);
+    }
+    if (!l.dueDay) return null;
+    let dueDate = new Date(today.getFullYear(), today.getMonth(), l.dueDay);
+    if (dueDate < today) dueDate = new Date(today.getFullYear(), today.getMonth() + 1, l.dueDay);
+    return Math.floor((dueDate.getTime() - today.getTime()) / 86400000);
+  });
+  projectedPayoffDate = computed(() => {
+    const sched = this.amortizationSchedule();
+    if (!sched?.entries?.length) return null;
+    const last = sched.entries[sched.entries.length - 1];
+    return last.paymentDate;
+  });
   private accountNameMap = new Map<number, string>();
   private weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   paymentLabel = computed(() => {
@@ -254,17 +365,21 @@ export class LoanDetailComponent implements OnInit {
         this.loading.set(false);
         this.cdr.detectChanges();
       },
-      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
+      error: () => { this.loading.set(false); this.notify.error('Failed to load loan details'); this.cdr.detectChanges(); }
     });
     this.loanService.getAmortization(id).subscribe({
-      next: (schedule) => { this.amortizationSchedule.set(schedule); this.cdr.detectChanges(); }
+      next: (schedule) => { this.amortizationSchedule.set(schedule); this.cdr.detectChanges(); },
+      error: () => {}
     });
     this.loanService.getPayments(id).subscribe({
-      next: (payments) => {
-        this.paymentHistory.set(payments);
-        this.totalPaid.set(sumCurrency(payments.map(p => p.amountPaid)));
+      next: (result) => {
+        this.paymentHistory.set(result.payments);
+        this.totalPaid.set(result.totalPaid);
+        this.totalPrincipalPaid.set(result.totalPrincipalPaid);
+        this.totalInterestPaid.set(result.totalInterestPaid);
         this.cdr.detectChanges();
-      }
+      },
+      error: () => {}
     });
   }
 
@@ -276,7 +391,7 @@ export class LoanDetailComponent implements OnInit {
     import('../../../shared/record-payment-dialog.component').then(m => {
       const dialogRef = this.dialog.open(m.RecordPaymentDialogComponent, {
         width: '440px',
-        data: { debtType: 'PersonalLoan', debtId: this.loan()!.id, debtName: this.loan()!.lenderName, currentBalance: this.loan()!.currentBalance, minimumPayment: this.loan()!.monthlyPayment, fundedBankAccountId: this.loan()!.fundedBankAccountId }
+        data: { debtType: 'PersonalLoan', debtId: this.loan()!.id, debtName: this.loan()!.lenderName, currentBalance: this.loan()!.currentBalance, minimumPayment: this.loan()!.monthlyPayment, aprPercent: this.loan()!.aprPercent, paymentFrequency: this.loan()!.paymentFrequency, fundedBankAccountId: this.loan()!.fundedBankAccountId }
       });
       dialogRef.afterClosed().subscribe(result => {
         if (result) this.loadLoan();
@@ -341,15 +456,19 @@ export class LoanDetailComponent implements OnInit {
   }
 
   editPayment(payment: PaymentHistory): void {
+    const loan = this.loan()!;
+    const balanceAtPayment = this.computeBalanceAtPayment(payment);
     import('../../../shared/record-payment-dialog.component').then(m => {
       const dialogRef = this.dialog.open(m.RecordPaymentDialogComponent, {
         width: '440px',
         data: {
           debtType: 'PersonalLoan',
-          debtId: this.loan()!.id,
-          debtName: this.loan()!.lenderName,
-          currentBalance: this.loan()!.currentBalance,
-          fundedBankAccountId: this.loan()!.fundedBankAccountId,
+          debtId: loan.id,
+          debtName: loan.lenderName,
+          currentBalance: balanceAtPayment,
+          aprPercent: loan.aprPercent,
+          paymentFrequency: loan.paymentFrequency,
+          fundedBankAccountId: loan.fundedBankAccountId,
           existingPayment: payment
         }
       });
@@ -357,6 +476,20 @@ export class LoanDetailComponent implements OnInit {
         if (result) this.loadLoan();
       });
     });
+  }
+
+  private computeBalanceAtPayment(target: PaymentHistory): number {
+    const loan = this.loan();
+    if (!loan) return 0;
+    const sorted = [...this.paymentHistory()].sort(
+      (a, b) => new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime()
+    );
+    let balance = loan.originalAmount;
+    for (const p of sorted) {
+      if (p.id === target.id) return balance;
+      balance -= p.principalAmount ?? p.amountPaid;
+    }
+    return Math.max(0, balance);
   }
 
   getAccountName(accountId?: number): string {

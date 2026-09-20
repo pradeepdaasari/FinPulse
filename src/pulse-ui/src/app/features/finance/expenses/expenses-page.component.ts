@@ -56,9 +56,9 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
 
       @if (viewMode() === 'month') {
         <div class="month-nav">
-          <button mat-icon-button (click)="prevMonth()"><mat-icon>chevron_left</mat-icon></button>
+          <button mat-icon-button (click)="prevMonth()" aria-label="Previous month"><mat-icon>chevron_left</mat-icon></button>
           <span class="month-label">{{ monthLabel() }}</span>
-          <button mat-icon-button (click)="nextMonth()"><mat-icon>chevron_right</mat-icon></button>
+          <button mat-icon-button (click)="nextMonth()" aria-label="Next month"><mat-icon>chevron_right</mat-icon></button>
         </div>
       } @else {
         <div class="range-nav">
@@ -772,8 +772,9 @@ export class ExpensesPageComponent implements OnInit {
     if (budgeted <= 0) return null;
 
     const now = new Date();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const dayOfMonth = now.getDate();
+    const viewingCurrent = this.currentYear === now.getFullYear() && this.currentMonth === (now.getMonth() + 1);
+    const daysInMonth = new Date(this.currentYear, this.currentMonth, 0).getDate();
+    const dayOfMonth = viewingCurrent ? now.getDate() : daysInMonth;
     const monthProgress = dayOfMonth / daysInMonth;
     const spentPercent = spent / budgeted;
     const paceRatio = spentPercent / monthProgress;
@@ -820,14 +821,17 @@ export class ExpensesPageComponent implements OnInit {
   ngOnInit(): void {
     this.updateMonthLabel();
     this.loadData();
-    this.accountService.getAll().subscribe(accounts => {
-      accounts.forEach(a => {
-        switch (a.accountType) {
-          case 'Savings': this.accountIconMap.set(a.id, 'savings'); break;
-          case 'Brokerage': this.accountIconMap.set(a.id, 'trending_up'); break;
-          default: this.accountIconMap.set(a.id, 'account_balance'); break;
-        }
-      });
+    this.accountService.getAll().subscribe({
+      next: (accounts) => {
+        accounts.forEach(a => {
+          switch (a.accountType) {
+            case 'Savings': this.accountIconMap.set(a.id, 'savings'); break;
+            case 'Brokerage': this.accountIconMap.set(a.id, 'trending_up'); break;
+            default: this.accountIconMap.set(a.id, 'account_balance'); break;
+          }
+        });
+      },
+      error: () => {}
     });
   }
 

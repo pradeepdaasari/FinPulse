@@ -67,6 +67,13 @@ public class PaymentsController : ControllerBase
         var payment = await _db.PaymentHistories.FirstOrDefaultAsync(p => p.Id == id && p.UserId == UserId);
         if (payment is null) return NotFound();
 
+        if (dto.AmountPaid <= 0)
+            return BadRequest(new { error = "Payment amount must be greater than zero." });
+
+        if (dto.PrincipalAmount.HasValue && dto.InterestAmount.HasValue
+            && Math.Abs(dto.PrincipalAmount.Value + dto.InterestAmount.Value - dto.AmountPaid) > 0.01m)
+            return BadRequest(new { error = "Principal + Interest must equal the total payment amount." });
+
         var strategy = _db.Database.CreateExecutionStrategy();
         try
         {
@@ -74,19 +81,30 @@ public class PaymentsController : ControllerBase
             {
                 using var transaction = await _db.Database.BeginTransactionAsync();
 
+                await _db.Entry(payment).ReloadAsync();
+
                 var difference = dto.AmountPaid - payment.AmountPaid;
 
                 if (payment.DebtType == DebtType.PersonalLoan)
                 {
-                    var loan = await _db.PersonalLoans.FindAsync(payment.DebtId);
+                    var oldPrincipal = payment.PrincipalAmount ?? payment.AmountPaid;
+                    var newPrincipal = dto.PrincipalAmount ?? dto.AmountPaid;
+                    var principalDiff = newPrincipal - oldPrincipal;
+                    var loan = await _db.PersonalLoans.FirstOrDefaultAsync(l => l.Id == payment.DebtId && l.UserId == UserId);
                     if (loan != null)
-                        loan.CurrentBalance = Math.Max(0, loan.CurrentBalance - difference);
+                    {
+                        await _db.Entry(loan).ReloadAsync();
+                        loan.CurrentBalance = Math.Max(0, loan.CurrentBalance - principalDiff);
+                    }
                 }
                 else
                 {
-                    var card = await _db.CreditCards.FindAsync(payment.DebtId);
+                    var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == payment.DebtId && c.UserId == UserId);
                     if (card != null)
+                    {
+                        await _db.Entry(card).ReloadAsync();
                         card.CurrentBalance = Math.Max(0, card.CurrentBalance - difference);
+                    }
                 }
 
                 // Handle FromAccountId change — reverse old bank deduction, apply new
@@ -100,18 +118,26 @@ public class PaymentsController : ControllerBase
                     {
                         var oldAccount = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == oldFromAccountId && a.UserId == UserId);
                         if (oldAccount != null)
+                        {
+                            await _db.Entry(oldAccount).ReloadAsync();
                             oldAccount.CurrentBalance += oldAmount;
+                        }
                     }
                     // Apply new bank account deduction
                     if (dto.FromAccountId.HasValue)
                     {
                         var newAccount = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == dto.FromAccountId && a.UserId == UserId);
                         if (newAccount != null)
+                        {
+                            await _db.Entry(newAccount).ReloadAsync();
                             newAccount.CurrentBalance -= dto.AmountPaid;
+                        }
                     }
                 }
 
                 payment.AmountPaid = dto.AmountPaid;
+                payment.PrincipalAmount = dto.PrincipalAmount;
+                payment.InterestAmount = dto.InterestAmount;
                 payment.PaymentDate = dto.PaymentDate;
                 payment.Notes = dto.Notes;
                 payment.FromAccountId = dto.FromAccountId;
@@ -132,9 +158,9 @@ public class PaymentsController : ControllerBase
             });
             return Ok(payment);
         }
-        catch (Exception ex)
+        catch
         {
-            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+            return StatusCode(500, new { error = "Failed to update payment. Please try again." });
         }
     }
 
@@ -151,18 +177,41 @@ public class PaymentsController : ControllerBase
             {
                 using var transaction = await _db.Database.BeginTransactionAsync();
 
+                await _db.Entry(payment).ReloadAsync();
+
                 if (payment.DebtType == DebtType.PersonalLoan)
                 {
-                    var loan = await _db.PersonalLoans.FindAsync(payment.DebtId);
+                    var loan = await _db.PersonalLoans.FirstOrDefaultAsync(l => l.Id == payment.DebtId && l.UserId == UserId);
                     if (loan != null)
-                        loan.CurrentBalance += payment.AmountPaid;
+                    {
+                        await _db.Entry(loan).ReloadAsync();
+                        loan.CurrentBalance += payment.PrincipalAmount ?? payment.AmountPaid;
+                    }
                 }
                 else
                 {
-                    var card = await _db.CreditCards.FindAsync(payment.DebtId);
+                    var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == payment.DebtId && c.UserId == UserId);
                     if (card != null)
+                    {
+                        await _db.Entry(card).ReloadAsync();
                         card.CurrentBalance += payment.AmountPaid;
+                    }
                 }
+
+                if (payment.FromAccountId.HasValue)
+                {
+                    var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == payment.FromAccountId && a.UserId == UserId);
+                    if (account != null)
+                    {
+                        await _db.Entry(account).ReloadAsync();
+                        account.CurrentBalance += payment.AmountPaid;
+                    }
+                }
+
+                var movements = await _db.MoneyMovements
+                    .Where(m => m.RelatedPaymentId == payment.Id && m.UserId == UserId)
+                    .ToListAsync();
+                _db.MoneyMovements.RemoveRange(movements);
 
                 _db.PaymentHistories.Remove(payment);
                 await _db.SaveChangesAsync();
@@ -170,9 +219,9 @@ public class PaymentsController : ControllerBase
             });
             return NoContent();
         }
-        catch (Exception ex)
+        catch
         {
-            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+            return StatusCode(500, new { error = "Failed to delete payment. Please try again." });
         }
     }
 }

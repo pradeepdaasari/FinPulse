@@ -10,6 +10,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { RecurringService } from '../../../core/services/recurring.service';
 import { RecurringTransaction } from '../../../core/models/recurring.model';
+import { LoanService } from '../../../core/services/loan.service';
 import { DailyExpense, DailyExpenseCreate, TransactionType, FundingSourceType } from '../../../core/models/daily-expense.model';
 import { NotificationService } from '../../../core/services/notification.service';
 import { RecurringDialogComponent } from './recurring-dialog.component';
@@ -431,6 +432,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
 })
 export class RecurringPageComponent implements OnInit {
   private service = inject(RecurringService);
+  private loanService = inject(LoanService);
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
   private cdr = inject(ChangeDetectorRef);
@@ -553,6 +555,10 @@ export class RecurringPageComponent implements OnInit {
   }
 
   markPaid(item: RecurringTransaction): void {
+    if (item.transactionType === 'LoanPayment') {
+      this.markLoanPaid(item);
+      return;
+    }
     const prefill: Partial<DailyExpense> = {
       categoryId: item.categoryId,
       amount: item.amount,
@@ -571,6 +577,48 @@ export class RecurringPageComponent implements OnInit {
         error: (err: any) => this.notify.error(err.error?.message || 'Failed to mark paid')
       });
     });
+  }
+
+  private markLoanPaid(item: RecurringTransaction): void {
+    this.loanService.getAll().subscribe({ next: (loans) => {
+      const desc = item.description?.toLowerCase() ?? '';
+      const merch = item.merchant?.toLowerCase() ?? '';
+      const loan = loans.find(l => {
+        const name = l.lenderName.toLowerCase();
+        if (name === desc || name === merch) return true;
+        if (item.fundingSourceId && l.id === item.fundingSourceId) return true;
+        if (desc && (name.includes(desc) || desc.includes(name))) return true;
+        if (merch && (name.includes(merch) || merch.includes(name))) return true;
+        return false;
+      });
+      if (!loan) {
+        this.notify.error('Could not find matching loan — use Loan Detail to record payment');
+        return;
+      }
+      import('../../../shared/record-payment-dialog.component').then(m => {
+        const ref = this.dialog.open(m.RecordPaymentDialogComponent, {
+          width: '440px',
+          data: {
+            debtType: 'PersonalLoan',
+            debtId: loan.id,
+            debtName: loan.lenderName,
+            currentBalance: loan.currentBalance,
+            minimumPayment: loan.monthlyPayment,
+            aprPercent: loan.aprPercent,
+            paymentFrequency: loan.paymentFrequency,
+            fundedBankAccountId: loan.fundedBankAccountId
+          }
+        });
+        ref.afterClosed().subscribe(result => {
+          if (result) {
+            this.service.advance(item.id).subscribe({
+              next: () => { this.notify.success(`${item.description} marked as paid`); this.loadData(); },
+              error: () => this.loadData()
+            });
+          }
+        });
+      });
+    }, error: () => this.notify.error('Failed to load loans') });
   }
 
   deleteItem(item: RecurringTransaction): void {

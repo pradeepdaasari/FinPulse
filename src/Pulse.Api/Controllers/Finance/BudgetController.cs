@@ -47,8 +47,10 @@ public class BudgetController : ControllerBase
         if (profile is null)
             return BadRequest("User profile is required.");
 
-        var targetYear = year ?? DateTime.UtcNow.Year;
-        var targetMonth = month ?? DateTime.UtcNow.Month;
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var targetYear = year ?? now.Year;
+        var targetMonth = month ?? now.Month;
 
         var expenses = await _db.BudgetExpenses.Include(e => e.Category).Where(e => e.UserId == UserId).ToListAsync();
         var debts = await GetDebtSnapshots();
@@ -59,8 +61,7 @@ public class BudgetController : ControllerBase
         var plan = _budgetPlanService.GeneratePlan(profile, expenses, debts, recurring, targetYear, targetMonth);
 
         // Enrich with actual spending
-        var startDate = new DateTime(targetYear, targetMonth, 1);
-        var endDate = startDate.AddMonths(1);
+        var (startDate, endDate) = TimeZoneHelper.MonthRangeUtc(targetYear, targetMonth, tz);
         var dailyExpenses = await _db.DailyExpenses
             .Where(e => e.UserId == UserId && e.Date >= startDate && e.Date < endDate
                    && e.TransactionType == TransactionType.Expense && e.CategoryId != null)
@@ -162,6 +163,12 @@ public class BudgetController : ControllerBase
     [HttpPost("expenses")]
     public async Task<ActionResult> CreateExpense(BudgetExpenseCreateDto dto)
     {
+        if (dto.CategoryId > 0)
+        {
+            var catExists = await _db.CustomCategories.AnyAsync(c => c.Id == dto.CategoryId && (c.UserId == null || c.UserId == UserId));
+            if (!catExists) return BadRequest(new { message = "Invalid category." });
+        }
+
         var expense = new BudgetExpense
         {
             Name = dto.Name,

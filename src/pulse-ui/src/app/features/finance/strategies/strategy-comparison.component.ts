@@ -704,28 +704,28 @@ import { forkJoin, catchError, of } from 'rxjs';
 
     /* Hero */
     .hero {
-      text-align: center; padding: 32px 20px 28px;
+      text-align: center; padding: 18px 20px 16px;
       background: var(--gradient-primary); border-radius: var(--radius-lg);
       color: #fff; margin-bottom: 20px;
     }
     .hero-icon-wrap {
-      width: 52px; height: 52px; border-radius: var(--radius-full);
+      width: 36px; height: 36px; border-radius: var(--radius-full);
       background: rgba(255,255,255,0.2); display: inline-flex;
-      align-items: center; justify-content: center; margin-bottom: 12px;
+      align-items: center; justify-content: center; margin-bottom: 8px;
     }
-    .hero-icon-wrap mat-icon { font-size: 28px; width: 28px; height: 28px; color: #fff; }
-    .hero-title { font-size: 1.3rem; font-weight: 800; margin: 0 0 16px; }
-    .hero-amount { font-size: 2.2rem; font-weight: 900; display: block; }
-    .hero-label { font-size: 0.8rem; font-weight: 500; opacity: 0.85; display: block; margin-top: 2px; }
+    .hero-icon-wrap mat-icon { font-size: 20px; width: 20px; height: 20px; color: #fff; }
+    .hero-title { font-size: 1rem; font-weight: 700; margin: 0 0 8px; }
+    .hero-amount { font-size: 1.6rem; font-weight: 900; display: block; }
+    .hero-label { font-size: 0.75rem; font-weight: 500; opacity: 0.85; display: block; margin-top: 2px; }
     .hero-date {
-      display: inline-flex; align-items: center; gap: 6px;
-      margin-top: 14px; font-size: 0.9rem; font-weight: 600;
-      background: rgba(255,255,255,0.15); padding: 8px 16px;
+      display: inline-flex; align-items: center; gap: 5px;
+      margin-top: 10px; font-size: 0.82rem; font-weight: 600;
+      background: rgba(255,255,255,0.15); padding: 6px 14px;
       border-radius: var(--radius-full);
     }
-    .hero-date mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .hero-date mat-icon { font-size: 16px; width: 16px; height: 16px; }
     .hero-months { opacity: 0.7; font-weight: 400; }
-    .hero-encourage { margin: 14px 0 0; font-size: 0.85rem; opacity: 0.85; }
+    .hero-encourage { margin: 8px 0 0; font-size: 0.8rem; opacity: 0.85; }
 
     /* Section cards */
     .section-card {
@@ -1091,7 +1091,7 @@ import { forkJoin, catchError, of } from 'rxjs';
 
     /* Mobile */
     @media (max-width: 599px) {
-      .hero { padding: 24px 16px 22px; }
+      .hero { padding: 14px 16px 12px; }
       .hero-amount { font-size: 1.8rem; }
       .hero-title { font-size: 1.1rem; }
       .hero-date { font-size: 0.8rem; padding: 6px 12px; flex-wrap: wrap; justify-content: center; }
@@ -1128,7 +1128,7 @@ export class StrategyComparisonComponent implements OnInit {
   budgetPlan = signal<BudgetPlan | null>(null);
   loading = signal(true);
   extraPayment = signal(0);
-  chosenStrategy = signal<string>(localStorage.getItem('pulse_chosen_strategy') || 'avalanche');
+  chosenStrategy = signal<string>((() => { try { return localStorage.getItem('pulse_chosen_strategy') || 'avalanche'; } catch { return 'avalanche'; } })());
 
   activeStrategy = computed(() => {
     const comp = this.comparison();
@@ -1326,12 +1326,12 @@ export class StrategyComparisonComponent implements OnInit {
         this.comparison.set(data);
         this.cdr.detectChanges();
       },
-      error: () => {}
+      error: () => this.notificationService.error('Failed to update comparison')
     });
   }
 
   chooseStrategy(type: string): void {
-    localStorage.setItem('pulse_chosen_strategy', type);
+    try { localStorage.setItem('pulse_chosen_strategy', type); } catch { /* private browsing */ }
     this.chosenStrategy.set(type);
     const label = type === 'avalanche' ? 'Avalanche' : 'Snowball';
     this.notificationService.success(`${label} strategy selected!`);

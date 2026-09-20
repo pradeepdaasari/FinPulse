@@ -101,7 +101,7 @@ import { toLocalISOString } from '../../../core/utils/date-utils';
         <div class="form-row">
           <mat-form-field>
             <mat-label>Payment Frequency</mat-label>
-            <mat-select formControlName="paymentFrequency" (selectionChange)="paymentFrequencyValue.set($event.value)">
+            <mat-select formControlName="paymentFrequency" (selectionChange)="onFrequencyChange($event.value)">
               <mat-option value="Monthly">Monthly</mat-option>
               <mat-option value="Biweekly">Biweekly</mat-option>
               <mat-option value="Weekly">Weekly</mat-option>
@@ -163,28 +163,17 @@ import { toLocalISOString } from '../../../core/utils/date-utils';
         </mat-form-field>
 
         <div class="toggle-row">
+          <mat-form-field class="rate-type-field">
+            <mat-label>Rate Type</mat-label>
+            <mat-select formControlName="rateType">
+              <mat-option value="Fixed">Fixed</mat-option>
+              <mat-option value="Variable">Variable</mat-option>
+            </mat-select>
+          </mat-form-field>
           <mat-slide-toggle formControlName="isAutopay" color="primary">
             Autopay
           </mat-slide-toggle>
-          <mat-slide-toggle formControlName="hasPromo" color="primary">
-            Promotional rate
-          </mat-slide-toggle>
         </div>
-
-        @if (form.get('hasPromo')?.value) {
-          <div class="form-row">
-            <mat-form-field>
-              <mat-label>Promo APR %</mat-label>
-              <input matInput type="number" inputmode="decimal" formControlName="promoAprPercent" step="0.01">
-            </mat-form-field>
-            <mat-form-field>
-              <mat-label>Promo Ends On</mat-label>
-              <input matInput [matDatepicker]="promoPicker" formControlName="promoEndDate">
-              <mat-datepicker-toggle matIconSuffix [for]="promoPicker"></mat-datepicker-toggle>
-              <mat-datepicker #promoPicker></mat-datepicker>
-            </mat-form-field>
-          </div>
-        }
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end" class="dialog-actions">
@@ -241,6 +230,7 @@ import { toLocalISOString } from '../../../core/utils/date-utils';
       gap: var(--spacing-lg);
       flex-wrap: wrap;
     }
+    .rate-type-field { max-width: 140px; }
     .category-search-box {
       display: flex; align-items: center; gap: 8px;
       padding: 10px 16px; border-bottom: 1px solid var(--color-border);
@@ -304,6 +294,12 @@ export class AddLoanDialogComponent implements OnInit {
     setTimeout(() => el.focus(), 0);
   }
 
+  onFrequencyChange(value: string): void {
+    this.paymentFrequencyValue.set(value);
+    const isWeekly = value === 'Weekly' || value === 'Biweekly';
+    this.form.patchValue({ dueDay: isWeekly ? 1 : 1 });
+  }
+
   ngOnInit(): void {
     this.fundingSourceService.getAll().subscribe(sources => {
       this.bankSources.set(
@@ -325,11 +321,9 @@ export class AddLoanDialogComponent implements OnInit {
     monthlyPayment: [null as number | null, [Validators.required, Validators.min(1)]],
     dueDay: [1, Validators.required],
     paymentFrequency: ['Monthly' as string, Validators.required],
+    rateType: ['Fixed' as string],
     fundedBankAccountId: [null as number | null],
     nextPaymentDate: [null as Date | null],
-    hasPromo: [false],
-    promoAprPercent: [null as number | null],
-    promoEndDate: [null as Date | null]
   });
 
   save(): void {
@@ -349,18 +343,15 @@ export class AddLoanDialogComponent implements OnInit {
       monthlyPayment: value.monthlyPayment,
       dueDay: Math.round(value.dueDay!),
       paymentFrequency: value.paymentFrequency,
+      rateType: value.rateType,
       fundedBankAccountId: value.fundedBankAccountId,
       nextPaymentDate: value.nextPaymentDate ? toLocalISOString(value.nextPaymentDate) : null
     };
 
-    if (value.hasPromo && value.promoAprPercent != null) {
-      loan.promoAprPercent = value.promoAprPercent;
-      loan.promoEndDate = value.promoEndDate ? toLocalISOString(value.promoEndDate) : null;
-    }
-
     this.loanService.create(loan).subscribe({
-      next: (created) => {
-        this.dialogRef.close(created);
+      next: (result) => {
+        if (result.warning) this.notify.warning(result.warning);
+        this.dialogRef.close(result.loan);
       },
       error: (err) => {
         let msg = err?.error?.message || err?.error?.title || 'Failed to add loan';

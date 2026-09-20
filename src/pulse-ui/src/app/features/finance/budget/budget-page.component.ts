@@ -27,9 +27,9 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     <div appPullToRefresh (refresh)="loadData()">
     <div class="budget-header">
       <div class="month-nav">
-        <button mat-icon-button (click)="prevMonth()"><mat-icon>chevron_left</mat-icon></button>
+        <button mat-icon-button (click)="prevMonth()" aria-label="Previous month"><mat-icon>chevron_left</mat-icon></button>
         <span class="month-label">{{ monthLabel() }}</span>
-        <button mat-icon-button (click)="nextMonth()"><mat-icon>chevron_right</mat-icon></button>
+        <button mat-icon-button (click)="nextMonth()" aria-label="Next month"><mat-icon>chevron_right</mat-icon></button>
       </div>
     </div>
 
@@ -329,6 +329,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                   </div>
 
                   @if (pc.expenses.length > 0) {
+                    <div style="overflow-x: auto">
                     <table mat-table [dataSource]="pc.expenses" class="expense-table">
                       <ng-container matColumnDef="name">
                         <th mat-header-cell *matHeaderCellDef>Expense</th>
@@ -353,6 +354,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                       <tr mat-header-row *matHeaderRowDef="paycheckExpenseColumns"></tr>
                       <tr mat-row *matRowDef="let row; columns: paycheckExpenseColumns;"></tr>
                     </table>
+                    </div>
                   } @else {
                     <p class="no-expenses">No expenses assigned to this paycheck.</p>
                   }

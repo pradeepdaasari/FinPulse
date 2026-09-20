@@ -50,7 +50,7 @@ public class BankAccountsController : ControllerBase
 
         var account = new BankAccount
         {
-            AccountName = dto.AccountName,
+            AccountName = dto.AccountName.Trim(),
             AccountType = dto.AccountType,
             CurrentBalance = dto.CurrentBalance,
             OptionsCommissionPerContract = dto.OptionsCommissionPerContract,
@@ -77,7 +77,7 @@ public class BankAccountsController : ControllerBase
         if (duplicate)
             return Conflict(new { message = $"A bank account named '{dto.AccountName.Trim()}' already exists." });
 
-        account.AccountName = dto.AccountName;
+        account.AccountName = dto.AccountName.Trim();
         account.AccountType = dto.AccountType;
         account.CurrentBalance = dto.CurrentBalance;
         account.OptionsCommissionPerContract = dto.OptionsCommissionPerContract;
@@ -114,8 +114,21 @@ public class BankAccountsController : ControllerBase
             e.FundingSourceId == id &&
             e.UserId == UserId);
 
-        if (hasLinkedExpenses)
-            return BadRequest(new { message = "Cannot delete account with linked transactions. Remove or reassign them first." });
+        var hasLinkedPayments = await _db.PaymentHistories.AnyAsync(p =>
+            p.FromAccountId == id && p.UserId == UserId);
+
+        var hasLinkedMovements = await _db.MoneyMovements.AnyAsync(m =>
+            m.UserId == UserId &&
+            ((m.SourceType == MoneyMovementEntityType.BankAccount && m.SourceId == id) ||
+             (m.DestinationType == MoneyMovementEntityType.BankAccount && m.DestinationId == id)));
+
+        var hasLinkedRecurring = await _db.RecurringTransactions.AnyAsync(r =>
+            r.UserId == UserId &&
+            r.FundingSourceType == FundingSourceType.BankAccount &&
+            r.FundingSourceId == id);
+
+        if (hasLinkedExpenses || hasLinkedPayments || hasLinkedMovements || hasLinkedRecurring)
+            return BadRequest(new { message = "Cannot delete account with linked transactions, payments, or recurring items. Remove or reassign them first." });
 
         _db.BankAccounts.Remove(account);
         await _db.SaveChangesAsync();

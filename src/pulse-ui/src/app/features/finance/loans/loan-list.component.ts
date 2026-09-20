@@ -1,5 +1,5 @@
 import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
-import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,7 +19,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
 @Component({
   selector: 'app-loan-list',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatTooltipModule, CurrencyPipe, DatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatTooltipModule, CurrencyPipe, DatePipe, DecimalPipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadLoans()">
     <div class="header-row">
@@ -68,7 +68,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
         <div class="stat-card stat-amber">
           <mat-icon>receipt_long</mat-icon>
           <div class="stat-content">
-            <span class="stat-value">{{ loans().length }}</span>
+            <span class="stat-value">{{ activeCount() }}</span>
             <span class="stat-label">Active Loans</span>
           </div>
         </div>
@@ -91,6 +91,12 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
             <th mat-header-cell *matHeaderCellDef>Lender</th>
             <td mat-cell *matCellDef="let loan">
               <span class="lender-name">{{ loan.lenderName }}</span>
+              @if (loan.isAutopay) {
+                <mat-icon class="autopay-icon" matTooltip="Autopay enabled">autorenew</mat-icon>
+              }
+              @if (loan.rateType === 'Variable') {
+                <span class="variable-badge">Variable</span>
+              }
               @if (isDeferred(loan)) {
                 <span class="deferred-chip">Paused until {{ loan.nextPaymentDate | date:'MMM yyyy' }}</span>
               }
@@ -121,13 +127,28 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
           <ng-container matColumnDef="monthlyPayment">
             <th mat-header-cell *matHeaderCellDef>Monthly</th>
             <td mat-cell *matCellDef="let loan">
-              <span class="value-monthly">{{ loan.monthlyPayment | currency }}</span>
+              <span class="value-monthly">{{ (loan.monthlyEquivalentPayment || loan.monthlyPayment) | currency }}</span>
+              @if (loan.paymentFrequency !== 'Monthly') {
+                <span class="freq-note">{{ loan.monthlyPayment | currency }}/{{ loan.paymentFrequency === 'Biweekly' ? 'bw' : 'wk' }}</span>
+              }
             </td>
           </ng-container>
 
           <ng-container matColumnDef="paymentFrequency">
             <th mat-header-cell *matHeaderCellDef>Frequency</th>
             <td mat-cell *matCellDef="let loan">{{ loan.paymentFrequency }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="progress">
+            <th mat-header-cell *matHeaderCellDef>Progress</th>
+            <td mat-cell *matCellDef="let loan">
+              <div class="progress-mini">
+                <div class="progress-bar-mini">
+                  <div class="progress-fill" [style.width.%]="getProgress(loan)"></div>
+                </div>
+                <span class="progress-text">{{ getProgress(loan) | number:'1.0-0' }}%</span>
+              </div>
+            </td>
           </ng-container>
 
           <ng-container matColumnDef="actions">
@@ -168,6 +189,12 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                 <span class="loan-name">{{ loan.lenderName }}</span>
                 <div class="loan-pills">
                   <span class="loan-type-pill" [style.background]="getLoanTypeBg(loan.loanType)" [style.color]="getLoanTypeColor(loan.loanType)">{{ loan.loanType }}</span>
+                  @if (loan.isAutopay) {
+                    <mat-icon class="autopay-icon" matTooltip="Autopay enabled">autorenew</mat-icon>
+                  }
+                  @if (loan.rateType === 'Variable') {
+                    <span class="variable-badge">Variable</span>
+                  }
                   @if (isDeferred(loan)) {
                     <span class="deferred-chip">Paused until {{ loan.nextPaymentDate | date:'MMM yyyy' }}</span>
                   }
@@ -175,7 +202,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
               </div>
               <div class="loan-balance">
                 <span class="loan-amount">{{ loan.currentBalance | currency }}</span>
-                <span class="loan-monthly">{{ loan.monthlyPayment | currency }}/mo</span>
+                <span class="loan-monthly">{{ (loan.monthlyEquivalentPayment || loan.monthlyPayment) | currency }}/mo</span>
               </div>
             </div>
             <div class="loan-detail-row">
@@ -191,6 +218,12 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                 <span class="detail-label">Frequency</span>
                 <span class="detail-value">{{ loan.paymentFrequency }}</span>
               </span>
+            </div>
+            <div class="progress-mini mobile-progress">
+              <div class="progress-bar-mini">
+                <div class="progress-fill" [style.width.%]="getProgress(loan)"></div>
+              </div>
+              <span class="progress-text">{{ getProgress(loan) | number:'1.0-0' }}% paid</span>
             </div>
             <div class="loan-actions" (click)="$event.stopPropagation()">
               <button mat-icon-button class="action-btn action-pay" (click)="recordPayment(loan)">
@@ -292,6 +325,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .loan-pills { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
     .value-balance { font-weight: var(--weight-bold); color: var(--color-text); }
     .value-monthly { font-weight: var(--weight-semibold); color: var(--color-primary); }
+    .freq-note { display: block; font-size: 0.65rem; color: var(--color-text-muted); }
 
     /* APR Badge */
     .apr-badge {
@@ -393,6 +427,20 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       gap: 0;
       margin-top: 8px;
     }
+    .autopay-icon { font-size: 16px; width: 16px; height: 16px; color: var(--color-primary); vertical-align: middle; margin-left: 4px; }
+    .variable-badge {
+      display: inline-block; font-size: 0.625rem; font-weight: 600; padding: 1px 6px;
+      border-radius: var(--radius-full); background: rgba(255,152,0,0.15); color: #e65100;
+      margin-left: 4px; vertical-align: middle;
+    }
+    .progress-mini { display: flex; align-items: center; gap: 6px; }
+    .progress-bar-mini {
+      flex: 1; height: 6px; background: var(--color-border); border-radius: 3px;
+      overflow: hidden; min-width: 50px;
+    }
+    .progress-fill { height: 100%; background: var(--color-primary); border-radius: 3px; transition: width 0.3s ease; }
+    .progress-text { font-size: 0.7rem; font-weight: 600; color: var(--color-text-muted); white-space: nowrap; }
+    .mobile-progress { margin-top: 8px; }
 
     /* Empty State */
     .empty-state {
@@ -459,14 +507,18 @@ export class LoanListComponent implements OnInit {
 
   loans = signal<PersonalLoan[]>([]);
   loading = signal(true);
-  displayedColumns = ['loanType', 'lenderName', 'currentBalance', 'aprPercent', 'durationMonths', 'monthlyPayment', 'paymentFrequency', 'actions'];
+  displayedColumns = ['loanType', 'lenderName', 'currentBalance', 'aprPercent', 'durationMonths', 'monthlyPayment', 'paymentFrequency', 'progress', 'actions'];
 
   totalBalance = computed(() => this.loans().reduce((sum, l) => sum + l.currentBalance, 0));
-  totalMonthly = computed(() => this.loans().reduce((sum, l) => sum + l.monthlyPayment, 0));
+  totalMonthly = computed(() => this.loans().reduce((sum, l) => sum + (l.monthlyEquivalentPayment || l.monthlyPayment), 0));
+  activeCount = computed(() => this.loans().filter(l => l.currentBalance > 0).length);
   avgApr = computed(() => {
-    const loans = this.loans();
+    const loans = this.loans().filter(l => l.currentBalance > 0);
     if (!loans.length) return '0.0';
-    return (loans.reduce((sum, l) => sum + l.aprPercent, 0) / loans.length).toFixed(1);
+    const totalBalance = loans.reduce((sum, l) => sum + l.currentBalance, 0);
+    if (totalBalance <= 0) return '0.0';
+    const weighted = loans.reduce((sum, l) => sum + l.aprPercent * l.currentBalance, 0);
+    return (weighted / totalBalance).toFixed(1);
   });
 
   ngOnInit(): void {
@@ -480,7 +532,7 @@ export class LoanListComponent implements OnInit {
         this.loading.set(false);
         this.cdr.detectChanges();
       },
-      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
+      error: () => { this.loading.set(false); this.notify.error('Failed to load loans'); this.cdr.detectChanges(); }
     });
   }
 
@@ -494,6 +546,8 @@ export class LoanListComponent implements OnInit {
         debtType: 'PersonalLoan',
         currentBalance: loan.currentBalance,
         minimumPayment: loan.monthlyPayment,
+        aprPercent: loan.aprPercent,
+        paymentFrequency: loan.paymentFrequency,
         fundedBankAccountId: loan.fundedBankAccountId
       }
     });
@@ -519,19 +573,32 @@ export class LoanListComponent implements OnInit {
     });
   }
 
-  viewLoan(id: string): void {
+  viewLoan(id: number | string): void {
     this.router.navigate(['/loans', id]);
   }
 
   deleteLoan(loan: PersonalLoan): void {
-    if (!this.notify.confirmDelete(loan.lenderName)) return;
-    this.loading.set(true);
-    this.loanService.delete(loan.id).subscribe({
-      next: () => {
-        this.notify.success('Loan deleted successfully');
-        this.loadLoans();
-      },
-      error: () => { this.loading.set(false); this.notify.error('Failed to delete loan'); this.cdr.detectChanges(); }
+    import('../../../shared/confirm-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.ConfirmDialogComponent, {
+        width: '400px',
+        data: {
+          title: 'Delete Loan?',
+          message: `Are you sure you want to delete "${loan.lenderName}"? All payment history will be permanently removed.`,
+          confirmText: 'Delete',
+          color: 'warn'
+        }
+      });
+      dialogRef.afterClosed().subscribe(confirmed => {
+        if (!confirmed) return;
+        this.loading.set(true);
+        this.loanService.delete(loan.id).subscribe({
+          next: () => {
+            this.notify.success('Loan deleted successfully');
+            this.loadLoans();
+          },
+          error: () => { this.loading.set(false); this.notify.error('Failed to delete loan'); this.cdr.detectChanges(); }
+        });
+      });
     });
   }
 
@@ -550,8 +617,8 @@ export class LoanListComponent implements OnInit {
 
   getLoanTypeColor(type: string): string {
     const colors: Record<string, string> = {
-      'Personal': '#1565c0', 'Auto': '#2e7d32', 'Mortgage': '#6a1b9a',
-      'Student': '#e65100', 'Home Equity': '#00695c', 'Business': '#4527a0'
+      'Personal': '#1565c0', 'Vehicle': '#2e7d32', 'Mortgage': '#6a1b9a',
+      'Student': '#e65100', 'Home Equity': '#00695c', 'Business': '#4527a0', 'Other': '#455a64'
     };
     return colors[type] || '#455a64';
   }
@@ -560,10 +627,15 @@ export class LoanListComponent implements OnInit {
     return !!loan.nextPaymentDate && new Date(loan.nextPaymentDate) > new Date();
   }
 
+  getProgress(loan: PersonalLoan): number {
+    if (!loan.originalAmount || loan.originalAmount <= 0) return 0;
+    return Math.max(0, Math.min(100, (1 - loan.currentBalance / loan.originalAmount) * 100));
+  }
+
   getLoanTypeBg(type: string): string {
     const colors: Record<string, string> = {
-      'Personal': 'rgba(21,101,192,0.1)', 'Auto': 'rgba(46,125,50,0.1)', 'Mortgage': 'rgba(106,27,154,0.1)',
-      'Student': 'rgba(230,81,0,0.1)', 'Home Equity': 'rgba(0,105,92,0.1)', 'Business': 'rgba(69,39,160,0.1)'
+      'Personal': 'rgba(21,101,192,0.1)', 'Vehicle': 'rgba(46,125,50,0.1)', 'Mortgage': 'rgba(106,27,154,0.1)',
+      'Student': 'rgba(230,81,0,0.1)', 'Home Equity': 'rgba(0,105,92,0.1)', 'Business': 'rgba(69,39,160,0.1)', 'Other': 'rgba(69,90,100,0.1)'
     };
     return colors[type] || 'rgba(69,90,100,0.1)';
   }

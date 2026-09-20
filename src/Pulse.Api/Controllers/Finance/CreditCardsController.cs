@@ -50,7 +50,7 @@ public class CreditCardsController : ControllerBase
 
         var card = new CreditCard
         {
-            CardName = dto.CardName,
+            CardName = dto.CardName.Trim(),
             CurrentBalance = dto.CurrentBalance,
             CreditLimit = dto.CreditLimit,
             AprPercent = dto.AprPercent,
@@ -78,7 +78,7 @@ public class CreditCardsController : ControllerBase
         if (duplicate)
             return Conflict(new { message = $"A credit card named '{dto.CardName.Trim()}' already exists." });
 
-        card.CardName = dto.CardName;
+        card.CardName = dto.CardName.Trim();
         card.CurrentBalance = dto.CurrentBalance;
         card.CreditLimit = dto.CreditLimit;
         card.AprPercent = dto.AprPercent;
@@ -135,6 +135,8 @@ public class CreditCardsController : ControllerBase
             {
                 using var transaction = await _db.Database.BeginTransactionAsync();
 
+                await _db.Entry(card).ReloadAsync();
+
                 payment = new PaymentHistory
                 {
                     DebtType = DebtType.CreditCard,
@@ -152,7 +154,10 @@ public class CreditCardsController : ControllerBase
                 {
                     var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == dto.FromAccountId && a.UserId == UserId);
                     if (account != null)
+                    {
+                        await _db.Entry(account).ReloadAsync();
                         account.CurrentBalance -= dto.AmountPaid;
+                    }
                 }
 
                 _db.PaymentHistories.Add(payment);
@@ -179,9 +184,9 @@ public class CreditCardsController : ControllerBase
             });
             return Ok(payment);
         }
-        catch (Exception ex)
+        catch
         {
-            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+            return StatusCode(500, new { error = "Failed to record payment. Please try again." });
         }
     }
 

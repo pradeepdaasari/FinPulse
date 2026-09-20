@@ -129,10 +129,10 @@ public class ExpenseController : ControllerBase
             .Distinct();
         var loanIds = payments.Where(p => p.DebtType == DebtType.PersonalLoan).Select(p => p.DebtId).Distinct().ToList();
 
-        var bankNames = await _db.BankAccounts.Where(a => bankAccountIds.Contains(a.Id)).ToDictionaryAsync(a => a.Id, a => a.AccountName);
-        var cardNames = await _db.CreditCards.Where(c => creditCardIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.CardName);
+        var bankNames = await _db.BankAccounts.Where(a => bankAccountIds.Contains(a.Id) && a.UserId == UserId).ToDictionaryAsync(a => a.Id, a => a.AccountName);
+        var cardNames = await _db.CreditCards.Where(c => creditCardIds.Contains(c.Id) && c.UserId == UserId).ToDictionaryAsync(c => c.Id, c => c.CardName);
         var loanNames = loanIds.Count > 0
-            ? await _db.PersonalLoans.Where(l => loanIds.Contains(l.Id)).ToDictionaryAsync(l => l.Id, l => l.LenderName)
+            ? await _db.PersonalLoans.Where(l => loanIds.Contains(l.Id) && l.UserId == UserId).ToDictionaryAsync(l => l.Id, l => l.LenderName)
             : new Dictionary<int, string>();
 
         var expenseIds = expenses.Select(e => e.Id).ToList();
@@ -279,7 +279,7 @@ public class ExpenseController : ControllerBase
         foreach (var group in grouped)
         {
             var parentCatId = group.Key;
-            var parentCat = await _db.CustomCategories.FirstOrDefaultAsync(c => c.Id == parentCatId);
+            var parentCat = await _db.CustomCategories.FirstOrDefaultAsync(c => c.Id == parentCatId && (c.UserId == null || c.UserId == UserId));
 
             summaries.Add(new SpendingSummaryDto
             {
@@ -299,10 +299,11 @@ public class ExpenseController : ControllerBase
     [HttpGet("export")]
     public async Task<IActionResult> Export([FromQuery] int? year, [FromQuery] int? month)
     {
-        var targetYear = year ?? DateTime.UtcNow.Year;
-        var targetMonth = month ?? DateTime.UtcNow.Month;
-        var startDate = new DateTime(targetYear, targetMonth, 1);
-        var endDate = startDate.AddMonths(1);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var targetYear = year ?? now.Year;
+        var targetMonth = month ?? now.Month;
+        var (startDate, endDate) = TimeZoneHelper.MonthRangeUtc(targetYear, targetMonth, tz);
 
         var expenses = await _db.DailyExpenses
             .Include(e => e.Category)
@@ -327,7 +328,8 @@ public class ExpenseController : ControllerBase
                 source = bankNames.GetValueOrDefault(e.FundingSourceId.Value) ?? "";
             else if (e.FundingSourceType == FundingSourceType.CreditCard && e.FundingSourceId.HasValue)
                 source = cardNames.GetValueOrDefault(e.FundingSourceId.Value) ?? "";
-            sb.AppendLine($"{e.Date:yyyy-MM-dd},{type},{desc},{merchant},{category},{e.Amount},{EscapeCsv(source)},{EscapeCsv(e.Tag ?? "")},{EscapeCsv(e.TagType ?? "")}");
+            var localDate = TimeZoneInfo.ConvertTimeFromUtc(e.Date, tz);
+            sb.AppendLine($"{localDate:yyyy-MM-dd},{type},{desc},{merchant},{category},{e.Amount},{EscapeCsv(source)},{EscapeCsv(e.Tag ?? "")},{EscapeCsv(e.TagType ?? "")}");
         }
 
         var bytes = Encoding.UTF8.GetBytes(sb.ToString());
@@ -453,8 +455,10 @@ public class ExpenseController : ControllerBase
         var endYear = year ?? DateTime.UtcNow.Year;
         var endMonth = month ?? DateTime.UtcNow.Month;
 
-        var endDate = new DateTime(endYear, endMonth, 1).AddMonths(1);
-        var startDate = new DateTime(endYear, endMonth, 1).AddMonths(-(months - 1));
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var (_, endDate) = TimeZoneHelper.MonthRangeUtc(endYear, endMonth, tz);
+        var startMonth = new DateTime(endYear, endMonth, 1).AddMonths(-(months - 1));
+        var (startDate, _) = TimeZoneHelper.MonthRangeUtc(startMonth.Year, startMonth.Month, tz);
 
         var expenses = await _db.DailyExpenses
             .Include(e => e.Category)
@@ -511,12 +515,11 @@ public class ExpenseController : ControllerBase
         var targetYear = year ?? DateTime.UtcNow.Year;
         var targetMonth = month ?? DateTime.UtcNow.Month;
 
-        var currentStart = new DateTime(targetYear, targetMonth, 1);
-        var currentEnd = currentStart.AddMonths(1);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var (currentStart, currentEnd) = TimeZoneHelper.MonthRangeUtc(targetYear, targetMonth, tz);
 
-        var prevDate = currentStart.AddMonths(-1);
-        var prevStart = new DateTime(prevDate.Year, prevDate.Month, 1);
-        var prevEnd = prevStart.AddMonths(1);
+        var prevDate = new DateTime(targetYear, targetMonth, 1).AddMonths(-1);
+        var (prevStart, prevEnd) = TimeZoneHelper.MonthRangeUtc(prevDate.Year, prevDate.Month, tz);
 
         var currentExpenses = await _db.DailyExpenses
             .Include(e => e.Category)
@@ -734,6 +737,29 @@ public class ExpenseController : ControllerBase
 
         foreach (var dto in splits)
         {
+            switch (dto.TransactionType)
+            {
+                case TransactionType.Expense:
+                    if (dto.FundingSourceId == null) return BadRequest(new { message = $"Expense requires a payment source: {dto.Description}" });
+                    break;
+                case TransactionType.Income:
+                    if (dto.FundingSourceId == null) return BadRequest(new { message = $"Income requires an account: {dto.Description}" });
+                    if (dto.FundingSourceType == FundingSourceType.CreditCard) return BadRequest(new { message = $"Income cannot go to a credit card: {dto.Description}" });
+                    break;
+                case TransactionType.Transfer:
+                    if (dto.FundingSourceId == null) return BadRequest(new { message = $"Transfer requires a source account: {dto.Description}" });
+                    if (dto.ToFundingSourceId == null) return BadRequest(new { message = $"Transfer requires a destination account: {dto.Description}" });
+                    break;
+                case TransactionType.Refund:
+                    if (dto.FundingSourceId == null) return BadRequest(new { message = $"Refund requires an account: {dto.Description}" });
+                    break;
+                case TransactionType.CardPayment:
+                    if (dto.FundingSourceId == null || dto.FundingSourceType != FundingSourceType.BankAccount)
+                        return BadRequest(new { message = $"Card payment must come from a bank account: {dto.Description}" });
+                    if (dto.ToFundingSourceId == null) return BadRequest(new { message = $"Card payment requires a target credit card: {dto.Description}" });
+                    break;
+            }
+
             if (dto.FundingSourceType.HasValue && dto.FundingSourceId.HasValue)
             {
                 var valid = await ValidateFundingSource(dto.FundingSourceType.Value, dto.FundingSourceId.Value);
@@ -769,7 +795,14 @@ public class ExpenseController : ControllerBase
                         UserId = UserId
                     };
                     _db.DailyExpenses.Add(expense);
-                    await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
+
+                    if (dto.TransactionType == TransactionType.Transfer)
+                        await AdjustTransfer(dto.FundingSourceId!.Value, dto.ToFundingSourceId!.Value, dto.Amount);
+                    else if (dto.TransactionType == TransactionType.CardPayment)
+                        await AdjustCardPayment(dto.FundingSourceId!.Value, dto.ToFundingSourceId!.Value, dto.Amount);
+                    else
+                        await AdjustBalance(dto.TransactionType, dto.FundingSourceType, dto.FundingSourceId, dto.Amount);
+
                     created.Add(expense.Id);
                 }
 
@@ -824,6 +857,8 @@ public class ExpenseController : ControllerBase
             await strategy.ExecuteAsync(async () =>
             {
                 using var transaction = await _db.Database.BeginTransactionAsync();
+
+                await _db.Entry(expense).ReloadAsync();
 
                 // Reverse old balance adjustment
                 if (expense.TransactionType == TransactionType.Transfer && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
@@ -975,6 +1010,8 @@ public class ExpenseController : ControllerBase
             {
                 using var transaction = await _db.Database.BeginTransactionAsync();
 
+                await _db.Entry(expense).ReloadAsync();
+
                 if (expense.TransactionType == TransactionType.Transfer && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
                     await ReverseTransfer(expense.FundingSourceId.Value, expense.ToFundingSourceId.Value, expense.Amount);
                 else if (expense.TransactionType == TransactionType.CardPayment && expense.FundingSourceId.HasValue && expense.ToFundingSourceId.HasValue)
@@ -1018,6 +1055,7 @@ public class ExpenseController : ControllerBase
             var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == sourceId && a.UserId == UserId);
             if (account != null)
             {
+                await _db.Entry(account).ReloadAsync();
                 account.CurrentBalance += (txnType == TransactionType.Income || txnType == TransactionType.Refund)
                     ? amount : -amount;
             }
@@ -1026,7 +1064,10 @@ public class ExpenseController : ControllerBase
         {
             var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == sourceId && c.UserId == UserId);
             if (card != null)
+            {
+                await _db.Entry(card).ReloadAsync();
                 card.CurrentBalance += txnType == TransactionType.Refund ? -amount : amount;
+            }
         }
     }
 
@@ -1039,6 +1080,7 @@ public class ExpenseController : ControllerBase
             var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == sourceId && a.UserId == UserId);
             if (account != null)
             {
+                await _db.Entry(account).ReloadAsync();
                 account.CurrentBalance += (txnType == TransactionType.Income || txnType == TransactionType.Refund)
                     ? -amount : amount;
             }
@@ -1047,7 +1089,10 @@ public class ExpenseController : ControllerBase
         {
             var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == sourceId && c.UserId == UserId);
             if (card != null)
+            {
+                await _db.Entry(card).ReloadAsync();
                 card.CurrentBalance += txnType == TransactionType.Refund ? amount : -amount;
+            }
         }
     }
 
@@ -1055,31 +1100,31 @@ public class ExpenseController : ControllerBase
     {
         var source = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == fromAccountId && a.UserId == UserId);
         var dest = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == toAccountId && a.UserId == UserId);
-        if (source != null) source.CurrentBalance -= amount;
-        if (dest != null) dest.CurrentBalance += amount;
+        if (source != null) { await _db.Entry(source).ReloadAsync(); source.CurrentBalance -= amount; }
+        if (dest != null) { await _db.Entry(dest).ReloadAsync(); dest.CurrentBalance += amount; }
     }
 
     private async Task ReverseTransfer(int fromAccountId, int toAccountId, decimal amount)
     {
         var source = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == fromAccountId && a.UserId == UserId);
         var dest = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == toAccountId && a.UserId == UserId);
-        if (source != null) source.CurrentBalance += amount;
-        if (dest != null) dest.CurrentBalance -= amount;
+        if (source != null) { await _db.Entry(source).ReloadAsync(); source.CurrentBalance += amount; }
+        if (dest != null) { await _db.Entry(dest).ReloadAsync(); dest.CurrentBalance -= amount; }
     }
 
     private async Task AdjustCardPayment(int bankAccountId, int creditCardId, decimal amount)
     {
         var bank = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == bankAccountId && a.UserId == UserId);
         var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == creditCardId && c.UserId == UserId);
-        if (bank != null) bank.CurrentBalance -= amount;
-        if (card != null) card.CurrentBalance -= amount;
+        if (bank != null) { await _db.Entry(bank).ReloadAsync(); bank.CurrentBalance -= amount; }
+        if (card != null) { await _db.Entry(card).ReloadAsync(); card.CurrentBalance -= amount; }
     }
 
     private async Task ReverseCardPayment(int bankAccountId, int creditCardId, decimal amount)
     {
         var bank = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == bankAccountId && a.UserId == UserId);
         var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == creditCardId && c.UserId == UserId);
-        if (bank != null) bank.CurrentBalance += amount;
-        if (card != null) card.CurrentBalance += amount;
+        if (bank != null) { await _db.Entry(bank).ReloadAsync(); bank.CurrentBalance += amount; }
+        if (card != null) { await _db.Entry(card).ReloadAsync(); card.CurrentBalance += amount; }
     }
 }

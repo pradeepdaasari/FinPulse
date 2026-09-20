@@ -79,8 +79,9 @@ import { toLocalISOString } from '../../../core/utils/date-utils';
 
           <mat-form-field>
             <mat-label>Current Balance</mat-label>
-            <input matInput type="number" inputmode="decimal" formControlName="currentBalance">
+            <input matInput type="number" inputmode="decimal" formControlName="currentBalance" readonly>
             <span matTextPrefix>$&nbsp;</span>
+            <mat-hint>Computed from payments</mat-hint>
           </mat-form-field>
         </div>
 
@@ -101,7 +102,7 @@ import { toLocalISOString } from '../../../core/utils/date-utils';
         <div class="form-row">
           <mat-form-field>
             <mat-label>Payment Frequency</mat-label>
-            <mat-select formControlName="paymentFrequency" (selectionChange)="paymentFrequencyValue.set($event.value)">
+            <mat-select formControlName="paymentFrequency" (selectionChange)="onFrequencyChange($event.value)">
               <mat-option value="Monthly">Monthly</mat-option>
               <mat-option value="Biweekly">Biweekly</mat-option>
               <mat-option value="Weekly">Weekly</mat-option>
@@ -162,9 +163,18 @@ import { toLocalISOString } from '../../../core/utils/date-utils';
           <mat-hint>Leave empty if payments are due every month</mat-hint>
         </mat-form-field>
 
-        <mat-slide-toggle formControlName="isAutopay" color="primary">
-          This loan is on autopay
-        </mat-slide-toggle>
+        <div class="toggle-row">
+          <mat-form-field class="rate-type-field">
+            <mat-label>Rate Type</mat-label>
+            <mat-select formControlName="rateType">
+              <mat-option value="Fixed">Fixed</mat-option>
+              <mat-option value="Variable">Variable</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-slide-toggle formControlName="isAutopay" color="primary">
+            Autopay
+          </mat-slide-toggle>
+        </div>
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end" class="dialog-actions">
@@ -228,6 +238,8 @@ import { toLocalISOString } from '../../../core/utils/date-utils';
     }
     .category-search-box mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-text-muted); }
     .category-search-box input { border: none; outline: none; flex: 1; font-size: 0.875rem; background: transparent; color: inherit; }
+    .toggle-row { display: flex; align-items: center; gap: var(--spacing-lg); flex-wrap: wrap; }
+    .rate-type-field { max-width: 140px; }
     @media (max-width: 600px) {
       mat-dialog-content {
         min-width: unset;
@@ -273,6 +285,12 @@ export class EditLoanDialogComponent implements OnInit {
     setTimeout(() => el.focus(), 0);
   }
 
+  onFrequencyChange(value: 'Monthly' | 'Biweekly' | 'Weekly'): void {
+    this.paymentFrequencyValue.set(value);
+    const isWeekly = value === 'Weekly' || value === 'Biweekly';
+    this.form.patchValue({ dueDay: isWeekly ? 1 : 1 });
+  }
+
   ngOnInit(): void {
     this.fundingSourceService.getAll().subscribe(sources => {
       this.bankSources.set(
@@ -294,6 +312,7 @@ export class EditLoanDialogComponent implements OnInit {
     monthlyPayment: [this.data.monthlyPayment, [Validators.required, Validators.min(1)]],
     dueDay: [this.data.dueDay, Validators.required],
     paymentFrequency: [this.data.paymentFrequency, Validators.required],
+    rateType: [this.data.rateType || 'Fixed'],
     fundedBankAccountId: [this.data.fundedBankAccountId ?? null],
     nextPaymentDate: [this.data.nextPaymentDate ? new Date(this.data.nextPaymentDate) : null]
   });
@@ -315,13 +334,15 @@ export class EditLoanDialogComponent implements OnInit {
       monthlyPayment: value.monthlyPayment,
       dueDay: Math.round(value.dueDay!),
       paymentFrequency: value.paymentFrequency,
+      rateType: value.rateType,
       fundedBankAccountId: value.fundedBankAccountId,
       nextPaymentDate: value.nextPaymentDate ? toLocalISOString(value.nextPaymentDate) : null
     };
 
     this.loanService.update(this.data.id, payload).subscribe({
-      next: (updated) => {
-        this.dialogRef.close(updated);
+      next: (result) => {
+        if (result.warning) this.notify.error(result.warning);
+        this.dialogRef.close(result.loan);
       },
       error: (err) => {
         const msg = err?.error?.message || 'Failed to update loan';
