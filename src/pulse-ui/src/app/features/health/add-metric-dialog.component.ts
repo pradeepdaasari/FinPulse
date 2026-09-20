@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -31,12 +31,12 @@ interface MetricConfig {
           <mat-icon>monitor_heart</mat-icon>
         </div>
         <div>
-          <h2 mat-dialog-title>{{ isEdit ? 'Edit' : 'Log' }} Health Metric</h2>
-          <p class="dialog-subtitle">{{ isEdit ? 'Update your entry' : 'Track your vitals & progress' }}</p>
+          <h2 mat-dialog-title>{{ isEdit() ? 'Edit' : 'Log' }} Health Metric</h2>
+          <p class="dialog-subtitle">{{ isEdit() ? 'Update your entry' : 'Track your vitals & progress' }}</p>
         </div>
         <span class="banner-spacer"></span>
         <div class="dialog-header-actions">
-          @if (isEdit) {
+          @if (isEdit()) {
             <button mat-icon-button class="header-delete" (click)="onDelete()" matTooltip="Delete">
               <mat-icon>delete_outline</mat-icon>
             </button>
@@ -51,7 +51,7 @@ interface MetricConfig {
       <div class="metric-form">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Metric Type</mat-label>
-          <mat-select [(value)]="selectedType" [disabled]="isEdit">
+          <mat-select [(value)]="selectedType" [disabled]="isEdit()">
             @for (config of metricConfigs; track config.type) {
               <mat-option [value]="config.type">
                 <mat-icon class="option-icon">{{ config.icon }}</mat-icon>
@@ -83,9 +83,9 @@ interface MetricConfig {
       </div>
     </mat-dialog-content>
     <mat-dialog-actions align="end" class="dialog-actions">
-      <button mat-raised-button color="primary" class="save-btn" [disabled]="!selectedType || !value || saving" (click)="save()">
+      <button mat-raised-button color="primary" class="save-btn" [disabled]="!selectedType || !value || saving()" (click)="save()">
         <mat-icon>check</mat-icon>
-        {{ saving ? 'Saving...' : (isEdit ? 'Update' : 'Save') }}
+        {{ saving() ? 'Saving...' : (isEdit() ? 'Update' : 'Save') }}
       </button>
     </mat-dialog-actions>
   `,
@@ -136,8 +136,8 @@ interface MetricConfig {
     }
     .header-delete, .header-close {
       color: rgba(255, 255, 255, 0.9) !important;
-      width: 40px !important;
-      height: 40px !important;
+      width: 44px !important;
+      height: 44px !important;
       padding: 0 !important;
       display: inline-flex !important;
       align-items: center !important;
@@ -195,8 +195,8 @@ export class AddMetricDialogComponent implements OnInit {
   private notify = inject(NotificationService);
   data: HealthMetric | null = inject(MAT_DIALOG_DATA);
 
-  isEdit = false;
-  saving = false;
+  isEdit = signal(false);
+  saving = signal(false);
 
   metricConfigs: MetricConfig[] = [
     { type: 'Weight', label: 'Weight', unit: 'lbs', icon: 'monitor_weight' },
@@ -220,7 +220,7 @@ export class AddMetricDialogComponent implements OnInit {
 
   ngOnInit() {
     if (this.data) {
-      this.isEdit = true;
+      this.isEdit.set(true);
       this.selectedType = this.data.metricType;
       this.value = this.data.value;
       this.measuredAt = this.formatDateLocal(new Date(this.data.measuredAt));
@@ -235,7 +235,7 @@ export class AddMetricDialogComponent implements OnInit {
   }
 
   save() {
-    this.saving = true;
+    this.saving.set(true);
     const payload = {
       metricType: this.selectedType,
       value: this.value!,
@@ -243,14 +243,14 @@ export class AddMetricDialogComponent implements OnInit {
       measuredAt: toLocalISOString(new Date(this.measuredAt)),
       notes: this.notes || undefined
     };
-    const op$ = this.isEdit && this.data
+    const op$ = this.isEdit() && this.data
       ? this.metricService.update(this.data.id, payload)
       : this.metricService.create(payload);
     op$.subscribe({
       next: () => this.dialogRef.close(true),
       error: (err) => {
         this.notify.error(err.error?.message || 'Failed to save metric');
-        this.saving = false;
+        this.saving.set(false);
       }
     });
   }

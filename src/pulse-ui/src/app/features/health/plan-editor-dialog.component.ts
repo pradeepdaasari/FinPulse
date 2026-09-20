@@ -168,7 +168,7 @@ import { NotificationService } from '../../core/services/notification.service';
     .banner-spacer { flex: 1; }
     .header-close {
       color: rgba(255, 255, 255, 0.85) !important;
-      width: 32px !important; height: 32px !important; line-height: 32px !important;
+      width: 44px !important; height: 44px !important; line-height: 44px !important;
       flex-shrink: 0;
     }
     .header-close:hover { background: rgba(255, 255, 255, 0.15) !important; }
@@ -296,13 +296,19 @@ export class PlanEditorDialogComponent implements OnInit {
   ngOnInit() {
     if (this.data?.planId) {
       this.isEditing = true;
-      this.planService.getById(this.data.planId).subscribe(plan => {
-        this.planName = plan.name;
-        this.isActive = plan.isActive;
-        this.days = plan.days.sort((a, b) => a.dayOfWeek - b.dayOfWeek);
-        if (this.days.length === 0) this.initDays();
-        this.loading.set(false);
-        this.cdr.detectChanges();
+      this.planService.getById(this.data.planId).subscribe({
+        next: plan => {
+          this.planName = plan.name;
+          this.isActive = plan.isActive;
+          this.days = plan.days.sort((a, b) => a.dayOfWeek - b.dayOfWeek);
+          if (this.days.length === 0) this.initDays();
+          this.loading.set(false);
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.notify.error('Failed to load plan');
+          this.dialogRef.close();
+        }
       });
     } else {
       this.initDays();

@@ -254,7 +254,7 @@ import { NotificationService } from '../../core/services/notification.service';
     .metric-unit { font-size: 0.8rem; color: var(--color-text-muted); margin-left: 4px; }
     .notes-text { font-size: 0.85rem; color: var(--color-text-muted); }
     td.mat-column-actions { white-space: nowrap; text-align: right; }
-    .action-btn { width: 34px; height: 34px; border-radius: var(--radius-xs) !important; transition: background var(--transition-fast) !important; }
+    .action-btn { width: 36px; height: 36px; border-radius: var(--radius-xs) !important; transition: background var(--transition-fast) !important; }
     .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .action-edit { color: var(--color-action-edit) !important; }
     .action-edit:hover { background: var(--color-action-edit-bg) !important; }
@@ -275,7 +275,7 @@ import { NotificationService } from '../../core/services/notification.service';
     .mc-icon {
       width: 40px; height: 40px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
-      background: rgba(21,101,192,0.08);
+      background: var(--color-stat-blue-bg);
       flex-shrink: 0;
     }
     .mc-icon mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); }
@@ -409,10 +409,10 @@ export class MetricsLogComponent implements OnInit {
               datasets: [{
                 label: this.getMetricLabel(this.selectedType),
                 data: data.map(d => d.value),
-                borderColor: '#1565c0',
-                backgroundColor: 'rgba(21, 101, 192, 0.06)',
+                borderColor: 'var(--color-stat-blue, #1565c0)',
+                backgroundColor: 'var(--color-stat-blue-bg, rgba(21, 101, 192, 0.06))',
                 fill: true,
-                pointBackgroundColor: '#1565c0',
+                pointBackgroundColor: 'var(--color-stat-blue, #1565c0)',
                 borderWidth: 2.5
               }]
             });

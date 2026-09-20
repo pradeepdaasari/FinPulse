@@ -54,6 +54,9 @@ public class HealthMetricsController : ControllerBase
     [HttpGet("trends")]
     public async Task<ActionResult> GetTrends([FromQuery] string type, [FromQuery] int days = 90)
     {
+        if (string.IsNullOrWhiteSpace(type))
+            return BadRequest(new { error = "type is required." });
+
         var since = DateTime.UtcNow.AddDays(-days);
         var data = await _db.HealthMetrics
             .Where(m => m.UserId == UserId && m.MetricType == type && m.MeasuredAt >= since)
@@ -78,7 +81,11 @@ public class HealthMetricsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<HealthMetric>> Create([FromBody] HealthMetric metric)
     {
+        metric.Id = 0;
         metric.UserId = UserId;
+        metric.MetricType = metric.MetricType?.Trim() ?? "";
+        metric.Unit = metric.Unit?.Trim() ?? "";
+        metric.Notes = metric.Notes?.Trim();
         if (metric.MeasuredAt == default)
             metric.MeasuredAt = DateTime.UtcNow;
         else
@@ -86,8 +93,14 @@ public class HealthMetricsController : ControllerBase
             var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
             metric.MeasuredAt = TimeZoneHelper.ToUtc(metric.MeasuredAt, tz);
         }
-        _db.HealthMetrics.Add(metric);
-        await _db.SaveChangesAsync();
+
+        var strategy = _db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            _db.ChangeTracker.Clear();
+            _db.HealthMetrics.Add(metric);
+            await _db.SaveChangesAsync();
+        });
         return Ok(metric);
     }
 
@@ -99,12 +112,20 @@ public class HealthMetricsController : ControllerBase
 
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
 
-        existing.MetricType = metric.MetricType;
-        existing.Value = metric.Value;
-        existing.Unit = metric.Unit;
-        existing.MeasuredAt = TimeZoneHelper.ToUtc(metric.MeasuredAt, tz);
-        existing.Notes = metric.Notes;
-        await _db.SaveChangesAsync();
+        var strategy = _db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            _db.ChangeTracker.Clear();
+            var e = await _db.HealthMetrics.FirstAsync(m => m.Id == id && m.UserId == UserId);
+            e.MetricType = metric.MetricType?.Trim() ?? "";
+            e.Value = metric.Value;
+            e.Unit = metric.Unit?.Trim() ?? "";
+            e.MeasuredAt = TimeZoneHelper.ToUtc(metric.MeasuredAt, tz);
+            e.Notes = metric.Notes?.Trim();
+            await _db.SaveChangesAsync();
+        });
+
+        await _db.Entry(existing).ReloadAsync();
         return Ok(existing);
     }
 
@@ -113,8 +134,15 @@ public class HealthMetricsController : ControllerBase
     {
         var metric = await _db.HealthMetrics.FirstOrDefaultAsync(m => m.Id == id && m.UserId == UserId);
         if (metric == null) return NotFound();
-        _db.HealthMetrics.Remove(metric);
-        await _db.SaveChangesAsync();
+
+        var strategy = _db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            _db.ChangeTracker.Clear();
+            var m = await _db.HealthMetrics.FirstAsync(m => m.Id == id && m.UserId == UserId);
+            _db.HealthMetrics.Remove(m);
+            await _db.SaveChangesAsync();
+        });
         return NoContent();
     }
 }

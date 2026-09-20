@@ -163,6 +163,7 @@ export class WorkoutPlansComponent implements OnInit {
 
   deletePlan(plan: WorkoutPlanSummary, event: Event) {
     event.stopPropagation();
+    if (!confirm(`Delete "${plan.name}"? This cannot be undone.`)) return;
     this.loading.set(true);
     this.planService.delete(plan.id).subscribe({
       next: () => { this.notify.success('Plan deleted'); this.loadPlans(); },

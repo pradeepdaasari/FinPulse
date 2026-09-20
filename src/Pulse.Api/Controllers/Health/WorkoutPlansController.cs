@@ -13,10 +13,12 @@ namespace Pulse.Api.Controllers.Health;
 public class WorkoutPlansController : ControllerBase
 {
     private readonly PulseDbContext _db;
+    private readonly ILogger<WorkoutPlansController> _logger;
 
-    public WorkoutPlansController(PulseDbContext db)
+    public WorkoutPlansController(PulseDbContext db, ILogger<WorkoutPlansController> logger)
     {
         _db = db;
+        _logger = logger;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -125,6 +127,10 @@ public class WorkoutPlansController : ControllerBase
             .FirstOrDefaultAsync(p => p.UserId == UserId && p.IsActive);
         if (plan == null) return NotFound();
 
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var userNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var userToday = userNow.Date;
+
         WorkoutPlanDay? todayPlan;
 
         if (plan.IsSequential)
@@ -138,15 +144,17 @@ public class WorkoutPlansController : ControllerBase
         }
         else
         {
-            var today = (int)DateTime.UtcNow.DayOfWeek;
-            todayPlan = plan.Days.FirstOrDefault(d => d.DayOfWeek == today);
+            var todayDow = (int)userToday.DayOfWeek;
+            todayPlan = plan.Days.FirstOrDefault(d => d.DayOfWeek == todayDow);
         }
 
         if (todayPlan == null)
             return Ok(new { restDay = true, plan = new { plan.Id, plan.Name, plan.IsSequential } });
 
+        var todayStartUtc = TimeZoneHelper.ToUtc(userToday, tz);
+        var todayEndUtc = TimeZoneHelper.ToUtc(userToday.AddDays(1), tz);
         var alreadyLogged = await _db.WorkoutLogs
-            .AnyAsync(l => l.UserId == UserId && l.Date.Date == DateTime.UtcNow.Date);
+            .AnyAsync(l => l.UserId == UserId && l.Date >= todayStartUtc && l.Date < todayEndUtc);
 
         return Ok(new
         {
@@ -175,13 +183,29 @@ public class WorkoutPlansController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<WorkoutPlan>> Create([FromBody] WorkoutPlan plan)
     {
+        plan.Id = 0;
         plan.UserId = UserId;
+        plan.Name = plan.Name?.Trim() ?? "";
+        foreach (var day in plan.Days)
+        {
+            day.Id = 0;
+            day.FocusArea = day.FocusArea?.Trim() ?? "";
+            foreach (var ex in day.Exercises)
+            {
+                ex.Id = 0;
+                ex.ExerciseName = ex.ExerciseName?.Trim() ?? "";
+                ex.Notes = ex.Notes?.Trim();
+                ex.VideoUrl = ex.VideoUrl?.Trim();
+                ex.MuscleGroup = ex.MuscleGroup?.Trim();
+            }
+        }
 
         var strategy = _db.Database.CreateExecutionStrategy();
         try
         {
             await strategy.ExecuteAsync(async () =>
             {
+                _db.ChangeTracker.Clear();
                 using var transaction = await _db.Database.BeginTransactionAsync();
 
                 if (plan.IsActive)
@@ -197,7 +221,8 @@ public class WorkoutPlansController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+            _logger.LogError(ex, "Error creating workout plan");
+            return StatusCode(500, new { error = "An error occurred while creating the plan." });
         }
     }
 
@@ -215,33 +240,52 @@ public class WorkoutPlansController : ControllerBase
         {
             await strategy.ExecuteAsync(async () =>
             {
+                _db.ChangeTracker.Clear();
                 using var transaction = await _db.Database.BeginTransactionAsync();
 
-                plan.Name = updated.Name;
-                plan.IsActive = updated.IsActive;
+                var p = await _db.WorkoutPlans
+                    .Include(x => x.Days).ThenInclude(d => d.Exercises)
+                    .FirstAsync(x => x.Id == id && x.UserId == UserId);
 
-                if (plan.IsActive)
+                p.Name = updated.Name?.Trim() ?? "";
+                p.IsActive = updated.IsActive;
+                p.IsSequential = updated.IsSequential;
+
+                if (p.IsActive)
                 {
                     await DeactivateAllPlans(id);
                 }
 
-                _db.PlannedExercises.RemoveRange(plan.Days.SelectMany(d => d.Exercises));
-                _db.WorkoutPlanDays.RemoveRange(plan.Days);
+                _db.PlannedExercises.RemoveRange(p.Days.SelectMany(d => d.Exercises));
+                _db.WorkoutPlanDays.RemoveRange(p.Days);
 
                 foreach (var day in updated.Days)
                 {
+                    day.Id = 0;
                     day.PlanId = id;
+                    day.FocusArea = day.FocusArea?.Trim() ?? "";
+                    foreach (var ex in day.Exercises)
+                    {
+                        ex.Id = 0;
+                        ex.ExerciseName = ex.ExerciseName?.Trim() ?? "";
+                        ex.Notes = ex.Notes?.Trim();
+                        ex.VideoUrl = ex.VideoUrl?.Trim();
+                        ex.MuscleGroup = ex.MuscleGroup?.Trim();
+                    }
                     _db.WorkoutPlanDays.Add(day);
                 }
 
                 await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
             });
+
+            await _db.Entry(plan).ReloadAsync();
             return Ok(plan);
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+            _logger.LogError(ex, "Error updating workout plan {Id}", id);
+            return StatusCode(500, new { error = "An error occurred while updating the plan." });
         }
     }
 
@@ -253,8 +297,17 @@ public class WorkoutPlansController : ControllerBase
                 .ThenInclude(d => d.Exercises)
             .FirstOrDefaultAsync(p => p.Id == id && p.UserId == UserId);
         if (plan == null) return NotFound();
-        _db.WorkoutPlans.Remove(plan);
-        await _db.SaveChangesAsync();
+
+        var strategy = _db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            _db.ChangeTracker.Clear();
+            var p = await _db.WorkoutPlans
+                .Include(x => x.Days).ThenInclude(d => d.Exercises)
+                .FirstAsync(x => x.Id == id && x.UserId == UserId);
+            _db.WorkoutPlans.Remove(p);
+            await _db.SaveChangesAsync();
+        });
         return NoContent();
     }
 
@@ -269,19 +322,24 @@ public class WorkoutPlansController : ControllerBase
         {
             await strategy.ExecuteAsync(async () =>
             {
+                _db.ChangeTracker.Clear();
                 using var transaction = await _db.Database.BeginTransactionAsync();
 
                 await DeactivateAllPlans();
-                plan.IsActive = true;
+                var p = await _db.WorkoutPlans.FirstAsync(x => x.Id == id && x.UserId == UserId);
+                p.IsActive = true;
                 await _db.SaveChangesAsync();
 
                 await transaction.CommitAsync();
             });
+
+            await _db.Entry(plan).ReloadAsync();
             return Ok(plan);
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+            _logger.LogError(ex, "Error activating workout plan {Id}", id);
+            return StatusCode(500, new { error = "An error occurred while activating the plan." });
         }
     }
 
@@ -393,7 +451,8 @@ public class WorkoutPlansController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+            _logger.LogError(ex, "Error seeding FITTR plan");
+            return StatusCode(500, new { error = "An error occurred while seeding the plan." });
         }
     }
 

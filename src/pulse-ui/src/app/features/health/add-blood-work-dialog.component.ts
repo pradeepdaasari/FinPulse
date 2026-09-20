@@ -153,10 +153,16 @@ export class AddBloodWorkDialogComponent {
   filteredTestNames = signal<string[]>([]);
 
   constructor() {
-    this.bloodWorkService.getTestNames().subscribe(names => {
-      this.allTestNames.set(names);
-      this.loading.set(false);
-      this.cdr.detectChanges();
+    this.bloodWorkService.getTestNames().subscribe({
+      next: names => {
+        this.allTestNames.set(names);
+        this.loading.set(false);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loading.set(false);
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -177,7 +183,7 @@ export class AddBloodWorkDialogComponent {
 
   save() {
     this.saving.set(true);
-    const validResults = this.results.filter(r => r.testName && r.value);
+    const validResults = this.results.filter(r => r.testName && r.value != null);
     const payload = {
       reportDate: toLocalISOString(new Date(this.reportDate)),
       labName: this.labName || undefined,

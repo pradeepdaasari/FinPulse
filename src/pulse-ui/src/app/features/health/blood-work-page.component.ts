@@ -166,6 +166,7 @@ export class BloodWorkPageComponent implements OnInit {
 
   deleteReport(report: BloodWorkReportSummary, event: Event) {
     event.stopPropagation();
+    if (!confirm('Delete this blood work report? This cannot be undone.')) return;
     this.loading.set(true);
     this.bloodWorkService.delete(report.id).subscribe({
       next: () => { this.notify.success('Report deleted'); this.loadReports(); },

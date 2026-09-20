@@ -13,10 +13,12 @@ namespace Pulse.Api.Controllers.Health;
 public class WorkoutLogsController : ControllerBase
 {
     private readonly PulseDbContext _db;
+    private readonly ILogger<WorkoutLogsController> _logger;
 
-    public WorkoutLogsController(PulseDbContext db)
+    public WorkoutLogsController(PulseDbContext db, ILogger<WorkoutLogsController> logger)
     {
         _db = db;
+        _logger = logger;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -64,10 +66,14 @@ public class WorkoutLogsController : ControllerBase
     [HttpGet("today")]
     public async Task<ActionResult> GetToday()
     {
-        var today = DateTime.UtcNow.Date;
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var userNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var todayStart = TimeZoneHelper.ToUtc(userNow.Date, tz);
+        var todayEnd = TimeZoneHelper.ToUtc(userNow.Date.AddDays(1), tz);
+
         var log = await _db.WorkoutLogs
             .Include(l => l.Sets.OrderBy(s => s.OrderIndex).ThenBy(s => s.SetNumber))
-            .FirstOrDefaultAsync(l => l.UserId == UserId && l.Date.Date == today);
+            .FirstOrDefaultAsync(l => l.UserId == UserId && l.Date >= todayStart && l.Date < todayEnd);
         if (log == null) return NotFound();
         return Ok(log);
     }
@@ -75,20 +81,31 @@ public class WorkoutLogsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<WorkoutLog>> Create([FromBody] WorkoutLog log)
     {
+        log.Id = 0;
         log.UserId = UserId;
+        log.FocusArea = log.FocusArea?.Trim();
+        log.Notes = log.Notes?.Trim();
+        foreach (var s in log.Sets)
+        {
+            s.Id = 0;
+            s.ExerciseName = s.ExerciseName?.Trim() ?? "";
+        }
+
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         if (log.Date == default)
             log.Date = DateTime.UtcNow;
         else
-        {
-            var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
             log.Date = TimeZoneHelper.ToUtc(log.Date, tz);
-        }
+
+        var userNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var todayDow = (int)userNow.DayOfWeek;
 
         var strategy = _db.Database.CreateExecutionStrategy();
         try
         {
             await strategy.ExecuteAsync(async () =>
             {
+                _db.ChangeTracker.Clear();
                 using var transaction = await _db.Database.BeginTransactionAsync();
 
                 _db.WorkoutLogs.Add(log);
@@ -97,10 +114,10 @@ public class WorkoutLogsController : ControllerBase
                 var activePlan = await _db.WorkoutPlans.FirstOrDefaultAsync(p => p.UserId == UserId && p.IsActive && p.IsSequential);
                 if (activePlan != null && log.PlanDayId == null)
                 {
-                    var today = (int)DateTime.UtcNow.DayOfWeek;
-                    var todayDay = await _db.WorkoutPlanDays.FirstOrDefaultAsync(d => d.PlanId == activePlan.Id && d.DayOfWeek == today);
+                    var todayDay = await _db.WorkoutPlanDays.FirstOrDefaultAsync(d => d.PlanId == activePlan.Id && d.DayOfWeek == todayDow);
                     if (todayDay != null)
                     {
+                        await _db.Entry(log).ReloadAsync();
                         log.PlanDayId = todayDay.Id;
                         await _db.SaveChangesAsync();
                     }
@@ -112,7 +129,8 @@ public class WorkoutLogsController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+            _logger.LogError(ex, "Error creating workout log");
+            return StatusCode(500, new { error = "An error occurred while creating the workout log." });
         }
     }
 
@@ -124,34 +142,43 @@ public class WorkoutLogsController : ControllerBase
             .FirstOrDefaultAsync(l => l.Id == id && l.UserId == UserId);
         if (log == null) return NotFound();
 
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         var strategy = _db.Database.CreateExecutionStrategy();
         try
         {
             await strategy.ExecuteAsync(async () =>
             {
+                _db.ChangeTracker.Clear();
                 using var transaction = await _db.Database.BeginTransactionAsync();
 
-                var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-                log.Date = TimeZoneHelper.ToUtc(updated.Date, tz);
-                log.FocusArea = updated.FocusArea;
-                log.DurationMinutes = updated.DurationMinutes;
-                log.Notes = updated.Notes;
+                var l = await _db.WorkoutLogs.Include(x => x.Sets)
+                    .FirstAsync(x => x.Id == id && x.UserId == UserId);
 
-                _db.ExerciseSets.RemoveRange(log.Sets);
+                l.Date = TimeZoneHelper.ToUtc(updated.Date, tz);
+                l.FocusArea = updated.FocusArea?.Trim();
+                l.DurationMinutes = updated.DurationMinutes;
+                l.Notes = updated.Notes?.Trim();
+
+                _db.ExerciseSets.RemoveRange(l.Sets);
                 foreach (var set in updated.Sets)
                 {
+                    set.Id = 0;
                     set.WorkoutLogId = id;
+                    set.ExerciseName = set.ExerciseName?.Trim() ?? "";
                     _db.ExerciseSets.Add(set);
                 }
 
                 await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
             });
+
+            await _db.Entry(log).ReloadAsync();
             return Ok(log);
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { error = ex.Message, inner = ex.InnerException?.Message });
+            _logger.LogError(ex, "Error updating workout log {Id}", id);
+            return StatusCode(500, new { error = "An error occurred while updating the workout log." });
         }
     }
 
@@ -162,8 +189,16 @@ public class WorkoutLogsController : ControllerBase
             .Include(l => l.Sets)
             .FirstOrDefaultAsync(l => l.Id == id && l.UserId == UserId);
         if (log == null) return NotFound();
-        _db.WorkoutLogs.Remove(log);
-        await _db.SaveChangesAsync();
+
+        var strategy = _db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            _db.ChangeTracker.Clear();
+            var l = await _db.WorkoutLogs.Include(x => x.Sets)
+                .FirstAsync(x => x.Id == id && x.UserId == UserId);
+            _db.WorkoutLogs.Remove(l);
+            await _db.SaveChangesAsync();
+        });
         return NoContent();
     }
 
@@ -191,6 +226,9 @@ public class WorkoutLogsController : ControllerBase
     [HttpGet("progress")]
     public async Task<ActionResult> GetProgress([FromQuery] string exercise, [FromQuery] int days = 90)
     {
+        if (string.IsNullOrWhiteSpace(exercise))
+            return BadRequest(new { error = "exercise is required." });
+
         var since = DateTime.UtcNow.AddDays(-days);
         var data = await _db.ExerciseSets
             .Where(s => s.WorkoutLog!.UserId == UserId
@@ -224,23 +262,38 @@ public class WorkoutLogsController : ControllerBase
     [HttpGet("stats")]
     public async Task<ActionResult> GetStats()
     {
-        var now = DateTime.UtcNow;
-        var startOfWeek = now.Date.AddDays(-(int)now.DayOfWeek);
-        var startOfMonth = new DateTime(now.Year, now.Month, 1);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var userNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var userToday = userNow.Date;
 
-        var thisWeek = await _db.WorkoutLogs.CountAsync(l => l.UserId == UserId && l.Date >= startOfWeek);
-        var thisMonth = await _db.WorkoutLogs.CountAsync(l => l.UserId == UserId && l.Date >= startOfMonth);
+        var startOfWeek = userToday.AddDays(-(int)userToday.DayOfWeek);
+        var startOfMonth = new DateTime(userToday.Year, userToday.Month, 1);
+
+        var weekStartUtc = TimeZoneHelper.ToUtc(startOfWeek, tz);
+        var monthStartUtc = TimeZoneHelper.ToUtc(startOfMonth, tz);
+
+        var thisWeek = await _db.WorkoutLogs.CountAsync(l => l.UserId == UserId && l.Date >= weekStartUtc);
+        var thisMonth = await _db.WorkoutLogs.CountAsync(l => l.UserId == UserId && l.Date >= monthStartUtc);
 
         var totalVolume = await _db.ExerciseSets
-            .Where(s => s.WorkoutLog!.UserId == UserId && s.WorkoutLog!.Date >= startOfMonth)
+            .Where(s => s.WorkoutLog!.UserId == UserId && s.WorkoutLog!.Date >= monthStartUtc)
             .SumAsync(s => s.Weight * s.Reps);
 
+        var streakSince = TimeZoneHelper.ToUtc(userToday.AddDays(-60), tz);
+        var workoutDatesUtc = await _db.WorkoutLogs
+            .Where(l => l.UserId == UserId && l.Date >= streakSince)
+            .Select(l => l.Date)
+            .ToListAsync();
+
+        var workoutLocalDates = workoutDatesUtc
+            .Select(d => TimeZoneInfo.ConvertTimeFromUtc(d, tz).Date)
+            .Distinct()
+            .ToHashSet();
+
         var streak = 0;
-        var checkDate = now.Date;
-        while (true)
+        var checkDate = userToday;
+        while (workoutLocalDates.Contains(checkDate))
         {
-            var hasWorkout = await _db.WorkoutLogs.AnyAsync(l => l.UserId == UserId && l.Date.Date == checkDate);
-            if (!hasWorkout) break;
             streak++;
             checkDate = checkDate.AddDays(-1);
         }

@@ -9,13 +9,14 @@ import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { MatTableModule } from '@angular/material/table';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { WorkoutLogService } from '../../core/services/workout-log.service';
 import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/models/workout-log.model';
 
 @Component({
   selector: 'app-progress',
   standalone: true,
-  imports: [MatCardModule, MatIconModule, MatButtonModule, MatSelectModule, MatFormFieldModule, MatTableModule, DatePipe, DecimalPipe, FormsModule, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [MatCardModule, MatIconModule, MatButtonModule, MatSelectModule, MatFormFieldModule, MatTableModule, MatProgressSpinnerModule, DatePipe, DecimalPipe, FormsModule, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadData()">
     @if (loading()) {
@@ -123,7 +124,7 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
       <div class="progress-controls">
         <mat-form-field appearance="outline" class="exercise-select">
           <mat-label>Exercise</mat-label>
-          <mat-select [(value)]="selectedExercise" (selectionChange)="loadProgress()">
+          <mat-select [value]="selectedExercise()" (selectionChange)="selectedExercise.set($event.value); loadProgress()">
             @for (ex of exercises(); track ex) {
               <mat-option [value]="ex">{{ ex }}</mat-option>
             }
@@ -131,7 +132,11 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
         </mat-form-field>
       </div>
 
-      @if (progress().length > 0) {
+      @if (progressLoading()) {
+        <div class="loading-row"><mat-spinner diameter="24"></mat-spinner></div>
+      } @else if (selectedExercise() && progress().length === 0) {
+        <p class="no-progress-msg">No progress data for this exercise yet.</p>
+      } @else if (progress().length > 0) {
         <div class="progress-chart">
           @for (p of progress(); track p.date) {
             <div class="progress-bar-item">
@@ -161,14 +166,14 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
       width: 40px; height: 40px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
     }
-    .stat-icon-wrap.blue { background: rgba(21,101,192,0.1); }
-    .stat-icon-wrap.blue mat-icon { color: #1565c0; }
-    .stat-icon-wrap.green { background: rgba(46,125,50,0.1); }
-    .stat-icon-wrap.green mat-icon { color: #2e7d32; }
-    .stat-icon-wrap.purple { background: rgba(106,27,154,0.1); }
-    .stat-icon-wrap.purple mat-icon { color: #6a1b9a; }
-    .stat-icon-wrap.orange { background: rgba(230,81,0,0.1); }
-    .stat-icon-wrap.orange mat-icon { color: #e65100; }
+    .stat-icon-wrap.blue { background: var(--color-stat-blue-bg); }
+    .stat-icon-wrap.blue mat-icon { color: var(--color-stat-blue); }
+    .stat-icon-wrap.green { background: var(--color-stat-green-bg); }
+    .stat-icon-wrap.green mat-icon { color: var(--color-stat-green); }
+    .stat-icon-wrap.purple { background: var(--color-stat-purple-bg); }
+    .stat-icon-wrap.purple mat-icon { color: var(--color-stat-purple); }
+    .stat-icon-wrap.orange { background: var(--color-stat-amber-bg); }
+    .stat-icon-wrap.orange mat-icon { color: var(--color-stat-amber); }
     .stat-icon-wrap mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .stat-info { display: flex; flex-direction: column; }
     .stat-value { font-size: 1.25rem; font-weight: 700; }
@@ -206,9 +211,9 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
     .pr-icon {
       width: 40px; height: 40px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
-      background: rgba(230,81,0,0.1);
+      background: var(--color-stat-amber-bg);
     }
-    .pr-icon mat-icon { font-size: 20px; width: 20px; height: 20px; color: #e65100; }
+    .pr-icon mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-stat-amber); }
     .pr-mid { flex: 1; min-width: 0; }
     .pr-name { display: block; font-weight: 600; font-size: 0.9rem; }
     .pr-date { display: block; font-size: 0.75rem; color: var(--color-text-muted); }
@@ -222,11 +227,13 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
     .progress-bar-item { display: flex; align-items: center; gap: 8px; }
     .bar-date { font-size: 0.75rem; color: var(--color-text-muted); min-width: 36px; }
     .bar-track {
-      flex: 1; height: 20px; background: rgba(21,101,192,0.08);
+      flex: 1; height: 20px; background: var(--color-stat-blue-bg);
       border-radius: 4px; overflow: hidden;
     }
     .bar-fill { height: 100%; background: var(--color-primary); border-radius: 4px; transition: width 0.3s; }
     .bar-value { font-size: 0.75rem; font-weight: 600; min-width: 50px; }
+    .loading-row { display: flex; justify-content: center; padding: var(--spacing-md); }
+    .no-progress-msg { text-align: center; color: var(--color-text-muted); font-size: var(--text-sm); padding: var(--spacing-md); }
 
     @media (max-width: 1199px) {
       .desktop-only { display: none !important; }
@@ -250,7 +257,8 @@ export class ProgressComponent implements OnInit {
   records = signal<PersonalRecord[]>([]);
   exercises = signal<string[]>([]);
   progress = signal<ExerciseProgress[]>([]);
-  selectedExercise = '';
+  selectedExercise = signal('');
+  progressLoading = signal(false);
   prColumns = ['exercise', 'weight', 'reps', 'date'];
   private maxWeight = 0;
 
@@ -274,11 +282,17 @@ export class ProgressComponent implements OnInit {
   }
 
   loadProgress() {
-    if (!this.selectedExercise) return;
-    this.logService.getProgress(this.selectedExercise).subscribe({
+    if (!this.selectedExercise()) return;
+    this.progressLoading.set(true);
+    this.logService.getProgress(this.selectedExercise()).subscribe({
       next: p => {
         this.progress.set(p);
         this.maxWeight = Math.max(...p.map(x => x.maxWeight), 1);
+        this.progressLoading.set(false);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.progressLoading.set(false);
         this.cdr.detectChanges();
       }
     });
