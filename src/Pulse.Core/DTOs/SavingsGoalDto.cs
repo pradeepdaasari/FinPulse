@@ -15,3 +15,9 @@ public class SavingsGoalCreateDto
     [MaxLength(50)]
     public string? Icon { get; set; }
 }
+
+public class ContributeDto
+{
+    [Range(0.01, 10_000_000)]
+    public decimal Amount { get; set; }
+}

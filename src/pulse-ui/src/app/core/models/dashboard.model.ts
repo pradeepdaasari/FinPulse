@@ -3,14 +3,8 @@ export interface DashboardSummary {
   totalMonthlyPayment: number;
   estimatedDebtFreeDate: string;
   numberOfDebts: number;
-  debtBreakdown: DebtBreakdownItem[];
+  totalInterestPaid: number;
   upcomingPayments: UpcomingPayment[];
-}
-
-export interface DebtBreakdownItem {
-  name: string;
-  balance: number;
-  type: 'Loan' | 'CreditCard';
 }
 
 export interface UpcomingPayment {
@@ -19,7 +13,7 @@ export interface UpcomingPayment {
   debtType: 'PersonalLoan' | 'CreditCard';
   amount: number;
   dueDate: string;
-  urgencyLevel: 'Low' | 'Medium' | 'High';
+  urgencyLevel: 'Critical' | 'Warning' | 'Normal';
 }
 
 export interface AmortizationEntry {

@@ -6,6 +6,8 @@ export interface PaymentHistory {
   paymentDate: string;
   notes?: string;
   fromAccountId?: number;
+  principalAmount?: number;
+  interestAmount?: number;
 }
 
 export interface PaymentSummary {

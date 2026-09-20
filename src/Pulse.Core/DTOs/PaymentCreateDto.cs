@@ -11,7 +11,14 @@ public class PaymentCreateDto
     [Required]
     public DateTime PaymentDate { get; set; }
 
+    [MaxLength(500)]
     public string? Notes { get; set; }
 
     public int? FromAccountId { get; set; }
+
+    [Range(0, 10_000_000)]
+    public decimal? PrincipalAmount { get; set; }
+
+    [Range(0, 10_000_000)]
+    public decimal? InterestAmount { get; set; }
 }

@@ -281,7 +281,7 @@ export class FinancialSummaryComponent implements OnInit {
     const pct = Math.round((spent / income) * 100);
     if (this.paceStatus() === 'ahead') return `${pct}% of income spent, ${daysLeft} days left — under budget!`;
     if (this.paceStatus() === 'on-track') return `${pct}% of income spent, ${daysLeft} days left — on track.`;
-    return `${pct}% of income spent, ${daysLeft} days left — ahead of pace.`;
+    return `${pct}% of income spent, ${daysLeft} days left — over budget.`;
   });
 
   ngOnInit(): void {

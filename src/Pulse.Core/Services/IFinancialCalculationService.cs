@@ -27,6 +27,8 @@ public interface IFinancialCalculationService
 
     int CalculateRemainingMonths(PersonalLoan loan);
 
+    int CalculateRemainingMonthsFromBalance(decimal balance, decimal aprPercent, decimal monthlyPayment);
+
     List<PayoffEntryDto> GenerateCardPayoffSchedule(
         decimal balance,
         decimal aprPercent,

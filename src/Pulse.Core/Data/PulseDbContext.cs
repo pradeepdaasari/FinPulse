@@ -299,8 +299,11 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.StrikePrice4).HasPrecision(18, 6);
             entity.Property(e => e.EntryPremium).HasPrecision(18, 4);
             entity.Property(e => e.ExitPremium).HasPrecision(18, 4);
+            entity.Property(e => e.CommissionFees).HasPrecision(18, 4);
+            entity.Property(e => e.RegExchangeFees).HasPrecision(18, 4);
             entity.Property(e => e.TotalFees).HasPrecision(18, 4);
             entity.Property(e => e.NetPnl).HasPrecision(18, 2);
+            entity.Property(e => e.PlannedRisk).HasPrecision(18, 2);
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => new { e.UserId, e.Date });
             entity.HasIndex(e => e.BankAccountId);
@@ -517,6 +520,17 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
                 movement.UpdatedAt = now;
                 if (entry.State == EntityState.Added)
                     movement.CreatedAt = now;
+            }
+            else if (entry.Entity is TradingGoal tGoal)
+            {
+                tGoal.UpdatedAt = now;
+                if (entry.State == EntityState.Added)
+                    tGoal.CreatedAt = now;
+            }
+            else if (entry.Entity is TradingGoalSnapshot tSnap)
+            {
+                if (entry.State == EntityState.Added)
+                    tSnap.CreatedAt = now;
             }
         }
     }

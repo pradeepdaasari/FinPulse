@@ -25,6 +25,9 @@ interface MonthlyPayment {
   minimumPaid: boolean;
   isAutopay: boolean;
   currentBalance: number;
+  aprPercent?: number;
+  paymentFrequency?: 'Monthly' | 'Biweekly' | 'Weekly';
+  fundedBankAccountId?: number | null;
   paidAmount: number;
   dueDate: Date;
   nextDueDate: Date;
@@ -104,7 +107,9 @@ interface MonthlyPayment {
               <div class="col-date">{{ p.dueDate | date:'MMM d, y' }}</div>
               <div class="col-status">
                 <span class="status-badge" [class]="'status-' + p.status">
-                  @if (p.status === 'due-soon') {
+                  @if (p.status === 'overdue') {
+                    {{ -p.daysUntilDue }}d overdue
+                  } @else if (p.status === 'due-soon') {
                     Due in {{ p.daysUntilDue }}d
                   } @else {
                     {{ p.daysUntilDue }} days
@@ -276,7 +281,10 @@ export class MonthlyPaymentsComponent implements OnInit {
         debtName: payment.name,
         debtType: payment.type === 'Loan' ? 'PersonalLoan' : 'CreditCard',
         currentBalance: payment.currentBalance,
-        minimumPayment: payment.minimumPayment
+        minimumPayment: payment.minimumPayment,
+        aprPercent: payment.aprPercent,
+        paymentFrequency: payment.paymentFrequency,
+        fundedBankAccountId: payment.fundedBankAccountId
       }
     });
     dialogRef.afterClosed().subscribe(result => {
@@ -304,7 +312,7 @@ export class MonthlyPaymentsComponent implements OnInit {
         const isLoan = debt.type === 'PersonalLoan';
         const freq = debt.paymentFrequency || 'Monthly';
         const allDebtPayments = paymentResponse.payments.filter(
-          p => p.debtId == debt.id && (p.debtType === debt.type || String(p.debtType) === String(isLoan ? 0 : 1))
+          p => String(p.debtId) === String(debt.id) && (p.debtType === debt.type || String(p.debtType) === String(isLoan ? 0 : 1))
         );
 
         const dueDates = this.getDueDatesInMonth(debt, currentYear, currentMonth, monthEnd);
@@ -318,7 +326,9 @@ export class MonthlyPaymentsComponent implements OnInit {
 
           const paymentAmount = debt.perPaymentAmount;
           const hasActivePromo = !isLoan && debt.promoAprPercent === 0 && debt.promoEndDate && new Date(debt.promoEndDate) > now;
-          const dueAmount = isLoan ? paymentAmount : (hasActivePromo ? paymentAmount : debt.currentBalance);
+          const dueAmount = isLoan
+            ? paymentAmount
+            : (hasActivePromo ? paymentAmount : (paymentAmount > 0 ? paymentAmount : debt.currentBalance));
 
           const isPaid = roundCurrency(paidAmount) >= roundCurrency(dueAmount);
           if (isPaid) continue;
@@ -328,7 +338,7 @@ export class MonthlyPaymentsComponent implements OnInit {
 
           let status: MonthlyPayment['status'];
           if (daysUntilDue < 0) {
-            status = 'due-soon';
+            status = 'overdue';
           } else if (daysUntilDue <= 5) {
             status = 'due-soon';
           } else {
@@ -349,6 +359,9 @@ export class MonthlyPaymentsComponent implements OnInit {
             minimumPaid,
             isAutopay: debt.isAutopay,
             currentBalance: debt.currentBalance,
+            aprPercent: isLoan ? debt.aprPercent : undefined,
+            paymentFrequency: isLoan ? (debt as any).paymentFrequency : undefined,
+            fundedBankAccountId: isLoan ? (debt as any).fundedBankAccountId : undefined,
             paidAmount,
             dueDate,
             nextDueDate: dueDates[dueDates.length - 1] || dueDate,
@@ -398,14 +411,6 @@ export class MonthlyPaymentsComponent implements OnInit {
       return new Date(year, month, dueDay);
     }
     return new Date(year, month - 1, dueDay);
-  }
-
-  private sumPaymentsInCycle(payments: any[], debtId: string | number, debtType: 'PersonalLoan' | 'CreditCard', cycleStart: Date): number {
-    const typeValue = debtType === 'PersonalLoan' ? 0 : 1;
-    const matched = payments
-      .filter(p => p.debtId == debtId && (p.debtType === debtType || p.debtType === typeValue) && new Date(p.paymentDate) >= cycleStart)
-      .map(p => p.amountPaid);
-    return sumCurrency(matched);
   }
 
   private calculatePaycheckInfo(anchor: Date, frequency: string): void {

@@ -30,6 +30,10 @@ export class RecurringService {
     return this.http.post<{ expenseId: number; nextRunDate: string }>(`${this.baseUrl}/${id}/pay`, transaction);
   }
 
+  advance(id: number): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/${id}/advance`, {});
+  }
+
   generate(): Observable<{ generated: number }> {
     return this.http.post<{ generated: number }>(`${this.baseUrl}/generate`, {});
   }

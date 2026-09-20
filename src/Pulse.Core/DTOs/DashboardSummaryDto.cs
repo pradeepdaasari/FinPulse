@@ -6,5 +6,6 @@ public class DashboardSummaryDto
     public decimal TotalMonthlyPayment { get; set; }
     public DateTime EstimatedDebtFreeDate { get; set; }
     public int NumberOfDebts { get; set; }
+    public decimal TotalInterestPaid { get; set; }
     public List<UpcomingPaymentDto> UpcomingPayments { get; set; } = new();
 }

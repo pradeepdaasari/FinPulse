@@ -101,10 +101,16 @@ export class DebtCountdownComponent implements OnInit {
   countdown = signal<DebtFreeCountdown | null>(null);
 
   ngOnInit(): void {
-    this.dashboardService.getCountdown().subscribe(data => {
-      this.countdown.set(data);
-      this.loading.set(false);
-      this.cdr.detectChanges();
+    this.dashboardService.getCountdown().subscribe({
+      next: (data) => {
+        this.countdown.set(data);
+        this.loading.set(false);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loading.set(false);
+        this.cdr.detectChanges();
+      }
     });
   }
 

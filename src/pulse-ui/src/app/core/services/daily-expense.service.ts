@@ -86,13 +86,18 @@ export class DailyExpenseService {
     this.http.get(`${this.baseUrl}/export`, {
       params: { year: year.toString(), month: month.toString() },
       responseType: 'blob'
-    }).subscribe(blob => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `transactions_${year}_${month.toString().padStart(2, '0')}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
+    }).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `transactions_${year}_${month.toString().padStart(2, '0')}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => {
+        console.error('Failed to export CSV');
+      }
     });
   }
 }

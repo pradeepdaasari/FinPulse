@@ -120,6 +120,7 @@ export interface DailyReview {
   grade: TradeGrade | null;
   followedPlan: boolean;
   followedRules: boolean;
+  stoppedAtLimit: boolean;
   totalTrades: number;
   totalPnl: number;
   rulesViolated: number[];

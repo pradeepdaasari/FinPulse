@@ -5,6 +5,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
+import { forkJoin } from 'rxjs';
 import { DashboardService } from '../../../core/services/dashboard.service';
 import { FinancialSummary, NetWorthSnapshot } from '../../../core/models/dashboard.model';
 
@@ -455,25 +456,22 @@ export class NetWorthComponent implements OnInit {
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
 
-    this.dashboardService.getFinancialSummary(currentYear, currentMonth).subscribe({
-      next: (data) => { this.summary.set(data); this.loading.set(false); this.cdr.detectChanges(); },
-      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
-    });
-
     const prevDate = new Date(currentYear, currentMonth - 2, 1);
     const prevYear = prevDate.getFullYear();
     const prevMonth = prevDate.getMonth() + 1;
 
-    this.dashboardService.getFinancialSummary(prevYear, prevMonth).subscribe({
-      next: (data) => {
-        this.previousSummary.set(data);
-        const current = this.summary();
-        if (current) {
-          this.trend.set(current.netWorth - data.netWorth);
-        }
+    forkJoin({
+      current: this.dashboardService.getFinancialSummary(currentYear, currentMonth),
+      previous: this.dashboardService.getFinancialSummary(prevYear, prevMonth)
+    }).subscribe({
+      next: ({ current, previous }) => {
+        this.summary.set(current);
+        this.previousSummary.set(previous);
+        this.trend.set(current.netWorth - previous.netWorth);
+        this.loading.set(false);
         this.cdr.detectChanges();
       },
-      error: () => {}
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 }

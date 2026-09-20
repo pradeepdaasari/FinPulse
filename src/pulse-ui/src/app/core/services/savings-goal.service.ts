@@ -21,6 +21,10 @@ export class SavingsGoalService {
     return this.http.put<void>(`${this.baseUrl}/${id}`, goal);
   }
 
+  contribute(id: number, amount: number): Observable<{ currentAmount: number }> {
+    return this.http.post<{ currentAmount: number }>(`${this.baseUrl}/${id}/contribute`, { amount });
+  }
+
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }

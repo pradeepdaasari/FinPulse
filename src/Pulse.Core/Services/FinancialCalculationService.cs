@@ -61,8 +61,8 @@ public class FinancialCalculationService : IFinancialCalculationService
 
             DateTime paymentDate = frequency switch
             {
-                PaymentFrequency.Biweekly => startDate.AddDays(14 * period),
-                PaymentFrequency.Weekly => startDate.AddDays(7 * period),
+                PaymentFrequency.Biweekly => startDate.AddDays(14 * (period - 1)),
+                PaymentFrequency.Weekly => startDate.AddDays(7 * (period - 1)),
                 _ => startDate.AddMonths(period - 1)
             };
 
@@ -94,7 +94,15 @@ public class FinancialCalculationService : IFinancialCalculationService
         var today = DateTime.Today;
 
         DateTime firstPaymentDate;
-        if (dueDay >= 1 && dueDay <= 28 && frequency == PaymentFrequency.Monthly)
+        if (frequency == PaymentFrequency.Weekly)
+        {
+            firstPaymentDate = loanStartDate.AddDays(7);
+        }
+        else if (frequency == PaymentFrequency.Biweekly)
+        {
+            firstPaymentDate = loanStartDate.AddDays(14);
+        }
+        else if (dueDay >= 1 && dueDay <= 28)
         {
             firstPaymentDate = new DateTime(loanStartDate.Year, loanStartDate.Month, dueDay);
             if (firstPaymentDate <= loanStartDate)
@@ -190,18 +198,27 @@ public class FinancialCalculationService : IFinancialCalculationService
 
     public int CalculateRemainingMonths(PersonalLoan loan)
     {
-        var endDate = loan.StartDate.AddMonths(loan.DurationMonths);
-        var today = DateTime.Today;
+        return CalculateRemainingMonthsFromBalance(loan.CurrentBalance, loan.AprPercent, loan.MonthlyEquivalentPayment);
+    }
 
-        if (today >= endDate)
-            return 0;
+    public int CalculateRemainingMonthsFromBalance(decimal balance, decimal aprPercent, decimal monthlyPayment)
+    {
+        if (balance <= 0) return 0;
+        if (monthlyPayment <= 0) return 999;
 
-        int remainingMonths = ((endDate.Year - today.Year) * 12) + endDate.Month - today.Month;
+        var monthlyRate = aprPercent / 100m / 12m;
+        var months = 0;
+        var bal = balance;
 
-        if (today.Day > endDate.Day)
-            remainingMonths--;
+        while (bal > 0 && months < 999)
+        {
+            var interest = bal * monthlyRate;
+            if (monthlyPayment <= interest) return 999;
+            bal -= (monthlyPayment - interest);
+            months++;
+        }
 
-        return Math.Max(0, remainingMonths);
+        return months;
     }
 
     public List<PayoffEntryDto> GenerateCardPayoffSchedule(

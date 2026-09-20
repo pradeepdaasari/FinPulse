@@ -32,6 +32,8 @@ public class PersonalLoan
 
     public PaymentFrequency PaymentFrequency { get; set; } = PaymentFrequency.Monthly;
 
+    public RateType RateType { get; set; } = RateType.Fixed;
+
     public int? FundedBankAccountId { get; set; }
 
     public DateTime? NextPaymentDate { get; set; }

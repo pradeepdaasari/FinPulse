@@ -56,6 +56,20 @@ import { DashboardSummary } from '../../../core/models/dashboard.model';
       <mat-card>
         <mat-card-content>
           <div class="stat-card">
+            <div class="stat-icon icon-red">
+              <mat-icon>trending_down</mat-icon>
+            </div>
+            <div class="stat-info">
+              <span class="stat-label">Interest Paid</span>
+              <span class="stat-value">{{ summary.totalInterestPaid | currency }}</span>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card>
+        <mat-card-content>
+          <div class="stat-card">
             <div class="stat-icon icon-amber">
               <mat-icon>format_list_numbered</mat-icon>
             </div>
@@ -109,6 +123,10 @@ import { DashboardSummary } from '../../../core/models/dashboard.model';
       background: var(--gradient-icon-purple);
       color: var(--color-accent);
     }
+    .icon-red {
+      background: linear-gradient(135deg, rgba(198,40,40,0.12), rgba(198,40,40,0.04));
+      color: #c62828;
+    }
     .icon-amber {
       background: var(--gradient-icon-amber);
       color: var(--color-warning);
@@ -130,14 +148,16 @@ import { DashboardSummary } from '../../../core/models/dashboard.model';
       color: var(--color-text);
       letter-spacing: -0.02em;
     }
-    .stat-card:nth-child(1) { border-left: 4px solid var(--color-danger); }
-    .stat-card:nth-child(2) { border-left: 4px solid var(--color-value-blue); }
-    .stat-card:nth-child(3) { border-left: 4px solid var(--color-value-green); }
-    .stat-card:nth-child(4) { border-left: 4px solid var(--color-value-purple); }
-    .stat-card:nth-child(1) .stat-value { color: var(--color-danger); }
-    .stat-card:nth-child(2) .stat-value { color: var(--color-value-blue); }
-    .stat-card:nth-child(3) .stat-value { color: var(--color-value-green); }
-    .stat-card:nth-child(4) .stat-value { color: var(--color-value-purple); }
+    mat-card:nth-child(1) .stat-card { border-left: 4px solid var(--color-danger); }
+    mat-card:nth-child(2) .stat-card { border-left: 4px solid var(--color-value-blue); }
+    mat-card:nth-child(3) .stat-card { border-left: 4px solid var(--color-value-green); }
+    mat-card:nth-child(4) .stat-card { border-left: 4px solid #c62828; }
+    mat-card:nth-child(5) .stat-card { border-left: 4px solid var(--color-value-purple); }
+    mat-card:nth-child(1) .stat-value { color: var(--color-danger); }
+    mat-card:nth-child(2) .stat-value { color: var(--color-value-blue); }
+    mat-card:nth-child(3) .stat-value { color: var(--color-value-green); }
+    mat-card:nth-child(4) .stat-value { color: #c62828; }
+    mat-card:nth-child(5) .stat-value { color: var(--color-value-purple); }
     @media (max-width: 599px) {
       .summary-grid {
         grid-template-columns: 1fr 1fr;

@@ -19,4 +19,8 @@ public class PaymentHistory
     public string? UserId { get; set; }
 
     public int? FromAccountId { get; set; }
+
+    public decimal? PrincipalAmount { get; set; }
+
+    public decimal? InterestAmount { get; set; }
 }

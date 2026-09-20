@@ -17,7 +17,7 @@ import { NotificationService } from '../../../core/services/notification.service
   template: `
     <h3><mat-icon class="section-title-icon">schedule</mat-icon> Upcoming Payments</h3>
     <mat-list>
-      @for (payment of payments; track payment.debtName) {
+      @for (payment of payments; track payment.debtType + ':' + payment.debtId) {
         <mat-list-item>
           <mat-icon matListItemIcon>event</mat-icon>
           <span matListItemTitle>{{ payment.debtName }}</span>
@@ -25,7 +25,7 @@ import { NotificationService } from '../../../core/services/notification.service
             {{ payment.amount | currency }} &mdash; Due {{ payment.dueDate | localDate:'mediumDate' }}
           </span>
           <span matListItemMeta class="meta-actions">
-            @if (!paidSet().has(payment.debtId)) {
+            @if (!paidSet().has(payment.debtType + ':' + payment.debtId)) {
               <button mat-icon-button class="pay-btn" (click)="markAsPaid(payment)"
                       matTooltip="Record payment" [disabled]="paying()">
                 <mat-icon>payments</mat-icon>
@@ -64,15 +64,15 @@ import { NotificationService } from '../../../core/services/notification.service
       text-transform: uppercase;
       letter-spacing: 0.03em;
     }
-    .urgency-high, .urgency-warning {
+    .urgency-critical, .urgency-high {
       background-color: var(--color-danger-bg);
       color: var(--color-danger);
     }
-    .urgency-medium {
+    .urgency-warning, .urgency-medium {
       background-color: var(--color-warning-bg);
       color: var(--color-warning);
     }
-    .urgency-low {
+    .urgency-normal, .urgency-low {
       background-color: var(--color-success-bg);
       color: var(--color-success);
     }
@@ -113,14 +113,14 @@ export class UpcomingPaymentsComponent {
   @Input({ required: true }) payments!: UpcomingPayment[];
 
   paying = signal(false);
-  paidSet = signal<Set<number>>(new Set());
+  paidSet = signal<Set<string>>(new Set());
 
   markAsPaid(payment: UpcomingPayment): void {
     this.paying.set(true);
     this.paymentService.recordPayment(payment.debtType, payment.debtId, payment.amount, `Paid from dashboard`).subscribe({
       next: () => {
         const updated = new Set(this.paidSet());
-        updated.add(payment.debtId);
+        updated.add(payment.debtType + ':' + payment.debtId);
         this.paidSet.set(updated);
         this.paying.set(false);
         this.notify.success(`Payment of ${payment.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} recorded for ${payment.debtName}`);
