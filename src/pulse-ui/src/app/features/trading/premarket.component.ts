@@ -195,14 +195,20 @@ import { toLocalDateString } from '../../core/utils/date-utils';
           </a>
         </div>
 
-        <!-- Save -->
-        <div class="save-row">
-          <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || saving()">
+        <div class="save-spacer"></div>
+      </form>
+
+      <!-- Sticky Save Bar -->
+      <div class="sticky-save-bar">
+        <button class="save-btn" type="button" (click)="save()" [disabled]="form.invalid || saving()">
+          @if (saving()) {
+            <span class="btn-spinner"></span> Saving...
+          } @else {
             <mat-icon>{{ editingId() ? 'check' : 'save' }}</mat-icon>
             {{ editingId() ? 'Update Plan' : 'Save Plan' }}
-          </button>
-        </div>
-      </form>
+          }
+        </button>
+      </div>
 
       <!-- History -->
       @if (history().length > 0) {
@@ -360,9 +366,29 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     .template-btn { font-size: 0.82rem; }
     .template-btn mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 2px; }
 
-    .save-row { display: flex; justify-content: center; margin-top: var(--spacing-md); }
-    .save-row button { padding: 0 32px; }
-    .save-row button mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
+    .save-spacer { height: 80px; }
+    .sticky-save-bar {
+      position: sticky; bottom: 0; left: 0; right: 0; z-index: 10;
+      padding: 12px 0 16px;
+      background: linear-gradient(transparent, var(--color-surface) 30%);
+    }
+    .save-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; height: 48px; border: none; border-radius: var(--radius-md);
+      background: var(--gradient-primary); color: #fff;
+      font-size: 0.95rem; font-weight: 700; font-family: inherit;
+      cursor: pointer; box-shadow: 0 4px 16px rgba(0, 122, 255, 0.3);
+      transition: all 0.2s ease;
+    }
+    .save-btn:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(0, 122, 255, 0.4); transform: translateY(-1px); }
+    .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .save-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .btn-spinner {
+      display: inline-block; width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     /* History */
     .history-section { margin-top: var(--spacing-xl); }
@@ -397,9 +423,15 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     @media (max-width: 599px) {
       .page-banner { margin: -16px -16px 20px; padding: 12px 16px; }
       .stats-row { grid-template-columns: 1fr; }
-      .mental-state-row { grid-template-columns: 1fr; }
+      .mental-state-row { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .mental-btn { padding: 12px 4px; }
+      .mental-desc { display: none; }
       .bias-row { grid-template-columns: repeat(2, 1fr); }
+      .bias-btn { min-height: 44px; }
       .limits-row { grid-template-columns: 1fr; }
+      .template-btn { min-height: 44px; }
+      .date-nav button { min-width: 44px; min-height: 44px; }
+      .history-card { min-height: 44px; }
     }
   `]
 })

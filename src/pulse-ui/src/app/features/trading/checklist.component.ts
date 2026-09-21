@@ -332,10 +332,12 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
                   <app-rich-text-editor label="Notes (optional)" formControlName="notes" height="80px"
                     placeholder="Why are you taking this trade?"></app-rich-text-editor>
 
-                  <button mat-raised-button color="primary" class="log-btn" (click)="logTrade()" [disabled]="tradeForm.invalid">
+                </form>
+                <div class="log-btn-bar">
+                  <button class="log-btn" (click)="logTrade()" [disabled]="tradeForm.invalid">
                     <mat-icon>add_task</mat-icon> Log Trade
                   </button>
-                </form>
+                </div>
               </div>
             }
           }
@@ -537,12 +539,33 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     .dir-btn.long.active { border-color: var(--color-success); background: var(--color-stat-green-bg); color: var(--color-success); }
     .dir-btn.short.active { border-color: var(--color-danger); background: var(--color-stat-red-bg); color: var(--color-danger); }
 
-    .log-btn { width: 100%; padding: 12px !important; font-weight: 600 !important; font-size: 0.95rem !important; }
+
+    .log-btn-bar {
+      position: sticky; bottom: 0; z-index: 10;
+      padding: 12px 0 16px;
+      background: linear-gradient(transparent, var(--color-surface-solid) 30%);
+      margin: 8px -16px -16px;
+      padding-left: 16px; padding-right: 16px;
+    }
+    .log-btn-bar .log-btn {
+      width: 100%; height: 48px; border: none; border-radius: var(--radius-md);
+      background: var(--gradient-primary); color: #fff;
+      font-size: 0.95rem; font-weight: var(--weight-bold);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      cursor: pointer; box-shadow: 0 4px 16px rgba(0,122,255,0.3);
+    }
+    .log-btn-bar .log-btn:disabled {
+      opacity: 0.4; cursor: not-allowed; box-shadow: none;
+    }
+    .log-btn-bar .log-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
 
     @media (max-width: 599px) {
       .stats-row { grid-template-columns: repeat(2, 1fr); }
-      .mental-buttons { grid-template-columns: 1fr; }
-      .mental-buttons.two-col { grid-template-columns: 1fr; }
+      .mental-buttons { grid-template-columns: repeat(3, 1fr); }
+      .mental-buttons.two-col { grid-template-columns: repeat(2, 1fr); }
+      .mental-btn { padding: 10px 4px; min-height: 44px; font-size: 0.65rem; }
+      .mental-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
+      .dir-btn { min-height: 44px; }
       .entry-grid { grid-template-columns: 1fr; }
       .page-banner { margin: -16px -16px 16px; padding: 10px 16px; }
     }

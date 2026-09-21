@@ -148,7 +148,7 @@ interface PlanDay {
                               <span class="rx-item"><mat-icon>fitness_center</mat-icon> {{ ex.targetReps }} reps</span>
                             }
                             @if (ex.targetWeight) {
-                              <span class="rx-item"><mat-icon>scale</mat-icon> {{ ex.targetWeight }} lbs</span>
+                              <span class="rx-item"><mat-icon>scale</mat-icon> {{ ex.targetWeight }} kg</span>
                             }
                           </div>
                         </div>
@@ -163,7 +163,7 @@ interface PlanDay {
               @if (detailMode()) {
                 <div class="sets-grid">
                   <div class="set-header">
-                    <span>Set</span><span>Reps</span><span>Weight (lbs)</span>
+                    <span>Set</span><span>Reps</span><span>Weight (kg)</span>
                   </div>
                   @for (set of ex.sets; track $index; let j = $index) {
                     <div class="set-row">

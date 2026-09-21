@@ -7,6 +7,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { FormsModule } from '@angular/forms';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
+import { DatePipe } from '@angular/common';
 import { HealthMetric } from '../../core/models/health-metric.model';
 import { HealthMetricService } from '../../core/services/health-metric.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -22,7 +25,8 @@ interface MetricConfig {
 @Component({
   selector: 'app-add-metric-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule, MatIconModule, MatTooltipModule, FormsModule],
+  imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule, MatIconModule, MatTooltipModule, FormsModule, MatDatepickerModule, MatNativeDateModule, DatePipe],
+  providers: [provideNativeDateAdapter()],
   template: `
     <div class="dialog-banner">
       <div class="banner-pattern"></div>
@@ -66,15 +70,20 @@ interface MetricConfig {
             <mat-form-field appearance="outline" class="value-field">
               <mat-label>Value</mat-label>
               <input matInput type="number" inputmode="decimal" [(ngModel)]="value" step="0.1">
+              <span matSuffix class="unit-suffix">{{ getUnit() }}</span>
             </mat-form-field>
-            <div class="unit-badge">{{ getUnit() }}</div>
           </div>
         }
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Date & Time</mat-label>
-          <input matInput type="datetime-local" [(ngModel)]="measuredAt">
-        </mat-form-field>
+        <div class="date-time-compact" (click)="picker.open()">
+          <mat-icon class="dtc-icon">calendar_today</mat-icon>
+          <div class="dtc-date-value">{{ dateObj | date:'MMM d, yyyy' }}</div>
+          <span class="dtc-sep">|</span>
+          <mat-icon class="dtc-icon" (click)="$event.stopPropagation(); timePicker.showPicker()">schedule</mat-icon>
+          <input #timePicker type="time" class="dtc-time-input" [(ngModel)]="timeValue" (click)="$event.stopPropagation(); timePicker.showPicker()">
+          <input matInput [matDatepicker]="picker" [ngModel]="dateObj" (ngModelChange)="onDateChange($event)" class="hidden-date-input">
+          <mat-datepicker #picker></mat-datepicker>
+        </div>
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Notes (optional)</mat-label>
@@ -82,19 +91,18 @@ interface MetricConfig {
         </mat-form-field>
       </div>
     </mat-dialog-content>
-    <mat-dialog-actions align="end" class="dialog-actions">
-      <button mat-raised-button color="primary" class="save-btn" [disabled]="!selectedType || !value || saving()" (click)="save()">
+    <div class="save-bar">
+      <button class="save-btn-gradient" [disabled]="!selectedType || !value || saving()" (click)="save()">
         <mat-icon>check</mat-icon>
-        {{ saving() ? 'Saving...' : (isEdit() ? 'Update' : 'Save') }}
+        {{ saving() ? 'Saving...' : (isEdit() ? 'Update Metric' : 'Save Metric') }}
       </button>
-    </mat-dialog-actions>
+    </div>
   `,
   styles: [`
     :host { display: block; }
     .dialog-banner {
       position: relative;
-      margin: -24px -24px 20px;
-      padding: 20px 24px 16px;
+      padding: 18px 24px 14px;
       background: var(--gradient-primary);
       overflow: hidden;
     }
@@ -151,41 +159,69 @@ interface MetricConfig {
     .header-delete mat-icon, .header-close mat-icon {
       font-size: 20px; width: 20px; height: 20px;
     }
-    .metric-form { display: flex; flex-direction: column; gap: 4px; min-width: 0; width: 100%; padding-top: 4px; }
+    .metric-form { display: flex; flex-direction: column; gap: 12px; min-width: 0; width: 100%; padding-top: 12px; }
+    .date-time-compact {
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px 20px; background: var(--color-surface-secondary);
+      border-radius: var(--radius-md); border: 1px solid var(--color-border);
+      margin-bottom: 8px; width: 100%; box-sizing: border-box; cursor: pointer;
+      transition: border-color 0.15s; position: relative;
+    }
+    .date-time-compact:hover { border-color: var(--color-primary); }
+    .dtc-icon { color: var(--color-primary); font-size: 24px; width: 24px; height: 24px; flex-shrink: 0; }
+    .dtc-date-value {
+      font-size: 1.05rem; font-weight: 600; color: var(--color-text);
+      cursor: pointer; white-space: nowrap;
+    }
+    .dtc-sep { color: var(--color-border); font-weight: 300; flex-shrink: 0; font-size: 1.2rem; }
+    .dtc-time-input {
+      border: none; background: none; outline: none;
+      font-size: 1.05rem; font-weight: 600; color: var(--color-text-secondary);
+      width: auto; min-width: 60px; flex-shrink: 0; font-family: inherit;
+    }
+    .dtc-time-input::-webkit-calendar-picker-indicator { display: none; -webkit-appearance: none; }
+    .hidden-date-input {
+      position: absolute; left: 0; top: 100%; width: 1px; height: 1px;
+      opacity: 0; pointer-events: none; overflow: hidden;
+    }
     .full-width { width: 100%; }
-    .value-row { display: flex; align-items: center; gap: 12px; }
+    .value-row { display: flex; align-items: center; }
     .value-field { flex: 1; }
-    .unit-badge {
+    .unit-suffix {
       font-size: 0.8rem; font-weight: 600;
       color: var(--color-primary);
-      background: rgba(0, 122, 255, 0.08);
-      padding: 6px 12px;
-      border-radius: var(--radius-sm);
-      white-space: nowrap;
+      padding-right: 4px;
     }
     .option-icon {
       font-size: 18px; width: 18px; height: 18px;
       margin-right: 8px; vertical-align: middle;
       color: var(--color-primary);
     }
-    .dialog-actions {
-      padding: 12px 24px 16px !important;
+    .save-bar {
+      flex-shrink: 0;
+      padding: 12px 24px 16px;
+      background: var(--color-surface);
       border-top: 1px solid var(--color-border);
-      gap: 8px;
     }
-    .save-btn {
-      border-radius: var(--radius-sm) !important;
-      padding: 0 20px !important;
-      font-weight: 600 !important;
-      letter-spacing: 0.02em;
+    .save-btn-gradient {
+      width: 100%; height: 48px; border: none; border-radius: var(--radius-sm);
+      background: var(--gradient-primary); color: #fff;
+      font-size: 0.95rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      cursor: pointer; box-shadow: 0 4px 16px rgba(0,122,255,0.3);
+      transition: all 0.2s;
     }
-    .save-btn mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
+    .save-btn-gradient:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(0,122,255,0.4); transform: translateY(-1px); }
+    .save-btn-gradient:disabled { opacity: 0.5; cursor: not-allowed; }
+    .save-btn-gradient mat-icon { font-size: 20px; width: 20px; height: 20px; }
 
     @media (max-width: 599px) {
       :host { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-      .dialog-banner { margin: -16px -16px 16px; padding: 14px 16px 12px; flex-shrink: 0; }
+      .dialog-banner { padding: 14px 16px 12px; flex-shrink: 0; }
       .value-row { flex-wrap: wrap; }
       .value-field { min-width: 100%; }
+      .save-bar { padding: 10px 16px 14px; margin: 0 -16px -16px; }
+      .date-time-compact { padding: 8px 10px; }
     }
   `]
 })
@@ -199,7 +235,7 @@ export class AddMetricDialogComponent implements OnInit {
   saving = signal(false);
 
   metricConfigs: MetricConfig[] = [
-    { type: 'Weight', label: 'Weight', unit: 'lbs', icon: 'monitor_weight' },
+    { type: 'Weight', label: 'Weight', unit: 'kg', icon: 'monitor_weight' },
     { type: 'BloodPressureSystolic', label: 'Blood Pressure (Systolic)', unit: 'mmHg', icon: 'favorite' },
     { type: 'BloodPressureDiastolic', label: 'Blood Pressure (Diastolic)', unit: 'mmHg', icon: 'favorite' },
     { type: 'HeartRate', label: 'Heart Rate', unit: 'bpm', icon: 'heart_broken' },
@@ -215,15 +251,18 @@ export class AddMetricDialogComponent implements OnInit {
 
   selectedType = '';
   value: number | null = null;
-  measuredAt = this.formatDateLocal(new Date());
+  dateObj = new Date();
+  timeValue = '';
   notes = '';
 
   ngOnInit() {
+    const now = this.data ? new Date(this.data.measuredAt) : new Date();
+    this.dateObj = now;
+    this.timeValue = now.toTimeString().slice(0, 5);
     if (this.data) {
       this.isEdit.set(true);
       this.selectedType = this.data.metricType;
       this.value = this.data.value;
-      this.measuredAt = this.formatDateLocal(new Date(this.data.measuredAt));
       this.notes = this.data.notes || '';
     } else {
       this.selectedType = 'Weight';
@@ -240,7 +279,7 @@ export class AddMetricDialogComponent implements OnInit {
       metricType: this.selectedType,
       value: this.value!,
       unit: this.getUnit(),
-      measuredAt: toLocalISOString(new Date(this.measuredAt)),
+      measuredAt: toLocalISOString(new Date(`${this.dateObj.toISOString().slice(0, 10)}T${this.timeValue}`)),
       notes: this.notes || undefined
     };
     const op$ = this.isEdit() && this.data
@@ -253,6 +292,10 @@ export class AddMetricDialogComponent implements OnInit {
         this.saving.set(false);
       }
     });
+  }
+
+  onDateChange(date: Date) {
+    if (date) this.dateObj = date;
   }
 
   onDelete() {

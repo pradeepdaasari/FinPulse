@@ -27,33 +27,41 @@ import { toLocalDateString } from '../../core/utils/date-utils';
   ],
   template: `
     <div appPullToRefresh (refresh)="loadDashboard()">
-    <!-- Header Row -->
-    <div class="header-row">
-      <h2 class="page-title">Trading Dashboard</h2>
-      <div class="period-controls">
-        <mat-button-toggle-group [value]="period()" (change)="onPeriodChange($event.value)" hideSingleSelectionIndicator>
-          <mat-button-toggle value="ytd">YTD</mat-button-toggle>
-          <mat-button-toggle value="1m">1M</mat-button-toggle>
-          <mat-button-toggle value="3m">3M</mat-button-toggle>
-          <mat-button-toggle value="6m">6M</mat-button-toggle>
-          <mat-button-toggle value="1y">1Y</mat-button-toggle>
-          <mat-button-toggle value="all">All</mat-button-toggle>
-        </mat-button-toggle-group>
-        <div class="custom-range">
-          <mat-form-field appearance="outline" class="date-field">
-            <mat-label>From</mat-label>
-            <input matInput [matDatepicker]="fromPicker" [(ngModel)]="customFrom">
-            <mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
-            <mat-datepicker #fromPicker></mat-datepicker>
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="date-field">
-            <mat-label>To</mat-label>
-            <input matInput [matDatepicker]="toPicker" [(ngModel)]="customTo">
-            <mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
-            <mat-datepicker #toPicker></mat-datepicker>
-          </mat-form-field>
-          <button mat-flat-button color="primary" class="go-btn" (click)="onCustomRange()">Go</button>
+    <!-- Banner -->
+    <div class="banner">
+      <div class="banner-row">
+        <div class="banner-icon-wrap"><mat-icon>insights</mat-icon></div>
+        <div class="banner-text">
+          <h2>Trading Analytics</h2>
+          <p>Data-driven decisions, disciplined execution</p>
         </div>
+      </div>
+    </div>
+
+    <!-- Period Controls -->
+    <div class="period-row">
+      <mat-button-toggle-group [value]="period()" (change)="onPeriodChange($event.value)" hideSingleSelectionIndicator>
+        <mat-button-toggle value="ytd">YTD</mat-button-toggle>
+        <mat-button-toggle value="1m">1M</mat-button-toggle>
+        <mat-button-toggle value="3m">3M</mat-button-toggle>
+        <mat-button-toggle value="6m">6M</mat-button-toggle>
+        <mat-button-toggle value="1y">1Y</mat-button-toggle>
+        <mat-button-toggle value="all">All</mat-button-toggle>
+      </mat-button-toggle-group>
+      <div class="custom-range">
+        <mat-form-field appearance="outline" class="date-field">
+          <mat-label>From</mat-label>
+          <input matInput [matDatepicker]="fromPicker" [(ngModel)]="customFrom">
+          <mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
+          <mat-datepicker #fromPicker></mat-datepicker>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="date-field">
+          <mat-label>To</mat-label>
+          <input matInput [matDatepicker]="toPicker" [(ngModel)]="customTo">
+          <mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
+          <mat-datepicker #toPicker></mat-datepicker>
+        </mat-form-field>
+        <button mat-flat-button color="primary" class="go-btn" (click)="onCustomRange()">Go</button>
       </div>
     </div>
 
@@ -132,6 +140,24 @@ import { toLocalDateString } from '../../core/utils/date-utils';
           <span class="stat-label">Cumulative R</span>
         </div>
       }
+    </div>
+
+    <!-- Today Snapshot (moved up for quick access) -->
+    <div class="today-row">
+      <div class="today-card">
+        <span class="today-val">{{ dashboard()!.tradesToday }}</span>
+        <span class="today-lbl">Trades Today</span>
+      </div>
+      <div class="today-card">
+        <span class="today-val" [class.positive]="dashboard()!.pnlToday >= 0" [class.negative]="dashboard()!.pnlToday < 0">
+          {{ dashboard()!.pnlToday | currency:'USD':'symbol':'1.0-0' }}
+        </span>
+        <span class="today-lbl">P&L Today</span>
+      </div>
+      <div class="today-card">
+        <span class="today-val">{{ dashboard()!.checklistCompliance }}%</span>
+        <span class="today-lbl">Checklist Compliance</span>
+      </div>
     </div>
 
     <!-- Revenge/Oversizing Alerts -->
@@ -441,45 +467,45 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       </div>
     }
 
-    <!-- Today Snapshot -->
-    <div class="today-row">
-      <div class="today-card">
-        <span class="today-val">{{ dashboard()!.tradesToday }}</span>
-        <span class="today-lbl">Trades Today</span>
-      </div>
-      <div class="today-card">
-        <span class="today-val" [class.positive]="dashboard()!.pnlToday >= 0" [class.negative]="dashboard()!.pnlToday < 0">
-          {{ dashboard()!.pnlToday | currency:'USD':'symbol':'1.0-0' }}
-        </span>
-        <span class="today-lbl">P&L Today</span>
-      </div>
-      <div class="today-card">
-        <span class="today-val">{{ dashboard()!.checklistCompliance }}%</span>
-        <span class="today-lbl">Checklist Compliance</span>
-      </div>
-    </div>
-
     }
     </div>
   `,
   styles: [`
     :host { display: block; }
 
-    .header-row {
-      display: flex; justify-content: space-between; align-items: flex-start;
-      flex-wrap: wrap; gap: 12px; margin-bottom: 20px;
+    /* Banner */
+    .banner {
+      background: var(--gradient-primary); border-radius: var(--radius-md);
+      padding: 20px; margin-bottom: 16px; position: relative; overflow: hidden;
     }
-    .page-title { margin: 0; font-size: 1.5rem; font-weight: var(--weight-bold); color: var(--color-text); }
-    .period-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+    .banner::after {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%);
+    }
+    .banner-row { display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; }
+    .banner-icon-wrap {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .banner-icon-wrap mat-icon { color: #fff; font-size: 24px; width: 24px; height: 24px; }
+    .banner-text h2 { margin: 0; font-size: 1.1rem; font-weight: var(--weight-bold); color: #fff; }
+    .banner-text p { margin: 2px 0 0; font-size: var(--text-xs); color: rgba(255,255,255,0.7); }
+
+    /* Period Controls */
+    .period-row {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; margin-bottom: 16px;
+    }
     .custom-range { display: flex; align-items: center; gap: 8px; }
     .date-field { width: 130px; }
     .date-field .mat-mdc-form-field-infix { padding-top: 8px; padding-bottom: 8px; }
-    .go-btn { height: 40px; min-width: 56px; padding: 0 16px; border-radius: 10px; }
+    .go-btn { height: 44px; min-width: 56px; padding: 0 16px; border-radius: 10px; }
 
     /* Stats Grid */
     .stats-grid {
       display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 12px; margin-bottom: 20px;
+      gap: 12px; margin-bottom: 16px;
     }
     .stat-card {
       background: var(--color-surface-solid); border-radius: var(--radius-md);
@@ -619,10 +645,16 @@ import { toLocalDateString } from '../../core/utils/date-utils';
 
     /* Mobile */
     @media (max-width: 599px) {
-      .header-row { flex-direction: column; }
-      .period-controls { align-items: flex-start; width: 100%; }
+      .banner { padding: 16px; margin-bottom: 12px; border-radius: var(--radius-sm); }
+      .banner-text h2 { font-size: 1rem; }
+      .period-row { flex-direction: column; align-items: flex-start; }
       .custom-range { flex-wrap: wrap; }
-      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .stats-grid {
+        display: flex; overflow-x: auto; gap: 10px; padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch; scrollbar-width: none;
+      }
+      .stats-grid::-webkit-scrollbar { display: none; }
+      .stat-card { flex: 0 0 auto; min-width: 140px; }
       .two-col { grid-template-columns: 1fr; }
       .today-row { grid-template-columns: 1fr; }
       .chart-container { height: 220px; }
@@ -631,6 +663,8 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       .r-dist-row { gap: 6px; }
       .r-bar-wrap { height: 60px; }
       .r-label { font-size: 0.55rem; }
+      .go-btn { min-height: 44px; }
+      ::ng-deep .mat-button-toggle-label-content { min-height: 44px; line-height: 44px !important; }
     }
   `]
 })

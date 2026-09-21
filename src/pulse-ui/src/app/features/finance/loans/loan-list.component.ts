@@ -561,8 +561,7 @@ export class LoanListComponent implements OnInit {
 
   editLoan(loan: PersonalLoan): void {
     const dialogRef = this.dialog.open(EditLoanDialogComponent, {
-      width: '600px',
-      maxWidth: '95vw',
+      panelClass: 'responsive-dialog-panel',
       data: loan
     });
     dialogRef.afterClosed().subscribe(result => {
@@ -604,8 +603,7 @@ export class LoanListComponent implements OnInit {
 
   openAddLoan(): void {
     const dialogRef = this.dialog.open(AddLoanDialogComponent, {
-      width: '600px',
-      maxWidth: '95vw'
+      panelClass: 'responsive-dialog-panel'
     });
     dialogRef.afterClosed().subscribe(result => {
       if (result) {

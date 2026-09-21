@@ -441,14 +441,19 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
       .page-banner { margin: -20px -20px var(--spacing-md); padding: 12px 20px; }
     }
     @media (max-width: 599px) {
-      .stats-row { grid-template-columns: repeat(2, 1fr); }
-      .controls-row { flex-direction: column; align-items: stretch; }
+      .stats-row {
+        display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch;
+        scrollbar-width: none; gap: var(--spacing-sm); padding-bottom: 4px;
+      }
+      .stats-row::-webkit-scrollbar { display: none; }
+      .stat-card { flex: 0 0 auto; min-width: 140px; padding: 12px 14px; }
+      .stat-value { font-size: 1.1rem; }
+      .controls-row { flex-direction: row; flex-wrap: wrap; }
       .filter-chips { justify-content: center; }
+      .filter-chips button { min-height: 44px; }
       .desktop-only { display: none !important; }
       .mobile-feed { display: block; }
       .page-banner { margin: -14px -14px 16px; padding: 10px 16px; border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
-      .stat-card { padding: 12px 14px; }
-      .stat-value { font-size: 1.1rem; }
     }
   `]
 })
@@ -540,14 +545,14 @@ export class JournalComponent implements OnInit {
 
   openAddTrade(): void {
     const ref = this.dialog.open(TradeEntryDialogComponent, {
-      width: '600px', maxWidth: '95vw', data: { trade: null, setups: this.setups() }
+      panelClass: 'responsive-dialog-panel', data: { trade: null, setups: this.setups() }
     });
     ref.afterClosed().subscribe(r => { if (r) this.loadTrades(); });
   }
 
   editTrade(t: TradeEntry): void {
     const ref = this.dialog.open(TradeEntryDialogComponent, {
-      width: '600px', maxWidth: '95vw', data: { trade: t, setups: this.setups() }
+      panelClass: 'responsive-dialog-panel', data: { trade: t, setups: this.setups() }
     });
     ref.afterClosed().subscribe(r => { if (r) this.loadTrades(); });
   }

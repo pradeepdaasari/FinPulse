@@ -24,7 +24,7 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
     } @else {
       <!-- Stats Cards -->
       @if (stats()) {
-        <div class="stats-grid">
+        <div class="stats-row">
           <div class="stat-card">
             <div class="stat-icon-wrap blue">
               <mat-icon>local_fire_department</mat-icon>
@@ -58,14 +58,13 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
             </div>
             <div class="stat-info">
               <span class="stat-value">{{ stats()!.monthlyVolume | number:'1.0-0' }}</span>
-              <span class="stat-label">Volume (lbs)</span>
+              <span class="stat-label">Volume (kg)</span>
             </div>
           </div>
         </div>
       }
 
       <!-- Personal Records -->
-      <div class="section-label">Personal Records</div>
       @if (records().length === 0) {
         <div class="empty-state">
           <div class="empty-icon-wrap orange">
@@ -84,7 +83,7 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
             </ng-container>
             <ng-container matColumnDef="weight">
               <th mat-header-cell *matHeaderCellDef>Max Weight</th>
-              <td mat-cell *matCellDef="let r">{{ r.maxWeight | number:'1.0-1' }} lbs</td>
+              <td mat-cell *matCellDef="let r">{{ r.maxWeight | number:'1.0-1' }} kg</td>
             </ng-container>
             <ng-container matColumnDef="reps">
               <th mat-header-cell *matHeaderCellDef>Best Set</th>
@@ -112,7 +111,7 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
               </div>
               <div class="pr-right">
                 <span class="pr-weight">{{ r.maxWeight | number:'1.0-1' }}</span>
-                <span class="pr-unit">lbs · {{ r.bestSet.weight }}×{{ r.bestSet.reps }}</span>
+                <span class="pr-unit">kg · {{ r.bestSet.weight }}×{{ r.bestSet.reps }}</span>
               </div>
             </div>
           }
@@ -120,7 +119,6 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
       }
 
       <!-- Exercise Progress Chart -->
-      <div class="section-label">Exercise Progress</div>
       <div class="progress-controls">
         <mat-form-field appearance="outline" class="exercise-select">
           <mat-label>Exercise</mat-label>
@@ -144,7 +142,7 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
               <div class="bar-track">
                 <div class="bar-fill" [style.width.%]="getBarWidth(p.maxWeight)"></div>
               </div>
-              <span class="bar-value">{{ p.maxWeight }}lbs</span>
+              <span class="bar-value">{{ p.maxWeight }}kg</span>
             </div>
           }
         </div>
@@ -153,18 +151,22 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
     </div>
   `,
   styles: [`
-    .stats-grid {
-      display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
-      margin-bottom: var(--spacing-lg);
+    .stats-row {
+      display: flex; gap: 12px; overflow-x: auto;
+      margin-bottom: var(--spacing-lg); padding-bottom: 4px;
+      scrollbar-width: none;
     }
+    .stats-row::-webkit-scrollbar { display: none; }
     .stat-card {
       display: flex; align-items: center; gap: 12px;
       padding: 16px; background: var(--color-surface);
       border-radius: var(--radius-sm); box-shadow: var(--shadow-sm);
+      min-width: 0; flex: 1;
     }
     .stat-icon-wrap {
       width: 40px; height: 40px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
     }
     .stat-icon-wrap.blue { background: var(--color-stat-blue-bg); }
     .stat-icon-wrap.blue mat-icon { color: var(--color-stat-blue); }
@@ -175,15 +177,9 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
     .stat-icon-wrap.orange { background: var(--color-stat-amber-bg); }
     .stat-icon-wrap.orange mat-icon { color: var(--color-stat-amber); }
     .stat-icon-wrap mat-icon { font-size: 20px; width: 20px; height: 20px; }
-    .stat-info { display: flex; flex-direction: column; }
+    .stat-info { display: flex; flex-direction: column; min-width: 0; }
     .stat-value { font-size: 1.25rem; font-weight: 700; }
-    .stat-label { font-size: 0.75rem; color: var(--color-text-muted); }
-
-    .section-label {
-      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em;
-      text-transform: uppercase; color: var(--color-text-muted);
-      margin: var(--spacing-lg) 0 var(--spacing-sm);
-    }
+    .stat-label { font-size: 0.75rem; color: var(--color-text-muted); white-space: nowrap; }
 
     .empty-state {
       text-align: center; padding: var(--spacing-lg) var(--spacing-md);
@@ -241,7 +237,7 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
     }
 
     @media (max-width: 599px) {
-      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .stat-card { min-width: 140px; flex: 0 0 auto; }
       .desktop-only { display: none !important; }
       .mobile-cards { display: block; }
       .exercise-select { width: 100%; }

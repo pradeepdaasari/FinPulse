@@ -18,121 +18,224 @@ import { BloodWorkResult } from '../../core/models/blood-work.model';
   standalone: true,
   imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, MatAutocompleteModule, MatProgressSpinnerModule, MatTooltipModule, FormsModule],
   template: `
-    <div class="dialog-title-row">
-      <h2 mat-dialog-title>Add Blood Work Report</h2>
-      <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
-        <mat-icon>close</mat-icon>
-      </button>
+    <div class="dialog-banner">
+      <div class="banner-pattern"></div>
+      <div class="banner-content">
+        <div class="dialog-header-icon">
+          <mat-icon>bloodtype</mat-icon>
+        </div>
+        <div>
+          <h2 mat-dialog-title>Add Blood Work Report</h2>
+          <p class="dialog-subtitle">Log your lab results & track trends</p>
+        </div>
+        <span class="banner-spacer"></span>
+        <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
     </div>
     <mat-dialog-content>
       @if (loading()) {
         <div class="loading-container"><mat-spinner diameter="28"></mat-spinner></div>
       } @else {
-      <div class="form-row">
-        <mat-form-field appearance="outline" class="half-width">
-          <mat-label>Report Date</mat-label>
-          <input matInput type="date" [(ngModel)]="reportDate">
+      <div class="form-content">
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="half-width">
+            <mat-label>Report Date</mat-label>
+            <input matInput type="date" [(ngModel)]="reportDate">
+            <mat-icon matPrefix class="field-icon">calendar_today</mat-icon>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="half-width">
+            <mat-label>Lab Name</mat-label>
+            <input matInput [(ngModel)]="labName" placeholder="e.g. Quest Diagnostics">
+            <mat-icon matPrefix class="field-icon">science</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Notes (optional)</mat-label>
+          <input matInput [(ngModel)]="notes" placeholder="e.g. Fasting blood draw">
+          <mat-icon matPrefix class="field-icon">notes</mat-icon>
         </mat-form-field>
-        <mat-form-field appearance="outline" class="half-width">
-          <mat-label>Lab Name</mat-label>
-          <input matInput [(ngModel)]="labName" placeholder="e.g. Quest Diagnostics">
-        </mat-form-field>
-      </div>
 
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Notes (optional)</mat-label>
-        <input matInput [(ngModel)]="notes">
-      </mat-form-field>
+        <div class="results-header">
+          <span class="results-count">{{ results.length }} test{{ results.length !== 1 ? 's' : '' }}</span>
+          <button mat-stroked-button class="add-test-btn" (click)="addResult()">
+            <mat-icon>add</mat-icon> Add Test
+          </button>
+        </div>
 
-      <h3 class="results-header">
-        Test Results
-        <button mat-icon-button (click)="addResult()"><mat-icon>add</mat-icon></button>
-      </h3>
-
-      <div class="results-list">
-        @for (result of results; track $index; let i = $index) {
-          <div class="result-row">
-            <mat-form-field appearance="outline" class="test-name-field">
-              <mat-label>Test Name</mat-label>
-              <input matInput [(ngModel)]="result.testName" [matAutocomplete]="testAuto"
-                     (input)="filterTestNames($event)">
-              <mat-autocomplete #testAuto="matAutocomplete">
-                @for (name of filteredTestNames(); track name) {
-                  <mat-option [value]="name">{{ name }}</mat-option>
-                }
-              </mat-autocomplete>
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="value-field">
-              <mat-label>Value</mat-label>
-              <input matInput type="number" inputmode="decimal" [(ngModel)]="result.value" step="0.01">
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="unit-field">
-              <mat-label>Unit</mat-label>
-              <input matInput [(ngModel)]="result.unit" placeholder="mg/dL">
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="ref-field">
-              <mat-label>Ref Min</mat-label>
-              <input matInput type="number" inputmode="decimal" [(ngModel)]="result.referenceMin" step="0.01">
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="ref-field">
-              <mat-label>Ref Max</mat-label>
-              <input matInput type="number" inputmode="decimal" [(ngModel)]="result.referenceMax" step="0.01">
-            </mat-form-field>
-            <button mat-icon-button (click)="removeResult(i)" class="remove-btn">
-              <mat-icon>close</mat-icon>
-            </button>
-          </div>
-        }
+        <div class="results-list">
+          @for (result of results; track $index; let i = $index) {
+            <div class="result-card">
+              <div class="result-card-header">
+                <span class="result-num">{{ i + 1 }}</span>
+                <mat-form-field appearance="outline" class="test-name-field">
+                  <mat-label>Test Name</mat-label>
+                  <input matInput [(ngModel)]="result.testName" [matAutocomplete]="testAuto"
+                         (input)="filterTestNames($event)">
+                  <mat-autocomplete #testAuto="matAutocomplete">
+                    @for (name of filteredTestNames(); track name) {
+                      <mat-option [value]="name">{{ name }}</mat-option>
+                    }
+                  </mat-autocomplete>
+                </mat-form-field>
+                <button mat-icon-button (click)="removeResult(i)" class="remove-btn" matTooltip="Remove">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+              <div class="result-card-fields">
+                <mat-form-field appearance="outline" class="value-field">
+                  <mat-label>Value</mat-label>
+                  <input matInput type="number" inputmode="decimal" [(ngModel)]="result.value" step="0.01">
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="unit-field">
+                  <mat-label>Unit</mat-label>
+                  <input matInput [(ngModel)]="result.unit" placeholder="mg/dL">
+                </mat-form-field>
+              </div>
+              <div class="result-card-fields">
+                <mat-form-field appearance="outline" class="ref-field">
+                  <mat-label>Ref Min</mat-label>
+                  <input matInput type="number" inputmode="decimal" [(ngModel)]="result.referenceMin" step="0.01">
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="ref-field">
+                  <mat-label>Ref Max</mat-label>
+                  <input matInput type="number" inputmode="decimal" [(ngModel)]="result.referenceMax" step="0.01">
+                </mat-form-field>
+              </div>
+            </div>
+          }
+        </div>
       </div>
       }
     </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-flat-button color="primary" [disabled]="!reportDate || results.length === 0 || loading() || saving()" (click)="save()">
+    <div class="save-bar">
+      <button class="save-btn" [disabled]="!reportDate || results.length === 0 || loading() || saving()" (click)="save()">
+        <mat-icon>check</mat-icon>
         {{ saving() ? 'Saving...' : 'Save Report' }}
       </button>
-    </mat-dialog-actions>
+    </div>
   `,
   styles: [`
-    .dialog-title-row {
-      display: flex; align-items: center; gap: 8px;
+    :host { display: block; }
+    .dialog-banner {
+      position: relative;
+      margin: -24px -24px 20px;
+      padding: 20px 24px 16px;
+      background: linear-gradient(135deg, #FF2D55 0%, #AF52DE 100%);
+      overflow: hidden;
     }
-    .dialog-title-row h2 { flex: 1; }
+    .banner-pattern {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(circle at 20% 80%, rgba(255,255,255,0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.06) 0%, transparent 40%);
+    }
+    .banner-content {
+      position: relative;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .dialog-header-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: rgba(255,255,255,0.2);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(255,255,255,0.3);
+      flex-shrink: 0;
+    }
+    .dialog-header-icon mat-icon { font-size: 18px; width: 18px; height: 18px; color: #fff; }
+    h2[mat-dialog-title] {
+      margin: 0 !important; padding: 0 !important;
+      font-size: 1rem !important; font-weight: 700 !important;
+      color: #fff !important;
+    }
+    .dialog-subtitle { color: rgba(255,255,255,0.75); font-size: 0.72rem; margin: 2px 0 0; }
+    .banner-spacer { flex: 1; }
     .header-close {
-      color: var(--color-text-muted) !important;
-      width: 34px !important; height: 34px !important;
+      color: rgba(255,255,255,0.9) !important;
+      width: 44px !important; height: 44px !important;
       padding: 0 !important;
       display: inline-flex !important; align-items: center !important; justify-content: center !important;
       border-radius: 50% !important;
-      background: var(--color-surface-secondary) !important;
-      border: 1px solid var(--color-border) !important;
+      background: rgba(255,255,255,0.12) !important;
+      border: 1px solid rgba(255,255,255,0.2) !important;
     }
-    .header-close:hover { background: var(--color-surface-hover) !important; }
-    .header-close mat-icon { font-size: 18px; width: 18px; height: 18px; }
-    mat-dialog-content { min-width: 480px; max-height: 65vh; overflow-y: auto; }
+    .header-close:hover { background: rgba(255,255,255,0.25) !important; }
+    .header-close mat-icon { font-size: 20px; width: 20px; height: 20px; }
+
+    .form-content { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; }
     .full-width { width: 100%; }
     .half-width { width: 48%; }
     .form-row { display: flex; gap: 4%; }
+    .field-icon { font-size: 18px; width: 18px; height: 18px; color: var(--color-text-muted); margin-right: 4px; }
+
     .results-header {
-      display: flex; align-items: center; gap: 4px;
-      font-size: 0.9rem; font-weight: 600; margin: 8px 0 4px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin: 8px 0 4px;
     }
-    .results-list { display: flex; flex-direction: column; gap: 4px; }
-    .result-row {
-      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    .results-count {
+      font-size: 0.78rem; font-weight: 600; color: var(--color-text-muted);
     }
-    .test-name-field { flex: 2; min-width: 140px; }
-    .value-field { flex: 1; min-width: 70px; }
-    .unit-field { flex: 1; min-width: 60px; }
-    .ref-field { flex: 1; min-width: 60px; }
+    .add-test-btn {
+      border-style: dashed !important;
+      font-weight: 600 !important;
+      font-size: 0.8rem !important;
+    }
+    .add-test-btn mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
+
+    .results-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+    .result-card {
+      background: var(--color-surface-secondary);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      border: 1px solid var(--color-border);
+    }
+    .result-card-header {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+    }
+    .result-num {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--color-primary); color: #fff;
+      font-size: 0.7rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .test-name-field { flex: 1; }
     .remove-btn { flex-shrink: 0; }
+    .remove-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .result-card-fields { display: flex; gap: 8px; }
+    .value-field { flex: 2; }
+    .unit-field { flex: 1; }
+    .ref-field { flex: 1; }
+
     .mat-mdc-form-field-subscript-wrapper { display: none; }
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
+
+    .save-bar {
+      position: sticky; bottom: 0; left: 0; right: 0;
+      padding: 12px 24px 16px;
+      background: linear-gradient(transparent, var(--color-surface) 30%);
+    }
+    .save-btn {
+      width: 100%; height: 48px; border: none; border-radius: var(--radius-sm);
+      background: var(--gradient-primary); color: #fff;
+      font-size: 0.9rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      cursor: pointer; box-shadow: 0 4px 16px rgba(0,122,255,0.3);
+      transition: opacity 0.15s;
+    }
+    .save-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .save-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
+
     @media (max-width: 599px) {
-      mat-dialog-content { min-width: auto; }
+      :host { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+      .dialog-banner { margin: -16px -16px 16px; padding: 14px 16px 12px; flex-shrink: 0; }
       .form-row { flex-direction: column; gap: 0; }
       .half-width { width: 100%; }
-      .result-row { flex-direction: column; align-items: stretch; gap: 0; }
-      .test-name-field, .value-field, .unit-field, .ref-field { min-width: auto; flex: auto; }
+      .result-card-fields { flex-wrap: wrap; }
+      .value-field, .unit-field, .ref-field { min-width: calc(50% - 4px); }
+      .save-bar { padding: 12px 16px 16px; }
     }
   `]
 })

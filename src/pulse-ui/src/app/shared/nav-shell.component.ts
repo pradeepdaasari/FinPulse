@@ -1166,8 +1166,7 @@ export class NavShellComponent implements OnInit, OnDestroy {
   openExpenseDialog(preselectedType?: string): void {
     import('../features/finance/expenses/add-expense-dialog.component').then(m => {
       const ref = this.dialog.open(m.AddExpenseDialogComponent, {
-        width: '480px',
-        maxWidth: '95vw',
+        panelClass: 'expense-dialog-panel',
         data: { expense: null, preselectedType }
       });
       ref.afterClosed().subscribe((result: any) => {
@@ -1202,8 +1201,7 @@ export class NavShellComponent implements OnInit, OnDestroy {
       next: (setups) => {
         import('../features/trading/trade-entry-dialog.component').then(m => {
           const ref = this.dialog.open(m.TradeEntryDialogComponent, {
-            width: '600px',
-            maxWidth: '95vw',
+            panelClass: 'responsive-dialog-panel',
             data: { trade: null, setups }
           });
           ref.afterClosed().subscribe((result: any) => {

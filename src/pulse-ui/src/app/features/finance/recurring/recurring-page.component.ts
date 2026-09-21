@@ -477,7 +477,7 @@ export class RecurringPageComponent implements OnInit {
 
   openAdd(): void {
     this.dialog.open(RecurringDialogComponent, {
-      width: '600px', maxWidth: '95vw', data: null
+      panelClass: 'responsive-dialog-panel', data: null
     }).afterClosed().subscribe(result => {
       if (result) this.loadData();
     });
@@ -485,7 +485,7 @@ export class RecurringPageComponent implements OnInit {
 
   edit(item: RecurringTransaction): void {
     this.dialog.open(RecurringDialogComponent, {
-      width: '600px', maxWidth: '95vw', data: item
+      panelClass: 'responsive-dialog-panel', data: item
     }).afterClosed().subscribe(result => {
       if (result) this.loadData();
     });

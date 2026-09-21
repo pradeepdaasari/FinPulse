@@ -1,7 +1,6 @@
 import { Component, OnInit, Input, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
-import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DashboardService } from '../../../core/services/dashboard.service';
@@ -12,15 +11,14 @@ import { FinancialSummary } from '../../../core/models/dashboard.model';
 @Component({
   selector: 'app-financial-summary',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, LocalDatePipe],
+  imports: [CommonModule, MatIconModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, LocalDatePipe],
   template: `
     @if (loading()) {
       <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
     } @else if (data()) {
       <div class="panels">
         <!-- Left Panel: Cash Flow -->
-        <mat-card class="panel">
-          <mat-card-content>
+        <div class="panel">
             <div class="panel-header">
               <mat-icon class="panel-icon cash-icon">account_balance_wallet</mat-icon>
               <span class="panel-title">Cash Flow</span>
@@ -61,13 +59,11 @@ import { FinancialSummary } from '../../../core/models/dashboard.model';
                 </span>
               </div>
             }
-          </mat-card-content>
-        </mat-card>
+        </div>
 
         <!-- Right Panel: Debt Overview -->
         @if (debtSummary) {
-          <mat-card class="panel">
-            <mat-card-content>
+          <div class="panel">
               <div class="panel-header">
                 <mat-icon class="panel-icon debt-icon">trending_down</mat-icon>
                 <span class="panel-title">Debt Overview</span>
@@ -96,8 +92,7 @@ import { FinancialSummary } from '../../../core/models/dashboard.model';
                 </div>
                 <span class="debt-bar-label">{{ debtPaidPercent() | number:'1.0-0' }}% paid off this month</span>
               </div>
-            </mat-card-content>
-          </mat-card>
+          </div>
         }
       </div>
     }
@@ -110,11 +105,12 @@ import { FinancialSummary } from '../../../core/models/dashboard.model';
       margin-bottom: var(--spacing-md);
     }
     .panel {
-      border-radius: var(--radius-md) !important;
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-sm);
       overflow: hidden;
-    }
-    .panel mat-card-content {
-      padding: 20px !important;
+      padding: 20px;
     }
     .panel-header {
       display: flex;
@@ -224,12 +220,11 @@ import { FinancialSummary } from '../../../core/models/dashboard.model';
       .panels { grid-template-columns: 1fr; }
     }
     @media (max-width: 599px) {
-      .panel mat-card-content { padding: 14px !important; }
+      .panel { padding: 14px; -webkit-tap-highlight-color: transparent; transition: transform 0.1s ease; }
+      .panel:active { transform: scale(0.98); }
       .metrics-grid { gap: 10px 16px; }
       .metric-value { font-size: 1.05rem; }
       .trading-strip { flex-wrap: wrap; gap: 8px; }
-      .panel { -webkit-tap-highlight-color: transparent; transition: transform 0.1s ease; }
-      .panel:active { transform: scale(0.98); }
     }
   `]
 })

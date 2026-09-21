@@ -128,7 +128,7 @@ import { NotificationService } from '../../core/services/notification.service';
                 <th mat-header-cell *matHeaderCellDef>Value</th>
                 <td mat-cell *matCellDef="let m">
                   <span class="metric-value">{{ m.value | number:'1.0-2' }}</span>
-                  <span class="metric-unit">{{ m.unit }}</span>
+                  <span class="metric-unit">{{ m.unit === 'lbs' ? 'kg' : m.unit }}</span>
                 </td>
               </ng-container>
               <ng-container matColumnDef="date">
@@ -171,7 +171,7 @@ import { NotificationService } from '../../core/services/notification.service';
               <span class="mc-date">{{ m.measuredAt | date:'MMM d, h:mm a' }}{{ m.notes ? ' · ' + m.notes : '' }}</span>
             </div>
             <div class="mc-right">
-              <span class="mc-value">{{ m.value | number:'1.0-1' }}<small class="mc-unit">{{ m.unit }}</small></span>
+              <span class="mc-value">{{ m.value | number:'1.0-1' }}<small class="mc-unit">{{ m.unit === 'lbs' ? 'kg' : m.unit }}</small></span>
             </div>
           </div>
         }
@@ -409,11 +409,14 @@ export class MetricsLogComponent implements OnInit {
               datasets: [{
                 label: this.getMetricLabel(this.selectedType),
                 data: data.map(d => d.value),
-                borderColor: 'var(--color-stat-blue, #1565c0)',
-                backgroundColor: 'var(--color-stat-blue-bg, rgba(21, 101, 192, 0.06))',
+                borderColor: '#4f7cff',
+                backgroundColor: 'rgba(79, 124, 255, 0.08)',
                 fill: true,
-                pointBackgroundColor: 'var(--color-stat-blue, #1565c0)',
-                borderWidth: 2.5
+                pointBackgroundColor: '#4f7cff',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                borderWidth: 2.5,
+                tension: 0.35
               }]
             });
           } else {
@@ -431,7 +434,7 @@ export class MetricsLogComponent implements OnInit {
 
   openAddDialog() {
     import('./add-metric-dialog.component').then(m => {
-      const ref = this.dialog.open(m.AddMetricDialogComponent, { width: '420px', maxWidth: '95vw' });
+      const ref = this.dialog.open(m.AddMetricDialogComponent, { panelClass: 'responsive-dialog-panel' });
       ref.afterClosed().subscribe(result => {
         if (result) {
           this.loadMetrics();

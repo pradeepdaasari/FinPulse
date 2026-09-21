@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef, OnInit, inject, signal } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
 import { MatButtonModule } from '@angular/material/button';
@@ -26,6 +26,39 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
         <mat-icon>add</mat-icon> Add Goal
       </button>
     </div>
+
+    @if (!loading() && goals().length > 0) {
+      <div class="stats-row">
+        <div class="stat-card stat-blue">
+          <mat-icon>savings</mat-icon>
+          <div class="stat-content">
+            <span class="stat-value">{{ totalSaved() | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="stat-label">Total Saved</span>
+          </div>
+        </div>
+        <div class="stat-card stat-purple">
+          <mat-icon>flag</mat-icon>
+          <div class="stat-content">
+            <span class="stat-value">{{ totalTarget() | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="stat-label">Total Target</span>
+          </div>
+        </div>
+        <div class="stat-card stat-green">
+          <mat-icon>trending_up</mat-icon>
+          <div class="stat-content">
+            <span class="stat-value">{{ avgProgress() | number:'1.0-0' }}%</span>
+            <span class="stat-label">Avg Progress</span>
+          </div>
+        </div>
+        <div class="stat-card stat-orange">
+          <mat-icon>emoji_events</mat-icon>
+          <div class="stat-content">
+            <span class="stat-value">{{ completedGoals() }}/{{ goals().length }}</span>
+            <span class="stat-label">Completed</span>
+          </div>
+        </div>
+      </div>
+    }
 
     @if (loading()) {
       <app-skeleton type="card"></app-skeleton>
@@ -100,6 +133,32 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       display: flex; justify-content: flex-end; align-items: center;
       margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);
     }
+    .stats-row {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: var(--spacing-sm); margin-bottom: var(--spacing-md);
+    }
+    .stat-card {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 16px; border-radius: var(--radius-md);
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-sm);
+    }
+    .stat-card mat-icon {
+      width: 36px; height: 36px; font-size: 20px;
+      border-radius: var(--radius-sm); display: flex;
+      align-items: center; justify-content: center;
+    }
+    .stat-content { display: flex; flex-direction: column; }
+    .stat-value { font-size: var(--text-lg); font-weight: var(--weight-bold); line-height: 1.2; }
+    .stat-label { font-size: var(--text-xs); color: var(--color-text-secondary); }
+    .stat-blue mat-icon { background: rgba(33, 150, 243, 0.1); color: #2196F3; }
+    .stat-blue .stat-value { color: #2196F3; }
+    .stat-purple mat-icon { background: rgba(156, 39, 176, 0.1); color: #9C27B0; }
+    .stat-purple .stat-value { color: #9C27B0; }
+    .stat-green mat-icon { background: rgba(76, 175, 80, 0.1); color: #4CAF50; }
+    .stat-green .stat-value { color: #4CAF50; }
+    .stat-orange mat-icon { background: rgba(255, 152, 0, 0.1); color: #FF9800; }
+    .stat-orange .stat-value { color: #FF9800; }
     .goals-grid {
       display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
       gap: var(--spacing-md);
@@ -163,8 +222,14 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
       .goals-grid { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
     }
     @media (max-width: 599px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .stat-card { padding: 10px 12px; gap: 8px; }
+      .stat-card mat-icon { width: 32px; height: 32px; font-size: 18px; }
+      .stat-value { font-size: 0.95rem; }
+      .stat-label { font-size: 0.65rem; }
       .goals-grid { grid-template-columns: 1fr; gap: var(--spacing-sm); }
       .goal-card {
         padding: var(--spacing-sm) !important;
@@ -209,6 +274,15 @@ export class GoalsPageComponent implements OnInit {
   goals = signal<SavingsGoal[]>([]);
   loading = signal(true);
 
+  totalSaved = computed(() => this.goals().reduce((s, g) => s + g.currentAmount, 0));
+  totalTarget = computed(() => this.goals().reduce((s, g) => s + g.targetAmount, 0));
+  avgProgress = computed(() => {
+    const g = this.goals();
+    if (!g.length) return 0;
+    return g.reduce((s, goal) => s + this.getProgress(goal), 0) / g.length;
+  });
+  completedGoals = computed(() => this.goals().filter(g => this.getProgress(g) >= 100).length);
+
   ngOnInit(): void {
     this.loadData();
   }
@@ -227,7 +301,7 @@ export class GoalsPageComponent implements OnInit {
 
   openAdd(): void {
     this.dialog.open(GoalDialogComponent, {
-      width: '600px', maxWidth: '95vw', data: null
+      panelClass: 'responsive-dialog-panel', data: null
     }).afterClosed().subscribe(result => {
       if (result) this.loadData();
     });
@@ -235,7 +309,7 @@ export class GoalsPageComponent implements OnInit {
 
   edit(goal: SavingsGoal): void {
     this.dialog.open(GoalDialogComponent, {
-      width: '600px', maxWidth: '95vw', data: goal
+      panelClass: 'responsive-dialog-panel', data: goal
     }).afterClosed().subscribe(result => {
       if (result) this.loadData();
     });

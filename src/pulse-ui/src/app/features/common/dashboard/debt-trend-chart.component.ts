@@ -1,6 +1,5 @@
 import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { BaseChartDirective } from 'ng2-charts';
@@ -11,47 +10,48 @@ import { TrendData } from '../../../core/models/dashboard.model';
 @Component({
   selector: 'app-debt-trend-chart',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, BaseChartDirective],
+  imports: [CommonModule, MatIconModule, MatProgressSpinnerModule, BaseChartDirective],
   template: `
     @if (loading()) {
       <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
     } @else {
-    <mat-card class="trend-card">
-      <mat-card-header>
-        <mat-card-title>
-          <div class="card-title-row">
-            <span class="title-with-icon"><mat-icon class="card-title-icon">show_chart</mat-icon> Debt Trend</span>
-            @if (trendData()) {
-              <span class="mom-change" [class.positive]="trendData()!.monthOverMonthChange > 0" [class.negative]="trendData()!.monthOverMonthChange < 0">
-                <mat-icon>{{ trendData()!.monthOverMonthChange <= 0 ? 'trending_down' : 'trending_up' }}</mat-icon>
-                {{ trendData()!.monthOverMonthChangePercent }}% MoM
-              </span>
-            }
-          </div>
-        </mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        @if (chartData()) {
-          <div class="chart-container">
-            <canvas baseChart
-              [data]="chartData()!"
-              [options]="chartOptions"
-              type="line">
-            </canvas>
-          </div>
-        } @else {
-          <div class="empty-state">
-            <mat-icon>show_chart</mat-icon>
-            <span>Trend data will appear after your first month</span>
-          </div>
+    <div class="trend-card">
+      <div class="card-title-row">
+        <span class="title-with-icon"><mat-icon class="card-title-icon">show_chart</mat-icon> Debt Trend</span>
+        @if (trendData()) {
+          <span class="mom-change" [class.positive]="trendData()!.monthOverMonthChange > 0" [class.negative]="trendData()!.monthOverMonthChange < 0">
+            <mat-icon>{{ trendData()!.monthOverMonthChange <= 0 ? 'trending_down' : 'trending_up' }}</mat-icon>
+            {{ trendData()!.monthOverMonthChangePercent }}% MoM
+          </span>
         }
-      </mat-card-content>
-    </mat-card>
+      </div>
+      @if (chartData()) {
+        <div class="chart-container">
+          <canvas baseChart
+            [data]="chartData()!"
+            [options]="chartOptions"
+            type="line">
+          </canvas>
+        </div>
+      } @else {
+        <div class="empty-state">
+          <mat-icon>show_chart</mat-icon>
+          <span>Trend data will appear after your first month</span>
+        </div>
+      }
+    </div>
     }
   `,
   styles: [`
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
-    .trend-card { margin-top: var(--spacing-md); }
+    .trend-card {
+      margin-top: var(--spacing-md);
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-sm);
+      padding: 20px;
+    }
     .card-title-row {
       display: flex;
       justify-content: space-between;

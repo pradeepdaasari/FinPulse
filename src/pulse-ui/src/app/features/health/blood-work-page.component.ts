@@ -148,7 +148,7 @@ export class BloodWorkPageComponent implements OnInit {
 
   openAddDialog() {
     import('./add-blood-work-dialog.component').then(m => {
-      const ref = this.dialog.open(m.AddBloodWorkDialogComponent, { width: '600px', maxWidth: '95vw', maxHeight: '90vh' });
+      const ref = this.dialog.open(m.AddBloodWorkDialogComponent, { panelClass: 'responsive-dialog-panel', maxHeight: '90vh' });
       ref.afterClosed().subscribe(result => {
         if (result) this.loadReports();
       });

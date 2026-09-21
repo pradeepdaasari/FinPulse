@@ -100,18 +100,27 @@ export interface ExpenseDialogData {
           </div>
         </div>
 
-        <div class="date-time-row">
-          <mat-form-field appearance="outline" class="flex-1">
-            <mat-label>Date</mat-label>
-            <input matInput [matDatepicker]="picker" formControlName="date">
-            <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+        <!-- Hero Amount — front and center for standard types -->
+        @if (form.value.transactionType !== 'LoanPayment' && form.value.transactionType !== 'CardPayment') {
+          <div class="amount-hero">
+            <div class="amount-input-row">
+              <span class="amount-dollar">$</span>
+              <input class="amount-value" type="number" inputmode="decimal" formControlName="amount" min="0.01" step="0.01" placeholder="0.00" #amountInput cdkFocusInitial>
+            </div>
+            <div class="amount-underline"></div>
+          </div>
+        }
+
+        <!-- Compact date + time row -->
+        <div class="date-time-compact">
+          <mat-icon class="dtc-icon">calendar_today</mat-icon>
+          <div class="dtc-date-wrap" (click)="picker.open()">
+            <input matInput [matDatepicker]="picker" formControlName="date" class="dtc-date-input" readonly>
             <mat-datepicker #picker></mat-datepicker>
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="time-field">
-            <mat-label>Time</mat-label>
-            <input matInput type="time" formControlName="time">
-            <mat-icon matSuffix>schedule</mat-icon>
-          </mat-form-field>
+          </div>
+          <span class="dtc-sep">|</span>
+          <mat-icon class="dtc-icon" (click)="expTimeInput.showPicker()">schedule</mat-icon>
+          <input #expTimeInput type="time" formControlName="time" class="dtc-time-input" (click)="expTimeInput.showPicker()">
         </div>
 
         @if (form.value.transactionType !== 'Transfer' && form.value.transactionType !== 'CardPayment' && form.value.transactionType !== 'LoanPayment') {
@@ -177,20 +186,6 @@ export interface ExpenseDialogData {
                 <mat-icon>check</mat-icon>
               </button>
             </div>
-          }
-        }
-
-        @if (form.value.transactionType !== 'LoanPayment' && form.value.transactionType !== 'CardPayment') {
-          <mat-form-field appearance="outline">
-            <mat-label>{{ form.value.transactionType === 'Transfer' ? 'Transfer Amount' : form.value.transactionType === 'Refund' ? 'Refund Amount' : 'Amount' }}</mat-label>
-            <input matInput type="number" inputmode="decimal" formControlName="amount" min="0.01" step="0.01">
-            <span matTextPrefix>$&nbsp;</span>
-          </mat-form-field>
-
-          @if (!data?.expense && form.value.transactionType === 'Expense') {
-            <mat-slide-toggle [checked]="splitMode()" (change)="splitMode() ? splitMode.set(false) : enableSplit()" class="split-toggle">
-              Split across categories
-            </mat-slide-toggle>
           }
         }
 
@@ -368,25 +363,28 @@ export interface ExpenseDialogData {
           </mat-form-field>
         }
 
+        <!-- Two-column: Paid with + Merchant for standard types -->
         @if (form.value.transactionType !== 'Transfer' && form.value.transactionType !== 'CardPayment' && form.value.transactionType !== 'LoanPayment') {
-          <mat-form-field appearance="outline">
-            <mat-label>Merchant</mat-label>
-            <input matInput formControlName="merchant" [matAutocomplete]="merchantAuto"
-                   (input)="filterMerchants($event)" (focus)="onMerchantFocus()"
-                   placeholder="e.g. Walmart, Shell, Chipotle">
-            <mat-icon matSuffix class="merchant-search-icon">search</mat-icon>
-            <mat-autocomplete #merchantAuto="matAutocomplete">
-              @for (merchant of filteredMerchants(); track merchant) {
-                <mat-option [value]="merchant">{{ merchant }}</mat-option>
-              }
-            </mat-autocomplete>
-          </mat-form-field>
+          <div class="two-col-row">
+            <mat-form-field appearance="outline" class="flex-1">
+              <mat-label>Merchant</mat-label>
+              <input matInput formControlName="merchant" [matAutocomplete]="merchantAuto"
+                     (input)="filterMerchants($event)" (focus)="onMerchantFocus()"
+                     placeholder="e.g. Walmart">
+              <mat-icon matSuffix class="merchant-search-icon">search</mat-icon>
+              <mat-autocomplete #merchantAuto="matAutocomplete">
+                @for (merchant of filteredMerchants(); track merchant) {
+                  <mat-option [value]="merchant">{{ merchant }}</mat-option>
+                }
+              </mat-autocomplete>
+            </mat-form-field>
+          </div>
         }
 
         <mat-form-field appearance="outline">
-          <mat-label>Description</mat-label>
+          <mat-label>{{ form.value.transactionType === 'Transfer' ? 'e.g. Fund brokerage account' : 'What was this for?' }}</mat-label>
           <input matInput formControlName="description" [matAutocomplete]="descAuto"
-                 (input)="onDescriptionInput()" placeholder="{{ form.value.transactionType === 'Transfer' ? 'e.g. Fund brokerage account' : 'What was this for?' }}">
+                 (input)="onDescriptionInput()">
           <mat-autocomplete #descAuto="matAutocomplete">
             @for (desc of filteredDescriptions(); track desc) {
               <mat-option [value]="desc">{{ desc }}</mat-option>
@@ -394,40 +392,56 @@ export interface ExpenseDialogData {
           </mat-autocomplete>
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Tag (optional)</mat-label>
-          <input matInput formControlName="tag" [matAutocomplete]="tagAutoDialog"
-                 placeholder="e.g. Hawaii 2026" (input)="onTagDialogInput()">
-          <mat-icon matPrefix>label</mat-icon>
-          <mat-autocomplete #tagAutoDialog="matAutocomplete">
-            @for (t of filteredTagOptions(); track t) {
-              <mat-option [value]="t">{{ t }}</mat-option>
-            }
-          </mat-autocomplete>
-        </mat-form-field>
+        <!-- More Options — progressive disclosure for tags and split -->
+        <div class="more-options-toggle" (click)="showMoreOptions.set(!showMoreOptions())">
+          <mat-icon class="more-icon">{{ showMoreOptions() ? 'expand_less' : 'expand_more' }}</mat-icon>
+          <span>More options (Tag, Split)</span>
+        </div>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Tag Type (optional)</mat-label>
-          <input matInput [formControl]="tagTypeInputCtrl" [matAutocomplete]="tagTypeAuto" (blur)="onTagTypeBlur()" placeholder="Type to search...">
-          <mat-icon matPrefix>category</mat-icon>
-          <mat-icon matSuffix class="cat-arrow">arrow_drop_down</mat-icon>
-          <mat-autocomplete #tagTypeAuto="matAutocomplete" [displayWith]="displayTagType" (optionSelected)="onTagTypeAutoSelected($event)">
-            <mat-option [value]="''">-- None --</mat-option>
-            @for (tt of filteredTagTypes(); track tt) {
-              <mat-option [value]="tt">{{ tt }}</mat-option>
+        @if (showMoreOptions()) {
+          <div class="more-options-section">
+            <mat-form-field appearance="outline">
+              <mat-label>Tag (optional)</mat-label>
+              <input matInput formControlName="tag" [matAutocomplete]="tagAutoDialog"
+                     placeholder="e.g. Hawaii 2026" (input)="onTagDialogInput()">
+              <mat-icon matPrefix>label</mat-icon>
+              <mat-autocomplete #tagAutoDialog="matAutocomplete">
+                @for (t of filteredTagOptions(); track t) {
+                  <mat-option [value]="t">{{ t }}</mat-option>
+                }
+              </mat-autocomplete>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Tag Type (optional)</mat-label>
+              <input matInput [formControl]="tagTypeInputCtrl" [matAutocomplete]="tagTypeAuto" (blur)="onTagTypeBlur()" placeholder="Type to search...">
+              <mat-icon matPrefix>category</mat-icon>
+              <mat-icon matSuffix class="cat-arrow">arrow_drop_down</mat-icon>
+              <mat-autocomplete #tagTypeAuto="matAutocomplete" [displayWith]="displayTagType" (optionSelected)="onTagTypeAutoSelected($event)">
+                <mat-option [value]="''">-- None --</mat-option>
+                @for (tt of filteredTagTypes(); track tt) {
+                  <mat-option [value]="tt">{{ tt }}</mat-option>
+                }
+                <mat-option value="__other__">+ New tag type...</mat-option>
+              </mat-autocomplete>
+            </mat-form-field>
+            @if (form.value.tagType === '__other__') {
+              <mat-form-field appearance="outline">
+                <mat-label>New Tag Type</mat-label>
+                <input matInput formControlName="customTagType" placeholder="Enter new tag type" (input)="customTagTypeValue.set($any($event.target).value)">
+                <mat-icon matPrefix>edit</mat-icon>
+                @if (isTagTypeDuplicate()) {
+                  <mat-hint class="warn-hint">This tag type already exists — select it from the dropdown instead.</mat-hint>
+                }
+              </mat-form-field>
             }
-            <mat-option value="__other__">+ New tag type...</mat-option>
-          </mat-autocomplete>
-        </mat-form-field>
-        @if (form.value.tagType === '__other__') {
-          <mat-form-field appearance="outline">
-            <mat-label>New Tag Type</mat-label>
-            <input matInput formControlName="customTagType" placeholder="Enter new tag type" (input)="customTagTypeValue.set($any($event.target).value)">
-            <mat-icon matPrefix>edit</mat-icon>
-            @if (isTagTypeDuplicate()) {
-              <mat-hint class="warn-hint">This tag type already exists — select it from the dropdown instead.</mat-hint>
+
+            @if (!data?.expense && form.value.transactionType === 'Expense') {
+              <mat-slide-toggle [checked]="splitMode()" (change)="splitMode() ? splitMode.set(false) : enableSplit()" class="split-toggle">
+                Split across categories
+              </mat-slide-toggle>
             }
-          </mat-form-field>
+          </div>
         }
       </form>
     @if (splitMode()) {
@@ -473,19 +487,17 @@ export interface ExpenseDialogData {
     }
     </mat-dialog-content>
 
-    <mat-dialog-actions align="end" class="dialog-actions">
-      <button mat-raised-button color="primary" class="save-btn" (click)="save()" [disabled]="form.invalid || loading() || saving() || savingLoanPayment() || (splitMode() && !splitTotalValid()) || ((form.value.transactionType === 'LoanPayment' || form.value.transactionType === 'CardPayment') && !selectedDebt())">
+    <div class="sticky-save-bar">
+      <button class="gradient-save-btn" (click)="save()" [disabled]="form.invalid || loading() || saving() || savingLoanPayment() || (splitMode() && !splitTotalValid()) || ((form.value.transactionType === 'LoanPayment' || form.value.transactionType === 'CardPayment') && !selectedDebt())">
         @if (saving() || savingLoanPayment()) {
           <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
           Saving...
         } @else {
-          <ng-container>
-            <mat-icon>{{ data?.expense ? 'check' : 'save' }}</mat-icon>
-            {{ data?.expense ? 'Update' : 'Save' }}
-          </ng-container>
+          <mat-icon>{{ data?.expense ? 'check' : 'check' }}</mat-icon>
+          {{ data?.expense ? 'Update Transaction' : 'Save Transaction' }}
         }
       </button>
-    </mat-dialog-actions>
+    </div>
   `,
   styles: [`
     :host { display: block; }
@@ -564,10 +576,133 @@ export interface ExpenseDialogData {
     .header-delete mat-icon, .header-close mat-icon {
       font-size: 20px; width: 20px; height: 20px;
     }
+    /* Hero Amount */
+    .amount-hero {
+      text-align: center;
+      padding: 8px 0 4px;
+    }
+    .amount-input-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 2px;
+    }
+    .amount-dollar {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--color-text-muted);
+    }
+    .amount-value {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--color-text);
+      font-variant-numeric: tabular-nums;
+      border: none;
+      background: none;
+      text-align: center;
+      width: 180px;
+      outline: none;
+      caret-color: var(--color-primary);
+      -moz-appearance: textfield;
+    }
+    .amount-value::-webkit-inner-spin-button,
+    .amount-value::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .amount-value::placeholder { color: var(--color-text-muted); opacity: 0.4; }
+    .amount-underline {
+      width: 180px;
+      height: 3px;
+      border-radius: 2px;
+      background: var(--gradient-primary);
+      margin: 4px auto 0;
+      opacity: 0.4;
+    }
+
+    /* Compact date/time row */
+    .date-time-compact {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 20px;
+      background: var(--color-surface-secondary);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      margin-bottom: 8px;
+      width: 100%; box-sizing: border-box;
+    }
+    .dtc-icon { color: var(--color-primary); font-size: 24px; width: 24px; height: 24px; flex-shrink: 0; }
+    .dtc-date-wrap { cursor: pointer; flex-shrink: 0; }
+    .dtc-date-input {
+      border: none; background: none; outline: none;
+      font-size: 1.05rem; font-weight: 600; color: var(--color-primary);
+      cursor: pointer; width: 105px;
+      font-family: inherit;
+    }
+    .dtc-sep { color: var(--color-border); font-weight: 300; flex-shrink: 0; font-size: 1.2rem; }
+    .dtc-time-input {
+      border: none; background: none; outline: none;
+      font-size: 1.05rem; font-weight: 600; color: var(--color-text-secondary);
+      width: auto; min-width: 60px; flex-shrink: 0;
+      font-family: inherit;
+    }
+    .dtc-time-input::-webkit-calendar-picker-indicator { display: none; -webkit-appearance: none; }
+
+    /* Two-col row */
+    .two-col-row { display: flex; gap: 8px; }
+    .two-col-row .flex-1 { flex: 1; }
+
+    /* More options toggle */
+    .more-options-toggle {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.8rem; font-weight: 600; color: var(--color-primary);
+      cursor: pointer; padding: 4px 0; margin-top: -4px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .more-options-toggle:active { opacity: 0.7; }
+    .more-icon { font-size: 18px; width: 18px; height: 18px; }
+    .more-options-section {
+      display: flex; flex-direction: column; gap: 4px;
+      padding: 12px 14px;
+      background: color-mix(in srgb, var(--color-primary) 3%, var(--color-surface));
+      border-radius: var(--radius-sm);
+      border: 1px dashed color-mix(in srgb, var(--color-primary) 15%, transparent);
+    }
+
+    /* Sticky save bar */
+    .sticky-save-bar {
+      position: sticky;
+      bottom: 0;
+      padding: 12px 24px 16px;
+      background: linear-gradient(transparent, var(--color-surface) 30%);
+      z-index: 10;
+    }
+    .gradient-save-btn {
+      width: 100%;
+      height: 48px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: var(--gradient-primary);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary) 30%, transparent);
+      transition: opacity 0.15s, transform 0.1s;
+      font-family: inherit;
+    }
+    .gradient-save-btn:disabled { opacity: 0.4; cursor: default; }
+    .gradient-save-btn:not(:disabled):active { transform: scale(0.98); }
+    .gradient-save-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
+
     .expense-form {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 12px;
       min-width: 0;
       width: 100%;
     }
@@ -679,8 +814,6 @@ export interface ExpenseDialogData {
       align-items: center;
     }
     .flex-1 { flex: 1; }
-    .date-time-row { display: flex; gap: 10px; align-items: start; }
-    .time-field { width: 130px; min-width: 110px; }
     .cat-arrow { color: var(--color-text-muted); cursor: pointer; }
     :host ::ng-deep .mat-mdc-form-field input.mat-mdc-input-element { outline: none; box-shadow: none; }
     .merchant-search-icon { color: var(--color-text-muted); font-size: 20px; width: 20px; height: 20px; }
@@ -756,25 +889,9 @@ export interface ExpenseDialogData {
     .split-cat { flex: 2; }
     .split-amt { flex: 1; }
 
-    /* Dialog Actions */
-    .dialog-actions {
-      padding: 8px 24px 12px !important;
-      border-top: 1px solid var(--color-border);
-      gap: 8px;
-    }
     .split-toggle {
-      margin: -4px 0 8px;
+      margin: 4px 0 8px;
       font-size: 0.85rem;
-    }
-    .save-btn {
-      border-radius: var(--radius-sm) !important;
-      padding: 0 16px !important;
-      font-weight: 600 !important;
-      min-height: 38px;
-      letter-spacing: 0.02em;
-    }
-    .save-btn mat-icon {
-      font-size: 18px; width: 18px; height: 18px; margin-right: 4px;
     }
     .btn-spinner { display: inline-block; margin-right: 6px; vertical-align: middle; }
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
@@ -800,8 +917,10 @@ export interface ExpenseDialogData {
       .txn-circle { width: 46px; height: 46px; }
       .txn-circle mat-icon { font-size: 24px; width: 24px; height: 24px; }
       .txn-label { font-size: 0.68rem; }
-      .date-time-row { flex-wrap: wrap; }
-      .time-field { width: 100%; min-width: 0; }
+      .amount-value { font-size: 2rem; width: 140px; }
+      .amount-underline { width: 140px; }
+      .two-col-row { flex-wrap: wrap; }
+      .sticky-save-bar { padding: 10px 16px 14px; }
       .split-row { flex-wrap: wrap; }
     }
   `]
@@ -1035,6 +1154,7 @@ export class AddExpenseDialogComponent implements OnInit {
   private allDescriptions = signal<string[]>([]);
   filteredMerchants = signal<string[]>([]);
   splitMode = signal(false);
+  showMoreOptions = signal(false);
   splitRows = this.fb.array<FormGroup>([]);
   splitTotal = signal(0);
 
@@ -1159,6 +1279,10 @@ export class AddExpenseDialogComponent implements OnInit {
     this.tagTypeInputCtrl.valueChanges.subscribe(val => {
       if (typeof val === 'string') this.tagTypeSearch.set(val);
     });
+
+    if (this.source?.tag || this.source?.tagType) {
+      this.showMoreOptions.set(true);
+    }
 
     this.loadCategories();
     this.expenseService.getSourceUsage().subscribe(usage => {

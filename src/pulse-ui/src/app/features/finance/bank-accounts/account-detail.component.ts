@@ -799,7 +799,7 @@ export class AccountDetailComponent implements OnInit {
   editTransaction(txn: DailyExpense): void {
     import('../expenses/add-expense-dialog.component').then(m => {
       const ref = this.dialog.open(m.AddExpenseDialogComponent, {
-        width: '480px', maxWidth: '95vw', data: { expense: txn }
+        panelClass: 'expense-dialog-panel', data: { expense: txn }
       });
       ref.afterClosed().subscribe(result => {
         if (result?.saved) {

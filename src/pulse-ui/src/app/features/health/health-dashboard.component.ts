@@ -1,7 +1,6 @@
 import { Component, inject, signal, OnInit, ChangeDetectorRef } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
@@ -16,7 +15,7 @@ import { NotificationService } from '../../core/services/notification.service';
 @Component({
   selector: 'app-health-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatCardModule, MatIconModule, MatButtonModule, DatePipe, DecimalPipe, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [CommonModule, RouterLink, MatIconModule, MatButtonModule, DatePipe, DecimalPipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadData()">
     <div class="header-row">
@@ -41,7 +40,6 @@ import { NotificationService } from '../../core/services/notification.service';
     } @else {
       <!-- Health Metrics Summary -->
       @if (latestMetrics().length > 0) {
-        <div class="section-label">Latest Vitals</div>
         <div class="metrics-grid">
           @for (metric of latestMetrics(); track metric.metricType) {
             <div class="metric-card" routerLink="/health/metrics">
@@ -54,7 +52,7 @@ import { NotificationService } from '../../core/services/notification.service';
               </div>
               <div class="mc-right">
                 <span class="mc-value">{{ metric.value | number:'1.0-1' }}</span>
-                <span class="mc-unit">{{ metric.unit }}</span>
+                <span class="mc-unit">{{ metric.unit === 'lbs' ? 'kg' : metric.unit }}</span>
               </div>
             </div>
           }
@@ -63,9 +61,8 @@ import { NotificationService } from '../../core/services/notification.service';
 
       <!-- Workout Stats -->
       @if (workoutStats()) {
-        <div class="section-label">Workout Stats</div>
-        <div class="stats-grid">
-          <mat-card class="stat-card">
+        <div class="stats-row">
+          <div class="stat-card">
             <div class="stat-icon-wrap blue">
               <mat-icon>local_fire_department</mat-icon>
             </div>
@@ -73,8 +70,8 @@ import { NotificationService } from '../../core/services/notification.service';
               <span class="stat-value">{{ workoutStats()!.currentStreak }}</span>
               <span class="stat-label">Day Streak</span>
             </div>
-          </mat-card>
-          <mat-card class="stat-card">
+          </div>
+          <div class="stat-card">
             <div class="stat-icon-wrap green">
               <mat-icon>calendar_today</mat-icon>
             </div>
@@ -82,8 +79,8 @@ import { NotificationService } from '../../core/services/notification.service';
               <span class="stat-value">{{ workoutStats()!.workoutsThisWeek }}</span>
               <span class="stat-label">This Week</span>
             </div>
-          </mat-card>
-          <mat-card class="stat-card">
+          </div>
+          <div class="stat-card">
             <div class="stat-icon-wrap purple">
               <mat-icon>date_range</mat-icon>
             </div>
@@ -91,21 +88,20 @@ import { NotificationService } from '../../core/services/notification.service';
               <span class="stat-value">{{ workoutStats()!.workoutsThisMonth }}</span>
               <span class="stat-label">This Month</span>
             </div>
-          </mat-card>
-          <mat-card class="stat-card">
+          </div>
+          <div class="stat-card">
             <div class="stat-icon-wrap orange">
               <mat-icon>fitness_center</mat-icon>
             </div>
             <div class="stat-info">
               <span class="stat-value">{{ workoutStats()!.monthlyVolume | number:'1.0-0' }}</span>
-              <span class="stat-label">Volume (lbs)</span>
+              <span class="stat-label">Volume (kg)</span>
             </div>
-          </mat-card>
+          </div>
         </div>
       }
 
       <!-- Quick Links -->
-      <div class="section-label">Quick Access</div>
       <div class="quick-links">
         <div class="link-card" routerLink="/health/metrics">
           <div class="lc-icon red"><mat-icon>monitor_heart</mat-icon></div>
@@ -156,13 +152,6 @@ import { NotificationService } from '../../core/services/notification.service';
       display: flex; justify-content: flex-end; align-items: center;
       margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);
     }
-    .section-label {
-      font-size: var(--text-xs); font-weight: var(--weight-bold); letter-spacing: var(--tracking-wide);
-      text-transform: uppercase; color: var(--color-text-muted);
-      margin: var(--spacing-lg) 0 var(--spacing-sm);
-    }
-    .section-label:first-of-type { margin-top: 0; }
-
     .metrics-grid { display: flex; flex-direction: column; gap: var(--spacing-sm); }
     .metric-card {
       display: flex; align-items: center; gap: 12px;
@@ -185,11 +174,17 @@ import { NotificationService } from '../../core/services/notification.service';
     .mc-value { display: block; font-weight: var(--weight-bold); font-size: var(--text-base); color: var(--color-primary); }
     .mc-unit { display: block; font-size: var(--text-xs); color: var(--color-text-muted); }
 
-    .stats-grid {
-      display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+    .stats-row {
+      display: flex; gap: 12px; overflow-x: auto;
+      margin-top: var(--spacing-md); padding-bottom: 4px;
+      scrollbar-width: none;
     }
+    .stats-row::-webkit-scrollbar { display: none; }
     .stat-card {
-      display: flex; align-items: center; gap: 12px; padding: 16px !important;
+      display: flex; align-items: center; gap: 12px; padding: 16px;
+      min-width: 0; flex: 1;
+      background: var(--color-surface); border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-sm);
     }
     .stat-icon-wrap {
       width: 42px; height: 42px; border-radius: var(--radius-sm);
@@ -251,8 +246,10 @@ import { NotificationService } from '../../core/services/notification.service';
     .empty-state h3 { margin: 0 0 var(--spacing-xs); font-size: var(--text-lg); font-weight: var(--weight-bold); }
     .empty-state p { color: var(--color-text-muted); margin: 0 auto var(--spacing-md); max-width: 360px; font-size: var(--text-sm); }
 
+    .quick-links { margin-top: var(--spacing-md); }
+
     @media (max-width: 599px) {
-      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .stat-card { min-width: 140px; flex: 0 0 auto; }
     }
   `]
 })
@@ -286,7 +283,7 @@ export class HealthDashboardComponent implements OnInit {
 
   openQuickLog() {
     import('./add-metric-dialog.component').then(m => {
-      const ref = this.dialog.open(m.AddMetricDialogComponent, { width: '420px', maxWidth: '95vw' });
+      const ref = this.dialog.open(m.AddMetricDialogComponent, { panelClass: 'responsive-dialog-panel' });
       ref.afterClosed().subscribe(result => {
         if (result) {
           this.healthService.getLatest().subscribe(m => { this.latestMetrics.set(m); this.cdr.detectChanges(); });

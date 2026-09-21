@@ -102,7 +102,7 @@ import { NotificationService } from '../../core/services/notification.service';
                     </mat-form-field>
                     <mat-form-field appearance="outline" class="ex-field">
                       <mat-label>Weight</mat-label>
-                      <input matInput type="number" inputmode="decimal" [(ngModel)]="ex.targetWeight" placeholder="lbs">
+                      <input matInput type="number" inputmode="decimal" [(ngModel)]="ex.targetWeight" placeholder="kg">
                     </mat-form-field>
                   </div>
                   <mat-form-field appearance="outline" class="full-width ex-video-field">
@@ -125,11 +125,11 @@ import { NotificationService } from '../../core/services/notification.service';
         <div class="saving-overlay"><mat-spinner diameter="32"></mat-spinner></div>
       }
     </mat-dialog-content>
-    <mat-dialog-actions class="dialog-actions">
-      <button mat-raised-button color="primary" class="save-btn" [disabled]="!planName || loading() || saving()" (click)="save()">
+    <div class="save-bar">
+      <button class="save-btn-gradient" [disabled]="!planName || loading() || saving()" (click)="save()">
         <mat-icon>check</mat-icon> Save Plan
       </button>
-    </mat-dialog-actions>
+    </div>
   `,
   styles: [`
     :host { display: block; }
@@ -246,17 +246,21 @@ import { NotificationService } from '../../core/services/notification.service';
     }
     .add-exercise-btn mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
 
-    .dialog-actions {
-      padding: 12px 24px 16px !important;
-      border-top: 1px solid var(--color-border);
-      gap: 8px; display: flex; justify-content: flex-end;
+    .save-bar {
+      position: sticky; bottom: 0; left: 0; right: 0;
+      padding: 12px 24px 16px;
+      background: linear-gradient(transparent, var(--color-surface) 30%);
     }
-    .save-btn {
-      border-radius: var(--radius-sm) !important;
-      padding: 0 20px !important;
-      font-weight: 600 !important;
+    .save-btn-gradient {
+      width: 100%; height: 48px; border: none; border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, #1565c0 0%, #5e35b1 100%); color: #fff;
+      font-size: 0.9rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      cursor: pointer; box-shadow: 0 4px 16px rgba(21,101,192,0.3);
+      transition: opacity 0.15s;
     }
-    .save-btn mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
+    .save-btn-gradient:disabled { opacity: 0.4; cursor: not-allowed; }
+    .save-btn-gradient mat-icon { font-size: 20px; width: 20px; height: 20px; }
 
     .mat-mdc-form-field-subscript-wrapper { display: none; }
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }

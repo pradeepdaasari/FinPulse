@@ -1358,27 +1358,42 @@ textarea:focus-visible {
   max-width: 400px;
 }
 
-.expense-dialog-panel {
+.responsive-dialog-panel {
   .mat-mdc-dialog-container .mdc-dialog__surface {
     padding: 0 !important;
     overflow: hidden;
   }
   .mat-mdc-dialog-content {
-    padding: 16px 24px 0 !important;
+    padding: 20px 24px 0 !important;
   }
   .mat-mdc-dialog-actions {
     padding: 8px 24px 20px !important;
   }
+  @media (min-width: 600px) and (max-width: 1024px) {
+    width: min(600px, 90vw) !important;
+    max-width: 90vw !important;
+  }
+  @media (min-width: 1025px) {
+    width: 560px !important;
+    max-width: 90vw !important;
+  }
   @media (max-width: 599px) {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    .mat-mdc-dialog-container .mdc-dialog__surface {
+      border-radius: 0 !important;
+    }
     .mat-mdc-dialog-content {
-      padding: 12px 16px 0 !important;
+      padding: 16px 16px 0 !important;
     }
     .mat-mdc-dialog-actions {
       padding: 8px 16px 16px !important;
     }
   }
-
 }
+.expense-dialog-panel { @extend .responsive-dialog-panel; }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MOBILE NATIVE ENHANCEMENTS
@@ -1672,4 +1687,9 @@ input[type="date"] {
 .badge-neutral {
   background: rgba(0, 0, 0, 0.05);
   color: var(--color-text-secondary);
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator {
+  display: none !important;
+  -webkit-appearance: none !important;
 }

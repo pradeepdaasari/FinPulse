@@ -63,15 +63,17 @@ import { Observable } from 'rxjs';
           </div>
         </div>
 
+        <div class="amount-hero">
+          <div class="amount-input-row">
+            <span class="amount-dollar">$</span>
+            <input class="amount-value" type="number" inputmode="decimal" formControlName="amount" placeholder="0.00" min="0.01" step="0.01">
+          </div>
+          <div class="amount-underline"></div>
+        </div>
+
         <mat-form-field appearance="outline">
           <mat-label>Description</mat-label>
           <input matInput formControlName="description" placeholder="e.g. Netflix, Rent, Salary">
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Amount</mat-label>
-          <input matInput type="number" inputmode="decimal" formControlName="amount" min="0.01" step="0.01">
-          <span matTextPrefix>$&nbsp;</span>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
@@ -103,45 +105,56 @@ import { Observable } from 'rxjs';
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Merchant (optional)</mat-label>
-          <input matInput formControlName="merchant" placeholder="e.g. Netflix, Spotify">
-        </mat-form-field>
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Frequency</mat-label>
+            <mat-select formControlName="frequency">
+              <mat-option [value]="0">Daily</mat-option>
+              <mat-option [value]="1">Weekly</mat-option>
+              <mat-option [value]="2">Biweekly</mat-option>
+              <mat-option [value]="3">Monthly</mat-option>
+            </mat-select>
+          </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Frequency</mat-label>
-          <mat-select formControlName="frequency">
-            <mat-option [value]="0">Daily</mat-option>
-            <mat-option [value]="1">Weekly</mat-option>
-            <mat-option [value]="2">Biweekly</mat-option>
-            <mat-option [value]="3">Monthly</mat-option>
-          </mat-select>
-        </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Start Date</mat-label>
+            <input matInput [matDatepicker]="startPicker" formControlName="nextRunDate">
+            <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+            <mat-datepicker #startPicker></mat-datepicker>
+          </mat-form-field>
+        </div>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Start Date</mat-label>
-          <input matInput [matDatepicker]="startPicker" formControlName="nextRunDate">
-          <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
-          <mat-datepicker #startPicker></mat-datepicker>
-        </mat-form-field>
+        <div class="more-options-toggle" (click)="showMore.set(!showMore())">
+          <mat-icon class="more-icon">{{ showMore() ? 'expand_less' : 'expand_more' }}</mat-icon>
+          <span>More options (Merchant, End Date)</span>
+        </div>
 
-        <mat-form-field appearance="outline">
-          <mat-label>End Date (optional)</mat-label>
-          <input matInput [matDatepicker]="endPicker" formControlName="endDate">
-          <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
-          <mat-datepicker #endPicker></mat-datepicker>
-        </mat-form-field>
+        @if (showMore()) {
+          <div class="more-options-section">
+            <mat-form-field appearance="outline">
+              <mat-label>Merchant (optional)</mat-label>
+              <input matInput formControlName="merchant" placeholder="e.g. Netflix, Spotify">
+            </mat-form-field>
 
-        <mat-slide-toggle formControlName="isActive" class="full-width">Active</mat-slide-toggle>
+            <mat-form-field appearance="outline">
+              <mat-label>End Date (optional)</mat-label>
+              <input matInput [matDatepicker]="endPicker" formControlName="endDate">
+              <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
+              <mat-datepicker #endPicker></mat-datepicker>
+            </mat-form-field>
+
+            <mat-slide-toggle formControlName="isActive" class="full-width">Active</mat-slide-toggle>
+          </div>
+        }
       </form>
       }
     </mat-dialog-content>
-    <mat-dialog-actions align="end" class="dialog-actions">
-      <button mat-raised-button color="primary" class="save-btn" [disabled]="form.invalid || loading() || saving()" (click)="save()">
-        <mat-icon>{{ data ? 'check' : 'save' }}</mat-icon>
+    <div class="sticky-save-bar">
+      <button class="gradient-save-btn" [disabled]="form.invalid || loading() || saving()" (click)="save()">
+        <mat-icon>check</mat-icon>
         {{ saving() ? 'Saving...' : (data ? 'Update' : 'Create') }}
       </button>
-    </mat-dialog-actions>
+    </div>
   `,
   styles: [`
     :host { display: block; }
@@ -193,6 +206,49 @@ import { Observable } from 'rxjs';
     }
     .header-close:hover { background: rgba(255, 255, 255, 0.25) !important; }
     .header-close mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .amount-hero { text-align: center; padding: 8px 0 4px; }
+    .amount-input-row { display: flex; align-items: baseline; justify-content: center; gap: 2px; }
+    .amount-dollar { font-size: 1.6rem; font-weight: 700; color: var(--color-text-muted); }
+    .amount-value {
+      font-size: 2.8rem; font-weight: 800; letter-spacing: -0.03em;
+      color: var(--color-text-primary); font-variant-numeric: tabular-nums;
+      border: none; background: none; text-align: center; width: 180px;
+      outline: none; caret-color: var(--color-primary);
+    }
+    .amount-value::placeholder { color: #ccc; }
+    .amount-value::-webkit-outer-spin-button,
+    .amount-value::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .amount-value[type=number] { -moz-appearance: textfield; }
+    .amount-underline {
+      width: 200px; height: 3px; border-radius: 2px;
+      background: var(--gradient-primary); margin: 4px auto 0; opacity: 0.4;
+    }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md); }
+    .more-options-toggle {
+      display: flex; align-items: center; gap: 4px;
+      cursor: pointer; color: var(--color-primary);
+      font-size: 0.82rem; font-weight: 600; padding: 4px 0;
+    }
+    .more-icon { font-size: 20px !important; width: 20px !important; height: 20px !important; }
+    .more-options-section {
+      display: flex; flex-direction: column; gap: 4px;
+      padding: 12px; background: rgba(var(--color-primary-rgb, 33,150,243), 0.03);
+      border-radius: var(--radius-sm); border: 1px dashed rgba(var(--color-primary-rgb, 33,150,243), 0.15);
+    }
+    .sticky-save-bar {
+      position: sticky; bottom: 0; z-index: 10;
+      padding: 12px 24px 16px;
+      background: linear-gradient(transparent, var(--color-surface) 30%);
+    }
+    .gradient-save-btn {
+      width: 100%; height: 48px; border: none; border-radius: var(--radius-sm);
+      background: var(--gradient-primary); color: #fff;
+      font-size: 0.95rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      cursor: pointer; box-shadow: 0 4px 16px rgba(var(--color-primary-rgb, 33,150,243), 0.3);
+    }
+    .gradient-save-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .gradient-save-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .expense-form { display: flex; flex-direction: column; gap: 4px; min-width: 0; width: 100%; }
     .txn-icons { display: flex; justify-content: center; gap: 24px; margin-bottom: 12px; }
     .txn-icon-item {
@@ -229,22 +285,14 @@ import { Observable } from 'rxjs';
     }
     .search-box mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-text-muted); }
     .search-box input { border: none; outline: none; flex: 1; font-size: 0.875rem; background: transparent; color: inherit; }
-    .dialog-actions {
-      padding: 12px 24px 16px !important;
-      border-top: 1px solid var(--color-border);
-      gap: 8px;
-    }
-    .save-btn {
-      border-radius: var(--radius-sm) !important;
-      padding: 0 20px !important;
-      font-weight: 600 !important;
-      letter-spacing: 0.02em;
-    }
-    .save-btn mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
     @media (max-width: 599px) {
       :host { display: flex; flex-direction: column; height: 100%; min-height: 0; }
       .dialog-banner { margin: -16px -16px 12px; padding: 14px 16px 12px; flex-shrink: 0; }
+      .amount-value { font-size: 2rem; width: 140px; }
+      .amount-underline { width: 140px; }
+      .form-row { grid-template-columns: 1fr; }
+      .sticky-save-bar { padding: 10px 16px 14px; }
     }
   `]
 })
@@ -259,6 +307,7 @@ export class RecurringDialogComponent implements OnInit {
 
   loading = signal(true);
   saving = signal(false);
+  showMore = signal(false);
   categories = signal<any[]>([]);
   selectedParentId = signal<number | null>(null);
   parentSearch = signal('');
@@ -312,6 +361,9 @@ export class RecurringDialogComponent implements OnInit {
         endDate: this.data.endDate ? new Date(this.data.endDate) : null,
         isActive: this.data.isActive
       });
+      if (this.data.merchant || this.data.endDate) {
+        this.showMore.set(true);
+      }
     }
 
     this.loadCategories();

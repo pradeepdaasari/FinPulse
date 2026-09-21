@@ -1,7 +1,6 @@
 import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
-import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -11,46 +10,47 @@ import { DebtFreeCountdown } from '../../../core/models/dashboard.model';
 @Component({
   selector: 'app-debt-countdown',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, LocalDatePipe],
+  imports: [CommonModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, LocalDatePipe],
   template: `
     @if (loading()) {
       <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
     } @else if (countdown()) {
-      <mat-card class="countdown-card">
-        <mat-card-header>
-          <mat-card-title>
-            <div class="card-title-row">
-              <span class="title-with-icon"><mat-icon class="card-title-icon">timer</mat-icon> Debt-Free Countdown</span>
-              <span class="overall-date">
-                <mat-icon>flag</mat-icon>
-                {{ countdown()!.overallDebtFreeDate | localDate:'MMM yyyy' }}
-                ({{ countdown()!.overallRemainingMonths }} months)
-              </span>
-            </div>
-          </mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="projections">
-            @for (p of countdown()!.projections; track p.debtName) {
-              <div class="projection-row">
-                <div class="projection-info">
-                  <span class="debt-name">{{ p.debtName }}</span>
-                  <span class="debt-meta">{{ p.debtType }} &middot; {{ p.currentBalance | currency }} &middot; {{ p.remainingMonths }} mo</span>
-                </div>
-                <div class="projection-bar">
-                  <mat-progress-bar mode="determinate" [value]="p.progressPercent" [color]="getBarColor(p.remainingMonths)"></mat-progress-bar>
-                </div>
-                <span class="payoff-date">{{ p.projectedPayoffDate | localDate:'MMM yyyy' }}</span>
+      <div class="countdown-card">
+        <div class="card-title-row">
+          <span class="title-with-icon"><mat-icon class="card-title-icon">timer</mat-icon> Debt-Free Countdown</span>
+          <span class="overall-date">
+            <mat-icon>flag</mat-icon>
+            {{ countdown()!.overallDebtFreeDate | localDate:'MMM yyyy' }}
+            ({{ countdown()!.overallRemainingMonths }} months)
+          </span>
+        </div>
+        <div class="projections">
+          @for (p of countdown()!.projections; track p.debtName) {
+            <div class="projection-row">
+              <div class="projection-info">
+                <span class="debt-name">{{ p.debtName }}</span>
+                <span class="debt-meta">{{ p.debtType }} &middot; {{ p.currentBalance | currency }} &middot; {{ p.remainingMonths }} mo</span>
               </div>
-            }
-          </div>
-        </mat-card-content>
-      </mat-card>
+              <div class="projection-bar">
+                <mat-progress-bar mode="determinate" [value]="p.progressPercent" [color]="getBarColor(p.remainingMonths)"></mat-progress-bar>
+              </div>
+              <span class="payoff-date">{{ p.projectedPayoffDate | localDate:'MMM yyyy' }}</span>
+            </div>
+          }
+        </div>
+      </div>
     }
   `,
   styles: [`
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
-    .countdown-card { margin-top: var(--spacing-md); }
+    .countdown-card {
+      margin-top: var(--spacing-md);
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-sm);
+      padding: 20px;
+    }
     .card-title-row {
       display: flex;
       justify-content: space-between;

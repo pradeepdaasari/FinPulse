@@ -560,17 +560,10 @@ public class TradingController : ControllerBase
     public async Task<ActionResult> GetReviews([FromQuery] string? fromDate, [FromQuery] string? toDate)
     {
         var query = _db.DailyReviews.Where(r => r.UserId == UserId);
-        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         if (DateTime.TryParse(fromDate, out var from))
-        {
-            var fromUtc = TimeZoneHelper.ToUtc(from, tz);
-            query = query.Where(r => r.Date >= fromUtc);
-        }
+            query = query.Where(r => r.Date >= from.Date);
         if (DateTime.TryParse(toDate, out var to))
-        {
-            var toUtc = TimeZoneHelper.ToUtc(to.Date.AddDays(1), tz);
-            query = query.Where(r => r.Date < toUtc);
-        }
+            query = query.Where(r => r.Date < to.Date.AddDays(1));
         var reviews = await query.OrderByDescending(r => r.Date).ToListAsync();
         return Ok(reviews);
     }
@@ -589,6 +582,7 @@ public class TradingController : ControllerBase
     {
         review.Id = 0;
         review.UserId = UserId;
+        review.Date = DateTime.SpecifyKind(review.Date.Date, DateTimeKind.Unspecified);
         review.LessonsLearned = review.LessonsLearned?.Trim();
         review.ImprovementNote = review.ImprovementNote?.Trim();
         _db.DailyReviews.Add(review);
@@ -601,7 +595,7 @@ public class TradingController : ControllerBase
     {
         var review = await _db.DailyReviews.FirstOrDefaultAsync(r => r.Id == id && r.UserId == UserId);
         if (review == null) return NotFound();
-        review.Date = input.Date;
+        review.Date = DateTime.SpecifyKind(input.Date.Date, DateTimeKind.Unspecified);
         review.Grade = input.Grade;
         review.FollowedPlan = input.FollowedPlan;
         review.FollowedRules = input.FollowedRules;

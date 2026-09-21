@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed, OnInit, ChangeDetectorRef } from '@angular/core';
-import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, DecimalPipe, DatePipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -31,22 +31,28 @@ export interface TradeEntryDialogData {
   selector: 'app-trade-entry-dialog',
   standalone: true,
   imports: [
-    CommonModule, CurrencyPipe, DecimalPipe, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
+    CommonModule, CurrencyPipe, DecimalPipe, DatePipe, ReactiveFormsModule, MatDialogModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatDatepickerModule,
     MatButtonModule, MatIconModule, MatButtonToggleModule, MatCheckboxModule, MatProgressSpinnerModule,
     MatChipsModule, MatTooltipModule, RichTextEditorComponent
   ],
   providers: [provideNativeDateAdapter()],
   template: `
-    <div class="dialog-header">
-      <div class="header-icon" [class.edit-mode]="!!data?.trade">
-        <mat-icon>{{ data?.trade ? 'edit' : 'add_chart' }}</mat-icon>
+    <div class="dialog-banner">
+      <div class="banner-pattern"></div>
+      <div class="banner-content">
+        <div class="banner-icon" [class.edit-mode]="!!data?.trade">
+          <mat-icon>{{ data?.trade ? 'edit' : 'add_chart' }}</mat-icon>
+        </div>
+        <div class="banner-text">
+          <h2>{{ data?.trade ? 'Edit' : 'Log' }} Trade</h2>
+          <p>Record your entry with discipline</p>
+        </div>
+        <span class="banner-spacer"></span>
+        <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
+          <mat-icon>close</mat-icon>
+        </button>
       </div>
-      <h2>{{ data?.trade ? 'Edit' : 'Log' }} Trade</h2>
-      <span class="header-spacer"></span>
-      <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
-        <mat-icon>close</mat-icon>
-      </button>
     </div>
 
     <mat-dialog-content>
@@ -55,22 +61,18 @@ export interface TradeEntryDialogData {
       } @else {
       <form [formGroup]="form" class="trade-form" (submit)="$event.preventDefault()">
 
-        <!-- Row 1: Date + Time -->
-        <div class="row-2col">
-          <mat-form-field appearance="outline">
-            <mat-label>Date</mat-label>
-            <input matInput [matDatepicker]="picker" formControlName="date">
-            <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-            <mat-datepicker #picker></mat-datepicker>
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Time</mat-label>
-            <input matInput type="time" formControlName="time">
-            <mat-icon matSuffix>schedule</mat-icon>
-          </mat-form-field>
+        <!-- Compact date + time row -->
+        <div class="date-compact-row" (click)="picker.open()">
+          <mat-icon class="date-icon">calendar_today</mat-icon>
+          <div class="date-value">{{ form.value.date | date:'MMM d, yyyy' }}</div>
+          <div class="date-sep">|</div>
+          <mat-icon class="date-icon" (click)="$event.stopPropagation(); timeInput.showPicker()">schedule</mat-icon>
+          <input #timeInput type="time" class="time-input" formControlName="time" (click)="$event.stopPropagation(); timeInput.showPicker()">
+          <input matInput [matDatepicker]="picker" formControlName="date" class="hidden-date-input">
+          <mat-datepicker #picker></mat-datepicker>
         </div>
 
-        <!-- Row 2: Setup + Instrument -->
+        <!-- Setup + Instrument -->
         <div class="row-2col">
           <mat-form-field appearance="outline">
             <mat-label>Setup</mat-label>
@@ -94,8 +96,8 @@ export interface TradeEntryDialogData {
           </mat-form-field>
         </div>
 
-        <!-- Row 2: Direction + Asset Type side by side -->
-        <div class="row-2col">
+        <!-- Direction + Asset Type side by side -->
+        <div class="row-2col toggle-row">
           <div class="toggle-field">
             <mat-button-toggle-group formControlName="direction" class="dir-toggle">
               <mat-button-toggle value="long" class="toggle-long">
@@ -150,44 +152,44 @@ export interface TradeEntryDialogData {
             @if (form.value.spreadType === 'Single') {
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Strike</mat-label>
-                <input matInput type="number" inputmode="decimal" formControlName="strikePrice" step="1">
+                <input matInput type="text" inputmode="decimal" formControlName="strikePrice">
               </mat-form-field>
             } @else if (form.value.spreadType === 'Calendar') {
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Strike</mat-label>
-                <input matInput type="number" inputmode="decimal" formControlName="strikePrice" step="1">
+                <input matInput type="text" inputmode="decimal" formControlName="strikePrice">
               </mat-form-field>
             } @else if (form.value.spreadType === 'Vertical') {
               <div class="row-2col">
                 <mat-form-field appearance="outline">
                   <mat-label>Short Strike</mat-label>
-                  <input matInput type="number" inputmode="decimal" formControlName="strikePrice" step="1" (input)="calcPnl()">
+                  <input matInput type="text" inputmode="decimal" formControlName="strikePrice" (input)="calcPnl()">
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>Long Strike</mat-label>
-                  <input matInput type="number" inputmode="decimal" formControlName="strikePrice2" step="1" (input)="calcPnl()">
+                  <input matInput type="text" inputmode="decimal" formControlName="strikePrice2" (input)="calcPnl()">
                 </mat-form-field>
               </div>
             } @else if (form.value.spreadType === 'IronCondor') {
               <div class="row-4col">
                 <mat-form-field appearance="outline">
                   <mat-label>SC</mat-label>
-                  <input matInput type="number" inputmode="decimal" formControlName="strikePrice" step="1" (input)="calcPnl()">
+                  <input matInput type="text" inputmode="decimal" formControlName="strikePrice" (input)="calcPnl()">
                   <mat-hint>Short Call</mat-hint>
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>LC</mat-label>
-                  <input matInput type="number" inputmode="decimal" formControlName="strikePrice2" step="1" (input)="calcPnl()">
+                  <input matInput type="text" inputmode="decimal" formControlName="strikePrice2" (input)="calcPnl()">
                   <mat-hint>Long Call</mat-hint>
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>SP</mat-label>
-                  <input matInput type="number" inputmode="decimal" formControlName="strikePrice3" step="1" (input)="calcPnl()">
+                  <input matInput type="text" inputmode="decimal" formControlName="strikePrice3" (input)="calcPnl()">
                   <mat-hint>Short Put</mat-hint>
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>LP</mat-label>
-                  <input matInput type="number" inputmode="decimal" formControlName="strikePrice4" step="1" (input)="calcPnl()">
+                  <input matInput type="text" inputmode="decimal" formControlName="strikePrice4" (input)="calcPnl()">
                   <mat-hint>Long Put</mat-hint>
                 </mat-form-field>
               </div>
@@ -195,15 +197,15 @@ export interface TradeEntryDialogData {
               <div class="row-3col">
                 <mat-form-field appearance="outline">
                   <mat-label>Lower</mat-label>
-                  <input matInput type="number" inputmode="decimal" formControlName="strikePrice" step="1">
+                  <input matInput type="text" inputmode="decimal" formControlName="strikePrice">
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>Middle</mat-label>
-                  <input matInput type="number" inputmode="decimal" formControlName="strikePrice2" step="1">
+                  <input matInput type="text" inputmode="decimal" formControlName="strikePrice2">
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>Upper</mat-label>
-                  <input matInput type="number" inputmode="decimal" formControlName="strikePrice3" step="1">
+                  <input matInput type="text" inputmode="decimal" formControlName="strikePrice3">
                 </mat-form-field>
               </div>
             }
@@ -328,7 +330,6 @@ export interface TradeEntryDialogData {
           }
         }
 
-        <!-- Bottom row: checklist + emotion + mistakes + notes + tags -->
         <mat-checkbox formControlName="checklistCompleted" color="primary" class="checklist-check">
           Checklist completed
         </mat-checkbox>
@@ -346,59 +347,76 @@ export interface TradeEntryDialogData {
           </mat-button-toggle-group>
         </div>
 
-        <!-- Mistake tags -->
-        <div class="mistake-section">
-          <label class="section-label">Mistakes (if any)</label>
-          <div class="mistake-chips">
-            @for (m of mistakeOptions; track m) {
-              <button type="button" class="mistake-chip" [class.selected]="selectedMistakes().includes(m)"
-                (click)="toggleMistake(m)">{{ m }}</button>
-            }
+        <!-- More options: mistakes, notes, tags -->
+        <button type="button" class="more-toggle" (click)="showMore.set(!showMore())">
+          <mat-icon>{{ showMore() ? 'expand_less' : 'expand_more' }}</mat-icon>
+          More options (Mistakes, Notes, Tags)
+        </button>
+        @if (showMore()) {
+          <div class="more-section">
+            <div class="mistake-section">
+              <label class="section-label">Mistakes (if any)</label>
+              <div class="mistake-chips">
+                @for (m of mistakeOptions; track m) {
+                  <button type="button" class="mistake-chip" [class.selected]="selectedMistakes().includes(m)"
+                    (click)="toggleMistake(m)">{{ m }}</button>
+                }
+              </div>
+            </div>
+
+            <app-rich-text-editor label="Notes" formControlName="notes" height="80px"
+              placeholder="Quick notes..."></app-rich-text-editor>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Tags</mat-label>
+              <input matInput formControlName="tags" placeholder="0DTE, scalp, breakout">
+              <mat-hint>Comma-separated</mat-hint>
+            </mat-form-field>
           </div>
-        </div>
-
-        <app-rich-text-editor label="Notes" formControlName="notes" height="80px"
-          placeholder="Quick notes..."></app-rich-text-editor>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Tags</mat-label>
-          <input matInput formControlName="tags" placeholder="0DTE, scalp, breakout">
-          <mat-hint>Comma-separated</mat-hint>
-        </mat-form-field>
+        }
       </form>
       }
       @if (saving()) {
         <div class="saving-overlay"><mat-spinner diameter="32"></mat-spinner></div>
       }
     </mat-dialog-content>
-
-    <mat-dialog-actions align="end">
-      <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid || loading() || saving()">
-        <mat-icon>{{ data?.trade ? 'check' : 'save' }}</mat-icon>
-        {{ data?.trade ? 'Update' : 'Save Trade' }}
+    <div class="save-bar">
+      <button class="save-btn" (click)="save()" [disabled]="form.invalid || loading() || saving()">
+        @if (saving()) {
+          <mat-spinner diameter="20" class="save-spinner"></mat-spinner>
+          Saving...
+        } @else {
+          <mat-icon>{{ data?.trade ? 'check' : 'save' }}</mat-icon>
+          {{ data?.trade ? 'Update Trade' : 'Save Trade' }}
+        }
       </button>
-    </mat-dialog-actions>
+    </div>
   `,
   styles: [`
-    .dialog-header {
-      display: flex; align-items: center; gap: 12px;
-      padding: 18px 24px; margin: -24px -24px 0;
-      background: var(--gradient-primary); border-radius: 4px 4px 0 0;
+    .dialog-banner {
+      position: relative; padding: 18px 24px 14px;
+      background: var(--gradient-primary); overflow: hidden;
     }
-    .header-icon {
-      width: 36px; height: 36px; border-radius: 10px;
+    .banner-pattern {
+      position: absolute; inset: 0;
+      background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.06) 0%, transparent 50%),
+                  radial-gradient(circle at 85% 20%, rgba(255,255,255,0.04) 0%, transparent 40%);
+    }
+    .banner-content { position: relative; z-index: 1; display: flex; align-items: center; gap: 12px; }
+    .banner-icon {
+      width: 38px; height: 38px; border-radius: 10px;
       background: rgba(255,255,255,0.2); backdrop-filter: blur(6px);
       display: flex; align-items: center; justify-content: center;
       border: 1px solid rgba(255,255,255,0.3); flex-shrink: 0;
     }
-    .header-icon mat-icon { color: #fff; font-size: 20px; width: 20px; height: 20px; }
-    .header-icon.edit-mode { background: rgba(255,255,255,0.25); }
-    .dialog-header h2 { margin: 0; color: #fff; font-size: 1.1rem; font-weight: 700; flex: 1; min-width: 0; }
-    .header-spacer { flex: 1; }
+    .banner-icon mat-icon { color: #fff; font-size: 20px; width: 20px; height: 20px; }
+    .banner-icon.edit-mode { background: rgba(255,255,255,0.25); }
+    .banner-text h2 { margin: 0; color: #fff; font-size: 1.05rem; font-weight: 700; }
+    .banner-text p { margin: 2px 0 0; color: rgba(255,255,255,0.7); font-size: 0.72rem; }
+    .banner-spacer { flex: 1; }
     .header-close {
       color: rgba(255, 255, 255, 0.9) !important;
-      width: 40px !important; height: 40px !important;
-      padding: 0 !important;
+      width: 40px !important; height: 40px !important; padding: 0 !important;
       display: inline-flex !important; align-items: center !important; justify-content: center !important;
       border-radius: 50% !important;
       background: rgba(255, 255, 255, 0.12) !important;
@@ -408,7 +426,29 @@ export interface TradeEntryDialogData {
     .header-close:hover { background: rgba(255, 255, 255, 0.25) !important; }
     .header-close mat-icon { font-size: 20px; width: 20px; height: 20px; }
 
-    .trade-form { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding-top: 12px; }
+    .date-compact-row {
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px 20px; background: var(--color-surface-secondary);
+      border-radius: var(--radius-md); border: 1px solid var(--color-border);
+      cursor: pointer; transition: border-color 0.15s;
+      width: 100%; position: relative; box-sizing: border-box;
+    }
+    .hidden-date-input {
+      position: absolute; left: 0; top: 100%; width: 1px; height: 1px;
+      opacity: 0; pointer-events: none; overflow: hidden;
+    }
+    .date-compact-row:hover { border-color: var(--color-primary); }
+    .date-icon { color: var(--color-primary); font-size: 24px; width: 24px; height: 24px; flex-shrink: 0; }
+    .date-value { font-size: 1.05rem; font-weight: 600; color: var(--color-text); }
+    .date-sep { color: var(--color-border); font-size: 1.2rem; }
+    .time-input {
+      border: none; background: none; font-size: 1.05rem; font-weight: 600;
+      color: var(--color-text); outline: none; width: auto; min-width: 60px; cursor: text;
+      font-family: inherit;
+    }
+    .time-input::-webkit-calendar-picker-indicator { display: none; -webkit-appearance: none; }
+
+    .trade-form { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding-top: 12px; }
 
     .row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: center; }
     .row-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; align-items: start; }
@@ -497,8 +537,8 @@ export interface TradeEntryDialogData {
       text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
     }
     .emotion-section { margin: 4px 0 8px; }
-    .emotion-toggle { width: 100%; display: flex; }
-    .emotion-toggle .mat-button-toggle { flex: 1; }
+    .emotion-toggle { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+    .emotion-toggle .mat-button-toggle { flex: none; }
     ::ng-deep .emotion-toggle .mat-button-toggle-button {
       display: flex; align-items: center; justify-content: center; padding: 8px 4px;
     }
@@ -528,31 +568,72 @@ export interface TradeEntryDialogData {
     .expired-hint { font-size: 0.72rem; color: var(--color-text-muted); margin-left: 4px; }
     .max-risk-line { border-top: 1px dashed var(--color-border, #e0e0e0); padding-top: 4px; margin-top: 2px; }
 
+    .more-toggle {
+      display: flex; align-items: center; gap: 4px;
+      background: none; border: none; cursor: pointer;
+      color: var(--color-primary); font-size: 0.8rem; font-weight: 600;
+      padding: 6px 0; margin: 4px 0;
+    }
+    .more-toggle mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .more-section {
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 14px; border-radius: var(--radius-sm);
+      border: 1px dashed color-mix(in srgb, var(--color-primary) 25%, var(--color-border));
+      background: color-mix(in srgb, var(--color-primary) 2%, transparent);
+    }
+
+    .save-bar {
+      flex-shrink: 0;
+      padding: 12px 24px 16px;
+      background: var(--color-surface);
+      border-top: 1px solid var(--color-border);
+    }
+    .save-btn {
+      width: 100%; height: 48px; border: none; border-radius: var(--radius-sm);
+      background: var(--gradient-primary); color: #fff;
+      font-size: 0.95rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      cursor: pointer; box-shadow: 0 4px 16px rgba(0, 122, 255, 0.3);
+      transition: all 0.2s;
+    }
+    .save-btn:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(0, 122, 255, 0.4); transform: translateY(-1px); }
+    .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .save-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    ::ng-deep .save-spinner circle { stroke: #fff !important; }
+
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
     mat-dialog-content { position: relative; }
     .saving-overlay {
       position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
       background: rgba(255,255,255,0.7); border-radius: inherit; z-index: 10;
     }
+    @media (max-width: 1024px) {
+      .row-2col { grid-template-columns: 1fr 1fr; }
+      .toggle-row.row-2col { grid-template-columns: 1fr 1fr; }
+    }
     @media (max-width: 599px) {
       :host { display: flex; flex-direction: column; height: 100%; min-height: 0; max-width: 100%; overflow: hidden; }
-      .dialog-header { padding: 16px 16px; margin: -16px -16px 0; flex-shrink: 0; }
+      .dialog-banner { padding: 14px 16px 12px; flex-shrink: 0; }
+      .banner-text h2 { font-size: 0.95rem; }
       .trade-form { max-width: 100%; overflow: hidden; box-sizing: border-box; }
       .row-3col { grid-template-columns: 1fr 1fr; }
       .row-4col { grid-template-columns: 1fr 1fr; }
-      .row-2col { grid-template-columns: 1fr; }
+      .row-2col { grid-template-columns: 1fr 1fr; }
+      .toggle-row.row-2col { grid-template-columns: 1fr; }
       .compact-toggle { height: 44px; }
+      .asset-toggle .mat-button-toggle { font-size: 0.75rem; }
       .fees-section { margin-left: 0; margin-right: 0; overflow: hidden; max-width: 100%; box-sizing: border-box; padding: 10px 8px 8px; }
       .fees-inputs { grid-template-columns: 1fr 1fr; gap: 8px; }
       .fee-summary-bar { gap: 4px; flex-wrap: wrap; }
       .fee-chip { font-size: 0.7rem; padding: 4px 8px; }
       .options-section { padding: 10px 8px 6px; overflow: hidden; max-width: 100%; box-sizing: border-box; }
       .expired-hint { display: block; margin-left: 0; margin-top: 2px; }
-      .emotion-toggle { flex-wrap: wrap; }
-      .emotion-toggle .mat-button-toggle { flex: 0 0 calc(33.33% - 2px); }
+      .emotion-toggle { grid-template-columns: repeat(3, 1fr); }
       .emotion-icon { font-size: 1.2rem; }
       .emotion-label { font-size: 0.65rem; }
-      .mistake-chip { padding: 6px 12px; font-size: 0.75rem; min-height: 36px; display: flex; align-items: center; }
+      .mistake-chip { padding: 6px 12px; font-size: 0.75rem; min-height: 44px; display: flex; align-items: center; }
+      .save-bar { padding: 10px 16px 14px; margin: 0 -16px -16px; }
+      .date-compact-row { padding: 14px 16px; }
     }
   `]
 })
@@ -567,6 +648,7 @@ export class TradeEntryDialogComponent implements OnInit {
 
   loading = signal(true);
   saving = signal(false);
+  showMore = signal(false);
   feesManuallyEdited = false;
   selectedMistakes = signal<string[]>(this.data?.trade?.mistakeTags ?? []);
 
@@ -630,6 +712,12 @@ export class TradeEntryDialogComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    if (this.data?.trade) {
+      const t = this.data.trade;
+      if ((t.mistakeTags && t.mistakeTags.length > 0) || t.notes || (t.tags && t.tags.length > 0)) {
+        this.showMore.set(true);
+      }
+    }
     if (this.data?.trade?.commissionFees != null || this.data?.trade?.regExchangeFees != null) {
       this.feesManuallyEdited = true;
     }

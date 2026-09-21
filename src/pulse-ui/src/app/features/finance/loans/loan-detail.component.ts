@@ -402,7 +402,7 @@ export class LoanDetailComponent implements OnInit {
   editLoan(): void {
     import('./edit-loan-dialog.component').then(m => {
       const dialogRef = this.dialog.open(m.EditLoanDialogComponent, {
-        width: '500px',
+        panelClass: 'responsive-dialog-panel',
         data: this.loan()
       });
       dialogRef.afterClosed().subscribe(result => {

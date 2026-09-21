@@ -154,9 +154,11 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
         [ngModel]="tomorrowFocus()" (ngModelChange)="tomorrowFocus.set($event)"></app-rich-text-editor>
     </div>
 
-    <button mat-raised-button color="primary" class="save-btn" (click)="save()" [disabled]="!selectedGrade()">
-      <mat-icon>save</mat-icon> Save Review
-    </button>
+    <div class="save-bar">
+      <button class="save-btn" (click)="save()" [disabled]="!selectedGrade()">
+        <mat-icon>check</mat-icon> Save Review
+      </button>
+    </div>
 
     } @else {
     <!-- Observation Mode: No trades today -->
@@ -196,9 +198,11 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
         [ngModel]="tomorrowFocus()" (ngModelChange)="tomorrowFocus.set($event)"></app-rich-text-editor>
     </div>
 
-    <button mat-raised-button color="primary" class="save-btn" (click)="saveObservation()">
-      <mat-icon>save</mat-icon> Save Observation
-    </button>
+    <div class="save-bar">
+      <button class="save-btn" (click)="saveObservation()">
+        <mat-icon>check</mat-icon> Save Observation
+      </button>
+    </div>
     }
 
     <!-- Grade History -->
@@ -297,8 +301,22 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     .text-fields { display: flex; flex-direction: column; gap: 4px; margin-bottom: var(--spacing-md); }
     .text-fields mat-form-field { width: 100%; }
 
-    .save-btn { width: 100%; padding: 12px !important; font-weight: var(--weight-bold) !important; margin-bottom: var(--spacing-lg); }
-    .save-btn mat-icon { margin-right: 8px; }
+    .save-bar {
+      position: sticky; bottom: 0; z-index: 10;
+      padding: 12px 0 16px;
+      background: linear-gradient(transparent, var(--color-surface-solid) 30%);
+    }
+    .save-btn {
+      width: 100%; height: 48px; border: none; border-radius: var(--radius-sm);
+      background: var(--gradient-primary); color: #fff;
+      font-size: var(--text-base); font-weight: var(--weight-bold);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      cursor: pointer; box-shadow: 0 4px 16px rgba(0, 122, 255, 0.3);
+      transition: all 0.2s;
+    }
+    .save-btn:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(0, 122, 255, 0.4); transform: translateY(-1px); }
+    .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .save-btn mat-icon { margin-right: 4px; }
 
     .grade-history { margin-top: var(--spacing-md); }
     .history-grid { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -335,11 +353,14 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     @media (max-width: 599px) {
       .page-banner { margin: -16px -16px 20px; padding: 10px 16px; }
       .grade-buttons { grid-template-columns: repeat(5, 1fr); gap: 4px; }
-      .grade-btn { padding: 12px 4px; }
+      .grade-btn { padding: 12px 4px; min-height: 54px; }
       .grade-letter { font-size: 1.2rem; }
       .grade-desc { display: none; }
       .question-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .yn-toggle button { min-height: 44px; min-width: 60px; }
       .condition-buttons { grid-template-columns: repeat(2, 1fr); }
+      .condition-btn { min-height: 56px; }
+      .rule-chip { min-height: 44px !important; }
     }
   `]
 })

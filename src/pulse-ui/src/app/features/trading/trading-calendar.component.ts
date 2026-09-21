@@ -1258,7 +1258,7 @@ export class TradingCalendarComponent implements OnInit {
   editTrade(trade: TradeEntry): void {
     const dialogData: TradeEntryDialogData = { trade, setups: this.setups() };
     const ref = this.dialog.open(TradeEntryDialogComponent, {
-      width: '560px', maxWidth: '95vw', data: dialogData
+      panelClass: 'responsive-dialog-panel', data: dialogData
     });
     ref.afterClosed().subscribe(result => {
       if (result) this.loadMonth();

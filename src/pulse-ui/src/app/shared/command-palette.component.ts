@@ -259,7 +259,7 @@ export class CommandPaletteComponent {
       case 'add-expense':
         import('../features/finance/expenses/add-expense-dialog.component').then(m => {
           this.dialog.open(m.AddExpenseDialogComponent, {
-            width: '480px',
+            panelClass: 'expense-dialog-panel',
             data: { expense: null }
           });
         });

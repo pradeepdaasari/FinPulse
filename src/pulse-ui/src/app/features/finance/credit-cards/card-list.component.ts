@@ -576,8 +576,7 @@ export class CardListComponent implements OnInit {
 
   openAddCard(): void {
     const dialogRef = this.dialog.open(AddCardDialogComponent, {
-      width: '600px',
-      maxWidth: '95vw'
+      panelClass: 'responsive-dialog-panel'
     });
     dialogRef.afterClosed().subscribe(result => {
       if (result) {

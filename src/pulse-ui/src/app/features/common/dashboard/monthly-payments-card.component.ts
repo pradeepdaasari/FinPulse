@@ -260,12 +260,20 @@ interface MonthlyPaymentRow {
     .empty-row mat-icon { color: var(--color-success); }
 
     @media (max-width: 599px) {
-      .summary-bar { grid-template-columns: repeat(2, 1fr); }
-      .summary-stat { border-bottom: 1px solid var(--color-border); border-right: none; }
-      .summary-stat:nth-child(odd) { border-right: 1px solid var(--color-border); }
-      .summary-stat:last-child:nth-child(odd) { grid-column: 1 / -1; border-right: none; border-bottom: none; }
-      .summary-stat:nth-last-child(1):nth-child(even),
-      .summary-stat:nth-last-child(2):nth-child(odd) { border-bottom: none; }
+      .summary-bar {
+        display: flex;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      .summary-bar::-webkit-scrollbar { display: none; }
+      .summary-stat {
+        flex: 0 0 auto;
+        min-width: 100px;
+        border-bottom: none;
+        border-right: 1px solid var(--color-border);
+      }
+      .summary-stat:last-child { border-right: none; }
       .ss-value { font-size: 0.95rem; }
       .pay-row { padding: 12px 14px; gap: 10px; }
       .pay-icon { width: 32px; height: 32px; min-width: 32px; }
@@ -403,8 +411,7 @@ export class MonthlyPaymentsCardComponent implements OnInit {
     const debtKey = `${row.debtType}:${row.id}`;
 
     const ref = this.dialog.open(AddExpenseDialogComponent, {
-      width: '480px',
-      maxWidth: '95vw',
+      panelClass: 'expense-dialog-panel',
       data: {
         expense: null,
         preselectedType,
