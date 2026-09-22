@@ -382,7 +382,8 @@ export class ReviewComponent implements OnInit {
   });
 
   stripHtml(html: string): string {
-    return html.replace(/<[^>]*>/g, '').trim();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    return (doc.body.textContent || '').trim();
   }
 
   rules = signal<TradingRule[]>([]);

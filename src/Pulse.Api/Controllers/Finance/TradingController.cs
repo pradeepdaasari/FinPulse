@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
@@ -134,12 +135,12 @@ public class TradingController : ControllerBase
     {
         var query = _db.PreMarketNotes.Where(n => n.UserId == UserId);
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        if (DateTime.TryParse(fromDate, out var from))
+        if (DateTime.TryParse(fromDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var from))
         {
             var fromUtc = TimeZoneHelper.ToUtc(from, tz);
             query = query.Where(n => n.Date >= fromUtc);
         }
-        if (DateTime.TryParse(toDate, out var to))
+        if (DateTime.TryParse(toDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var to))
         {
             var toUtc = TimeZoneHelper.ToUtc(to.Date.AddDays(1), tz);
             query = query.Where(n => n.Date < toUtc);
@@ -151,7 +152,7 @@ public class TradingController : ControllerBase
     [HttpGet("premarket/date/{date}")]
     public async Task<ActionResult> GetPreMarketByDate(string date)
     {
-        if (!DateTime.TryParse(date, out var d)) return BadRequest();
+        if (!DateTime.TryParse(date, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)) return BadRequest();
         var note = await _db.PreMarketNotes.FirstOrDefaultAsync(n => n.UserId == UserId && n.Date.Date == d.Date);
         if (note == null) return NotFound();
         return Ok(note);
@@ -236,12 +237,12 @@ public class TradingController : ControllerBase
             .Include(t => t.ChecklistResponses);
 
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        if (DateTime.TryParse(fromDate, out var from))
+        if (DateTime.TryParse(fromDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var from))
         {
             var fromUtc = TimeZoneHelper.ToUtc(from, tz);
             query = query.Where(t => t.Date >= fromUtc);
         }
-        if (DateTime.TryParse(toDate, out var to))
+        if (DateTime.TryParse(toDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var to))
         {
             var toUtc = TimeZoneHelper.ToUtc(to.Date.AddDays(1), tz);
             query = query.Where(t => t.Date < toUtc);
@@ -560,9 +561,9 @@ public class TradingController : ControllerBase
     public async Task<ActionResult> GetReviews([FromQuery] string? fromDate, [FromQuery] string? toDate)
     {
         var query = _db.DailyReviews.Where(r => r.UserId == UserId);
-        if (DateTime.TryParse(fromDate, out var from))
+        if (DateTime.TryParse(fromDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var from))
             query = query.Where(r => r.Date >= from.Date);
-        if (DateTime.TryParse(toDate, out var to))
+        if (DateTime.TryParse(toDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var to))
             query = query.Where(r => r.Date < to.Date.AddDays(1));
         var reviews = await query.OrderByDescending(r => r.Date).ToListAsync();
         return Ok(reviews);
@@ -698,11 +699,11 @@ public class TradingController : ControllerBase
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         DateTime cutoff, endDate;
-        if (!string.IsNullOrEmpty(from) && DateTime.TryParse(from, out var fromDt))
+        if (!string.IsNullOrEmpty(from) && DateTime.TryParse(from, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fromDt))
             cutoff = TimeZoneHelper.ToUtc(fromDt, tz);
         else
             cutoff = TimeZoneHelper.ToUtc(new DateTime(DateTime.UtcNow.Year, 1, 1), tz);
-        if (!string.IsNullOrEmpty(to) && DateTime.TryParse(to, out var toDt))
+        if (!string.IsNullOrEmpty(to) && DateTime.TryParse(to, CultureInfo.InvariantCulture, DateTimeStyles.None, out var toDt))
             endDate = TimeZoneHelper.ToUtc(toDt.Date.AddDays(1), tz);
         else
             endDate = DateTime.UtcNow;
@@ -1183,7 +1184,7 @@ public class TradingController : ControllerBase
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
 
         // If fromDate is provided, compute periods from that date to today
-        if (!string.IsNullOrEmpty(fromDate) && DateTime.TryParse(fromDate, out var startFrom))
+        if (!string.IsNullOrEmpty(fromDate) && DateTime.TryParse(fromDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var startFrom))
         {
             periods = goal.Timeframe switch
             {
@@ -1369,7 +1370,7 @@ public class TradingController : ControllerBase
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         var localDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
-        var start = DateTime.TryParse(weekStart, out var ws) ? ws.Date : GetMondayOfWeek(localDate);
+        var start = DateTime.TryParse(weekStart, CultureInfo.InvariantCulture, DateTimeStyles.None, out var ws) ? ws.Date : GetMondayOfWeek(localDate);
         var end = start.AddDays(7);
 
         var startUtc = TimeZoneHelper.ToUtc(start, tz);

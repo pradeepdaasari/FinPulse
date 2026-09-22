@@ -480,7 +480,7 @@ public class ExpenseController : ControllerBase
             {
                 Year = mStart.Year,
                 Month = mStart.Month,
-                Label = mStart.ToString("MMM yyyy"),
+                Label = mStart.ToString("MMM yyyy", System.Globalization.CultureInfo.InvariantCulture),
                 Total = monthExpenses.Sum(e => e.Amount)
             });
         }

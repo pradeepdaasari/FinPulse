@@ -321,14 +321,14 @@ export class NetWorthComponent implements OnInit {
       legend: { display: false },
       tooltip: {
         callbacks: {
-          label: (ctx) => '$' + Number(ctx.parsed.y).toLocaleString()
+          label: (ctx) => '$' + Number(ctx.parsed.y).toLocaleString('en-US')
         }
       }
     },
     scales: {
       y: {
         ticks: {
-          callback: (value) => '$' + Number(value).toLocaleString()
+          callback: (value) => '$' + Number(value).toLocaleString('en-US')
         }
       },
       x: {

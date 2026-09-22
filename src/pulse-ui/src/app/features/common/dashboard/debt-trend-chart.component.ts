@@ -100,7 +100,7 @@ export class DebtTrendChartComponent implements OnInit {
       y: {
         beginAtZero: false,
         ticks: {
-          callback: (value) => '$' + Number(value).toLocaleString()
+          callback: (value) => '$' + Number(value).toLocaleString('en-US')
         }
       }
     }

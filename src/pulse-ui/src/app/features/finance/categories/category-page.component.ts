@@ -1193,7 +1193,7 @@ export class CategoryPageComponent implements OnInit {
     const txns = data.transactions as any[];
     const total = data.totalTransactions as number;
     let list = txns.map((t: any) =>
-      `• ${new Date(t.date).toLocaleDateString()} — ${t.description} ($${t.amount.toFixed(2)})${t.tag ? ' [' + t.tag + ']' : ''}`
+      `• ${new Date(t.date).toLocaleDateString('en-US')} — ${t.description} ($${t.amount.toFixed(2)})${t.tag ? ' [' + t.tag + ']' : ''}`
     ).join('\n');
     if (total > txns.length) list += `\n\n...and ${total - txns.length} more`;
     const budgets = data.budgetExpenses as any[];
