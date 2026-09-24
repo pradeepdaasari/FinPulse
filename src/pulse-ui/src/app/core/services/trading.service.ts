@@ -6,7 +6,7 @@ import {
   TradingSetup, TradingSetupSummary, PreMarketNote, PreMarketTemplate, TradeEntry,
   TradingRule, DailyReview, DailyLimits, TradingStats, TradingWisdom,
   WisdomCategory, WeeklyFocus, WeeklySummary, TradingDashboard,
-  TradingGoal, GoalProgress, GoalHistory
+  TradingGoal, GoalProgress, GoalHistory, TradeNote, TradingDayView
 } from '../models/trading.model';
 
 @Injectable({ providedIn: 'root' })
@@ -212,5 +212,31 @@ export class TradingService {
     if (periods) params = params.set('periods', periods);
     if (fromDate) params = params.set('fromDate', fromDate);
     return this.http.get<GoalHistory>(`${this.baseUrl}/goals/history`, { params });
+  }
+
+  // --- Day View ---
+  getDayView(date: string): Observable<TradingDayView> {
+    return this.http.get<TradingDayView>(`${this.baseUrl}/day/${date}`);
+  }
+
+  getTodayDayView(): Observable<TradingDayView> {
+    return this.http.get<TradingDayView>(`${this.baseUrl}/day/today`);
+  }
+
+  // --- Trade Notes ---
+  getTradeNotes(tradeId: number): Observable<TradeNote[]> {
+    return this.http.get<TradeNote[]>(`${this.baseUrl}/trades/${tradeId}/notes`);
+  }
+
+  createTradeNote(tradeId: number, dto: { note: string; emotion?: string }): Observable<TradeNote> {
+    return this.http.post<TradeNote>(`${this.baseUrl}/trades/${tradeId}/notes`, dto);
+  }
+
+  updateTradeNote(tradeId: number, noteId: number, dto: { note: string; emotion?: string }): Observable<TradeNote> {
+    return this.http.put<TradeNote>(`${this.baseUrl}/trades/${tradeId}/notes/${noteId}`, dto);
+  }
+
+  deleteTradeNote(tradeId: number, noteId: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/trades/${tradeId}/notes/${noteId}`);
   }
 }

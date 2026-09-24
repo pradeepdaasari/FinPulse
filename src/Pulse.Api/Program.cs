@@ -114,6 +114,23 @@ using (var scope = app.Services.CreateScope())
     if (!await roleManager.RoleExistsAsync("User"))
         await roleManager.CreateAsync(new IdentityRole("User"));
 
+    // Auto-create admin user in local dev only
+    if (app.Environment.IsDevelopment() && await userManager.FindByNameAsync("pradeepdasari@finpulse.com") == null)
+    {
+        var admin = new ApplicationUser
+        {
+            UserName = "pradeepdasari@finpulse.com",
+            Email = "pradeepdasari@finpulse.com",
+            EmailConfirmed = true,
+            PreferredTimezone = "America/Chicago"
+        };
+        var result = await userManager.CreateAsync(admin, "Pulse@2026!");
+        if (result.Succeeded)
+        {
+            await userManager.AddToRoleAsync(admin, "Admin");
+        }
+    }
+
 }
 
 // Configure the HTTP request pipeline.

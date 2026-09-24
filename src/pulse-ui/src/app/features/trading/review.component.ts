@@ -374,7 +374,7 @@ export class ReviewComponent implements OnInit {
   dateLabel = computed(() => this.currentDate().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }));
 
   todayTrades = signal<TradeEntry[]>([]);
-  todayPnl = computed(() => this.todayTrades().reduce((s, t) => s + (t.pnl ?? 0), 0));
+  todayPnl = computed(() => this.todayTrades().filter(t => t.status !== 'Open').reduce((s, t) => s + (t.pnl ?? 0), 0));
   todayCompliance = computed(() => {
     const t = this.todayTrades();
     if (!t.length) return 0;

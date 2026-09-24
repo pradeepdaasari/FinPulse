@@ -17,7 +17,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TradingService } from '../../core/services/trading.service';
 import { toLocalISOString } from '../../core/utils/date-utils';
 import { BankAccountService } from '../../core/services/bank-account.service';
-import { TradeEntry, TradeDirection, TradingSetupSummary } from '../../core/models/trading.model';
+import { TradeEntry, TradeDirection, TradeStatus, TradingSetupSummary } from '../../core/models/trading.model';
 import { BankAccount } from '../../core/models/bank-account.model';
 import { NotificationService } from '../../core/services/notification.service';
 import { RichTextEditorComponent } from '../../shared/rich-text-editor.component';
@@ -25,6 +25,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
 export interface TradeEntryDialogData {
   trade: TradeEntry | null;
   setups: TradingSetupSummary[];
+  closeMode?: boolean;
 }
 
 @Component({
@@ -41,12 +42,12 @@ export interface TradeEntryDialogData {
     <div class="dialog-banner">
       <div class="banner-pattern"></div>
       <div class="banner-content">
-        <div class="banner-icon" [class.edit-mode]="!!data?.trade">
-          <mat-icon>{{ data?.trade ? 'edit' : 'add_chart' }}</mat-icon>
+        <div class="banner-icon" [class.edit-mode]="!!data?.trade" [class.close-mode]="!!data?.closeMode">
+          <mat-icon>{{ data?.closeMode ? 'lock' : (data?.trade ? 'edit' : 'add_chart') }}</mat-icon>
         </div>
         <div class="banner-text">
-          <h2>{{ data?.trade ? 'Edit' : 'Log' }} Trade</h2>
-          <p>Record your entry with discipline</p>
+          <h2>{{ data?.closeMode ? 'Close' : (data?.trade ? 'Edit' : 'Log') }} Trade</h2>
+          <p>{{ bannerSubtitle }}</p>
         </div>
         <span class="banner-spacer"></span>
         <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
@@ -94,6 +95,26 @@ export interface TradeEntryDialogData {
               <mat-option value="Other">Other</mat-option>
             </mat-select>
           </mat-form-field>
+        </div>
+
+        <!-- Status Toggle -->
+        <div class="status-toggle-row">
+          <mat-button-toggle-group formControlName="status" class="status-toggle">
+            <mat-button-toggle value="Open" class="toggle-open">
+              <mat-icon>lock_open</mat-icon> Open
+            </mat-button-toggle>
+            <mat-button-toggle value="Closed" class="toggle-closed">
+              <mat-icon>lock</mat-icon> Closed
+            </mat-button-toggle>
+          </mat-button-toggle-group>
+          @if (form.value.status === 'Closed') {
+            <div class="closed-date-field" (click)="closedPicker.open()">
+              <mat-icon class="date-icon">event_available</mat-icon>
+              <span class="closed-date-value">Closed {{ form.value.closedDate | date:'MMM d, yyyy' }}</span>
+              <input matInput [matDatepicker]="closedPicker" formControlName="closedDate" class="hidden-date-input">
+              <mat-datepicker #closedPicker></mat-datepicker>
+            </div>
+          }
         </div>
 
         <!-- Direction + Asset Type side by side -->
@@ -211,62 +232,81 @@ export interface TradeEntryDialogData {
             }
 
             <!-- Premiums -->
-            <div class="row-2col">
-              <mat-form-field appearance="outline">
+            <div [class]="form.value.status === 'Closed' ? 'row-2col' : 'full-width'">
+              <mat-form-field appearance="outline" [class.full-width]="form.value.status !== 'Closed'">
                 <mat-label>Entry Premium</mat-label>
                 <input matInput type="number" inputmode="decimal" formControlName="entryPremium" step="0.01" (input)="calcPnl()">
                 <span matTextPrefix>$</span>
               </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Exit Premium</mat-label>
-                <input matInput type="number" inputmode="decimal" formControlName="exitPremium" step="0.01" (input)="calcPnl()" [readonly]="!!form.value.expiredWorthless">
-                <span matTextPrefix>$</span>
-              </mat-form-field>
+              @if (form.value.status === 'Closed') {
+                <mat-form-field appearance="outline">
+                  <mat-label>Exit Premium</mat-label>
+                  <input matInput type="number" inputmode="decimal" formControlName="exitPremium" step="0.01" (input)="calcPnl()" [readonly]="!!form.value.expiredWorthless">
+                  <span matTextPrefix>$</span>
+                </mat-form-field>
+              }
             </div>
-            <mat-checkbox formControlName="expiredWorthless" color="primary" class="expired-check" (change)="onExpiredWorthlessChange($event.checked)">
-              Expired Worthless <span class="expired-hint">(no exit brokerage — option expired, not closed)</span>
-            </mat-checkbox>
+            @if (form.value.status === 'Closed') {
+              <mat-checkbox formControlName="expiredWorthless" color="primary" class="expired-check" (change)="onExpiredWorthlessChange($event.checked)">
+                Expired Worthless <span class="expired-hint">(no exit brokerage — option expired, not closed)</span>
+              </mat-checkbox>
+            }
           </div>
         } @else {
           <!-- Non-options: standard price fields -->
-          <div class="row-2col">
-            <mat-form-field appearance="outline">
+          <div [class]="form.value.status === 'Closed' ? 'row-2col' : 'full-width'">
+            <mat-form-field appearance="outline" [class.full-width]="form.value.status !== 'Closed'">
               <mat-label>Entry Price</mat-label>
               <input matInput type="number" inputmode="decimal" formControlName="entryPrice" step="0.01" (input)="calcPnl()">
               <span matTextPrefix>$</span>
             </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Exit Price</mat-label>
-              <input matInput type="number" inputmode="decimal" formControlName="exitPrice" step="0.01" (input)="calcPnl()">
-              <span matTextPrefix>$</span>
-            </mat-form-field>
+            @if (form.value.status === 'Closed') {
+              <mat-form-field appearance="outline">
+                <mat-label>Exit Price</mat-label>
+                <input matInput type="number" inputmode="decimal" formControlName="exitPrice" step="0.01" (input)="calcPnl()">
+                <span matTextPrefix>$</span>
+              </mat-form-field>
+            }
           </div>
         }
 
         <!-- Contracts, Multiplier, P&L, Risk -->
-        <div class="row-4col">
-          <mat-form-field appearance="outline">
-            <mat-label>Qty</mat-label>
-            <input matInput type="number" inputmode="decimal" formControlName="quantity" min="1" (input)="calcPnl()">
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Multiplier</mat-label>
-            <input matInput type="number" inputmode="decimal" formControlName="multiplier" min="1" (input)="calcPnl()">
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>P&L</mat-label>
-            <input matInput type="number" inputmode="decimal" formControlName="pnl" step="0.01">
-            <span matTextPrefix>$</span>
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Risk</mat-label>
-            <input matInput type="number" inputmode="decimal" formControlName="plannedRisk" step="1" min="0">
-            <span matTextPrefix>$</span>
-          </mat-form-field>
-        </div>
+        @if (form.value.status === 'Closed') {
+          <div class="row-4col">
+            <mat-form-field appearance="outline">
+              <mat-label>Qty</mat-label>
+              <input matInput type="number" inputmode="decimal" formControlName="quantity" min="1" (input)="calcPnl()">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Multiplier</mat-label>
+              <input matInput type="number" inputmode="decimal" formControlName="multiplier" min="1" (input)="calcPnl()">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>P&L</mat-label>
+              <input matInput type="number" inputmode="decimal" formControlName="pnl" step="0.01">
+              <span matTextPrefix>$</span>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Risk</mat-label>
+              <input matInput type="number" inputmode="decimal" formControlName="plannedRisk" step="1" min="0">
+              <span matTextPrefix>$</span>
+            </mat-form-field>
+          </div>
+        } @else {
+          <div class="row-2col">
+            <mat-form-field appearance="outline">
+              <mat-label>Qty</mat-label>
+              <input matInput type="number" inputmode="decimal" formControlName="quantity" min="1">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Multiplier</mat-label>
+              <input matInput type="number" inputmode="decimal" formControlName="multiplier" min="1">
+            </mat-form-field>
+          </div>
+        }
 
-        <!-- Brokerage + Fees -->
-        @if (brokerageAccounts().length > 0) {
+        <!-- Brokerage + Fees (only when closing) -->
+        @if (form.value.status === 'Closed' && brokerageAccounts().length > 0) {
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Account</mat-label>
             <mat-select formControlName="bankAccountId" (selectionChange)="calcPnl()">
@@ -386,8 +426,8 @@ export interface TradeEntryDialogData {
           <mat-spinner diameter="20" class="save-spinner"></mat-spinner>
           Saving...
         } @else {
-          <mat-icon>{{ data?.trade ? 'check' : 'save' }}</mat-icon>
-          {{ data?.trade ? 'Update Trade' : 'Save Trade' }}
+          <mat-icon>{{ data?.closeMode ? 'lock' : (data?.trade ? 'check' : 'save') }}</mat-icon>
+          {{ data?.closeMode ? 'Close Trade' : (data?.trade ? 'Update Trade' : (form.value.status === 'Open' ? 'Open Trade' : 'Save Trade')) }}
         }
       </button>
     </div>
@@ -411,6 +451,7 @@ export interface TradeEntryDialogData {
     }
     .banner-icon mat-icon { color: #fff; font-size: 20px; width: 20px; height: 20px; }
     .banner-icon.edit-mode { background: rgba(255,255,255,0.25); }
+    .banner-icon.close-mode { background: rgba(76,175,80,0.35); }
     .banner-text h2 { margin: 0; color: #fff; font-size: 1.05rem; font-weight: 700; }
     .banner-text p { margin: 2px 0 0; color: rgba(255,255,255,0.7); font-size: 0.72rem; }
     .banner-spacer { flex: 1; }
@@ -455,6 +496,26 @@ export interface TradeEntryDialogData {
     .row-4col { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
     .full-width { width: 100%; }
 
+    .status-toggle-row {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .status-toggle { flex-shrink: 0; }
+    .status-toggle .mat-button-toggle { flex: none; }
+    ::ng-deep .status-toggle .mat-button-toggle-checked.toggle-open {
+      background: var(--color-stat-amber-bg) !important; color: var(--color-stat-amber) !important;
+    }
+    ::ng-deep .status-toggle .mat-button-toggle-checked.toggle-closed {
+      background: var(--color-stat-green-bg) !important; color: var(--color-success) !important;
+    }
+    .closed-date-field {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px; background: var(--color-stat-green-bg);
+      border-radius: var(--radius-full); cursor: pointer;
+      border: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent);
+      transition: border-color 0.15s; position: relative;
+    }
+    .closed-date-field:hover { border-color: var(--color-success); }
+    .closed-date-value { font-size: 0.8rem; font-weight: 600; color: var(--color-success); white-space: nowrap; }
     .toggle-field { display: flex; align-items: center; padding: 4px 0; }
     .dir-toggle, .opt-toggle, .asset-toggle { width: 100%; }
     .dir-toggle .mat-button-toggle, .opt-toggle .mat-button-toggle, .asset-toggle .mat-button-toggle { flex: 1; }
@@ -649,8 +710,14 @@ export class TradeEntryDialogComponent implements OnInit {
   loading = signal(true);
   saving = signal(false);
   showMore = signal(false);
-  feesManuallyEdited = false;
   selectedMistakes = signal<string[]>(this.data?.trade?.mistakeTags ?? []);
+
+  get bannerSubtitle(): string {
+    if (this.data?.closeMode) return 'Record exit details and lock in your P&L';
+    if (this.data?.trade?.status === 'Open') return 'Update your open position';
+    if (this.data?.trade) return 'Modify your trade record';
+    return 'Record your entry with discipline';
+  }
 
   emotions = [
     { value: 'Confident', label: 'Confident', icon: '💪' },
@@ -708,24 +775,28 @@ export class TradeEntryDialogComponent implements OnInit {
     emotionAtEntry: [this.data?.trade?.emotionAtEntry ?? null as string | null],
     plannedRisk: [this.data?.trade?.plannedRisk ?? null as number | null],
     notes: [this.data?.trade?.notes ?? ''],
-    tags: [this.data?.trade?.tags?.join(', ') ?? '']
+    tags: [this.data?.trade?.tags?.join(', ') ?? ''],
+    status: [this.data?.trade?.status ?? 'Open'],
+    closedDate: [this.data?.trade?.closedDate ? new Date(this.data.trade.closedDate) : new Date()]
   });
 
   ngOnInit(): void {
+    if (this.data?.closeMode) {
+      this.form.patchValue({ status: 'Closed', closedDate: new Date() });
+    }
+    this.updateFeeValidators(this.form.value.status as string);
+    this.form.get('status')!.valueChanges.subscribe(s => this.updateFeeValidators(s as string));
     if (this.data?.trade) {
       const t = this.data.trade;
       if ((t.mistakeTags && t.mistakeTags.length > 0) || t.notes || (t.tags && t.tags.length > 0)) {
         this.showMore.set(true);
       }
     }
-    if (this.data?.trade?.commissionFees != null || this.data?.trade?.regExchangeFees != null) {
-      this.feesManuallyEdited = true;
-    }
     this.accountService.getAll().subscribe({
       next: accounts => {
         const brokerages = accounts.filter(a => a.accountType === 'Brokerage');
         this.brokerageAccounts.set(brokerages);
-        if (!this.data?.trade && brokerages.length === 1) {
+        if (brokerages.length === 1 && !this.form.value.bankAccountId) {
           this.form.patchValue({ bankAccountId: brokerages[0].id });
         }
         this.updateFeeEstimate();
@@ -776,8 +847,18 @@ export class TradeEntryDialogComponent implements OnInit {
     this.updateFeeEstimate();
   }
 
+  private updateFeeValidators(status?: string): void {
+    const s = status ?? this.form.value.status;
+    const hasAccount = !!this.form.value.bankAccountId;
+    const controls = [this.form.get('commissionFees')!, this.form.get('regExchangeFees')!];
+    if (s === 'Closed' && hasAccount) {
+      controls.forEach(c => { c.setValidators([Validators.required, Validators.min(0)]); c.updateValueAndValidity(); });
+    } else {
+      controls.forEach(c => { c.clearValidators(); c.updateValueAndValidity(); });
+    }
+  }
+
   onFeesChanged(): void {
-    this.feesManuallyEdited = true;
     const v = this.form.value;
     const commission = v.commissionFees ?? 0;
     const regExchange = v.regExchangeFees ?? 0;
@@ -787,31 +868,19 @@ export class TradeEntryDialogComponent implements OnInit {
     this.netPnl.set(Math.round(net * 100) / 100);
     const acct = this.selectedAccount();
     if (acct) this.balanceAfter.set(Math.round((acct.currentBalance + net) * 100) / 100);
+    this.updateComputedR();
   }
 
   private updateFeeEstimate(): void {
     const v = this.form.value;
     const acct = this.brokerageAccounts().find(a => a.id === v.bankAccountId) ?? null;
     this.selectedAccount.set(acct);
+    this.updateFeeValidators();
     if (!acct || !v.quantity) {
       this.estimatedFees.set(0);
       this.netPnl.set(v.pnl ?? 0);
-      if (!acct) this.feesManuallyEdited = false;
       this.updateComputedR();
       return;
-    }
-    if (!this.feesManuallyEdited) {
-      const commissionRate = v.assetType === 'Futures'
-        ? (acct.futuresCommissionPerContract ?? 0)
-        : (acct.optionsCommissionPerContract ?? 0);
-      const regFeeRate = v.assetType === 'Futures'
-        ? (acct.futuresRegFeePerContract ?? 0)
-        : (acct.optionsRegFeePerContract ?? 0);
-      const legs = v.assetType === 'Options' ? this.getLegsForSpread(v.spreadType) : 1;
-      const multiplier = v.quantity * legs * (v.expiredWorthless ? 1 : 2);
-      const commission = Math.round(commissionRate * multiplier * 100) / 100;
-      const regExchange = Math.round(regFeeRate * multiplier * 100) / 100;
-      this.form.patchValue({ commissionFees: commission, regExchangeFees: regExchange }, { emitEvent: false });
     }
     const commission = this.form.value.commissionFees ?? 0;
     const regExchange = this.form.value.regExchangeFees ?? 0;
@@ -832,15 +901,6 @@ export class TradeEntryDialogComponent implements OnInit {
       this.computedR.set(Math.round((netPnl / risk) * 100) / 100);
     } else {
       this.computedR.set(null);
-    }
-  }
-
-  private getLegsForSpread(spreadType: string | null | undefined): number {
-    switch (spreadType) {
-      case 'Vertical': case 'Calendar': return 2;
-      case 'Butterfly': return 3;
-      case 'IronCondor': return 4;
-      default: return 1;
     }
   }
 
@@ -865,9 +925,9 @@ export class TradeEntryDialogComponent implements OnInit {
       instrument: val.instrument!,
       direction: (val.direction ?? 'long') as TradeDirection,
       entryPrice: val.entryPrice ?? 0,
-      exitPrice: val.exitPrice ?? undefined,
+      exitPrice: val.status === 'Closed' ? (val.exitPrice ?? undefined) : undefined,
       quantity: val.quantity!,
-      pnl: val.pnl ?? undefined,
+      pnl: val.status === 'Closed' ? (val.pnl ?? undefined) : undefined,
       checklistCompleted: val.checklistCompleted ?? false,
       notes: val.notes || undefined,
       tags: val.tags ? val.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
@@ -887,12 +947,16 @@ export class TradeEntryDialogComponent implements OnInit {
         ? `${val.expirationDate.getFullYear()}-${String(val.expirationDate.getMonth() + 1).padStart(2, '0')}-${String(val.expirationDate.getDate()).padStart(2, '0')}`
         : val.expirationDate ?? undefined,
       entryPremium: val.entryPremium ?? undefined,
-      exitPremium: val.exitPremium ?? undefined,
-      expiredWorthless: val.expiredWorthless ?? false,
-      bankAccountId: val.bankAccountId ?? undefined,
-      commissionFees: val.commissionFees ?? undefined,
-      regExchangeFees: val.regExchangeFees ?? undefined,
-      multiplier: val.multiplier ?? 100
+      exitPremium: val.status === 'Closed' ? (val.exitPremium ?? undefined) : undefined,
+      expiredWorthless: val.status === 'Closed' ? (val.expiredWorthless ?? false) : false,
+      bankAccountId: val.status === 'Closed' ? (val.bankAccountId ?? undefined) : undefined,
+      commissionFees: val.status === 'Closed' ? (val.commissionFees ?? undefined) : undefined,
+      regExchangeFees: val.status === 'Closed' ? (val.regExchangeFees ?? undefined) : undefined,
+      multiplier: val.multiplier ?? 100,
+      status: (val.status as TradeStatus) ?? 'Open',
+      closedDate: val.status === 'Closed' && val.closedDate instanceof Date
+        ? toLocalISOString(val.closedDate)
+        : val.status === 'Closed' && val.closedDate ? val.closedDate as unknown as string : undefined
     };
 
     this.saving.set(true);

@@ -16,6 +16,7 @@ public class PreMarketNote
     [MaxLength(10)]
     public string MentalState { get; set; } = "green";
     public string? MentalStateNotes { get; set; }
+    public string? EmotionalPlan { get; set; }
     public int MaxTrades { get; set; }
     public decimal MaxLoss { get; set; }
     public DateTime CreatedAt { get; set; }

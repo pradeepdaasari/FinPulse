@@ -66,11 +66,11 @@ import { toLocalDateString } from '../../core/utils/date-utils';
         <span class="summary-label">Trades</span>
       </div>
       <div class="summary-stat">
-        <span class="summary-value">{{ dashboard()!.winRate }}%</span>
+        <span class="summary-value">{{ dashboard()!.winRate | number:'1.0-1' }}%</span>
         <span class="summary-label">Win Rate</span>
       </div>
       <div class="summary-stat">
-        <span class="summary-value">{{ dashboard()!.profitFactor }}</span>
+        <span class="summary-value">{{ dashboard()!.profitFactor | number:'1.0-2' }}</span>
         <span class="summary-label">Profit Factor</span>
       </div>
     </div>

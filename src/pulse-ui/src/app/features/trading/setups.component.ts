@@ -87,7 +87,7 @@ import { NotificationService } from '../../core/services/notification.service';
               <div class="win-rate-bar">
                 <div class="win-rate-fill" [style.width.%]="setup.winRate ?? 0"></div>
               </div>
-              <span class="win-rate-label">{{ setup.winRate ?? 0 }}% win rate</span>
+              <span class="win-rate-label">{{ (setup.winRate ?? 0) | number:'1.0-1' }}% win rate</span>
             }
 
             <div class="setup-actions">

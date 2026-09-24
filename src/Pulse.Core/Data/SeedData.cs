@@ -3,6 +3,7 @@ namespace Pulse.Core.Data;
 using Microsoft.EntityFrameworkCore;
 using Pulse.Core.Models;
 using Pulse.Core.Models.Enums;
+using Pulse.Core.Models.Health;
 using Pulse.Core.Models.Trading;
 
 public static class SeedData
@@ -83,7 +84,7 @@ public static class SeedData
                     .Where(e => e.State == Microsoft.EntityFrameworkCore.EntityState.Added))
                 {
                     var prop = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "UserId");
-                    if (prop != null && prop.CurrentValue == null)
+                    if (prop != null && (prop.CurrentValue == null || (prop.CurrentValue is string s && s == string.Empty)))
                         prop.CurrentValue = userId;
                 }
             }
@@ -725,6 +726,643 @@ public static class SeedData
                 CreatedAt = new DateTime(2026, 3 + i, 28)
             });
         }
+
+        StampAndSave();
+
+        // ═══════════════════════════════════════════════════
+        // TRADING — Setups, Rules, Limits, Trades, Reviews
+        // ═══════════════════════════════════════════════════
+
+        // Clear existing trading data
+        if (userId != null)
+        {
+            context.TradeNotes.RemoveRange(context.TradeNotes.Where(x => x.UserId == userId));
+            context.ChecklistResponses.RemoveRange(context.ChecklistResponses.Where(x => context.TradeEntries.Where(t => t.UserId == userId).Select(t => t.Id).Contains(x.TradeEntryId)));
+            context.TradeEntries.RemoveRange(context.TradeEntries.Where(x => x.UserId == userId));
+            context.DailyReviews.RemoveRange(context.DailyReviews.Where(x => x.UserId == userId));
+            context.PreMarketNotes.RemoveRange(context.PreMarketNotes.Where(x => x.UserId == userId));
+            context.PreMarketTemplates.RemoveRange(context.PreMarketTemplates.Where(x => x.UserId == userId));
+            context.TradingRules.RemoveRange(context.TradingRules.Where(x => x.UserId == userId));
+            context.DailyLimits.RemoveRange(context.DailyLimits.Where(x => x.UserId == userId));
+            context.TradingGoalSnapshots.RemoveRange(context.TradingGoalSnapshots.Where(x => x.UserId == userId));
+            context.TradingGoals.RemoveRange(context.TradingGoals.Where(x => x.UserId == userId));
+            context.ChecklistItems.RemoveRange(context.ChecklistItems.Where(x => context.TradingSetups.Where(s => s.UserId == userId).Select(s => s.Id).Contains(x.SetupId)));
+            context.TradingSetups.RemoveRange(context.TradingSetups.Where(x => x.UserId == userId));
+        }
+        context.SaveChanges();
+
+        // Trading Setups with checklist items
+        var creditSpread = new TradingSetup { Name = "Credit Spread", Description = "Sell premium with defined risk. Best in high IV environments." };
+        var ironCondor = new TradingSetup { Name = "Iron Condor", Description = "Neutral strategy collecting premium on both sides. Works in range-bound markets." };
+        var longCall = new TradingSetup { Name = "Long Call / Put", Description = "Directional play with limited risk. Use on high-conviction moves." };
+        var calendarSpread = new TradingSetup { Name = "Calendar Spread", Description = "Exploit time decay differential between near and far expirations." };
+
+        context.TradingSetups.AddRange(creditSpread, ironCondor, longCall, calendarSpread);
+        StampAndSave();
+
+        context.ChecklistItems.AddRange(
+            new ChecklistItem { SetupId = creditSpread.Id, Label = "IV rank above 30%", OrderIndex = 0 },
+            new ChecklistItem { SetupId = creditSpread.Id, Label = "Checked earnings calendar — no event before expiration", OrderIndex = 1 },
+            new ChecklistItem { SetupId = creditSpread.Id, Label = "Short strike at or beyond 1 SD", OrderIndex = 2 },
+            new ChecklistItem { SetupId = creditSpread.Id, Label = "Risk/reward at least 1:2 (credit vs width)", OrderIndex = 3 },
+            new ChecklistItem { SetupId = creditSpread.Id, Label = "Position size within 5% of account", OrderIndex = 4 },
+            new ChecklistItem { SetupId = creditSpread.Id, Label = "Defined exit plan (50% profit target, 2x loss stop)", OrderIndex = 5 },
+
+            new ChecklistItem { SetupId = ironCondor.Id, Label = "IV rank above 40%", OrderIndex = 0 },
+            new ChecklistItem { SetupId = ironCondor.Id, Label = "No major catalysts before expiration", OrderIndex = 1 },
+            new ChecklistItem { SetupId = ironCondor.Id, Label = "Underlying in defined range for 2+ weeks", OrderIndex = 2 },
+            new ChecklistItem { SetupId = ironCondor.Id, Label = "Strikes beyond expected move", OrderIndex = 3 },
+            new ChecklistItem { SetupId = ironCondor.Id, Label = "Max loss acceptable if both sides tested", OrderIndex = 4 },
+
+            new ChecklistItem { SetupId = longCall.Id, Label = "Clear directional thesis with catalyst", OrderIndex = 0 },
+            new ChecklistItem { SetupId = longCall.Id, Label = "IV not elevated (avoid crush)", OrderIndex = 1 },
+            new ChecklistItem { SetupId = longCall.Id, Label = "At least 30 DTE for time", OrderIndex = 2 },
+            new ChecklistItem { SetupId = longCall.Id, Label = "Risk limited to amount willing to lose 100%", OrderIndex = 3 },
+
+            new ChecklistItem { SetupId = calendarSpread.Id, Label = "IV term structure in contango", OrderIndex = 0 },
+            new ChecklistItem { SetupId = calendarSpread.Id, Label = "Near-term expiration has event or high IV", OrderIndex = 1 },
+            new ChecklistItem { SetupId = calendarSpread.Id, Label = "Underlying near strike price", OrderIndex = 2 },
+            new ChecklistItem { SetupId = calendarSpread.Id, Label = "Back month has 45+ DTE", OrderIndex = 3 }
+        );
+
+        // Trading Rules (playbook)
+        context.TradingRules.AddRange(
+            new TradingRule { Text = "Never risk more than 2% of account on a single trade", Category = "risk", OrderIndex = 0 },
+            new TradingRule { Text = "No trading in the first 15 minutes after market open", Category = "entry", OrderIndex = 1 },
+            new TradingRule { Text = "Always complete the pre-market checklist before placing any trade", Category = "process", OrderIndex = 2 },
+            new TradingRule { Text = "Take 50% off at profit target, let the rest run with a trailing stop", Category = "exit", OrderIndex = 3 },
+            new TradingRule { Text = "Stop trading for the day after 3 consecutive losses", Category = "risk", OrderIndex = 4 },
+            new TradingRule { Text = "No revenge trades — if stopped out, wait 30 minutes before next entry", Category = "psychology", OrderIndex = 5 },
+            new TradingRule { Text = "Only trade setups from the playbook — no impulse trades", Category = "entry", OrderIndex = 6 },
+            new TradingRule { Text = "Complete the daily review every trading day, even if no trades", Category = "process", OrderIndex = 7 },
+            new TradingRule { Text = "Scale position size down by 50% after a red week", Category = "risk", OrderIndex = 8 },
+            new TradingRule { Text = "No trading when feeling anxious, angry, or euphoric", Category = "psychology", OrderIndex = 9 }
+        );
+
+        // Daily Limits
+        context.DailyLimits.Add(new DailyLimits
+        {
+            MaxTradesPerDay = 4,
+            MaxDailyLoss = 400,
+            StopAfterConsecutiveLosses = 3
+        });
+
+        // Pre-Market Template
+        context.PreMarketTemplates.Add(new PreMarketTemplate
+        {
+            KeyLevels = "SPX: Support _____ / Resistance _____\nQQQ: Support _____ / Resistance _____\nVIX: Current _____",
+            Catalysts = "Economic data:\nEarnings:\nFed speakers:",
+            Plan = "1. Market bias and reasoning:\n2. Primary setup to watch:\n3. Max trades today:\n4. Stop-loss level for the day:"
+        });
+
+        StampAndSave();
+
+        // Trade Entries — 3 weeks of realistic options trades
+        var trade1 = new TradeEntry
+        {
+            Date = new DateTime(2026, 9, 2),
+            SetupId = creditSpread.Id,
+            Instrument = "SPY",
+            Direction = "short",
+            AssetType = "Options",
+            OptionType = "put",
+            SpreadType = "credit-spread",
+            StrikePrice = 540m,
+            StrikePrice2 = 535m,
+            ExpirationDate = new DateTime(2026, 9, 19),
+            EntryPremium = 1.85m,
+            ExitPremium = 0.45m,
+            EntryPrice = 1.85m,
+            ExitPrice = 0.45m,
+            Quantity = 5,
+            Multiplier = 100,
+            Pnl = 700m,
+            NetPnl = 693.40m,
+            CommissionFees = 6.50m,
+            RegExchangeFees = 0.10m,
+            TotalFees = 6.60m,
+            ChecklistCompleted = true,
+            EmotionAtEntry = "focused",
+            Status = "Closed",
+            ClosedDate = new DateTime(2026, 9, 10),
+            EntryTime = "10:15",
+            ExitTime = "14:30",
+            PlannedRisk = 350m,
+            Notes = "Clean setup — IV rank 42, put below 1SD. Took profit at 50% target as planned.",
+            Tags = "[\"winner\",\"disciplined\"]",
+            BankAccountId = brokerage.Id
+        };
+        var trade2 = new TradeEntry
+        {
+            Date = new DateTime(2026, 9, 5),
+            SetupId = longCall.Id,
+            Instrument = "AAPL",
+            Direction = "long",
+            AssetType = "Options",
+            OptionType = "call",
+            SpreadType = "single",
+            StrikePrice = 230m,
+            ExpirationDate = new DateTime(2026, 10, 17),
+            EntryPremium = 4.20m,
+            ExitPremium = 2.10m,
+            EntryPrice = 4.20m,
+            ExitPrice = 2.10m,
+            Quantity = 2,
+            Multiplier = 100,
+            Pnl = -420m,
+            NetPnl = -423.30m,
+            CommissionFees = 2.60m,
+            RegExchangeFees = 0.70m,
+            TotalFees = 3.30m,
+            ChecklistCompleted = true,
+            EmotionAtEntry = "confident",
+            Status = "Closed",
+            ClosedDate = new DateTime(2026, 9, 9),
+            EntryTime = "10:45",
+            ExitTime = "11:20",
+            PlannedRisk = 420m,
+            Notes = "Thesis was right but timing was off. AAPL sold off on broader market weakness. Took the loss at planned stop.",
+            Tags = "[\"loser\",\"disciplined\"]",
+            MistakeTags = "[\"bad-timing\"]",
+            BankAccountId = brokerage.Id
+        };
+        var trade3 = new TradeEntry
+        {
+            Date = new DateTime(2026, 9, 9),
+            SetupId = ironCondor.Id,
+            Instrument = "QQQ",
+            Direction = "short",
+            AssetType = "Options",
+            OptionType = "put",
+            SpreadType = "iron-condor",
+            StrikePrice = 480m,
+            StrikePrice2 = 475m,
+            StrikePrice3 = 500m,
+            StrikePrice4 = 505m,
+            ExpirationDate = new DateTime(2026, 9, 19),
+            EntryPremium = 2.40m,
+            ExitPremium = 1.20m,
+            EntryPrice = 2.40m,
+            ExitPrice = 1.20m,
+            Quantity = 3,
+            Multiplier = 100,
+            Pnl = 360m,
+            NetPnl = 354.10m,
+            CommissionFees = 5.20m,
+            RegExchangeFees = 0.70m,
+            TotalFees = 5.90m,
+            ChecklistCompleted = true,
+            EmotionAtEntry = "calm",
+            Status = "Closed",
+            ClosedDate = new DateTime(2026, 9, 16),
+            EntryTime = "10:30",
+            ExitTime = "13:45",
+            PlannedRisk = 450m,
+            Notes = "QQQ stayed range-bound all week. Perfect environment for iron condor. Closed at 50% profit.",
+            Tags = "[\"winner\",\"disciplined\"]",
+            BankAccountId = brokerage.Id
+        };
+        var trade4 = new TradeEntry
+        {
+            Date = new DateTime(2026, 9, 12),
+            SetupId = creditSpread.Id,
+            Instrument = "TSLA",
+            Direction = "short",
+            AssetType = "Options",
+            OptionType = "call",
+            SpreadType = "credit-spread",
+            StrikePrice = 280m,
+            StrikePrice2 = 285m,
+            ExpirationDate = new DateTime(2026, 9, 19),
+            EntryPremium = 1.50m,
+            ExitPremium = 3.80m,
+            EntryPrice = 1.50m,
+            ExitPrice = 3.80m,
+            Quantity = 4,
+            Multiplier = 100,
+            Pnl = -920m,
+            NetPnl = -925.20m,
+            CommissionFees = 5.20m,
+            RegExchangeFees = 0m,
+            TotalFees = 5.20m,
+            ChecklistCompleted = true,
+            EmotionAtEntry = "anxious",
+            IsRevengeTrading = true,
+            Status = "Closed",
+            ClosedDate = new DateTime(2026, 9, 15),
+            EntryTime = "09:45",
+            ExitTime = "10:10",
+            PlannedRisk = 500m,
+            Notes = "Entered too early — TSLA squeezed after Elon tweet. This was a revenge trade after the AAPL loss. Broke my 30-minute rule.",
+            Tags = "[\"loser\",\"revenge\"]",
+            MistakeTags = "[\"revenge-trade\",\"broke-rules\",\"early-entry\"]",
+            BankAccountId = brokerage.Id
+        };
+        var trade5 = new TradeEntry
+        {
+            Date = new DateTime(2026, 9, 16),
+            SetupId = creditSpread.Id,
+            Instrument = "SPY",
+            Direction = "short",
+            AssetType = "Options",
+            OptionType = "put",
+            SpreadType = "credit-spread",
+            StrikePrice = 545m,
+            StrikePrice2 = 540m,
+            ExpirationDate = new DateTime(2026, 10, 17),
+            EntryPremium = 2.10m,
+            EntryPrice = 2.10m,
+            Quantity = 3,
+            Multiplier = 100,
+            ChecklistCompleted = true,
+            EmotionAtEntry = "focused",
+            Status = "Open",
+            EntryTime = "11:00",
+            PlannedRisk = 270m,
+            Notes = "Solid setup — IV rank 38, well below support. Aiming for 50% profit target.",
+            Tags = "[\"active\"]",
+            BankAccountId = brokerage.Id
+        };
+        var trade6 = new TradeEntry
+        {
+            Date = new DateTime(2026, 9, 19),
+            SetupId = calendarSpread.Id,
+            Instrument = "AMZN",
+            Direction = "long",
+            AssetType = "Options",
+            OptionType = "call",
+            SpreadType = "calendar",
+            StrikePrice = 195m,
+            ExpirationDate = new DateTime(2026, 10, 3),
+            EntryPremium = 3.50m,
+            ExitPremium = 5.20m,
+            EntryPrice = 3.50m,
+            ExitPrice = 5.20m,
+            Quantity = 2,
+            Multiplier = 100,
+            Pnl = 340m,
+            NetPnl = 336.70m,
+            CommissionFees = 2.60m,
+            RegExchangeFees = 0.70m,
+            TotalFees = 3.30m,
+            ChecklistCompleted = true,
+            EmotionAtEntry = "calm",
+            Status = "Closed",
+            ClosedDate = new DateTime(2026, 9, 22),
+            EntryTime = "10:20",
+            ExitTime = "14:00",
+            PlannedRisk = 350m,
+            Notes = "Near-term IV crushed after FOMC, back month held. Textbook calendar play.",
+            Tags = "[\"winner\",\"disciplined\"]",
+            BankAccountId = brokerage.Id
+        };
+
+        context.TradeEntries.AddRange(trade1, trade2, trade3, trade4, trade5, trade6);
+        StampAndSave();
+
+        // Trade Notes (in-trade observations)
+        context.TradeNotes.AddRange(
+            new TradeNote { TradeEntryId = trade1.Id, Note = "SPY holding above support, looking good for time decay", Emotion = "calm" },
+            new TradeNote { TradeEntryId = trade1.Id, Note = "Hit 50% profit — closing as planned", Emotion = "satisfied" },
+            new TradeNote { TradeEntryId = trade4.Id, Note = "TSLA spiking — this is going against me. Should have waited.", Emotion = "anxious" },
+            new TradeNote { TradeEntryId = trade4.Id, Note = "Cutting the loss. Need to step away from the screen.", Emotion = "frustrated" },
+            new TradeNote { TradeEntryId = trade5.Id, Note = "Market dipped but holding position — still within plan", Emotion = "focused" }
+        );
+
+        // Pre-Market Notes (last 2 weeks)
+        context.PreMarketNotes.AddRange(
+            new PreMarketNote
+            {
+                Date = new DateTime(2026, 9, 2),
+                MentalState = "green",
+                MarketBias = "bullish",
+                Plan = "Look for put credit spreads on SPY if we hold above 548. IV elevated from holiday weekend.",
+                KeyLevels = "SPX: 5480 support / 5520 resistance\nQQQ: 488 / 495\nVIX: 16.2",
+                Catalysts = "ISM Manufacturing at 10am\nLabor Day weekend positioning unwinding",
+                MaxTrades = 3,
+                MaxLoss = 400m,
+                EmotionalPlan = "Slept well, feeling rested. No emotional baggage from last week."
+            },
+            new PreMarketNote
+            {
+                Date = new DateTime(2026, 9, 5),
+                MentalState = "green",
+                MarketBias = "bullish",
+                Plan = "AAPL showing strength ahead of event. Looking at long calls with 30+ DTE.",
+                KeyLevels = "AAPL: 225 support / 235 resistance\nSPX: 5500 / 5550",
+                Catalysts = "AAPL product launch rumors\nJobs report",
+                MaxTrades = 2,
+                MaxLoss = 500m,
+                EmotionalPlan = "Good headspace. Focused on following the plan."
+            },
+            new PreMarketNote
+            {
+                Date = new DateTime(2026, 9, 9),
+                MentalState = "yellow",
+                MarketBias = "neutral",
+                Plan = "Market feels range-bound. Iron condor on QQQ looks attractive. Being cautious after AAPL loss.",
+                KeyLevels = "QQQ: 480 / 500 range\nVIX: 18.5",
+                Catalysts = "CPI Wednesday — staying small today",
+                MaxTrades = 2,
+                MaxLoss = 300m,
+                MentalStateNotes = "Still processing AAPL loss. Reminding myself it was a disciplined exit.",
+                EmotionalPlan = "Acknowledge the frustration. Stick to neutral strategies today."
+            },
+            new PreMarketNote
+            {
+                Date = new DateTime(2026, 9, 12),
+                MentalState = "yellow",
+                MarketBias = "bearish",
+                Plan = "Looking for call credit spreads on names showing weakness. TSLA at resistance.",
+                KeyLevels = "TSLA: 270 support / 280 resistance\nSPX: 5450 / 5500",
+                Catalysts = "PPI data\nTSLA delivery concerns",
+                MaxTrades = 2,
+                MaxLoss = 400m,
+                MentalStateNotes = "Feeling the urge to make back losses. Need to be extra careful.",
+                EmotionalPlan = "Red flag — revenge trading potential. Smaller size, wider stops."
+            },
+            new PreMarketNote
+            {
+                Date = new DateTime(2026, 9, 16),
+                MentalState = "green",
+                MarketBias = "neutral",
+                Plan = "FOMC week. Selling premium on SPY — vol expansion expected. Conservative positioning.",
+                KeyLevels = "SPX: 5480 / 5550\nVIX: 19.8",
+                Catalysts = "Retail sales\nFOMC Wednesday",
+                MaxTrades = 2,
+                MaxLoss = 300m,
+                EmotionalPlan = "Weekend reset helped. Clear head. Smaller size this week — FOMC uncertainty."
+            },
+            new PreMarketNote
+            {
+                Date = new DateTime(2026, 9, 19),
+                MentalState = "green",
+                MarketBias = "bullish",
+                Plan = "Post-FOMC rally. Calendar spread on AMZN — near term IV crushed, back month holding.",
+                KeyLevels = "AMZN: 192 / 198\nSPX: 5550 / 5600",
+                Catalysts = "FOMC aftermath — dovish tone\nQuad witching",
+                MaxTrades = 2,
+                MaxLoss = 400m,
+                EmotionalPlan = "Feeling great after the Fed cut. Staying disciplined — euphoria is dangerous."
+            }
+        );
+
+        // Daily Reviews
+        context.DailyReviews.AddRange(
+            new DailyReview
+            {
+                Date = new DateTime(2026, 9, 2),
+                Grade = "A",
+                FollowedPlan = true,
+                FollowedRules = true,
+                TotalTrades = 1,
+                TotalPnl = 693.40m,
+                LessonsLearned = "Patience paid off. Waited for the setup and executed the plan perfectly.",
+                ImprovementNote = "Could have sized up slightly — confidence was high and setup was textbook.",
+                EmotionalSummary = "Calm and focused all day."
+            },
+            new DailyReview
+            {
+                Date = new DateTime(2026, 9, 5),
+                Grade = "B",
+                FollowedPlan = true,
+                FollowedRules = true,
+                TotalTrades = 1,
+                TotalPnl = -423.30m,
+                LessonsLearned = "Thesis was correct but timing was early. Market needed more time to digest jobs data.",
+                ImprovementNote = "Consider waiting until after major data releases to enter directional trades.",
+                EmotionalSummary = "Disappointed but not frustrated. Good loss — followed the plan."
+            },
+            new DailyReview
+            {
+                Date = new DateTime(2026, 9, 9),
+                Grade = "A",
+                FollowedPlan = true,
+                FollowedRules = true,
+                TotalTrades = 1,
+                TotalPnl = 354.10m,
+                LessonsLearned = "Neutral strategies work well when uncertain. Iron condor was the right call.",
+                ImprovementNote = "Trust the process — yellow mental state doesn't mean don't trade, it means trade appropriately.",
+                EmotionalSummary = "Started cautious, ended satisfied."
+            },
+            new DailyReview
+            {
+                Date = new DateTime(2026, 9, 12),
+                Grade = "D",
+                FollowedPlan = false,
+                FollowedRules = false,
+                TotalTrades = 1,
+                TotalPnl = -925.20m,
+                RulesViolated = "No revenge trades,Wait 30 min after loss,Only trade setups from playbook",
+                LessonsLearned = "Revenge trading is the #1 account killer. I knew it and did it anyway. The yellow mental state was a warning I ignored.",
+                ImprovementNote = "When mental state is yellow AND I'm processing a loss, skip the day entirely. No exceptions.",
+                EmotionalSummary = "Angry at myself. This was 100% avoidable."
+            },
+            new DailyReview
+            {
+                Date = new DateTime(2026, 9, 16),
+                Grade = "B",
+                FollowedPlan = true,
+                FollowedRules = true,
+                TotalTrades = 1,
+                TotalPnl = 0m,
+                LessonsLearned = "Good entry on SPY spread. Still open — patience. No need to check P&L every 5 minutes.",
+                ImprovementNote = "Trust the trade thesis and let it work.",
+                EmotionalSummary = "Focused and disciplined. Good recovery week mentally."
+            },
+            new DailyReview
+            {
+                Date = new DateTime(2026, 9, 19),
+                Grade = "A",
+                FollowedPlan = true,
+                FollowedRules = true,
+                TotalTrades = 1,
+                TotalPnl = 336.70m,
+                LessonsLearned = "Calendar spreads after FOMC are a goldmine when vol term structure normalizes.",
+                ImprovementNote = "Add this to the playbook as a recurring setup.",
+                EmotionalSummary = "Calm and confident. Good execution."
+            },
+            // Observation-only day
+            new DailyReview
+            {
+                Date = new DateTime(2026, 9, 15),
+                Grade = "A",
+                FollowedPlan = true,
+                FollowedRules = true,
+                TotalTrades = 0,
+                TotalPnl = 0m,
+                IsObservationOnly = true,
+                MarketCondition = "volatile",
+                MarketObservation = "FOMC anticipation driving wild swings. Smart to sit out. Observed SPX whipsaw — would have been stopped out on any position.",
+                LessonsLearned = "Sitting out IS a valid trading decision. Protecting capital is priority #1.",
+                EmotionalSummary = "Proud of the discipline to sit this one out."
+            }
+        );
+
+        // Trading Goals
+        context.TradingGoals.AddRange(
+            new TradingGoal { Metric = "winRate", Operator = "gte", TargetValue = 60m, Timeframe = "weekly" },
+            new TradingGoal { Metric = "avgRMultiple", Operator = "gte", TargetValue = 1.5m, Timeframe = "weekly" },
+            new TradingGoal { Metric = "maxDailyLoss", Operator = "lte", TargetValue = 500m, Timeframe = "daily" },
+            new TradingGoal { Metric = "checklistRate", Operator = "gte", TargetValue = 100m, Timeframe = "daily" },
+            new TradingGoal { Metric = "revengeTradeCount", Operator = "lte", TargetValue = 0m, Timeframe = "weekly" }
+        );
+
+        StampAndSave();
+
+        // ═══════════════════════════════════════════════════
+        // HEALTH — Metrics, Blood Work, Workout Plans & Logs
+        // ═══════════════════════════════════════════════════
+
+        // Clear existing health data
+        if (userId != null)
+        {
+            context.ExerciseSets.RemoveRange(context.ExerciseSets.Where(x => context.WorkoutLogs.Where(w => w.UserId == userId).Select(w => w.Id).Contains(x.WorkoutLogId)));
+            context.WorkoutLogs.RemoveRange(context.WorkoutLogs.Where(x => x.UserId == userId));
+            context.PlannedExercises.RemoveRange(context.PlannedExercises.Where(x => context.WorkoutPlanDays.Where(d => context.WorkoutPlans.Where(p => p.UserId == userId).Select(p => p.Id).Contains(d.PlanId)).Select(d => d.Id).Contains(x.PlanDayId)));
+            context.WorkoutPlanDays.RemoveRange(context.WorkoutPlanDays.Where(x => context.WorkoutPlans.Where(p => p.UserId == userId).Select(p => p.Id).Contains(x.PlanId)));
+            context.WorkoutPlans.RemoveRange(context.WorkoutPlans.Where(x => x.UserId == userId));
+            context.BloodWorkResults.RemoveRange(context.BloodWorkResults.Where(x => context.BloodWorkReports.Where(r => r.UserId == userId).Select(r => r.Id).Contains(x.ReportId)));
+            context.BloodWorkReports.RemoveRange(context.BloodWorkReports.Where(x => x.UserId == userId));
+            context.HealthMetrics.RemoveRange(context.HealthMetrics.Where(x => x.UserId == userId));
+        }
+        context.SaveChanges();
+
+        // Health Metrics — 4 weeks of daily vitals
+        var healthMetrics = new List<HealthMetric>();
+        var rng = new Random(42);
+        for (int day = 0; day < 28; day++)
+        {
+            var date = new DateTime(2026, 8, 27).AddDays(day);
+            healthMetrics.Add(new HealthMetric { MetricType = "weight", Value = 178m - day * 0.1m + (decimal)(rng.NextDouble() * 1.5 - 0.75), Unit = "lbs", MeasuredAt = date });
+            healthMetrics.Add(new HealthMetric { MetricType = "body_fat", Value = 18.5m - day * 0.03m + (decimal)(rng.NextDouble() * 0.4 - 0.2), Unit = "%", MeasuredAt = date });
+            healthMetrics.Add(new HealthMetric { MetricType = "blood_pressure_systolic", Value = 122m + (decimal)(rng.NextDouble() * 8 - 4), Unit = "mmHg", MeasuredAt = date });
+            healthMetrics.Add(new HealthMetric { MetricType = "blood_pressure_diastolic", Value = 78m + (decimal)(rng.NextDouble() * 6 - 3), Unit = "mmHg", MeasuredAt = date });
+            healthMetrics.Add(new HealthMetric { MetricType = "resting_heart_rate", Value = 62m + (decimal)(rng.NextDouble() * 8 - 4), Unit = "bpm", MeasuredAt = date });
+            if (day % 7 == 0)
+                healthMetrics.Add(new HealthMetric { MetricType = "sleep_hours", Value = 7.2m + (decimal)(rng.NextDouble() * 1.5 - 0.75), Unit = "hours", MeasuredAt = date, Notes = day == 0 ? "Started tracking sleep more seriously" : null });
+        }
+        context.HealthMetrics.AddRange(healthMetrics);
+        StampAndSave();
+
+        // Blood Work Reports
+        var bloodWork1 = new BloodWorkReport
+        {
+            ReportDate = new DateTime(2026, 3, 15),
+            LabName = "Quest Diagnostics",
+            Notes = "Annual physical — baseline blood work"
+        };
+        var bloodWork2 = new BloodWorkReport
+        {
+            ReportDate = new DateTime(2026, 9, 10),
+            LabName = "Quest Diagnostics",
+            Notes = "6-month follow-up — checking cholesterol improvements after diet changes"
+        };
+        context.BloodWorkReports.AddRange(bloodWork1, bloodWork2);
+        StampAndSave();
+
+        context.BloodWorkResults.AddRange(
+            // March report
+            new BloodWorkResult { ReportId = bloodWork1.Id, TestName = "Total Cholesterol", Value = 215m, Unit = "mg/dL", ReferenceMin = 0, ReferenceMax = 200 },
+            new BloodWorkResult { ReportId = bloodWork1.Id, TestName = "LDL Cholesterol", Value = 138m, Unit = "mg/dL", ReferenceMin = 0, ReferenceMax = 100 },
+            new BloodWorkResult { ReportId = bloodWork1.Id, TestName = "HDL Cholesterol", Value = 52m, Unit = "mg/dL", ReferenceMin = 40, ReferenceMax = 999 },
+            new BloodWorkResult { ReportId = bloodWork1.Id, TestName = "Triglycerides", Value = 145m, Unit = "mg/dL", ReferenceMin = 0, ReferenceMax = 150 },
+            new BloodWorkResult { ReportId = bloodWork1.Id, TestName = "Fasting Glucose", Value = 95m, Unit = "mg/dL", ReferenceMin = 70, ReferenceMax = 100 },
+            new BloodWorkResult { ReportId = bloodWork1.Id, TestName = "HbA1c", Value = 5.4m, Unit = "%", ReferenceMin = 0, ReferenceMax = 5.7m },
+            new BloodWorkResult { ReportId = bloodWork1.Id, TestName = "Vitamin D", Value = 28m, Unit = "ng/mL", ReferenceMin = 30, ReferenceMax = 100 },
+            new BloodWorkResult { ReportId = bloodWork1.Id, TestName = "TSH", Value = 2.1m, Unit = "mIU/L", ReferenceMin = 0.4m, ReferenceMax = 4.0m },
+            new BloodWorkResult { ReportId = bloodWork1.Id, TestName = "Testosterone", Value = 520m, Unit = "ng/dL", ReferenceMin = 300, ReferenceMax = 1000 },
+            // September follow-up (improvements)
+            new BloodWorkResult { ReportId = bloodWork2.Id, TestName = "Total Cholesterol", Value = 195m, Unit = "mg/dL", ReferenceMin = 0, ReferenceMax = 200 },
+            new BloodWorkResult { ReportId = bloodWork2.Id, TestName = "LDL Cholesterol", Value = 115m, Unit = "mg/dL", ReferenceMin = 0, ReferenceMax = 100 },
+            new BloodWorkResult { ReportId = bloodWork2.Id, TestName = "HDL Cholesterol", Value = 58m, Unit = "mg/dL", ReferenceMin = 40, ReferenceMax = 999 },
+            new BloodWorkResult { ReportId = bloodWork2.Id, TestName = "Triglycerides", Value = 120m, Unit = "mg/dL", ReferenceMin = 0, ReferenceMax = 150 },
+            new BloodWorkResult { ReportId = bloodWork2.Id, TestName = "Fasting Glucose", Value = 90m, Unit = "mg/dL", ReferenceMin = 70, ReferenceMax = 100 },
+            new BloodWorkResult { ReportId = bloodWork2.Id, TestName = "HbA1c", Value = 5.2m, Unit = "%", ReferenceMin = 0, ReferenceMax = 5.7m },
+            new BloodWorkResult { ReportId = bloodWork2.Id, TestName = "Vitamin D", Value = 42m, Unit = "ng/mL", ReferenceMin = 30, ReferenceMax = 100 },
+            new BloodWorkResult { ReportId = bloodWork2.Id, TestName = "TSH", Value = 1.9m, Unit = "mIU/L", ReferenceMin = 0.4m, ReferenceMax = 4.0m },
+            new BloodWorkResult { ReportId = bloodWork2.Id, TestName = "Testosterone", Value = 580m, Unit = "ng/dL", ReferenceMin = 300, ReferenceMax = 1000 }
+        );
+
+        // Workout Plan — Push/Pull/Legs
+        var pplPlan = new WorkoutPlan { Name = "Push / Pull / Legs", IsActive = true, IsSequential = true };
+        context.WorkoutPlans.Add(pplPlan);
+        StampAndSave();
+
+        var pushDay = new WorkoutPlanDay { PlanId = pplPlan.Id, DayOfWeek = 1, FocusArea = "Push (Chest, Shoulders, Triceps)" };
+        var pullDay = new WorkoutPlanDay { PlanId = pplPlan.Id, DayOfWeek = 2, FocusArea = "Pull (Back, Biceps)" };
+        var legDay = new WorkoutPlanDay { PlanId = pplPlan.Id, DayOfWeek = 3, FocusArea = "Legs & Core" };
+        context.WorkoutPlanDays.AddRange(pushDay, pullDay, legDay);
+        StampAndSave();
+
+        context.PlannedExercises.AddRange(
+            // Push day
+            new PlannedExercise { PlanDayId = pushDay.Id, ExerciseName = "Bench Press", TargetSets = 4, TargetReps = "8-10", TargetWeight = 185m, OrderIndex = 0, MuscleGroup = "Chest" },
+            new PlannedExercise { PlanDayId = pushDay.Id, ExerciseName = "Overhead Press", TargetSets = 3, TargetReps = "8-10", TargetWeight = 115m, OrderIndex = 1, MuscleGroup = "Shoulders" },
+            new PlannedExercise { PlanDayId = pushDay.Id, ExerciseName = "Incline Dumbbell Press", TargetSets = 3, TargetReps = "10-12", TargetWeight = 65m, OrderIndex = 2, MuscleGroup = "Chest" },
+            new PlannedExercise { PlanDayId = pushDay.Id, ExerciseName = "Lateral Raises", TargetSets = 3, TargetReps = "12-15", TargetWeight = 20m, OrderIndex = 3, MuscleGroup = "Shoulders" },
+            new PlannedExercise { PlanDayId = pushDay.Id, ExerciseName = "Tricep Pushdowns", TargetSets = 3, TargetReps = "12-15", TargetWeight = 50m, OrderIndex = 4, MuscleGroup = "Triceps" },
+            // Pull day
+            new PlannedExercise { PlanDayId = pullDay.Id, ExerciseName = "Deadlift", TargetSets = 4, TargetReps = "5-6", TargetWeight = 275m, OrderIndex = 0, MuscleGroup = "Back" },
+            new PlannedExercise { PlanDayId = pullDay.Id, ExerciseName = "Barbell Rows", TargetSets = 4, TargetReps = "8-10", TargetWeight = 155m, OrderIndex = 1, MuscleGroup = "Back" },
+            new PlannedExercise { PlanDayId = pullDay.Id, ExerciseName = "Pull-ups", TargetSets = 3, TargetReps = "8-10", OrderIndex = 2, MuscleGroup = "Back" },
+            new PlannedExercise { PlanDayId = pullDay.Id, ExerciseName = "Face Pulls", TargetSets = 3, TargetReps = "15-20", TargetWeight = 30m, OrderIndex = 3, MuscleGroup = "Rear Delts" },
+            new PlannedExercise { PlanDayId = pullDay.Id, ExerciseName = "Barbell Curls", TargetSets = 3, TargetReps = "10-12", TargetWeight = 65m, OrderIndex = 4, MuscleGroup = "Biceps" },
+            // Leg day
+            new PlannedExercise { PlanDayId = legDay.Id, ExerciseName = "Squats", TargetSets = 4, TargetReps = "6-8", TargetWeight = 225m, OrderIndex = 0, MuscleGroup = "Quads" },
+            new PlannedExercise { PlanDayId = legDay.Id, ExerciseName = "Romanian Deadlift", TargetSets = 3, TargetReps = "8-10", TargetWeight = 185m, OrderIndex = 1, MuscleGroup = "Hamstrings" },
+            new PlannedExercise { PlanDayId = legDay.Id, ExerciseName = "Leg Press", TargetSets = 3, TargetReps = "10-12", TargetWeight = 360m, OrderIndex = 2, MuscleGroup = "Quads" },
+            new PlannedExercise { PlanDayId = legDay.Id, ExerciseName = "Leg Curls", TargetSets = 3, TargetReps = "12-15", TargetWeight = 90m, OrderIndex = 3, MuscleGroup = "Hamstrings" },
+            new PlannedExercise { PlanDayId = legDay.Id, ExerciseName = "Hanging Leg Raises", TargetSets = 3, TargetReps = "12-15", OrderIndex = 4, MuscleGroup = "Core" }
+        );
+
+        // Workout Logs — last 2 weeks
+        var log1 = new WorkoutLog { Date = new DateTime(2026, 9, 8), FocusArea = "Push (Chest, Shoulders, Triceps)", DurationMinutes = 65, PlanDayId = pushDay.Id, Notes = "Felt strong today. Hit a new bench PR." };
+        var log2 = new WorkoutLog { Date = new DateTime(2026, 9, 9), FocusArea = "Pull (Back, Biceps)", DurationMinutes = 60, PlanDayId = pullDay.Id };
+        var log3 = new WorkoutLog { Date = new DateTime(2026, 9, 10), FocusArea = "Legs & Core", DurationMinutes = 55, PlanDayId = legDay.Id, Notes = "Knees felt tight. Warmed up extra." };
+        var log4 = new WorkoutLog { Date = new DateTime(2026, 9, 15), FocusArea = "Push (Chest, Shoulders, Triceps)", DurationMinutes = 60, PlanDayId = pushDay.Id };
+        var log5 = new WorkoutLog { Date = new DateTime(2026, 9, 16), FocusArea = "Pull (Back, Biceps)", DurationMinutes = 70, PlanDayId = pullDay.Id, Notes = "Added extra set on deadlift — feeling good." };
+        var log6 = new WorkoutLog { Date = new DateTime(2026, 9, 17), FocusArea = "Legs & Core", DurationMinutes = 50, PlanDayId = legDay.Id };
+        context.WorkoutLogs.AddRange(log1, log2, log3, log4, log5, log6);
+        StampAndSave();
+
+        context.ExerciseSets.AddRange(
+            // Log 1 — Push
+            new ExerciseSet { WorkoutLogId = log1.Id, ExerciseName = "Bench Press", SetNumber = 1, Reps = 10, Weight = 175m, OrderIndex = 0 },
+            new ExerciseSet { WorkoutLogId = log1.Id, ExerciseName = "Bench Press", SetNumber = 2, Reps = 9, Weight = 185m, OrderIndex = 1 },
+            new ExerciseSet { WorkoutLogId = log1.Id, ExerciseName = "Bench Press", SetNumber = 3, Reps = 8, Weight = 190m, OrderIndex = 2 },
+            new ExerciseSet { WorkoutLogId = log1.Id, ExerciseName = "Bench Press", SetNumber = 4, Reps = 6, Weight = 195m, OrderIndex = 3 },
+            new ExerciseSet { WorkoutLogId = log1.Id, ExerciseName = "Overhead Press", SetNumber = 1, Reps = 10, Weight = 105m, OrderIndex = 4 },
+            new ExerciseSet { WorkoutLogId = log1.Id, ExerciseName = "Overhead Press", SetNumber = 2, Reps = 8, Weight = 115m, OrderIndex = 5 },
+            new ExerciseSet { WorkoutLogId = log1.Id, ExerciseName = "Overhead Press", SetNumber = 3, Reps = 7, Weight = 115m, OrderIndex = 6 },
+            new ExerciseSet { WorkoutLogId = log1.Id, ExerciseName = "Incline Dumbbell Press", SetNumber = 1, Reps = 12, Weight = 60m, OrderIndex = 7 },
+            new ExerciseSet { WorkoutLogId = log1.Id, ExerciseName = "Incline Dumbbell Press", SetNumber = 2, Reps = 10, Weight = 65m, OrderIndex = 8 },
+            new ExerciseSet { WorkoutLogId = log1.Id, ExerciseName = "Incline Dumbbell Press", SetNumber = 3, Reps = 9, Weight = 65m, OrderIndex = 9 },
+
+            // Log 2 — Pull
+            new ExerciseSet { WorkoutLogId = log2.Id, ExerciseName = "Deadlift", SetNumber = 1, Reps = 6, Weight = 255m, OrderIndex = 0 },
+            new ExerciseSet { WorkoutLogId = log2.Id, ExerciseName = "Deadlift", SetNumber = 2, Reps = 5, Weight = 275m, OrderIndex = 1 },
+            new ExerciseSet { WorkoutLogId = log2.Id, ExerciseName = "Deadlift", SetNumber = 3, Reps = 5, Weight = 275m, OrderIndex = 2 },
+            new ExerciseSet { WorkoutLogId = log2.Id, ExerciseName = "Deadlift", SetNumber = 4, Reps = 4, Weight = 285m, OrderIndex = 3 },
+            new ExerciseSet { WorkoutLogId = log2.Id, ExerciseName = "Barbell Rows", SetNumber = 1, Reps = 10, Weight = 145m, OrderIndex = 4 },
+            new ExerciseSet { WorkoutLogId = log2.Id, ExerciseName = "Barbell Rows", SetNumber = 2, Reps = 9, Weight = 155m, OrderIndex = 5 },
+            new ExerciseSet { WorkoutLogId = log2.Id, ExerciseName = "Barbell Rows", SetNumber = 3, Reps = 8, Weight = 155m, OrderIndex = 6 },
+            new ExerciseSet { WorkoutLogId = log2.Id, ExerciseName = "Pull-ups", SetNumber = 1, Reps = 10, Weight = 0m, OrderIndex = 7 },
+            new ExerciseSet { WorkoutLogId = log2.Id, ExerciseName = "Pull-ups", SetNumber = 2, Reps = 8, Weight = 0m, OrderIndex = 8 },
+            new ExerciseSet { WorkoutLogId = log2.Id, ExerciseName = "Pull-ups", SetNumber = 3, Reps = 7, Weight = 0m, OrderIndex = 9 },
+
+            // Log 3 — Legs
+            new ExerciseSet { WorkoutLogId = log3.Id, ExerciseName = "Squats", SetNumber = 1, Reps = 8, Weight = 205m, OrderIndex = 0 },
+            new ExerciseSet { WorkoutLogId = log3.Id, ExerciseName = "Squats", SetNumber = 2, Reps = 7, Weight = 225m, OrderIndex = 1 },
+            new ExerciseSet { WorkoutLogId = log3.Id, ExerciseName = "Squats", SetNumber = 3, Reps = 6, Weight = 225m, OrderIndex = 2 },
+            new ExerciseSet { WorkoutLogId = log3.Id, ExerciseName = "Squats", SetNumber = 4, Reps = 6, Weight = 225m, OrderIndex = 3 },
+            new ExerciseSet { WorkoutLogId = log3.Id, ExerciseName = "Romanian Deadlift", SetNumber = 1, Reps = 10, Weight = 175m, OrderIndex = 4 },
+            new ExerciseSet { WorkoutLogId = log3.Id, ExerciseName = "Romanian Deadlift", SetNumber = 2, Reps = 9, Weight = 185m, OrderIndex = 5 },
+            new ExerciseSet { WorkoutLogId = log3.Id, ExerciseName = "Romanian Deadlift", SetNumber = 3, Reps = 8, Weight = 185m, OrderIndex = 6 },
+            new ExerciseSet { WorkoutLogId = log3.Id, ExerciseName = "Leg Press", SetNumber = 1, Reps = 12, Weight = 340m, OrderIndex = 7 },
+            new ExerciseSet { WorkoutLogId = log3.Id, ExerciseName = "Leg Press", SetNumber = 2, Reps = 10, Weight = 360m, OrderIndex = 8 },
+            new ExerciseSet { WorkoutLogId = log3.Id, ExerciseName = "Leg Press", SetNumber = 3, Reps = 10, Weight = 360m, OrderIndex = 9 }
+        );
 
         StampAndSave();
     }

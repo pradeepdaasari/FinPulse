@@ -38,7 +38,7 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<DailyReview> DailyReviews => Set<DailyReview>();
     public DbSet<DailyLimits> DailyLimits => Set<DailyLimits>();
     public DbSet<TradingWisdom> TradingWisdoms => Set<TradingWisdom>();
-    public DbSet<CommissionSchedule> CommissionSchedules => Set<CommissionSchedule>();
+    public DbSet<TradeNote> TradeNotes => Set<TradeNote>();
     public DbSet<TradingGoal> TradingGoals => Set<TradingGoal>();
     public DbSet<TradingGoalSnapshot> TradingGoalSnapshots => Set<TradingGoalSnapshot>();
 
@@ -106,10 +106,6 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<BankAccount>(entity =>
         {
             entity.Property(e => e.CurrentBalance).HasPrecision(18, 2);
-            entity.Property(e => e.OptionsCommissionPerContract).HasPrecision(10, 4);
-            entity.Property(e => e.FuturesCommissionPerContract).HasPrecision(10, 4);
-            entity.Property(e => e.OptionsRegFeePerContract).HasPrecision(10, 4);
-            entity.Property(e => e.FuturesRegFeePerContract).HasPrecision(10, 4);
             entity.HasIndex(e => e.UserId);
         });
 
@@ -311,10 +307,20 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
                 .WithOne(r => r.TradeEntry)
                 .HasForeignKey(r => r.TradeEntryId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.TradeNotes)
+                .WithOne(n => n.TradeEntry)
+                .HasForeignKey(n => n.TradeEntryId)
+                .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.LinkedExpense)
                 .WithMany()
                 .HasForeignKey(e => e.LinkedExpenseId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<TradeNote>(entity =>
+        {
+            entity.HasIndex(e => e.TradeEntryId);
+            entity.HasIndex(e => e.UserId);
         });
 
         // TradingRule
@@ -338,20 +344,6 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(e => e.UserId).IsUnique();
         });
 
-        // CommissionSchedule
-        modelBuilder.Entity<CommissionSchedule>(entity =>
-        {
-            entity.Property(e => e.OptionsCommissionPerContract).HasPrecision(10, 4);
-            entity.Property(e => e.FuturesCommissionPerContract).HasPrecision(10, 4);
-            entity.Property(e => e.OptionsRegFeePerContract).HasPrecision(10, 4);
-            entity.Property(e => e.FuturesRegFeePerContract).HasPrecision(10, 4);
-            entity.HasIndex(e => new { e.BankAccountId, e.EffectiveFrom }).IsUnique();
-            entity.HasIndex(e => e.UserId);
-            entity.HasOne(e => e.BankAccount)
-                .WithMany()
-                .HasForeignKey(e => e.BankAccountId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
     }
 
     public override int SaveChanges()
@@ -493,6 +485,12 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
                 if (entry.State == EntityState.Added)
                     trade.CreatedAt = now;
             }
+            else if (entry.Entity is TradeNote tradeNote)
+            {
+                tradeNote.UpdatedAt = now;
+                if (entry.State == EntityState.Added)
+                    tradeNote.CreatedAt = now;
+            }
             else if (entry.Entity is TradingRule rule)
             {
                 rule.UpdatedAt = now;
@@ -508,12 +506,6 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
             else if (entry.Entity is DailyLimits limits)
             {
                 limits.UpdatedAt = now;
-            }
-            else if (entry.Entity is CommissionSchedule schedule)
-            {
-                schedule.UpdatedAt = now;
-                if (entry.State == EntityState.Added)
-                    schedule.CreatedAt = now;
             }
             else if (entry.Entity is MoneyMovement movement)
             {

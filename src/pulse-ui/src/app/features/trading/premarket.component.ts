@@ -115,6 +115,18 @@ import { toLocalDateString } from '../../core/utils/date-utils';
           }
         </div>
 
+        <!-- Emotional Plan -->
+        <div class="form-section">
+          <label class="section-label"><mat-icon>self_improvement</mat-icon> Emotional Plan</label>
+          <p class="section-hint">If I feel X, I will Y. Pre-commit to handling emotions before they arise.</p>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Your emotional plan</mat-label>
+            <textarea matInput formControlName="emotionalPlan" rows="3"
+                      placeholder="If I feel FOMO, I will walk away for 5 minutes.&#10;If I feel revenge urge, I will close the platform.&#10;If I feel anxious, I will check my max loss limit."
+                      cdkTextareaAutosize></textarea>
+          </mat-form-field>
+        </div>
+
         <!-- Market Bias -->
         <div class="form-section">
           <label class="section-label"><mat-icon>trending_up</mat-icon> Market Bias</label>
@@ -458,6 +470,7 @@ export class PremarketComponent implements OnInit {
     keyLevels: [''],
     catalysts: [''],
     plan: ['', Validators.required],
+    emotionalPlan: [''],
     maxTrades: [3],
     maxLoss: [500, [Validators.required, Validators.min(1)]]
   });
@@ -489,6 +502,7 @@ export class PremarketComponent implements OnInit {
           keyLevels: note.keyLevels || '',
           catalysts: note.catalysts || '',
           plan: note.plan,
+          emotionalPlan: note.emotionalPlan || '',
           maxTrades: note.maxTrades,
           maxLoss: note.maxLoss
         });
@@ -502,7 +516,8 @@ export class PremarketComponent implements OnInit {
           mentalState: 'green', marketBias: 'neutral', maxTrades: 3, maxLoss: 500,
           keyLevels: t?.keyLevels || '',
           catalysts: t?.catalysts || '',
-          plan: t?.plan || ''
+          plan: t?.plan || '',
+          emotionalPlan: ''
         });
         this.loading.set(false);
         this.cdr.detectChanges();
@@ -530,6 +545,7 @@ export class PremarketComponent implements OnInit {
       keyLevels: val.keyLevels || undefined,
       catalysts: val.catalysts || undefined,
       plan: val.plan!,
+      emotionalPlan: val.emotionalPlan || undefined,
       maxTrades: val.maxTrades!,
       maxLoss: val.maxLoss!
     };

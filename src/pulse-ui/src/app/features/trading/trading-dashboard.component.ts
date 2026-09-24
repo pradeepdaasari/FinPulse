@@ -80,7 +80,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       </div>
       <div class="stat-card">
         <div class="win-rate-display">
-          <span class="stat-value stat-large">{{ dashboard()!.winRate }}%</span>
+          <span class="stat-value stat-large">{{ dashboard()!.winRate | number:'1.0-1' }}%</span>
           <div class="win-rate-bar">
             <div class="win-rate-fill" [style.width.%]="dashboard()!.winRate"></div>
           </div>
@@ -274,7 +274,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
                   <tr [class.best-row]="row.day === bestDay()" [class.worst-row]="row.day === worstDay()">
                     <td class="col-name">{{ row.day }}</td>
                     <td>{{ row.trades }}</td>
-                    <td>{{ row.winRate }}%</td>
+                    <td>{{ row.winRate | number:'1.0-1' }}%</td>
                     <td [class.positive]="row.avgPnl >= 0" [class.negative]="row.avgPnl < 0">{{ row.avgPnl | currency:'USD':'symbol':'1.0-0' }}</td>
                     <td [class.positive]="row.pnl >= 0" [class.negative]="row.pnl < 0">{{ row.pnl | currency:'USD':'symbol':'1.0-0' }}</td>
                   </tr>
@@ -297,7 +297,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
                   <tr>
                     <td class="col-name">{{ row.instrument }}</td>
                     <td>{{ row.trades }}</td>
-                    <td>{{ row.winRate }}%</td>
+                    <td>{{ row.winRate | number:'1.0-1' }}%</td>
                     <td [class.positive]="row.avgPnl >= 0" [class.negative]="row.avgPnl < 0">{{ row.avgPnl | currency:'USD':'symbol':'1.0-0' }}</td>
                     <td [class.positive]="row.pnl >= 0" [class.negative]="row.pnl < 0">{{ row.pnl | currency:'USD':'symbol':'1.0-0' }}</td>
                   </tr>
@@ -324,7 +324,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
                   <tr>
                     <td class="col-name">{{ row.setupName }}</td>
                     <td>{{ row.trades }}</td>
-                    <td>{{ row.winRate }}%</td>
+                    <td>{{ row.winRate | number:'1.0-1' }}%</td>
                     <td [class.positive]="row.avgPnl >= 0" [class.negative]="row.avgPnl < 0">{{ row.avgPnl | currency:'USD':'symbol':'1.0-0' }}</td>
                     <td [class.positive]="row.pnl >= 0" [class.negative]="row.pnl < 0">{{ row.pnl | currency:'USD':'symbol':'1.0-0' }}</td>
                   </tr>
@@ -347,7 +347,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
                   <tr>
                     <td class="col-name">{{ row.bucket }}</td>
                     <td>{{ row.trades }}</td>
-                    <td>{{ row.winRate }}%</td>
+                    <td>{{ row.winRate | number:'1.0-1' }}%</td>
                     <td [class.positive]="row.avgPnl >= 0" [class.negative]="row.avgPnl < 0">{{ row.avgPnl | currency:'USD':'symbol':'1.0-0' }}</td>
                     <td [class.positive]="row.pnl >= 0" [class.negative]="row.pnl < 0">{{ row.pnl | currency:'USD':'symbol':'1.0-0' }}</td>
                   </tr>
@@ -376,7 +376,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
                       <tr>
                         <td class="col-name">{{ row.emotion }}</td>
                         <td>{{ row.trades }}</td>
-                        <td>{{ row.winRate }}%</td>
+                        <td>{{ row.winRate | number:'1.0-1' }}%</td>
                         <td [class.positive]="row.avgPnl >= 0" [class.negative]="row.avgPnl < 0">{{ row.avgPnl | currency:'USD':'symbol':'1.0-0' }}</td>
                         <td [class.positive]="row.pnl >= 0" [class.negative]="row.pnl < 0">{{ row.pnl | currency:'USD':'symbol':'1.0-0' }}</td>
                       </tr>
@@ -401,7 +401,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
                       <tr>
                         <td class="col-name">{{ row.tag }}</td>
                         <td>{{ row.trades }}</td>
-                        <td>{{ row.winRate }}%</td>
+                        <td>{{ row.winRate | number:'1.0-1' }}%</td>
                         <td [class.positive]="row.avgPnl >= 0" [class.negative]="row.avgPnl < 0">{{ row.avgPnl | currency:'USD':'symbol':'1.0-0' }}</td>
                         <td [class.positive]="row.pnl >= 0" [class.negative]="row.pnl < 0" class="col-name">{{ row.pnl | currency:'USD':'symbol':'1.0-0' }}</td>
                       </tr>
@@ -444,7 +444,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
               <h3 class="section-title">Calls</h3>
               <div class="option-stats">
                 <div class="option-stat"><span class="option-val">{{ call.trades }}</span><span class="option-lbl">Trades</span></div>
-                <div class="option-stat"><span class="option-val">{{ call.winRate }}%</span><span class="option-lbl">Win Rate</span></div>
+                <div class="option-stat"><span class="option-val">{{ call.winRate | number:'1.0-1' }}%</span><span class="option-lbl">Win Rate</span></div>
                 <div class="option-stat"><span class="option-val" [class.positive]="call.avgPnl >= 0" [class.negative]="call.avgPnl < 0">{{ call.avgPnl | currency:'USD':'symbol':'1.0-0' }}</span><span class="option-lbl">Avg P&L</span></div>
                 <div class="option-stat"><span class="option-val" [class.positive]="call.pnl >= 0" [class.negative]="call.pnl < 0">{{ call.pnl | currency:'USD':'symbol':'1.0-0' }}</span><span class="option-lbl">Total P&L</span></div>
               </div>
@@ -457,7 +457,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
               <h3 class="section-title">Puts</h3>
               <div class="option-stats">
                 <div class="option-stat"><span class="option-val">{{ put.trades }}</span><span class="option-lbl">Trades</span></div>
-                <div class="option-stat"><span class="option-val">{{ put.winRate }}%</span><span class="option-lbl">Win Rate</span></div>
+                <div class="option-stat"><span class="option-val">{{ put.winRate | number:'1.0-1' }}%</span><span class="option-lbl">Win Rate</span></div>
                 <div class="option-stat"><span class="option-val" [class.positive]="put.avgPnl >= 0" [class.negative]="put.avgPnl < 0">{{ put.avgPnl | currency:'USD':'symbol':'1.0-0' }}</span><span class="option-lbl">Avg P&L</span></div>
                 <div class="option-stat"><span class="option-val" [class.positive]="put.pnl >= 0" [class.negative]="put.pnl < 0">{{ put.pnl | currency:'USD':'symbol':'1.0-0' }}</span><span class="option-lbl">Total P&L</span></div>
               </div>

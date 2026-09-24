@@ -59,6 +59,11 @@ public class TradeEntry
     public decimal? TotalFees { get; set; }
     public decimal? NetPnl { get; set; }
 
+    // Trade status (Open = still holding, Closed = exited)
+    [MaxLength(10)]
+    public string Status { get; set; } = "Open";
+    public DateTime? ClosedDate { get; set; }
+
     // Brokerage account link
     public int? BankAccountId { get; set; }
 
@@ -71,4 +76,5 @@ public class TradeEntry
 
     public TradingSetup? Setup { get; set; }
     public List<ChecklistResponse> ChecklistResponses { get; set; } = new();
+    public List<TradeNote> TradeNotes { get; set; } = new();
 }

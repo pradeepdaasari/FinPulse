@@ -87,7 +87,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
               <span class="gs-label">Trades Today</span>
             </div>
             <div class="glance-stat">
-              <span class="gs-value">{{ tradingStats()!.winRate }}%</span>
+              <span class="gs-value">{{ tradingStats()!.winRate | number:'1.0-1' }}%</span>
               <span class="gs-label">Win Rate</span>
             </div>
             <div class="glance-stat">

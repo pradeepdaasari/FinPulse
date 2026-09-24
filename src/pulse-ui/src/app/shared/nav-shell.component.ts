@@ -137,6 +137,11 @@ import { routeFadeAnimation } from './route-animations';
                   <span class="ios-nav-label">Dashboard</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
+                <a class="ios-nav-item" routerLink="/trading/day" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-amber"><mat-icon>today</mat-icon></span>
+                  <span class="ios-nav-label">Day View</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
                 <a class="ios-nav-item" routerLink="/trading/analytics" routerLinkActive="active-link" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-teal"><mat-icon>insights</mat-icon></span>
                   <span class="ios-nav-label">Analytics</span>

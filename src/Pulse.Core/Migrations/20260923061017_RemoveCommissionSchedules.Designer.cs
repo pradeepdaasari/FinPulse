@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Pulse.Core.Data;
 
@@ -11,9 +12,11 @@ using Pulse.Core.Data;
 namespace Pulse.Core.Migrations
 {
     [DbContext(typeof(PulseDbContext))]
-    partial class PulseDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260923061017_RemoveCommissionSchedules")]
+    partial class RemoveCommissionSchedules
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1401,9 +1404,6 @@ namespace Pulse.Core.Migrations
                     b.Property<DateTime>("Date")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("EmotionalPlan")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("KeyLevels")
                         .HasColumnType("nvarchar(max)");
 
@@ -1648,43 +1648,6 @@ namespace Pulse.Core.Migrations
                     b.HasIndex("UserId", "Date");
 
                     b.ToTable("TradeEntries");
-                });
-
-            modelBuilder.Entity("Pulse.Core.Models.Trading.TradeNote", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Emotion")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("Note")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("TradeEntryId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TradeEntryId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("TradeNotes");
                 });
 
             modelBuilder.Entity("Pulse.Core.Models.Trading.TradingGoal", b =>
@@ -2122,17 +2085,6 @@ namespace Pulse.Core.Migrations
                     b.Navigation("Setup");
                 });
 
-            modelBuilder.Entity("Pulse.Core.Models.Trading.TradeNote", b =>
-                {
-                    b.HasOne("Pulse.Core.Models.Trading.TradeEntry", "TradeEntry")
-                        .WithMany("TradeNotes")
-                        .HasForeignKey("TradeEntryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("TradeEntry");
-                });
-
             modelBuilder.Entity("Pulse.Core.Models.Trading.TradingGoalSnapshot", b =>
                 {
                     b.HasOne("Pulse.Core.Models.Trading.TradingGoal", "Goal")
@@ -2182,8 +2134,6 @@ namespace Pulse.Core.Migrations
             modelBuilder.Entity("Pulse.Core.Models.Trading.TradeEntry", b =>
                 {
                     b.Navigation("ChecklistResponses");
-
-                    b.Navigation("TradeNotes");
                 });
 
             modelBuilder.Entity("Pulse.Core.Models.Trading.TradingSetup", b =>

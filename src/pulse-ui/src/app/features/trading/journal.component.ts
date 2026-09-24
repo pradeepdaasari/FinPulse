@@ -15,6 +15,7 @@ import { TradingService } from '../../core/services/trading.service';
 import { TradeEntry, TradingSetupSummary } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
 import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
+import { TradeNotesPanelComponent } from './trade-notes-panel.component';
 
 @Component({
   selector: 'app-journal',
@@ -23,7 +24,7 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
     CommonModule, MatCardModule, MatButtonModule, MatIconModule,
     MatTableModule, MatChipsModule, MatDialogModule, MatTooltipModule,
     CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe,
-    SkeletonLoaderComponent, PullToRefreshDirective
+    SkeletonLoaderComponent, PullToRefreshDirective, TradeNotesPanelComponent
   ],
   template: `
     <div appPullToRefresh (refresh)="loadTrades()">
@@ -49,6 +50,15 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
           <span class="stat-label">Total Trades</span>
         </div>
       </div>
+      @if (openCount() > 0) {
+        <div class="stat-card stat-amber">
+          <mat-icon>lock_open</mat-icon>
+          <div class="stat-content">
+            <span class="stat-value">{{ openCount() }}</span>
+            <span class="stat-label">Open</span>
+          </div>
+        </div>
+      }
       <div class="stat-card stat-green">
         <mat-icon>percent</mat-icon>
         <div class="stat-content">
@@ -94,6 +104,12 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
       </div>
       <div class="filter-chips">
         <button mat-stroked-button [class.active-chip]="filter() === 'all'" (click)="filter.set('all')">All</button>
+        <button mat-stroked-button [class.active-chip]="filter() === 'open'" (click)="filter.set('open')">
+          <mat-icon>lock_open</mat-icon> Open
+        </button>
+        <button mat-stroked-button [class.active-chip]="filter() === 'closed'" (click)="filter.set('closed')">
+          <mat-icon>lock</mat-icon> Closed
+        </button>
         <button mat-stroked-button [class.active-chip]="filter() === 'compliant'" (click)="filter.set('compliant')">
           <mat-icon>check_circle</mat-icon> Compliant
         </button>
@@ -125,6 +141,9 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
               <ng-container matColumnDef="instrument">
                 <th mat-header-cell *matHeaderCellDef>Instrument</th>
                 <td mat-cell *matCellDef="let t">
+                  @if (t.status === 'Open') {
+                    <span class="open-badge">OPEN</span>
+                  }
                   {{ t.instrument }}
                   @if (t.spreadType) {
                     <span class="spread-badge">{{ t.spreadType }}</span>
@@ -161,19 +180,23 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
               <ng-container matColumnDef="pnl">
                 <th mat-header-cell *matHeaderCellDef>P&L</th>
                 <td mat-cell *matCellDef="let t">
-                  <div class="pnl-breakdown">
-                    <span class="pnl-gross" [class.pnl-positive]="(t.pnl ?? 0) >= 0" [class.pnl-negative]="(t.pnl ?? 0) < 0">
-                      {{ (t.pnl ?? 0) >= 0 ? '+' : '' }}{{ t.pnl | currency }}
-                    </span>
-                    @if (t.totalFees) {
-                      <span class="pnl-fees">-{{ t.totalFees | currency }} fees</span>
-                    }
-                    @if (t.netPnl != null) {
-                      <span class="pnl-net" [class.pnl-positive]="(t.netPnl ?? 0) >= 0" [class.pnl-negative]="(t.netPnl ?? 0) < 0">
-                        Net: {{ (t.netPnl ?? 0) >= 0 ? '+' : '' }}{{ t.netPnl | currency }}
+                  @if (t.status === 'Open') {
+                    <span class="open-pnl-label">—</span>
+                  } @else {
+                    <div class="pnl-breakdown">
+                      <span class="pnl-gross" [class.pnl-positive]="(t.pnl ?? 0) >= 0" [class.pnl-negative]="(t.pnl ?? 0) < 0">
+                        {{ (t.pnl ?? 0) >= 0 ? '+' : '' }}{{ t.pnl | currency }}
                       </span>
-                    }
-                  </div>
+                      @if (t.totalFees) {
+                        <span class="pnl-fees">-{{ t.totalFees | currency }} fees</span>
+                      }
+                      @if (t.netPnl != null) {
+                        <span class="pnl-net" [class.pnl-positive]="(t.netPnl ?? 0) >= 0" [class.pnl-negative]="(t.netPnl ?? 0) < 0">
+                          Net: {{ (t.netPnl ?? 0) >= 0 ? '+' : '' }}{{ t.netPnl | currency }}
+                        </span>
+                      }
+                    </div>
+                  }
                 </td>
               </ng-container>
               <ng-container matColumnDef="compliance">
@@ -187,6 +210,17 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef></th>
                 <td mat-cell *matCellDef="let t">
+                  @if (t.status === 'Open') {
+                    <button mat-flat-button class="close-trade-btn" (click)="closeTrade(t)">
+                      <mat-icon>lock</mat-icon> Close
+                    </button>
+                  }
+                  <button mat-icon-button class="action-btn action-notes" (click)="toggleNotes(t)" matTooltip="Notes">
+                    <mat-icon>sticky_note_2</mat-icon>
+                    @if (t.notesCount) {
+                      <span class="notes-badge">{{ t.notesCount }}</span>
+                    }
+                  </button>
                   <button mat-icon-button class="action-btn action-edit" (click)="editTrade(t)" matTooltip="Edit">
                     <mat-icon>edit</mat-icon>
                   </button>
@@ -197,23 +231,34 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
               </ng-container>
               <tr mat-header-row *matHeaderRowDef="columns"></tr>
               <tr mat-row *matRowDef="let row; columns: columns;"
-                  [class.row-non-compliant]="!row.checklistCompleted"></tr>
+                  [class.row-non-compliant]="!row.checklistCompleted"
+                  [class.row-open]="row.status === 'Open'"></tr>
             </table>
           </div>
+          @if (expandedTradeId()) {
+            <div class="expanded-notes-panel">
+              <app-trade-notes-panel
+                [tradeId]="expandedTradeId()!"
+                [instrument]="expandedInstrument()">
+              </app-trade-notes-panel>
+            </div>
+          }
         </mat-card-content>
       </mat-card>
 
       <!-- Mobile card feed -->
       <div class="mobile-feed">
         @for (t of filteredTrades(); track t.id) {
-          <div class="trade-card" [class.card-non-compliant]="!t.checklistCompleted" (click)="editTrade(t)">
+          <div class="trade-card" [class.card-non-compliant]="!t.checklistCompleted" [class.card-open]="t.status === 'Open'" (click)="editTrade(t)">
             <div class="trade-left">
               <div class="trade-dir-dot" [class.dot-long]="t.direction === 'long'" [class.dot-short]="t.direction === 'short'">
                 <mat-icon>{{ t.direction === 'long' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
               </div>
             </div>
             <div class="trade-mid">
-              <span class="trade-instrument">{{ t.instrument }}
+              <span class="trade-instrument">
+                @if (t.status === 'Open') { <span class="open-badge">OPEN</span> }
+                {{ t.instrument }}
                 @if (t.spreadType) { <span class="spread-badge-sm">{{ t.spreadType }}</span> }
                 @if (t.optionType && t.spreadType !== 'IronCondor') {
                   <span class="option-type-badge-sm" [class.badge-call]="t.optionType === 'Call'" [class.badge-put]="t.optionType === 'Put'">{{ t.optionType }}</span>
@@ -236,17 +281,35 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
               </span>
             </div>
             <div class="trade-right">
-              <span class="pnl-value" [class.pnl-positive]="(t.netPnl ?? t.pnl ?? 0) >= 0" [class.pnl-negative]="(t.netPnl ?? t.pnl ?? 0) < 0">
-                {{ (t.netPnl ?? t.pnl ?? 0) >= 0 ? '+' : '' }}{{ (t.netPnl ?? t.pnl) | currency }}
-              </span>
-              @if (t.totalFees) {
-                <span class="mobile-fees">{{ t.totalFees | currency }} fees</span>
+              @if (t.status === 'Open') {
+                <button mat-flat-button class="close-trade-btn-mobile" (click)="$event.stopPropagation(); closeTrade(t)">
+                  <mat-icon>lock</mat-icon> Close
+                </button>
+              } @else {
+                <span class="pnl-value" [class.pnl-positive]="(t.netPnl ?? t.pnl ?? 0) >= 0" [class.pnl-negative]="(t.netPnl ?? t.pnl ?? 0) < 0">
+                  {{ (t.netPnl ?? t.pnl ?? 0) >= 0 ? '+' : '' }}{{ (t.netPnl ?? t.pnl) | currency }}
+                </span>
+                @if (t.totalFees) {
+                  <span class="mobile-fees">{{ t.totalFees | currency }} fees</span>
+                }
               }
               <mat-icon class="compliance-icon-sm" [class.compliant]="t.checklistCompleted" [class.non-compliant]="!t.checklistCompleted">
                 {{ t.checklistCompleted ? 'check_circle' : 'radio_button_unchecked' }}
               </mat-icon>
             </div>
+            <button mat-icon-button class="mobile-notes-btn" (click)="$event.stopPropagation(); toggleNotes(t)" matTooltip="Notes">
+              <mat-icon>sticky_note_2</mat-icon>
+              @if (t.notesCount) {
+                <span class="notes-badge">{{ t.notesCount }}</span>
+              }
+            </button>
           </div>
+          @if (expandedTradeId() === t.id) {
+            <app-trade-notes-panel
+              [tradeId]="t.id"
+              [instrument]="t.instrument">
+            </app-trade-notes-panel>
+          }
         }
       </div>
     } @else {
@@ -318,8 +381,32 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
     .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .action-edit { color: var(--color-action-edit) !important; }
     .action-edit:hover { background: var(--color-action-edit-bg) !important; }
+    .action-notes { color: var(--color-stat-blue) !important; position: relative; }
+    .action-notes:hover { background: var(--color-stat-blue-bg) !important; }
     .action-delete { color: var(--color-action-delete) !important; }
     .action-delete:hover { background: var(--color-action-delete-bg) !important; }
+
+    .notes-badge {
+      position: absolute; top: 2px; right: 2px;
+      min-width: 16px; height: 16px; border-radius: 8px;
+      background: var(--color-primary); color: #fff;
+      font-size: 0.6rem; font-weight: var(--weight-bold);
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 3px; line-height: 1;
+    }
+
+    .expanded-notes-panel {
+      padding: 8px 16px 16px;
+      border-top: 1px solid var(--color-border);
+      background: var(--color-surface-hover);
+    }
+
+    .mobile-notes-btn {
+      position: absolute; top: 8px; right: 8px;
+      width: 32px !important; height: 32px !important; min-width: 32px;
+      color: var(--color-stat-blue) !important;
+    }
+    .mobile-notes-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
 
     /* ─── Controls ─── */
     .controls-row {
@@ -368,6 +455,40 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
     .strike-info { margin-top: 2px; }
     .strike-label { font-size: var(--text-xs); color: var(--color-text-secondary); font-weight: var(--weight-medium); font-variant-numeric: tabular-nums; }
 
+    /* ─── Open Badge ─── */
+    .open-badge {
+      display: inline-block; padding: 2px 8px; border-radius: var(--radius-full);
+      font-size: 0.6rem; font-weight: var(--weight-bold); text-transform: uppercase;
+      letter-spacing: 0.04em; background: var(--color-stat-amber-bg); color: var(--color-stat-amber);
+      border: 1px solid color-mix(in srgb, var(--color-stat-amber) 30%, transparent);
+      margin-right: 4px; vertical-align: middle;
+    }
+    .open-pnl-label {
+      font-size: var(--text-sm); color: var(--color-text-muted); font-weight: var(--weight-medium);
+    }
+
+    /* ─── Close Trade Button ─── */
+    .close-trade-btn {
+      background: var(--color-success) !important; color: #fff !important;
+      font-size: 0.7rem !important; font-weight: 700 !important;
+      height: 32px !important; min-height: 32px !important;
+      padding: 0 12px !important; border-radius: var(--radius-full) !important;
+      line-height: 1 !important; letter-spacing: 0.02em;
+    }
+    .close-trade-btn mat-icon { font-size: 14px !important; width: 14px !important; height: 14px !important; margin-right: 2px; }
+    .close-trade-btn-mobile {
+      background: var(--color-success) !important; color: #fff !important;
+      font-size: 0.68rem !important; font-weight: 700 !important;
+      height: 30px !important; min-height: 30px !important;
+      padding: 0 10px !important; border-radius: var(--radius-full) !important;
+      line-height: 1 !important;
+    }
+    .close-trade-btn-mobile mat-icon { font-size: 13px !important; width: 13px !important; height: 13px !important; margin-right: 2px; }
+
+    /* ─── Open Row Accent ─── */
+    .row-open { border-left: 3px solid var(--color-stat-amber); background: color-mix(in srgb, var(--color-stat-amber) 4%, transparent); }
+    .card-open { border-left: 3px solid var(--color-stat-amber); background: color-mix(in srgb, var(--color-stat-amber) 4%, transparent); padding-left: 12px; }
+
     /* ─── Direction pill ─── */
     .dir-pill {
       display: inline-block; padding: 2px 9px; border-radius: var(--radius-full);
@@ -396,7 +517,7 @@ import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
     .mobile-feed { display: none; }
     .trade-card {
       display: flex; align-items: center; gap: 12px;
-      padding: 14px 4px; cursor: pointer;
+      padding: 14px 4px; cursor: pointer; position: relative;
       -webkit-tap-highlight-color: transparent;
       transition: background var(--transition-fast);
     }
@@ -467,7 +588,9 @@ export class JournalComponent implements OnInit {
   loading = signal(true);
   trades = signal<TradeEntry[]>([]);
   setups = signal<TradingSetupSummary[]>([]);
-  filter = signal<'all' | 'compliant' | 'non-compliant'>('all');
+  filter = signal<'all' | 'open' | 'closed' | 'compliant' | 'non-compliant'>('all');
+  expandedTradeId = signal<number | null>(null);
+  expandedInstrument = signal<string>('');
   currentYear = new Date().getFullYear();
   currentMonth = new Date().getMonth() + 1;
   monthLabel = signal('');
@@ -475,28 +598,37 @@ export class JournalComponent implements OnInit {
 
   filteredTrades = computed(() => {
     const f = this.filter();
-    if (f === 'all') return this.trades();
+    if (f === 'all') {
+      const open = this.trades().filter(t => t.status === 'Open');
+      const closed = this.trades().filter(t => t.status !== 'Open');
+      return [...open, ...closed];
+    }
+    if (f === 'open') return this.trades().filter(t => t.status === 'Open');
+    if (f === 'closed') return this.trades().filter(t => t.status !== 'Open');
     return this.trades().filter(t => f === 'compliant' ? t.checklistCompleted : !t.checklistCompleted);
   });
 
+  closedTrades = computed(() => this.trades().filter(t => t.status !== 'Open'));
+  openCount = computed(() => this.trades().filter(t => t.status === 'Open').length);
+
   winRate = computed(() => {
-    const t = this.trades();
+    const t = this.closedTrades();
     if (!t.length) return 0;
     return (t.filter(x => (x.pnl ?? 0) > 0).length / t.length) * 100;
   });
 
   avgPnl = computed(() => {
-    const t = this.trades();
+    const t = this.closedTrades();
     if (!t.length) return 0;
     return t.reduce((s, x) => s + (x.pnl ?? 0), 0) / t.length;
   });
 
   totalFees = computed(() => {
-    return this.trades().reduce((s, x) => s + (x.totalFees ?? 0), 0);
+    return this.closedTrades().reduce((s, x) => s + (x.totalFees ?? 0), 0);
   });
 
   totalNetPnl = computed(() => {
-    return this.trades().reduce((s, x) => s + (x.netPnl ?? x.pnl ?? 0), 0);
+    return this.closedTrades().reduce((s, x) => s + (x.netPnl ?? x.pnl ?? 0), 0);
   });
 
   complianceRate = computed(() => {
@@ -555,6 +687,23 @@ export class JournalComponent implements OnInit {
       panelClass: 'responsive-dialog-panel', data: { trade: t, setups: this.setups() }
     });
     ref.afterClosed().subscribe(r => { if (r) this.loadTrades(); });
+  }
+
+  closeTrade(t: TradeEntry): void {
+    const ref = this.dialog.open(TradeEntryDialogComponent, {
+      panelClass: 'responsive-dialog-panel', data: { trade: t, setups: this.setups(), closeMode: true }
+    });
+    ref.afterClosed().subscribe(r => { if (r) this.loadTrades(); });
+  }
+
+  toggleNotes(t: TradeEntry): void {
+    if (this.expandedTradeId() === t.id) {
+      this.expandedTradeId.set(null);
+      this.expandedInstrument.set('');
+    } else {
+      this.expandedTradeId.set(t.id);
+      this.expandedInstrument.set(t.instrument);
+    }
   }
 
   deleteTrade(t: TradeEntry): void {

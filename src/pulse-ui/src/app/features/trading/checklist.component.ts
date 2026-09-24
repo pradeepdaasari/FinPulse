@@ -605,7 +605,7 @@ export class ChecklistComponent implements OnInit {
   tradesToday = computed(() => this.todayTrades().length);
   maxTrades = computed(() => this.limits().maxTradesPerDay);
   maxLoss = computed(() => this.limits().maxDailyLoss);
-  pnlToday = computed(() => this.todayTrades().reduce((sum, t) => sum + (t.pnl ?? 0), 0));
+  pnlToday = computed(() => this.todayTrades().filter(t => t.status !== 'Open').reduce((sum, t) => sum + (t.pnl ?? 0), 0));
 
   tradeLimitHit = computed(() => this.tradesToday() >= this.maxTrades());
   lossLimitHit = computed(() => this.pnlToday() <= -this.maxLoss());

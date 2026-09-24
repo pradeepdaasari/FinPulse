@@ -17,7 +17,7 @@ import { LocalDatePipe } from '../../../shared/local-date.pipe';
 import { BankAccountService } from '../../../core/services/bank-account.service';
 import { DailyExpenseService } from '../../../core/services/daily-expense.service';
 import { MoneyMovementService } from '../../../core/services/money-movement.service';
-import { BankAccount, CommissionSchedule } from '../../../core/models/bank-account.model';
+import { BankAccount } from '../../../core/models/bank-account.model';
 import { DailyExpense } from '../../../core/models/daily-expense.model';
 import { MoneyMovement, MovementType } from '../../../core/models/money-movement.model';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -95,49 +95,6 @@ interface ActivityItem {
           </div>
         </mat-card-content>
       </mat-card>
-
-      <!-- Commission History (Brokerage only) -->
-      @if (account()!.accountType === 'Brokerage' && commissionHistory().length > 0) {
-        <h3 class="section-title">Commission History</h3>
-        <mat-card class="commission-card">
-          <div class="commission-list">
-            @for (schedule of commissionHistory(); track schedule.id; let i = $index) {
-              <div class="commission-entry" [class.current]="i === 0">
-                <div class="commission-date">
-                  <span class="date-badge">{{ schedule.effectiveFrom | localDate:'MMM d, yyyy' }}</span>
-                  @if (i === 0) {
-                    <span class="current-badge">Current</span>
-                  }
-                </div>
-                <div class="commission-rates">
-                  @if (schedule.optionsCommissionPerContract != null) {
-                    <span class="rate-item">Options: {{ schedule.optionsCommissionPerContract | currency:'USD':'symbol':'1.2-4' }}</span>
-                  }
-                  @if (schedule.optionsRegFeePerContract != null) {
-                    <span class="rate-item">+ {{ schedule.optionsRegFeePerContract | currency:'USD':'symbol':'1.3-4' }} reg</span>
-                  }
-                  @if (schedule.futuresCommissionPerContract != null) {
-                    <span class="rate-item sep">Futures: {{ schedule.futuresCommissionPerContract | currency:'USD':'symbol':'1.2-4' }}</span>
-                  }
-                  @if (schedule.futuresRegFeePerContract != null) {
-                    <span class="rate-item">+ {{ schedule.futuresRegFeePerContract | currency:'USD':'symbol':'1.3-4' }} reg</span>
-                  }
-                </div>
-                <div class="commission-actions">
-                  <button mat-icon-button (click)="editSchedule(schedule)" matTooltip="Edit & recalculate">
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  @if (i > 0 && commissionHistory().length > 1) {
-                    <button mat-icon-button (click)="deleteSchedule(schedule)" matTooltip="Delete">
-                      <mat-icon>close</mat-icon>
-                    </button>
-                  }
-                </div>
-              </div>
-            }
-          </div>
-        </mat-card>
-      }
 
       <!-- Activity History -->
       @if (allActivity().length > 0) {
@@ -541,32 +498,6 @@ interface ActivityItem {
     .empty-history mat-icon { font-size: 32px; width: 32px; height: 32px; opacity: 0.4; }
     .empty-history p { margin-top: 12px; }
 
-    /* Commission History */
-    .commission-card { margin-bottom: var(--spacing-lg); }
-    .commission-list { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
-    .commission-entry {
-      display: flex; align-items: center; gap: 12px;
-      padding: 10px 12px; border-radius: var(--radius-sm);
-      background: var(--color-surface-secondary);
-      position: relative;
-    }
-    .commission-entry.current {
-      border: 1.5px solid var(--color-stat-purple);
-      background: color-mix(in srgb, var(--color-stat-purple-bg) 40%, transparent);
-    }
-    .commission-date { display: flex; align-items: center; gap: 8px; min-width: 120px; }
-    .date-badge { font-size: 0.75rem; font-weight: 600; color: var(--color-text-secondary); }
-    .current-badge {
-      font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
-      padding: 2px 6px; border-radius: var(--radius-full);
-      background: var(--color-stat-purple-bg); color: var(--color-stat-purple);
-    }
-    .commission-rates { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
-    .rate-item { font-size: 0.75rem; color: var(--color-text-secondary); }
-    .rate-item.sep { margin-left: 8px; }
-    .commission-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
-    .commission-actions mat-icon { font-size: 16px; width: 16px; height: 16px; }
-
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
       .summary-stats { gap: 14px; }
@@ -581,8 +512,6 @@ interface ActivityItem {
       .detail-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
       .detail-actions { flex-wrap: wrap; }
       .summary-stats { gap: 10px; }
-      .commission-entry { flex-direction: column; align-items: flex-start; gap: 6px; }
-      .commission-date { min-width: unset; }
       .txn-header-row { flex-direction: column; align-items: flex-start; }
       .period-controls { width: 100%; }
       .period-controls mat-button-toggle-group { width: 100%; }
@@ -607,7 +536,6 @@ export class AccountDetailComponent implements OnInit {
   account = signal<BankAccount | null>(null);
   allTransactions = signal<DailyExpense[]>([]);
   allMovements = signal<MoneyMovement[]>([]);
-  commissionHistory = signal<CommissionSchedule[]>([]);
   loading = signal(true);
   displayedColumns = ['date', 'description', 'type', 'source', 'category', 'amount', 'balance', 'actions'];
 
@@ -684,9 +612,6 @@ export class AccountDetailComponent implements OnInit {
         this.account.set(account);
         this.loadTransactions(id);
         this.loadMovements(id);
-        if (account.accountType === 'Brokerage') {
-          this.loadCommissionHistory(id);
-        }
         this.cdr.detectChanges();
       },
       error: () => {
@@ -724,46 +649,6 @@ export class AccountDetailComponent implements OnInit {
         to: new Date(this.customTo.getFullYear(), this.customTo.getMonth(), this.customTo.getDate(), 23, 59, 59)
       });
       this.period.set('custom');
-    }
-  }
-
-  private loadCommissionHistory(accountId: number): void {
-    this.accountService.getCommissionHistory(accountId).subscribe({
-      next: (history) => { this.commissionHistory.set(history); this.cdr.detectChanges(); }
-    });
-  }
-
-  editSchedule(schedule: CommissionSchedule): void {
-    import('./edit-commission-dialog.component').then(m => {
-      const ref = this.dialog.open(m.EditCommissionDialogComponent, {
-        width: '460px',
-        maxWidth: '95vw',
-        data: {
-          accountId: this.account()!.id,
-          accountName: this.account()!.accountName,
-          schedule
-        }
-      });
-      ref.afterClosed().subscribe(result => {
-        if (result) {
-          this.loadCommissionHistory(this.account()!.id);
-          this.loadAccount();
-        }
-      });
-    });
-  }
-
-  deleteSchedule(schedule: CommissionSchedule): void {
-    const confirmed = confirm('Delete this commission schedule? Trades will keep their current calculated fees.');
-    if (confirmed) {
-      this.loading.set(true);
-      this.accountService.deleteCommissionSchedule(this.account()!.id, schedule.id).subscribe({
-        next: () => {
-          this.notify.success('Schedule deleted');
-          this.loadCommissionHistory(this.account()!.id);
-        },
-        error: () => { this.loading.set(false); this.notify.error('Failed to delete schedule'); this.cdr.detectChanges(); }
-      });
     }
   }
 

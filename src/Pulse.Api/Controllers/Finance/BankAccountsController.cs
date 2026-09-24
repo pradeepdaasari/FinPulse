@@ -53,10 +53,6 @@ public class BankAccountsController : ControllerBase
             AccountName = dto.AccountName.Trim(),
             AccountType = dto.AccountType,
             CurrentBalance = dto.CurrentBalance,
-            OptionsCommissionPerContract = dto.OptionsCommissionPerContract,
-            FuturesCommissionPerContract = dto.FuturesCommissionPerContract,
-            OptionsRegFeePerContract = dto.OptionsRegFeePerContract,
-            FuturesRegFeePerContract = dto.FuturesRegFeePerContract,
             IsExcluded = dto.IsExcluded,
             UserId = UserId
         };
@@ -80,10 +76,6 @@ public class BankAccountsController : ControllerBase
         account.AccountName = dto.AccountName.Trim();
         account.AccountType = dto.AccountType;
         account.CurrentBalance = dto.CurrentBalance;
-        account.OptionsCommissionPerContract = dto.OptionsCommissionPerContract;
-        account.FuturesCommissionPerContract = dto.FuturesCommissionPerContract;
-        account.OptionsRegFeePerContract = dto.OptionsRegFeePerContract;
-        account.FuturesRegFeePerContract = dto.FuturesRegFeePerContract;
         account.IsExcluded = dto.IsExcluded;
 
         await _db.SaveChangesAsync();

@@ -65,7 +65,8 @@ public class TradingController : ControllerBase
                       / _db.TradeEntries.Where(t => t.SetupId == s.Id && t.UserId == UserId && t.Pnl != null).Count()
             })
             .ToListAsync();
-        return Ok(setups);
+        var result = setups.Select(s => new { s.Id, s.Name, s.Description, s.IsActive, s.ItemCount, s.TradeCount, WinRate = s.WinRate.HasValue ? Math.Round(s.WinRate.Value, 1) : (decimal?)null });
+        return Ok(result);
     }
 
     [HttpGet("setups/{id}")]
@@ -193,6 +194,7 @@ public class TradingController : ControllerBase
         note.Plan = input.Plan;
         note.MentalState = input.MentalState;
         note.MentalStateNotes = input.MentalStateNotes;
+        note.EmotionalPlan = input.EmotionalPlan;
         note.MaxTrades = input.MaxTrades;
         note.MaxLoss = input.MaxLoss;
 
@@ -263,7 +265,10 @@ public class TradingController : ControllerBase
                 t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.Multiplier, t.BankAccountId,
                 t.CommissionFees, t.RegExchangeFees, t.TotalFees, t.NetPnl,
                 t.PlannedRisk,
-                MistakeTags = t.MistakeTags != null ? JsonSerializer.Deserialize<string[]>(t.MistakeTags) : null
+                MistakeTags = t.MistakeTags != null ? JsonSerializer.Deserialize<string[]>(t.MistakeTags) : null,
+                t.Status,
+                t.ClosedDate,
+                NotesCount = t.TradeNotes.Count
             })
             .ToListAsync();
         return Ok(trades);
@@ -287,7 +292,9 @@ public class TradingController : ControllerBase
                 t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.Multiplier, t.BankAccountId,
                 t.CommissionFees, t.RegExchangeFees, t.TotalFees, t.NetPnl, t.CreatedAt,
                 t.PlannedRisk,
-                MistakeTags = t.MistakeTags != null ? JsonSerializer.Deserialize<string[]>(t.MistakeTags) : null
+                MistakeTags = t.MistakeTags != null ? JsonSerializer.Deserialize<string[]>(t.MistakeTags) : null,
+                t.Status,
+                t.ClosedDate
             })
             .Take(20)
             .ToListAsync();
@@ -307,9 +314,8 @@ public class TradingController : ControllerBase
             var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
             var tradeDate = TimeZoneHelper.ToUtc(input.Date, tz);
 
-            var (commission, regExchange) = input.CommissionFees.HasValue || input.RegExchangeFees.HasValue
-                ? (input.CommissionFees ?? 0, input.RegExchangeFees ?? 0)
-                : await CalculateFeesBreakdown(input.BankAccountId, input.AssetType, input.Quantity, input.SpreadType, tradeDate, input.ExpiredWorthless);
+            var commission = input.CommissionFees ?? 0;
+            var regExchange = input.RegExchangeFees ?? 0;
             var fees = commission + regExchange;
 
             var trade = new TradeEntry
@@ -349,6 +355,8 @@ public class TradingController : ControllerBase
                 BankAccountId = input.BankAccountId,
                 PlannedRisk = input.PlannedRisk,
                 MistakeTags = input.MistakeTags != null ? JsonSerializer.Serialize(input.MistakeTags) : null,
+                Status = input.Status ?? "Open",
+                ClosedDate = input.ClosedDate,
                 ChecklistResponses = (input.ChecklistResponses ?? new()).Select(r => new ChecklistResponse
                 {
                     ChecklistItemId = r.ChecklistItemId,
@@ -359,7 +367,8 @@ public class TradingController : ControllerBase
             _db.TradeEntries.Add(trade);
             await _db.SaveChangesAsync();
 
-            await SyncLinkedExpense(trade);
+            if (trade.Status == "Closed")
+                await SyncLinkedExpense(trade);
 
             trade.Setup = null;
             trade.LinkedExpense = null;
@@ -384,9 +393,8 @@ public class TradingController : ControllerBase
             var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
             var tradeDate = TimeZoneHelper.ToUtc(input.Date, tz);
 
-            var (commission, regExchange) = input.CommissionFees.HasValue || input.RegExchangeFees.HasValue
-                ? (input.CommissionFees ?? 0, input.RegExchangeFees ?? 0)
-                : await CalculateFeesBreakdown(input.BankAccountId, input.AssetType, input.Quantity, input.SpreadType, tradeDate, input.ExpiredWorthless);
+            var commission = input.CommissionFees ?? 0;
+            var regExchange = input.RegExchangeFees ?? 0;
             var fees = commission + regExchange;
 
             trade.Date = tradeDate;
@@ -423,6 +431,8 @@ public class TradingController : ControllerBase
             trade.BankAccountId = input.BankAccountId;
             trade.PlannedRisk = input.PlannedRisk;
             trade.MistakeTags = input.MistakeTags != null ? JsonSerializer.Serialize(input.MistakeTags) : null;
+            trade.Status = input.Status ?? "Open";
+            trade.ClosedDate = input.ClosedDate;
 
             _db.ChecklistResponses.RemoveRange(trade.ChecklistResponses);
             trade.ChecklistResponses = (input.ChecklistResponses ?? new()).Select(r => new ChecklistResponse
@@ -434,7 +444,10 @@ public class TradingController : ControllerBase
 
             await _db.SaveChangesAsync();
 
-            await SyncLinkedExpense(trade);
+            if (trade.Status == "Closed")
+                await SyncLinkedExpense(trade);
+            else
+                await RemoveLinkedExpense(trade);
 
             trade.Setup = null;
             trade.LinkedExpense = null;
@@ -492,6 +505,78 @@ public class TradingController : ControllerBase
         {
             return StatusCode(500, new { error = "An error occurred while deleting the trade." });
         }
+    }
+
+    // ─── Trade Notes ─────────────────────────────────────
+
+    private static readonly HashSet<string> ValidEmotions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "confident", "anxious", "calm", "frustrated", "fomo", "relieved", "neutral"
+    };
+
+    [HttpGet("trades/{tradeId}/notes")]
+    public async Task<ActionResult> GetTradeNotes(int tradeId)
+    {
+        var trade = await _db.TradeEntries.FirstOrDefaultAsync(t => t.Id == tradeId && t.UserId == UserId);
+        if (trade is null) return NotFound();
+
+        var notes = await _db.TradeNotes
+            .Where(n => n.TradeEntryId == tradeId && n.UserId == UserId)
+            .OrderBy(n => n.CreatedAt)
+            .ToListAsync();
+
+        return Ok(notes);
+    }
+
+    [HttpPost("trades/{tradeId}/notes")]
+    public async Task<ActionResult> CreateTradeNote(int tradeId, [FromBody] TradeNoteDto dto)
+    {
+        var trade = await _db.TradeEntries.FirstOrDefaultAsync(t => t.Id == tradeId && t.UserId == UserId);
+        if (trade is null) return NotFound();
+
+        if (!string.IsNullOrEmpty(dto.Emotion) && !ValidEmotions.Contains(dto.Emotion))
+            return BadRequest(new { message = "Invalid emotion value." });
+
+        var note = new TradeNote
+        {
+            TradeEntryId = tradeId,
+            UserId = UserId,
+            Note = dto.Note.Trim(),
+            Emotion = string.IsNullOrEmpty(dto.Emotion) ? null : dto.Emotion.ToLower()
+        };
+
+        _db.TradeNotes.Add(note);
+        await _db.SaveChangesAsync();
+
+        return CreatedAtAction(nameof(GetTradeNotes), new { tradeId }, note);
+    }
+
+    [HttpPut("trades/{tradeId}/notes/{noteId}")]
+    public async Task<ActionResult> UpdateTradeNote(int tradeId, int noteId, [FromBody] TradeNoteDto dto)
+    {
+        var note = await _db.TradeNotes.FirstOrDefaultAsync(n => n.Id == noteId && n.TradeEntryId == tradeId && n.UserId == UserId);
+        if (note is null) return NotFound();
+
+        if (!string.IsNullOrEmpty(dto.Emotion) && !ValidEmotions.Contains(dto.Emotion))
+            return BadRequest(new { message = "Invalid emotion value." });
+
+        note.Note = dto.Note.Trim();
+        note.Emotion = string.IsNullOrEmpty(dto.Emotion) ? null : dto.Emotion.ToLower();
+        await _db.SaveChangesAsync();
+
+        return Ok(note);
+    }
+
+    [HttpDelete("trades/{tradeId}/notes/{noteId}")]
+    public async Task<ActionResult> DeleteTradeNote(int tradeId, int noteId)
+    {
+        var note = await _db.TradeNotes.FirstOrDefaultAsync(n => n.Id == noteId && n.TradeEntryId == tradeId && n.UserId == UserId);
+        if (note is null) return NotFound();
+
+        _db.TradeNotes.Remove(note);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
     }
 
     // ─── Rules ────────────────────────────────────────────
@@ -644,6 +729,82 @@ public class TradingController : ControllerBase
         return Ok(limits);
     }
 
+    // ─── Day View ──────────────────────────────────────────
+
+    [HttpGet("day/today")]
+    public Task<ActionResult> GetTodayDayView() => GetDayView(null);
+
+    [HttpGet("day/{date}")]
+    public async Task<ActionResult> GetDayView(string? date)
+    {
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        DateTime targetDate;
+        if (date != null && DateTime.TryParse(date, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+            targetDate = parsed.Date;
+        else
+            targetDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+
+        var dayStart = TimeZoneHelper.ToUtc(targetDate, tz);
+        var dayEnd = TimeZoneHelper.ToUtc(targetDate.AddDays(1), tz);
+
+        var premarket = await _db.PreMarketNotes
+            .Where(p => p.UserId == UserId && p.Date >= dayStart && p.Date < dayEnd)
+            .FirstOrDefaultAsync();
+
+        var trades = await _db.TradeEntries
+            .Where(t => t.UserId == UserId && t.Date >= dayStart && t.Date < dayEnd)
+            .Include(t => t.ChecklistResponses)
+            .OrderBy(t => t.Date)
+            .Select(t => new
+            {
+                t.Id, t.Date, t.SetupId,
+                SetupName = t.Setup != null ? t.Setup.Name : null,
+                t.Instrument, t.Direction, t.EntryPrice, t.ExitPrice, t.Quantity,
+                t.Pnl, t.ChecklistCompleted, t.ChecklistResponses,
+                t.EntryTime, t.ExitTime, t.Notes,
+                Tags = t.Tags != null ? JsonSerializer.Deserialize<string[]>(t.Tags) : null,
+                t.IsRevengeTrading, t.EmotionAtEntry, t.CreatedAt,
+                t.AssetType, t.OptionType, t.SpreadType,
+                t.StrikePrice, t.StrikePrice2, t.StrikePrice3, t.StrikePrice4,
+                t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.Multiplier,
+                t.BankAccountId, t.CommissionFees, t.RegExchangeFees, t.TotalFees, t.NetPnl,
+                t.PlannedRisk,
+                MistakeTags = t.MistakeTags != null ? JsonSerializer.Deserialize<string[]>(t.MistakeTags) : null,
+                t.Status, t.ClosedDate,
+                TradeNotes = t.TradeNotes.OrderBy(n => n.CreatedAt).Select(n => new { n.Id, n.TradeEntryId, n.Note, n.Emotion, n.CreatedAt, n.UpdatedAt }).ToList()
+            })
+            .ToListAsync();
+
+        var review = await _db.DailyReviews
+            .Where(r => r.UserId == UserId && r.Date >= dayStart && r.Date < dayEnd)
+            .FirstOrDefaultAsync();
+
+        var limits = await _db.DailyLimits
+            .Where(l => l.UserId == UserId)
+            .FirstOrDefaultAsync();
+
+        var closedTrades = trades.Where(t => t.Status == "Closed").ToList();
+
+        return Ok(new
+        {
+            Date = targetDate.ToString("yyyy-MM-dd"),
+            Premarket = premarket,
+            Trades = trades,
+            Review = review,
+            Limits = limits,
+            Stats = new
+            {
+                TotalTrades = trades.Count,
+                OpenTrades = trades.Count(t => t.Status == "Open"),
+                ClosedTrades = closedTrades.Count,
+                TotalPnl = closedTrades.Sum(t => t.Pnl ?? 0),
+                TotalNetPnl = closedTrades.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+                TotalFees = closedTrades.Sum(t => t.TotalFees ?? 0),
+                WinRate = closedTrades.Count > 0 ? Math.Round((double)closedTrades.Count(t => (t.Pnl ?? 0) > 0) / closedTrades.Count * 100, 1) : 0
+            }
+        });
+    }
+
     // ─── Stats ────────────────────────────────────────────
 
     [HttpGet("stats")]
@@ -673,7 +834,7 @@ public class TradingController : ControllerBase
             LongestRuleStreak = 0,
             AverageGrade = await GetAverageGrade(cutoff),
             TradesToday = trades.Count(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date == today),
-            PnlToday = trades.Where(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date == today).Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+            PnlToday = closedTrades.Where(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date == today).Sum(t => t.NetPnl ?? t.Pnl ?? 0),
             ChecklistComplianceRate = trades.Count == 0 ? 0m : Math.Round((decimal)trades.Count(t => t.ChecklistCompleted) / trades.Count * 100, 1),
             SetupBreakdown = trades
                 .GroupBy(t => t.SetupId)
@@ -986,7 +1147,7 @@ public class TradingController : ControllerBase
             MaxConsecutiveWins = maxConsWins,
             MaxConsecutiveLosses = maxConsLosses,
             TradesToday = trades.Count(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date == today),
-            PnlToday = trades.Where(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date == today).Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+            PnlToday = closed.Where(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date == today).Sum(t => t.NetPnl ?? t.Pnl ?? 0),
             ChecklistCompliance = trades.Count == 0 ? 0m : Math.Round((decimal)trades.Count(t => t.ChecklistCompleted) / trades.Count * 100, 1),
             // Equity Curve + Drawdown
             EquityCurve = equityCurve,
@@ -1510,61 +1671,6 @@ public class TradingController : ControllerBase
         return (decimal)Math.Round(grades.Average(g => g switch { "A" => 4, "B" => 3, "C" => 2, "D" => 1, _ => 0 }), 1);
     }
 
-    private async Task<(decimal commission, decimal regExchange)> CalculateFeesBreakdown(int? bankAccountId, string assetType, decimal quantity, string? spreadType = null, DateTime? tradeDate = null, bool expiredWorthless = false)
-    {
-        if (!bankAccountId.HasValue) return (0, 0);
-
-        decimal commissionRate, regFeeRate;
-
-        var effectiveDate = tradeDate?.Date ?? await GetUserLocalDateAsync();
-        var schedule = await _db.CommissionSchedules
-            .Where(s => s.BankAccountId == bankAccountId.Value
-                     && s.UserId == UserId
-                     && s.EffectiveFrom <= effectiveDate)
-            .OrderByDescending(s => s.EffectiveFrom)
-            .FirstOrDefaultAsync();
-
-        if (schedule != null)
-        {
-            commissionRate = assetType == "Futures"
-                ? (schedule.FuturesCommissionPerContract ?? 0)
-                : (schedule.OptionsCommissionPerContract ?? 0);
-            regFeeRate = assetType == "Futures"
-                ? (schedule.FuturesRegFeePerContract ?? 0)
-                : (schedule.OptionsRegFeePerContract ?? 0);
-        }
-        else
-        {
-            var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == bankAccountId.Value && a.UserId == UserId);
-            if (account == null) return (0, 0);
-            commissionRate = assetType == "Futures"
-                ? (account.FuturesCommissionPerContract ?? 0)
-                : (account.OptionsCommissionPerContract ?? 0);
-            regFeeRate = assetType == "Futures"
-                ? (account.FuturesRegFeePerContract ?? 0)
-                : (account.OptionsRegFeePerContract ?? 0);
-        }
-
-        var legs = assetType == "Options" ? GetLegsForSpread(spreadType) : 1;
-        var multiplier = quantity * legs * (expiredWorthless ? 1 : 2);
-
-        return (commissionRate * multiplier, regFeeRate * multiplier);
-    }
-
-    private async Task<decimal> CalculateFees(int? bankAccountId, string assetType, decimal quantity, string? spreadType = null, DateTime? tradeDate = null, bool expiredWorthless = false)
-    {
-        var (commission, regExchange) = await CalculateFeesBreakdown(bankAccountId, assetType, quantity, spreadType, tradeDate, expiredWorthless);
-        return commission + regExchange;
-    }
-
-    private static int GetLegsForSpread(string? spreadType) => spreadType switch
-    {
-        "Vertical" or "Calendar" => 2,
-        "Butterfly" => 3,
-        "IronCondor" => 4,
-        _ => 1
-    };
-
     // ─── Linked Transaction Helpers ───────────────────────────────
 
     private async Task SyncLinkedExpense(TradeEntry trade)
@@ -1834,6 +1940,8 @@ public class TradeEntryCreateDto
     public decimal? NetPnl { get; set; }
     public decimal? PlannedRisk { get; set; }
     public string[]? MistakeTags { get; set; }
+    public string Status { get; set; } = "Open";
+    public DateTime? ClosedDate { get; set; }
 }
 
 public class ChecklistResponseDto
@@ -1846,4 +1954,10 @@ public class ChecklistResponseDto
 public class ReorderDto
 {
     public List<int> Ids { get; set; } = new();
+}
+
+public class TradeNoteDto
+{
+    public string Note { get; set; } = string.Empty;
+    public string? Emotion { get; set; }
 }

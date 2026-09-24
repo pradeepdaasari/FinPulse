@@ -120,6 +120,16 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'trading/day',
+    loadComponent: () => import('./features/trading/day-view.component').then(m => m.DayViewComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'trading/day/:date',
+    loadComponent: () => import('./features/trading/day-view.component').then(m => m.DayViewComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'trading/goals',
     loadComponent: () => import('./features/trading/trading-goals.component').then(m => m.TradingGoalsComponent),
     canActivate: [authGuard]

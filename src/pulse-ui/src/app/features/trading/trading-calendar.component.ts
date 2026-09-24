@@ -1396,7 +1396,8 @@ export class TradingCalendarComponent implements OnInit {
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       const dayTrades = tradesByDate.get(dateStr) || [];
-      const totalPnl = dayTrades.reduce((sum, t) => sum + (t.netPnl ?? t.pnl ?? 0), 0);
+      const closedDayTrades = dayTrades.filter(t => t.status !== 'Open');
+      const totalPnl = closedDayTrades.reduce((sum, t) => sum + (t.netPnl ?? t.pnl ?? 0), 0);
       days.push({
         date: d,
         isCurrentMonth: true,

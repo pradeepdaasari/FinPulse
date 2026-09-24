@@ -34,6 +34,7 @@ export interface PreMarketNote {
   plan: string;
   mentalState: MentalState;
   mentalStateNotes?: string;
+  emotionalPlan?: string;
   maxTrades: number;
   maxLoss: number;
   createdAt?: string;
@@ -90,7 +91,23 @@ export interface TradeEntry {
   netPnl?: number;
   plannedRisk?: number;
   mistakeTags?: string[];
+  status?: TradeStatus;
+  closedDate?: string;
+  notesCount?: number;
 }
+
+export type TradeStatus = 'Open' | 'Closed';
+
+export interface TradeNote {
+  id: number;
+  tradeEntryId: number;
+  note: string;
+  emotion?: TradeNoteEmotion;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TradeNoteEmotion = 'confident' | 'anxious' | 'calm' | 'frustrated' | 'fomo' | 'relieved' | 'neutral';
 
 export type SpreadType = 'Single' | 'Vertical' | 'IronCondor' | 'Butterfly' | 'Calendar';
 export type OptionTypeValue = 'Call' | 'Put';
@@ -307,6 +324,29 @@ export interface GoalSnapshot {
   targetValue: number;
   achieved: boolean;
   percentage: number;
+}
+
+export interface TradeEntryWithNotes extends TradeEntry {
+  tradeNotes: TradeNote[];
+}
+
+export interface DayViewStats {
+  totalTrades: number;
+  openTrades: number;
+  closedTrades: number;
+  totalPnl: number;
+  totalNetPnl: number;
+  totalFees: number;
+  winRate: number;
+}
+
+export interface TradingDayView {
+  date: string;
+  premarket: PreMarketNote | null;
+  trades: TradeEntryWithNotes[];
+  review: DailyReview | null;
+  limits: DailyLimits | null;
+  stats: DayViewStats;
 }
 
 export interface GoalHistory {

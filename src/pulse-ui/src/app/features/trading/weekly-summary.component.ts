@@ -67,7 +67,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
             <span class="grade-stat-label">Trades</span>
           </div>
           <div class="grade-stat">
-            <span class="grade-stat-value">{{ summary()!.winRate }}%</span>
+            <span class="grade-stat-value">{{ summary()!.winRate | number:'1.0-1' }}%</span>
             <span class="grade-stat-label">Win Rate</span>
           </div>
         </div>
@@ -127,7 +127,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
               </div>
               <div class="setup-stats">
                 <span>{{ setup.trades }} trades</span>
-                <span>{{ setup.winRate }}% win</span>
+                <span>{{ setup.winRate | number:'1.0-1' }}% win</span>
                 <span [class.positive]="setup.totalPnl >= 0" [class.negative]="setup.totalPnl < 0">
                   {{ setup.totalPnl | currency:'USD':'symbol':'1.0-0' }}
                 </span>
@@ -151,7 +151,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
                 </div>
                 <div class="time-stats">
                   <span>{{ slot.trades }} trades</span>
-                  <span>{{ slot.winRate }}% win</span>
+                  <span>{{ slot.winRate | number:'1.0-1' }}% win</span>
                 </div>
                 <span class="time-pnl" [class.positive]="slot.totalPnl >= 0" [class.negative]="slot.totalPnl < 0">
                   {{ slot.totalPnl | currency:'USD':'symbol':'1.0-0' }}
@@ -171,7 +171,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
               <div class="day-card" [class]="'day-' + day.grade">
                 <span class="day-name">{{ day.day }}</span>
                 <span class="day-trades">{{ day.trades }}T</span>
-                <span class="day-win">{{ day.winRate }}%</span>
+                <span class="day-win">{{ day.winRate | number:'1.0-1' }}%</span>
                 <span class="day-pnl" [class.positive]="day.totalPnl >= 0" [class.negative]="day.totalPnl < 0">
                   {{ day.totalPnl | currency:'USD':'symbol':'1.0-0' }}
                 </span>
@@ -258,7 +258,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
                 <span class="trend-pnl" [class.positive]="week.totalPnl >= 0" [class.negative]="week.totalPnl < 0">
                   {{ week.totalPnl | currency:'USD':'symbol':'1.0-0' }}
                 </span>
-                <span class="trend-win">{{ week.winRate }}%</span>
+                <span class="trend-win">{{ week.winRate | number:'1.0-1' }}%</span>
                 <span class="trend-compliance">{{ week.checklistCompliance }}% CL</span>
               </div>
             }
