@@ -595,18 +595,14 @@ export class RecurringPageComponent implements OnInit {
         this.notify.error('Could not find matching loan — use Loan Detail to record payment');
         return;
       }
-      import('../../../shared/record-payment-dialog.component').then(m => {
-        const ref = this.dialog.open(m.RecordPaymentDialogComponent, {
-          width: '440px',
+      import('../../finance/expenses/add-expense-dialog.component').then(m => {
+        const ref = this.dialog.open(m.AddExpenseDialogComponent, {
+          width: '520px',
+          maxHeight: '90vh',
           data: {
-            debtType: 'PersonalLoan',
-            debtId: loan.id,
-            debtName: loan.lenderName,
-            currentBalance: loan.currentBalance,
-            minimumPayment: loan.monthlyPayment,
-            aprPercent: loan.aprPercent,
-            paymentFrequency: loan.paymentFrequency,
-            fundedBankAccountId: loan.fundedBankAccountId
+            expense: null,
+            preselectedType: 'LoanPayment',
+            preselectedDebtKey: `PersonalLoan:${loan.id}`
           }
         });
         ref.afterClosed().subscribe(result => {

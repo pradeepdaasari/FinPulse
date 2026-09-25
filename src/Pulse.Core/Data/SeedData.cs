@@ -8,14 +8,37 @@ using Pulse.Core.Models.Trading;
 
 public static class SeedData
 {
-    public static void Initialize(PulseDbContext context)
+    public static void Initialize(PulseDbContext context, string? userId = null)
     {
         SeedTradingWisdom(context);
 
         if (context.PersonalLoans.Any() || context.CreditCards.Any())
             return;
 
-        Reseed(context, null);
+        Reseed(context, userId);
+    }
+
+    /// <summary>
+    /// Assigns all records with NULL UserId to the given user.
+    /// Fixes data created before the seed-ordering bug was fixed.
+    /// </summary>
+    public static void ClaimOrphanedRecords(PulseDbContext context, string userId)
+    {
+        string[] tables = [
+            "PersonalLoans", "CreditCards", "BankAccounts", "BudgetExpenses",
+            "DailyExpenses", "RecurringTransactions", "SavingsGoals", "PaymentHistories",
+            "MonthlySnapshots", "CustomCategories", "UserProfiles", "MoneyMovements",
+            "HealthMetrics", "BloodWorkReports", "WorkoutPlans", "WorkoutLogs",
+            "PreMarketNotes", "PreMarketTemplates", "TradingSetups", "TradeEntries",
+            "TradeNotes", "DailyReviews", "TradingRules", "TradingGoals",
+            "TradingGoalSnapshots", "DailyLimits", "NetWorthSnapshots"
+        ];
+
+        foreach (var table in tables)
+        {
+            context.Database.ExecuteSqlRaw(
+                $"UPDATE [{table}] SET UserId = {{0}} WHERE UserId IS NULL OR UserId = ''", userId);
+        }
     }
 
     private static void SeedTradingWisdom(PulseDbContext context)

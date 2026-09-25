@@ -7,7 +7,6 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
-import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
@@ -20,7 +19,6 @@ import { MoneyMovementService } from '../../../core/services/money-movement.serv
 import { CreditCard } from '../../../core/models/credit-card.model';
 import { DailyExpense } from '../../../core/models/daily-expense.model';
 import { MoneyMovement, MovementType } from '../../../core/models/money-movement.model';
-import { PayoffEntry } from '../../../core/models/dashboard.model';
 import { PaymentHistory } from '../../../core/models/payment-history.model';
 import { sumCurrency } from '../../../core/utils/currency';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
@@ -47,7 +45,7 @@ interface CardActivityItem {
 @Component({
   selector: 'app-card-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatPaginatorModule, MatTooltipModule, MatChipsModule, CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe, SkeletonLoaderComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatTooltipModule, MatChipsModule, CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe, SkeletonLoaderComponent],
   template: `
     @if (loading()) {
       <app-skeleton type="card"></app-skeleton>
@@ -335,68 +333,6 @@ interface CardActivityItem {
         </mat-card>
       }
 
-      @if (timeline().length > 0) {
-        <h3>Payoff Timeline</h3>
-        <mat-card>
-          <div class="desktop-only">
-            <table mat-table [dataSource]="timeline()">
-              <ng-container matColumnDef="month">
-                <th mat-header-cell *matHeaderCellDef>Month</th>
-                <td mat-cell *matCellDef="let entry">{{ entry.month }}</td>
-              </ng-container>
-              <ng-container matColumnDef="date">
-                <th mat-header-cell *matHeaderCellDef>Date</th>
-                <td mat-cell *matCellDef="let entry">{{ entry.date | date:'mediumDate' }}</td>
-              </ng-container>
-              <ng-container matColumnDef="payment">
-                <th mat-header-cell *matHeaderCellDef>Payment</th>
-                <td mat-cell *matCellDef="let entry">{{ entry.payment | currency }}</td>
-              </ng-container>
-              <ng-container matColumnDef="principal">
-                <th mat-header-cell *matHeaderCellDef>Principal</th>
-                <td mat-cell *matCellDef="let entry">{{ entry.principal | currency }}</td>
-              </ng-container>
-              <ng-container matColumnDef="interest">
-                <th mat-header-cell *matHeaderCellDef>Interest</th>
-                <td mat-cell *matCellDef="let entry">{{ entry.interest | currency }}</td>
-              </ng-container>
-              <ng-container matColumnDef="remainingBalance">
-                <th mat-header-cell *matHeaderCellDef>Balance</th>
-                <td mat-cell *matCellDef="let entry">{{ entry.remainingBalance | currency }}</td>
-              </ng-container>
-
-              <tr mat-header-row *matHeaderRowDef="timelineColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: timelineColumns;"></tr>
-            </table>
-            <mat-paginator [pageSize]="12" [pageSizeOptions]="[12, 24, 60]" showFirstLastButtons></mat-paginator>
-          </div>
-          <div class="mobile-cards">
-            @for (entry of timeline(); track entry.month) {
-              <div class="mobile-card timeline-card">
-                <div class="mobile-card-row">
-                  <span class="timeline-month">Month {{ entry.month }}</span>
-                  <span class="timeline-balance">{{ entry.remainingBalance | currency }}</span>
-                </div>
-                <div class="mobile-card-date">{{ entry.date | date:'mediumDate' }}</div>
-                <div class="timeline-details">
-                  <div class="timeline-detail-item">
-                    <span class="label">Payment</span>
-                    <span>{{ entry.payment | currency }}</span>
-                  </div>
-                  <div class="timeline-detail-item">
-                    <span class="label">Principal</span>
-                    <span>{{ entry.principal | currency }}</span>
-                  </div>
-                  <div class="timeline-detail-item">
-                    <span class="label">Interest</span>
-                    <span class="interest-val">{{ entry.interest | currency }}</span>
-                  </div>
-                </div>
-              </div>
-            }
-          </div>
-        </mat-card>
-      }
 
     }
   `,
@@ -545,32 +481,6 @@ interface CardActivityItem {
       margin-top: 4px;
     }
 
-    /* Timeline mobile cards */
-    .timeline-month {
-      font-weight: 600;
-      font-size: 0.9rem;
-    }
-    .timeline-balance {
-      font-weight: 700;
-      font-size: 0.95rem;
-    }
-    .timeline-details {
-      display: flex;
-      gap: 16px;
-      margin-top: 8px;
-      font-size: 0.8rem;
-    }
-    .timeline-detail-item {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .timeline-detail-item .label {
-      font-size: 0.65rem;
-    }
-    .interest-val {
-      color: var(--color-danger, #f44336);
-    }
 
     @media (max-width: 1199px) {
       .desktop-only { display: none !important; }
@@ -624,7 +534,6 @@ export class CardDetailComponent implements OnInit {
   private fundingSourceService = inject(FundingSourceService);
 
   card = signal<CreditCard | null>(null);
-  timeline = signal<PayoffEntry[]>([]);
   paymentHistory = signal<PaymentHistory[]>([]);
   allTransactions = signal<DailyExpense[]>([]);
   allMovements = signal<MoneyMovement[]>([]);
@@ -713,7 +622,6 @@ export class CardDetailComponent implements OnInit {
       .map(key => ({ key, label: new Date(key + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) }));
   });
 
-  timelineColumns = ['month', 'date', 'payment', 'principal', 'interest', 'remainingBalance'];
   paymentColumns = ['paymentDate', 'amountPaid', 'fromAccount', 'notes', 'actions'];
   private accountNameMap = new Map<number, string>();
   txnColumns = ['date', 'description', 'category', 'type', 'amount', 'balance'];
@@ -749,9 +657,6 @@ export class CardDetailComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => { this.loading.set(false); this.cdr.detectChanges(); }
-    });
-    this.cardService.getPayoffTimeline(id).subscribe({
-      next: (entries) => { this.timeline.set(entries); this.cdr.detectChanges(); }
     });
     this.cardService.getPayments(id).subscribe({
       next: (payments) => {
@@ -794,10 +699,15 @@ export class CardDetailComponent implements OnInit {
   }
 
   recordPayment(): void {
-    import('../../../shared/record-payment-dialog.component').then(m => {
-      const dialogRef = this.dialog.open(m.RecordPaymentDialogComponent, {
-        width: '440px',
-        data: { debtType: 'CreditCard', debtId: this.card()!.id, debtName: this.card()!.cardName, currentBalance: this.card()!.currentBalance, minimumPayment: this.card()!.minimumPayment }
+    import('../../finance/expenses/add-expense-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.AddExpenseDialogComponent, {
+        width: '520px',
+        maxHeight: '90vh',
+        data: {
+          expense: null,
+          preselectedType: 'CardPayment',
+          preselectedDebtKey: `CreditCard:${this.card()!.id}`
+        }
       });
       dialogRef.afterClosed().subscribe(result => {
         if (result) this.loadCard();
@@ -862,14 +772,14 @@ export class CardDetailComponent implements OnInit {
   }
 
   editPayment(payment: PaymentHistory): void {
-    import('../../../shared/record-payment-dialog.component').then(m => {
-      const dialogRef = this.dialog.open(m.RecordPaymentDialogComponent, {
-        width: '440px',
+    import('../../finance/expenses/add-expense-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.AddExpenseDialogComponent, {
+        width: '520px',
+        maxHeight: '90vh',
         data: {
-          debtType: 'CreditCard',
-          debtId: this.card()!.id,
-          debtName: this.card()!.cardName,
-          currentBalance: this.card()!.currentBalance,
+          expense: null,
+          preselectedType: 'CardPayment',
+          preselectedDebtKey: `CreditCard:${this.card()!.id}`,
           existingPayment: payment
         }
       });

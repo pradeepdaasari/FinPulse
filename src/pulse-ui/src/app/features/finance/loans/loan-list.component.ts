@@ -12,7 +12,6 @@ import { PersonalLoan } from '../../../core/models/personal-loan.model';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AddLoanDialogComponent } from './add-loan-dialog.component';
 import { EditLoanDialogComponent } from './edit-loan-dialog.component';
-import { RecordPaymentDialogComponent } from '../../../shared/record-payment-dialog.component';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directive';
 
@@ -537,25 +536,22 @@ export class LoanListComponent implements OnInit {
   }
 
   recordPayment(loan: PersonalLoan): void {
-    const dialogRef = this.dialog.open(RecordPaymentDialogComponent, {
-      width: '480px',
-      maxWidth: '95vw',
-      data: {
-        debtId: loan.id,
-        debtName: loan.lenderName,
-        debtType: 'PersonalLoan',
-        currentBalance: loan.currentBalance,
-        minimumPayment: loan.monthlyPayment,
-        aprPercent: loan.aprPercent,
-        paymentFrequency: loan.paymentFrequency,
-        fundedBankAccountId: loan.fundedBankAccountId
-      }
-    });
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.notify.success('Payment recorded successfully');
-        this.loadLoans();
-      }
+    import('../../finance/expenses/add-expense-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.AddExpenseDialogComponent, {
+        width: '520px',
+        maxHeight: '90vh',
+        data: {
+          expense: null,
+          preselectedType: 'LoanPayment',
+          preselectedDebtKey: `PersonalLoan:${loan.id}`
+        }
+      });
+      dialogRef.afterClosed().subscribe(result => {
+        if (result) {
+          this.notify.success('Payment recorded successfully');
+          this.loadLoans();
+        }
+      });
     });
   }
 

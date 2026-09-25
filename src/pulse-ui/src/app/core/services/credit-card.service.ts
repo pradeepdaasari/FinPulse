@@ -2,7 +2,6 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { CreditCard } from '../models/credit-card.model';
-import { PayoffEntry } from '../models/dashboard.model';
 import { PaymentHistory } from '../models/payment-history.model';
 import { environment } from '../../../environments/environment';
 
@@ -29,10 +28,6 @@ export class CreditCardService {
 
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
-  }
-
-  getPayoffTimeline(id: string): Observable<PayoffEntry[]> {
-    return this.http.get<PayoffEntry[]>(`${this.baseUrl}/${id}/payoff-timeline`);
   }
 
   recordPayment(id: string, payment: { amountPaid: number; paymentDate: string; notes?: string }): Observable<PaymentHistory> {

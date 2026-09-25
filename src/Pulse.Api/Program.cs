@@ -103,9 +103,7 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
-    SeedData.Initialize(db);
-
-    // Seed Admin role and user
+    // Seed Admin role and user first, so seed data gets the correct UserId
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
@@ -129,6 +127,19 @@ using (var scope = app.Services.CreateScope())
         {
             await userManager.AddToRoleAsync(admin, "Admin");
         }
+    }
+
+    // Find the first admin user to own seed data and fix orphaned records
+    var adminUsers = await userManager.GetUsersInRoleAsync("Admin");
+    var primaryUser = adminUsers.FirstOrDefault();
+    var seedUserId = primaryUser?.Id;
+
+    SeedData.Initialize(db, seedUserId);
+
+    // Fix any existing records with NULL UserId (from prior seed bug)
+    if (seedUserId != null)
+    {
+        SeedData.ClaimOrphanedRecords(db, seedUserId);
     }
 
 }

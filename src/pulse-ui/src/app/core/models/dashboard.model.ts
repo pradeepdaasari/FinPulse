@@ -37,14 +37,6 @@ export interface AmortizationSchedule {
   totalCost: number;
 }
 
-export interface PayoffEntry {
-  month: number;
-  date: string;
-  payment: number;
-  principal: number;
-  interest: number;
-  remainingBalance: number;
-}
 
 export interface MonthlySnapshotPoint {
   year: number;

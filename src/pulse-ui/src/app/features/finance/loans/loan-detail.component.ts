@@ -388,10 +388,15 @@ export class LoanDetailComponent implements OnInit {
   }
 
   recordPayment(): void {
-    import('../../../shared/record-payment-dialog.component').then(m => {
-      const dialogRef = this.dialog.open(m.RecordPaymentDialogComponent, {
-        width: '440px',
-        data: { debtType: 'PersonalLoan', debtId: this.loan()!.id, debtName: this.loan()!.lenderName, currentBalance: this.loan()!.currentBalance, minimumPayment: this.loan()!.monthlyPayment, aprPercent: this.loan()!.aprPercent, paymentFrequency: this.loan()!.paymentFrequency, fundedBankAccountId: this.loan()!.fundedBankAccountId }
+    import('../../finance/expenses/add-expense-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.AddExpenseDialogComponent, {
+        width: '520px',
+        maxHeight: '90vh',
+        data: {
+          expense: null,
+          preselectedType: 'LoanPayment',
+          preselectedDebtKey: `PersonalLoan:${this.loan()!.id}`
+        }
       });
       dialogRef.afterClosed().subscribe(result => {
         if (result) this.loadLoan();
@@ -457,18 +462,14 @@ export class LoanDetailComponent implements OnInit {
 
   editPayment(payment: PaymentHistory): void {
     const loan = this.loan()!;
-    const balanceAtPayment = this.computeBalanceAtPayment(payment);
-    import('../../../shared/record-payment-dialog.component').then(m => {
-      const dialogRef = this.dialog.open(m.RecordPaymentDialogComponent, {
-        width: '440px',
+    import('../../finance/expenses/add-expense-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.AddExpenseDialogComponent, {
+        width: '520px',
+        maxHeight: '90vh',
         data: {
-          debtType: 'PersonalLoan',
-          debtId: loan.id,
-          debtName: loan.lenderName,
-          currentBalance: balanceAtPayment,
-          aprPercent: loan.aprPercent,
-          paymentFrequency: loan.paymentFrequency,
-          fundedBankAccountId: loan.fundedBankAccountId,
+          expense: null,
+          preselectedType: 'LoanPayment',
+          preselectedDebtKey: `PersonalLoan:${loan.id}`,
           existingPayment: payment
         }
       });

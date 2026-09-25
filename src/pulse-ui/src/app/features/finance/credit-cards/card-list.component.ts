@@ -14,7 +14,6 @@ import { CreditCard } from '../../../core/models/credit-card.model';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AddCardDialogComponent } from './add-card-dialog.component';
 import { UpdateBalanceDialogComponent } from './update-balance-dialog.component';
-import { RecordPaymentDialogComponent } from '../../../shared/record-payment-dialog.component';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directive';
 
@@ -529,22 +528,22 @@ export class CardListComponent implements OnInit {
   }
 
   recordPayment(card: CreditCard): void {
-    const dialogRef = this.dialog.open(RecordPaymentDialogComponent, {
-      width: '480px',
-      maxWidth: '95vw',
-      data: {
-        debtId: card.id,
-        debtName: card.cardName,
-        debtType: 'CreditCard',
-        currentBalance: card.currentBalance,
-        minimumPayment: card.minimumPayment
-      }
-    });
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.notify.success('Payment recorded successfully');
-        this.loadCards();
-      }
+    import('../../finance/expenses/add-expense-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.AddExpenseDialogComponent, {
+        width: '520px',
+        maxHeight: '90vh',
+        data: {
+          expense: null,
+          preselectedType: 'CardPayment',
+          preselectedDebtKey: `CreditCard:${card.id}`
+        }
+      });
+      dialogRef.afterClosed().subscribe(result => {
+        if (result) {
+          this.notify.success('Payment recorded successfully');
+          this.loadCards();
+        }
+      });
     });
   }
 

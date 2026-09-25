@@ -14,6 +14,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DailyExpense, DailyExpenseCreate, TransactionType, FundingSourceType } from '../../../core/models/daily-expense.model';
+import { PaymentHistory } from '../../../core/models/payment-history.model';
 import { toLocalISOString } from '../../../core/utils/date-utils';
 import { Category } from '../../../core/models/category.model';
 import { CategoryService } from '../../../core/services/category.service';
@@ -34,6 +35,7 @@ export interface ExpenseDialogData {
   preselectedType?: string;
   preselectedDebtKey?: string;
   returnPayload?: boolean;
+  existingPayment?: PaymentHistory;
 }
 
 @Component({
@@ -52,12 +54,12 @@ export interface ExpenseDialogData {
           <mat-icon>receipt_long</mat-icon>
         </div>
         <div>
-          <h2 mat-dialog-title>{{ data?.expense ? 'Edit' : 'Log' }} Transaction</h2>
-          <p class="dialog-subtitle">Track every dollar, build better habits</p>
+          <h2 mat-dialog-title>{{ data?.existingPayment ? 'Edit Payment' : data?.expense ? 'Edit' : 'Log' }} Transaction</h2>
+          <p class="dialog-subtitle">{{ data?.existingPayment ? 'Update payment details' : 'Track every dollar, build better habits' }}</p>
         </div>
         <span class="banner-spacer"></span>
         <div class="dialog-header-actions">
-          @if (data?.expense) {
+          @if (data?.expense || data?.existingPayment) {
             <button mat-icon-button class="header-delete" (click)="confirmDelete()" matTooltip="Delete">
               <mat-icon>delete_outline</mat-icon>
             </button>
@@ -493,8 +495,8 @@ export interface ExpenseDialogData {
           <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
           Saving...
         } @else {
-          <mat-icon>{{ data?.expense ? 'check' : 'check' }}</mat-icon>
-          {{ data?.expense ? 'Update Transaction' : 'Save Transaction' }}
+          <mat-icon>check</mat-icon>
+          {{ data?.existingPayment ? 'Update Payment' : data?.expense ? 'Update Transaction' : 'Save Transaction' }}
         }
       </button>
     </div>
@@ -1126,7 +1128,7 @@ export class AddExpenseDialogComponent implements OnInit {
     return q ? this.filteredSources().filter(s => s.name.toLowerCase().includes(q)) : this.filteredSources();
   });
   selectedDebt = signal<DebtItem | null>(null);
-  loanPaymentMode = signal<'full' | 'minimum' | 'custom'>('full');
+  loanPaymentMode = signal<'full' | 'minimum' | 'custom'>(this.data?.existingPayment ? 'custom' : 'full');
   savingLoanPayment = signal(false);
   cardMinPayments = new Map<number, number>();
   private sourceUsageMap = new Map<string, number>();
@@ -1230,22 +1232,31 @@ export class AddExpenseDialogComponent implements OnInit {
     return new Date(year, month, day);
   }
 
+  private get paymentDate(): Date {
+    return this.data?.existingPayment ? new Date(this.data.existingPayment.paymentDate) : new Date();
+  }
+
+  private get paymentFundingKey(): string | null {
+    const p = this.data?.existingPayment;
+    return p?.fromAccountId ? `BankAccount:${p.fromAccountId}` : null;
+  }
+
   form = this.fb.group({
     transactionType: [(this.data?.preselectedType ?? this.source?.transactionType ?? 'Expense') as TransactionType, Validators.required],
-    date: [this.data?.expense ? this.getDateInUserTz(new Date(this.data.expense.date)) : this.getDateInUserTz(new Date()), Validators.required],
-    time: [this.data?.expense ? this.getTimeInUserTz(new Date(this.data.expense.date)) : this.getTimeInUserTz(new Date()), Validators.required],
+    date: [this.data?.existingPayment ? this.getDateInUserTz(this.paymentDate) : this.data?.expense ? this.getDateInUserTz(new Date(this.data.expense.date)) : this.getDateInUserTz(new Date()), Validators.required],
+    time: [this.data?.existingPayment ? this.getTimeInUserTz(this.paymentDate) : this.data?.expense ? this.getTimeInUserTz(new Date(this.data.expense.date)) : this.getTimeInUserTz(new Date()), Validators.required],
     categoryId: [this.source?.categoryId ?? this.data?.prefilledCategoryId ?? null as number | null],
-    amount: [this.source?.amount ?? null as number | null, [Validators.required, Validators.min(0.01)]],
+    amount: [this.data?.existingPayment?.amountPaid ?? this.source?.amount ?? null as number | null, [Validators.required, Validators.min(0.01)]],
     merchant: [this.source?.merchant ?? '', Validators.required],
-    description: [this.source?.description ?? '', [Validators.required, Validators.maxLength(500)]],
-    fundingSourceKey: [this.buildSourceKey(this.source as DailyExpense | null) as string | null, Validators.required],
+    description: [this.data?.existingPayment?.notes ?? this.source?.description ?? '', [Validators.required, Validators.maxLength(500)]],
+    fundingSourceKey: [this.paymentFundingKey ?? this.buildSourceKey(this.source as DailyExpense | null) as string | null, Validators.required],
     toFundingSourceKey: [this.buildToSourceKey(this.source as DailyExpense | null) as string | null],
     tag: [this.source?.tag ?? ''],
     tagType: [this.source?.tagType ?? ''],
     customTagType: [''],
     newCategoryName: [''],
     newCategoryParent: [null as number | null],
-    selectedDebtKey: [null as string | null]
+    selectedDebtKey: [this.data?.preselectedDebtKey ?? null as string | null]
   });
 
   private checkLoaded(): void {
@@ -1335,7 +1346,7 @@ export class AddExpenseDialogComponent implements OnInit {
       this.debts.set(debts.sort((a, b) => a.name.localeCompare(b.name)));
       if (this.data?.preselectedDebtKey) {
         this.form.patchValue({ selectedDebtKey: this.data.preselectedDebtKey });
-        this.onDebtSelected(this.data.preselectedDebtKey);
+        this.onDebtSelected(this.data.preselectedDebtKey, !!this.data.existingPayment);
         const txnType = this.form.value.transactionType;
         if (txnType === 'CardPayment') this.cardInputCtrl.setValue(this.data.preselectedDebtKey, { emitEvent: false });
         else if (txnType === 'LoanPayment') this.loanInputCtrl.setValue(this.data.preselectedDebtKey, { emitEvent: false });
@@ -1502,7 +1513,18 @@ export class AddExpenseDialogComponent implements OnInit {
     }
 
     this.savingLoanPayment.set(true);
-    this.paymentService.recordPayment(debt.type, debt.id, amount, description, this.buildDateTime(), fromAccountId).subscribe({
+
+    const existingPayment = this.data?.existingPayment;
+    const request$ = existingPayment
+      ? this.paymentService.update(existingPayment.id, {
+          amountPaid: amount,
+          paymentDate: toLocalISOString(this.buildDateTime()),
+          notes: description || undefined,
+          fromAccountId: fromAccountId ?? undefined
+        })
+      : this.paymentService.recordPayment(debt.type, debt.id, amount, description, this.buildDateTime(), fromAccountId);
+
+    request$.subscribe({
       next: () => {
         this.savingLoanPayment.set(false);
         this.dialogRef.close({ loanPayment: true, debtName: debt.name, amount });
@@ -1515,10 +1537,10 @@ export class AddExpenseDialogComponent implements OnInit {
     });
   }
 
-  onDebtSelected(key: string): void {
+  onDebtSelected(key: string, preserveAmount = false): void {
     const debt = this.debts().find(d => d.key === key) ?? null;
     this.selectedDebt.set(debt);
-    if (debt) {
+    if (debt && !preserveAmount) {
       this.loanPaymentMode.set('full');
       this.form.patchValue({ amount: debt.monthlyPayment });
     }
@@ -1578,7 +1600,14 @@ export class AddExpenseDialogComponent implements OnInit {
   }
 
   confirmDelete(): void {
-    if (confirm('Delete this transaction? This cannot be undone.')) {
+    if (this.data?.existingPayment) {
+      if (confirm('Delete this payment? Balances will be restored. This cannot be undone.')) {
+        this.paymentService.delete(this.data.existingPayment.id).subscribe({
+          next: () => this.dialogRef.close('delete'),
+          error: (err: any) => this.notify.error(err?.error?.error || 'Failed to delete payment')
+        });
+      }
+    } else if (confirm('Delete this transaction? This cannot be undone.')) {
       this.dialogRef.close('delete');
     }
   }

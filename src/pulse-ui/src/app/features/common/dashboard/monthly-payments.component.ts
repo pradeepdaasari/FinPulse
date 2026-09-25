@@ -12,7 +12,6 @@ import { DebtService } from '../../../core/services/debt.service';
 import { UserProfileService } from '../../../core/services/user-profile.service';
 import { PaymentService } from '../../../core/services/payment.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import { RecordPaymentDialogComponent } from '../../../shared/record-payment-dialog.component';
 import { DebtItem } from '../../../core/models/debt-item.model';
 import { roundCurrency, sumCurrency } from '../../../core/utils/currency';
 
@@ -273,25 +272,23 @@ export class MonthlyPaymentsComponent implements OnInit {
   }
 
   recordPayment(payment: MonthlyPayment): void {
-    const dialogRef = this.dialog.open(RecordPaymentDialogComponent, {
-      width: '480px',
-      maxWidth: '95vw',
-      data: {
-        debtId: payment.id,
-        debtName: payment.name,
-        debtType: payment.type === 'Loan' ? 'PersonalLoan' : 'CreditCard',
-        currentBalance: payment.currentBalance,
-        minimumPayment: payment.minimumPayment,
-        aprPercent: payment.aprPercent,
-        paymentFrequency: payment.paymentFrequency,
-        fundedBankAccountId: payment.fundedBankAccountId
-      }
-    });
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.notify.success('Payment recorded successfully');
-        this.loadPayments();
-      }
+    import('../../finance/expenses/add-expense-dialog.component').then(m => {
+      const debtType = payment.type === 'Loan' ? 'PersonalLoan' : 'CreditCard';
+      const dialogRef = this.dialog.open(m.AddExpenseDialogComponent, {
+        width: '520px',
+        maxHeight: '90vh',
+        data: {
+          expense: null,
+          preselectedType: debtType === 'PersonalLoan' ? 'LoanPayment' : 'CardPayment',
+          preselectedDebtKey: `${debtType}:${payment.id}`
+        }
+      });
+      dialogRef.afterClosed().subscribe(result => {
+        if (result) {
+          this.notify.success('Payment recorded successfully');
+          this.loadPayments();
+        }
+      });
     });
   }
 
