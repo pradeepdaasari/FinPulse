@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, ChangeDetectorRef, afterNextRender, viewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormArray, FormGroup, FormControl, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -940,6 +940,13 @@ export class AddExpenseDialogComponent implements OnInit {
   private notify = inject(NotificationService);
   data = inject<ExpenseDialogData>(MAT_DIALOG_DATA);
   private cdr = inject(ChangeDetectorRef);
+  amountInput = viewChild<ElementRef<HTMLInputElement>>('amountInput');
+
+  constructor() {
+    afterNextRender(() => {
+      setTimeout(() => this.amountInput()?.nativeElement.focus(), 150);
+    });
+  }
 
   loading = signal(true);
   private loadCount = 0;
