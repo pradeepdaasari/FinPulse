@@ -8,6 +8,7 @@ export class LocalDatePipe implements PipeTransform {
     const year = +parts[0];
     const month = +parts[1];
     const day = +parts[2];
+    const d = new Date(year, month - 1, day);
 
     switch (format) {
       case 'M/d':
@@ -22,6 +23,12 @@ export class LocalDatePipe implements PipeTransform {
         return `${this.monthShort(month)} ${year}`;
       case 'mediumDate':
         return `${this.monthShort(month)} ${day}, ${year}`;
+      case 'EEEE, MMM d':
+        return `${this.dayFull(d.getDay())}, ${this.monthShort(month)} ${day}`;
+      case 'EEEE, MMM d, y':
+        return `${this.dayFull(d.getDay())}, ${this.monthShort(month)} ${day}, ${year}`;
+      case 'EEE, MMM d':
+        return `${this.dayShort(d.getDay())}, ${this.monthShort(month)} ${day}`;
       default:
         return `${month}/${day}/${year}`;
     }
@@ -29,5 +36,13 @@ export class LocalDatePipe implements PipeTransform {
 
   private monthShort(m: number): string {
     return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m - 1];
+  }
+
+  private dayFull(d: number): string {
+    return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d];
+  }
+
+  private dayShort(d: number): string {
+    return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d];
   }
 }

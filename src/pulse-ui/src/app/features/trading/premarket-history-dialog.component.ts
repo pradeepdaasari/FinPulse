@@ -1,5 +1,6 @@
 import { Component, inject, OnInit, signal, ChangeDetectorRef } from '@angular/core';
-import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { CommonModule, CurrencyPipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,7 +11,7 @@ import { PreMarketNote } from '../../core/models/trading.model';
 @Component({
   selector: 'app-premarket-history-dialog',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, CurrencyPipe, LocalDatePipe],
   template: `
     <h2 mat-dialog-title>Pre-Market History</h2>
     <mat-dialog-content>
@@ -23,7 +24,7 @@ import { PreMarketNote } from '../../core/models/trading.model';
       @for (note of notes(); track note.id) {
         <div class="history-card">
           <div class="history-header">
-            <span class="history-date">{{ note.date | date:'mediumDate' }}</span>
+            <span class="history-date">{{ note.date | localDate:'mediumDate' }}</span>
             <span class="mental-badge" [class]="'mental-' + note.mentalState">{{ note.mentalState }}</span>
             <span class="bias-badge" [class]="'bias-' + note.marketBias">{{ note.marketBias }}</span>
           </div>

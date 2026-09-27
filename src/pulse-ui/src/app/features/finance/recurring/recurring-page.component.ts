@@ -1,5 +1,6 @@
 import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
-import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { CommonModule, CurrencyPipe } from '@angular/common';
+import { LocalDatePipe } from '../../../shared/local-date.pipe';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,6 +8,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
+
 import { MatDialog } from '@angular/material/dialog';
 import { RecurringService } from '../../../core/services/recurring.service';
 import { RecurringTransaction } from '../../../core/models/recurring.model';
@@ -18,10 +20,11 @@ import { AddExpenseDialogComponent, ExpenseDialogData } from '../expenses/add-ex
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directive';
 
+
 @Component({
   selector: 'app-recurring-page',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatSlideToggleModule, MatTooltipModule, CurrencyPipe, DatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatSlideToggleModule, MatTooltipModule, CurrencyPipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadData()">
     <div class="header-row">
@@ -49,22 +52,15 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
         <div class="stat-card stat-blue">
           <mat-icon>repeat</mat-icon>
           <div class="stat-content">
-            <span class="stat-value">{{ items().length }}</span>
-            <span class="stat-label">Total Recurring</span>
-          </div>
-        </div>
-        <div class="stat-card stat-green">
-          <mat-icon>check_circle</mat-icon>
-          <div class="stat-content">
             <span class="stat-value">{{ activeCount() }}</span>
             <span class="stat-label">Active</span>
           </div>
         </div>
         <div class="stat-card stat-amber">
-          <mat-icon>payments</mat-icon>
+          <mat-icon>receipt_long</mat-icon>
           <div class="stat-content">
-            <span class="stat-value">{{ monthlyTotal() | currency:'USD':'symbol':'1.0-0' }}</span>
-            <span class="stat-label">Monthly Total</span>
+            <span class="stat-value">{{ billMonthlyTotal() | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="stat-label">Monthly Bills</span>
           </div>
         </div>
         @if (overdueItems().length > 0) {
@@ -86,12 +82,12 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
         }
       </div>
 
-      <!-- Overdue Section -->
+      <!-- Overdue Section (Bills only) -->
       @if (overdueItems().length > 0) {
         <div class="due-section overdue-section">
           <div class="due-header overdue-header">
             <mat-icon>warning</mat-icon>
-            <span>{{ overdueItems().length }} payment{{ overdueItems().length > 1 ? 's' : '' }} past due</span>
+            <span>{{ overdueItems().length }} bill{{ overdueItems().length > 1 ? 's' : '' }} past due</span>
           </div>
           @for (r of overdueItems(); track r.id) {
             <div class="due-card">
@@ -101,7 +97,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                 </div>
                 <div>
                   <div class="desc-text">{{ r.description }}</div>
-                  <div class="overdue-date-text">{{ daysOverdue(r) }} day{{ daysOverdue(r) > 1 ? 's' : '' }} overdue &middot; Was due {{ r.nextRunDate | date:'MMM d' }}</div>
+                  <div class="overdue-date-text">{{ daysOverdue(r) }} day{{ daysOverdue(r) > 1 ? 's' : '' }} overdue &middot; Was due {{ r.nextRunDate | localDate:'MMM d' }}</div>
                 </div>
               </div>
               <div class="due-right">
@@ -115,12 +111,12 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
         </div>
       }
 
-      <!-- Due Today Section -->
+      <!-- Due Today Section (Bills only) -->
       @if (dueTodayItems().length > 0) {
         <div class="due-section">
           <div class="due-header">
             <mat-icon>notifications_active</mat-icon>
-            <span>{{ dueTodayItems().length }} payment{{ dueTodayItems().length > 1 ? 's' : '' }} due today</span>
+            <span>{{ dueTodayItems().length }} bill{{ dueTodayItems().length > 1 ? 's' : '' }} due today</span>
           </div>
           @for (r of dueTodayItems(); track r.id) {
             <div class="due-card">
@@ -144,10 +140,11 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
         </div>
       }
 
-      <!-- Desktop table -->
+      <!-- Desktop table (Bills only) -->
+      @if (billItems().length > 0) {
       <mat-card class="desktop-only">
         <div class="table-wrapper">
-        <table mat-table [dataSource]="items()">
+        <table mat-table [dataSource]="billItems()">
           <ng-container matColumnDef="description">
             <th mat-header-cell *matHeaderCellDef>Description</th>
             <td mat-cell *matCellDef="let r">
@@ -182,7 +179,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
           <ng-container matColumnDef="nextRunDate">
             <th mat-header-cell *matHeaderCellDef>Next Run</th>
             <td mat-cell *matCellDef="let r">
-              <span [class.due-highlight]="isDue(r) && !isOverdue(r)" [class.overdue-highlight]="isOverdue(r)">{{ r.nextRunDate | date:'mediumDate' }}</span>
+              <span [class.due-highlight]="isDue(r) && !isOverdue(r)" [class.overdue-highlight]="isOverdue(r)">{{ r.nextRunDate | localDate:'mediumDate' }}</span>
               @if (isOverdue(r)) { <span class="overdue-badge">{{ daysOverdue(r) }}d overdue</span> }
             </td>
           </ng-container>
@@ -209,10 +206,10 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                     <mat-icon>{{ isDue(r) ? 'check_circle' : 'payments' }}</mat-icon>
                   </button>
                 }
-                <button mat-icon-button class="action-btn action-edit" (click)="edit(r)">
+                <button mat-icon-button class="action-btn action-edit" (click)="edit(r)" matTooltip="Edit">
                   <mat-icon>edit</mat-icon>
                 </button>
-                <button mat-icon-button class="action-btn action-delete" (click)="deleteItem(r)">
+                <button mat-icon-button class="action-btn action-delete" (click)="deleteItem(r)" matTooltip="Delete">
                   <mat-icon>delete_outline</mat-icon>
                 </button>
               </div>
@@ -225,9 +222,9 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
         </div>
       </mat-card>
 
-      <!-- Mobile cards -->
+      <!-- Mobile cards (Bills only) -->
       <div class="mobile-cards">
-        @for (r of items(); track r.id) {
+        @for (r of billItems(); track r.id) {
           <div class="rec-card" [class.rec-paused]="!r.isActive" [class.rec-due]="isDue(r) && !isOverdue(r)" [class.rec-overdue]="isOverdue(r)">
             <div class="rec-top">
               <div class="rec-icon-wrap">
@@ -244,9 +241,9 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
             </div>
             <div class="rec-bottom">
               @if (isOverdue(r)) {
-                <span class="overdue-date-text">{{ daysOverdue(r) }}d overdue &middot; Due {{ r.nextRunDate | date:'MMM d' }}</span>
+                <span class="overdue-date-text">{{ daysOverdue(r) }}d overdue &middot; Due {{ r.nextRunDate | localDate:'MMM d' }}</span>
               } @else {
-                <span class="rec-next">Next: {{ r.nextRunDate | date:'MMM d' }}</span>
+                <span class="rec-next">Next: {{ r.nextRunDate | localDate:'MMM d' }}</span>
               }
               <div class="rec-actions">
                 @if (isCurrentMonth(r)) {
@@ -254,11 +251,11 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                     <mat-icon>{{ isDue(r) ? 'check_circle' : 'payments' }}</mat-icon> {{ isDue(r) ? 'Pay' : 'Pay Now' }}
                   </button>
                 }
-                <mat-slide-toggle [checked]="r.isActive" (change)="toggleStatus(r)" color="primary"></mat-slide-toggle>
-                <button mat-icon-button class="action-btn action-edit" (click)="edit(r)">
+                <mat-slide-toggle [checked]="r.isActive" (change)="toggleStatus(r)" color="primary" [aria-label]="r.isActive ? 'Pause ' + r.description : 'Activate ' + r.description"></mat-slide-toggle>
+                <button mat-icon-button class="action-btn action-edit" (click)="edit(r)" aria-label="Edit">
                   <mat-icon>edit</mat-icon>
                 </button>
-                <button mat-icon-button class="action-btn action-delete" (click)="deleteItem(r)">
+                <button mat-icon-button class="action-btn action-delete" (click)="deleteItem(r)" aria-label="Delete">
                   <mat-icon>delete_outline</mat-icon>
                 </button>
               </div>
@@ -266,6 +263,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
           </div>
         }
       </div>
+      }
     }
     </div>
   `,
@@ -277,7 +275,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
 
     /* Summary Stats */
     .stats-row {
-      display: grid; grid-template-columns: repeat(4, 1fr);
+      display: grid; grid-template-columns: repeat(3, 1fr);
       gap: var(--spacing-sm); margin-bottom: var(--spacing-md);
     }
     .stat-card {
@@ -423,7 +421,10 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       .stat-card mat-icon { font-size: 22px; width: 22px; height: 22px; padding: 8px; border-radius: var(--radius-sm); box-sizing: content-box; overflow: visible; }
       .stat-value { font-size: 1rem; }
       .action-btn { min-width: 44px; min-height: 44px; }
+      .pay-btn { min-height: 44px !important; }
       .pay-btn-sm { min-height: 44px !important; line-height: 44px !important; padding: 0 14px !important; }
+      .due-card { flex-wrap: wrap; gap: 8px; }
+      .due-right { width: 100%; justify-content: flex-end; }
       .rec-card { -webkit-tap-highlight-color: transparent; }
       .rec-card:active { transform: scale(0.98); }
     }
@@ -447,31 +448,36 @@ export class RecurringPageComponent implements OnInit {
     const tz = localStorage.getItem('pulse_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
     return new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
   });
-  dueItems = computed(() => this.items().filter(i => i.isActive && i.nextRunDate.slice(0, 10) <= this.todayStr()));
-  overdueItems = computed(() => this.items().filter(i => i.isActive && i.nextRunDate.slice(0, 10) < this.todayStr()));
-  dueTodayItems = computed(() => this.items().filter(i => i.isActive && i.nextRunDate.slice(0, 10) === this.todayStr()));
-  monthlyTotal = computed(() => {
-    return this.items()
-      .filter(i => i.isActive)
-      .reduce((sum, i) => {
-        switch (i.frequency) {
-          case 'Daily': return sum + i.amount * 30;
-          case 'Weekly': return sum + i.amount * 4.33;
-          case 'Biweekly': return sum + i.amount * 2.17;
-          case 'Monthly': return sum + i.amount;
-          default: return sum + i.amount;
-        }
-      }, 0);
-  });
 
+  billItems = computed(() => this.items().filter(i => i.recurringType !== 'Budget'));
+  overdueItems = computed(() => this.billItems().filter(i => i.isActive && i.nextRunDate.slice(0, 10) < this.todayStr()));
+  dueTodayItems = computed(() => this.billItems().filter(i => i.isActive && i.nextRunDate.slice(0, 10) === this.todayStr()));
+  dueItems = computed(() => this.billItems().filter(i => i.isActive && i.nextRunDate.slice(0, 10) <= this.todayStr()));
+
+  private monthlyCalc(items: RecurringTransaction[]): number {
+    return items.filter(i => i.isActive).reduce((sum, i) => {
+      switch (i.frequency) {
+        case 'Daily': return sum + i.amount * 30;
+        case 'Weekly': return sum + i.amount * 4.33;
+        case 'Biweekly': return sum + i.amount * 2.17;
+        case 'Monthly': return sum + i.amount;
+        default: return sum + i.amount;
+      }
+    }, 0);
+  }
+  billMonthlyTotal = computed(() => this.monthlyCalc(this.billItems()));
   ngOnInit(): void {
     this.loadData();
   }
 
   loadData(): void {
     this.service.getAll().subscribe({
-      next: (items) => { this.items.set(items); this.loading.set(false); this.cdr.detectChanges(); },
-      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
+      next: (items) => {
+        this.items.set(items);
+        this.loading.set(false);
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loading.set(false); this.notify.error('Failed to load recurring items'); this.cdr.detectChanges(); }
     });
   }
 
@@ -491,6 +497,11 @@ export class RecurringPageComponent implements OnInit {
     });
   }
 
+  private recurringTypeToNumber(type: string): number {
+    const map: Record<string, number> = { Bill: 0, Budget: 1 };
+    return map[type] ?? 0;
+  }
+
   toggleStatus(item: RecurringTransaction): void {
     const updated = {
       description: item.description,
@@ -500,6 +511,7 @@ export class RecurringPageComponent implements OnInit {
       transactionType: this.transactionTypeToNumber(item.transactionType),
       fundingSourceType: item.fundingSourceType ? this.fundingSourceToNumber(item.fundingSourceType) : undefined,
       fundingSourceId: item.fundingSourceId,
+      recurringType: this.recurringTypeToNumber(item.recurringType),
       frequency: this.frequencyToNumber(item.frequency),
       nextRunDate: item.nextRunDate,
       endDate: item.endDate,

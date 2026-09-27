@@ -238,7 +238,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       <mat-card class="table-card" style="margin-bottom: 20px;">
         <mat-card-content>
           <h3 class="section-title">Win Rate by Trade # in Session</h3>
-          <div class="table-scroll">
+          <div class="table-scroll table-wrapper">
             <table class="data-table">
               <thead>
                 <tr><th>Trade #</th><th>Count</th><th>Win Rate</th><th>Avg P&L</th></tr>
@@ -264,7 +264,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       <mat-card class="table-card">
         <mat-card-content>
           <h3 class="section-title">Performance by Day of Week</h3>
-          <div class="table-scroll">
+          <div class="table-scroll table-wrapper">
             <table class="data-table">
               <thead>
                 <tr><th>Day</th><th>Trades</th><th>Win Rate</th><th>Avg P&L</th><th>Net P&L</th></tr>
@@ -287,7 +287,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       <mat-card class="table-card">
         <mat-card-content>
           <h3 class="section-title">Performance by Instrument</h3>
-          <div class="table-scroll">
+          <div class="table-scroll table-wrapper">
             <table class="data-table">
               <thead>
                 <tr><th>Instrument</th><th>Trades</th><th>Win Rate</th><th>Avg P&L</th><th>Net P&L</th></tr>
@@ -314,7 +314,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       <mat-card class="table-card">
         <mat-card-content>
           <h3 class="section-title">Performance by Setup</h3>
-          <div class="table-scroll">
+          <div class="table-scroll table-wrapper">
             <table class="data-table">
               <thead>
                 <tr><th>Setup</th><th>Trades</th><th>Win Rate</th><th>Avg P&L</th><th>Net P&L</th></tr>
@@ -337,7 +337,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       <mat-card class="table-card">
         <mat-card-content>
           <h3 class="section-title">Performance by Time of Day</h3>
-          <div class="table-scroll">
+          <div class="table-scroll table-wrapper">
             <table class="data-table">
               <thead>
                 <tr><th>Time</th><th>Trades</th><th>Win Rate</th><th>Avg P&L</th><th>Net P&L</th></tr>
@@ -366,7 +366,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
           <mat-card class="table-card">
             <mat-card-content>
               <h3 class="section-title">Performance by Emotion</h3>
-              <div class="table-scroll">
+              <div class="table-scroll table-wrapper">
                 <table class="data-table">
                   <thead>
                     <tr><th>Emotion</th><th>Trades</th><th>Win Rate</th><th>Avg P&L</th><th>Net P&L</th></tr>
@@ -391,7 +391,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
           <mat-card class="table-card">
             <mat-card-content>
               <h3 class="section-title">Cost of Mistakes</h3>
-              <div class="table-scroll">
+              <div class="table-scroll table-wrapper">
                 <table class="data-table">
                   <thead>
                     <tr><th>Mistake</th><th>Trades</th><th>Win Rate</th><th>Avg P&L</th><th>Net P&L</th></tr>

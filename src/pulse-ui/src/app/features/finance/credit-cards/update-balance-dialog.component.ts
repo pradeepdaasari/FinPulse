@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef, inject, signal } from '@angular/core';
+import { Component, ChangeDetectorRef, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -12,6 +12,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { CreditCardService } from '../../../core/services/credit-card.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { CreditCard } from '../../../core/models/credit-card.model';
 
 @Component({
@@ -72,6 +73,14 @@ import { CreditCard } from '../../../core/models/credit-card.model';
             <input matInput type="number" inputmode="decimal" formControlName="minimumPayment" step="0.01">
             <span matTextPrefix>$&nbsp;</span>
           </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Statement Date</mat-label>
+            <input matInput [matDatepicker]="stmtPicker" formControlName="lastStatementDate">
+            <mat-datepicker-toggle matIconSuffix [for]="stmtPicker"></mat-datepicker-toggle>
+            <mat-datepicker #stmtPicker></mat-datepicker>
+            <mat-hint>When this statement was issued</mat-hint>
+          </mat-form-field>
         </div>
 
         <div class="form-section">
@@ -113,6 +122,12 @@ import { CreditCard } from '../../../core/models/credit-card.model';
                 <mat-datepicker #promoPicker></mat-datepicker>
               </mat-form-field>
             </div>
+            @if (promoExpiringDays() !== null && promoExpiringDays()! <= 30) {
+              <div class="promo-warning">
+                <mat-icon>warning</mat-icon>
+                <span>Promo rate expires in {{ promoExpiringDays() }} days</span>
+              </div>
+            }
           }
         </div>
       </form>
@@ -258,6 +273,13 @@ import { CreditCard } from '../../../core/models/credit-card.model';
     .promo-fields {
       margin-top: 12px;
     }
+    .promo-warning {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 8px; padding: 8px 12px;
+      background: #fff3e0; border-radius: 6px; border: 1px solid #ffe0b2;
+      font-size: 0.82rem; font-weight: 500; color: #e65100;
+    }
+    .promo-warning mat-icon { font-size: 18px; width: 18px; height: 18px; color: #ff9800; }
 
     @media (max-width: 600px) {
       mat-dialog-content {
@@ -276,8 +298,16 @@ export class UpdateBalanceDialogComponent {
   private dialogRef = inject(MatDialogRef<UpdateBalanceDialogComponent>);
   data: CreditCard = inject(MAT_DIALOG_DATA);
   private cdr = inject(ChangeDetectorRef);
+  private notify = inject(NotificationService);
 
   saving = signal(false);
+
+  promoExpiringDays = computed(() => {
+    const endDate = this.data.promoEndDate;
+    if (!endDate) return null;
+    const diff = Math.ceil((new Date(endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return diff >= 0 ? diff : null;
+  });
 
   form = this.fb.group({
     creditLimit: [this.data.creditLimit, [Validators.required, Validators.min(1)]],
@@ -285,6 +315,7 @@ export class UpdateBalanceDialogComponent {
     minimumPayment: [this.data.minimumPayment, [Validators.required, Validators.min(0)]],
     aprPercent: [this.data.aprPercent, [Validators.required, Validators.min(0)]],
     dueDay: [this.data.dueDay, [Validators.required, Validators.min(1), Validators.max(31)]],
+    lastStatementDate: [this.data.lastStatementDate ? new Date(this.data.lastStatementDate) : null as Date | null],
     hasPromo: [this.data.promoAprPercent != null],
     promoAprPercent: [this.data.promoAprPercent as number | null],
     promoEndDate: [this.data.promoEndDate ? new Date(this.data.promoEndDate) : null as Date | null]
@@ -302,7 +333,8 @@ export class UpdateBalanceDialogComponent {
       minimumPayment: value.minimumPayment!,
       aprPercent: value.aprPercent!,
       dueDay: value.dueDay!,
-      isAutopay: this.data.isAutopay
+      isAutopay: this.data.isAutopay,
+      lastStatementDate: value.lastStatementDate || null
     };
     if (value.hasPromo && value.promoAprPercent != null) {
       payload.promoAprPercent = value.promoAprPercent;
@@ -317,6 +349,7 @@ export class UpdateBalanceDialogComponent {
       },
       error: () => {
         this.saving.set(false);
+        this.notify.error('Failed to update card');
         this.cdr.detectChanges();
       }
     });

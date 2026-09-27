@@ -1,5 +1,6 @@
 import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
-import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common';
+import { LocalDatePipe } from '../../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -24,7 +25,7 @@ import { forkJoin, catchError, of } from 'rxjs';
     CommonModule, MatCardModule, MatIconModule, MatButtonModule,
     MatButtonToggleModule, MatSliderModule, MatTooltipModule,
     SkeletonLoaderComponent, PullToRefreshDirective,
-    CurrencyPipe, DatePipe, DecimalPipe
+    CurrencyPipe, LocalDatePipe, DecimalPipe
   ],
   template: `
     <div appPullToRefresh (refresh)="loadData()">
@@ -109,7 +110,7 @@ import { forkJoin, catchError, of } from 'rxjs';
                 <div class="pc-header">
                   <div class="pc-date-badge">
                     <mat-icon>payments</mat-icon>
-                    <span>{{ pc.date | date:'MMM d' }}</span>
+                    <span>{{ pc.date | localDate:'MMM d' }}</span>
                   </div>
                   <span class="pc-amount">{{ pc.amount | currency:'USD':'symbol':'1.0-0' }} paycheck</span>
                 </div>
@@ -162,7 +163,7 @@ import { forkJoin, catchError, of } from 'rxjs';
               @if (group.paycheckDate) {
                 <div class="paycheck-section-header">
                   <mat-icon>payments</mat-icon>
-                  <span>{{ group.paycheckDate | date:'MMM d' }} paycheck</span>
+                  <span>{{ group.paycheckDate | localDate:'MMM d' }} paycheck</span>
                   <span class="psh-amount">({{ group.paycheckAmount | currency:'USD':'symbol':'1.0-0' }})</span>
                   <span class="psh-allocated">{{ group.total | currency }} allocated</span>
                 </div>

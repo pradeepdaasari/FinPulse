@@ -93,7 +93,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
           </ng-container>
 
           <ng-container matColumnDef="currentBalance">
-            <th mat-header-cell *matHeaderCellDef>Balance</th>
+            <th mat-header-cell *matHeaderCellDef>Statement Bal</th>
             <td mat-cell *matCellDef="let card">
               <span class="value-balance">{{ card.currentBalance | currency }}</span>
             </td>
@@ -213,13 +213,13 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
               </span>
             </div>
             <div class="cc-actions" (click)="$event.stopPropagation()">
-              <button mat-icon-button class="action-btn action-pay" (click)="recordPayment(card)">
+              <button mat-icon-button class="action-btn action-pay" (click)="recordPayment(card)" aria-label="Record payment" matTooltip="Record Payment">
                 <mat-icon>payments</mat-icon>
               </button>
-              <button mat-icon-button class="action-btn action-edit" (click)="updateBalance(card)">
+              <button mat-icon-button class="action-btn action-edit" (click)="updateBalance(card)" aria-label="Update balance" matTooltip="Update Balance">
                 <mat-icon>edit</mat-icon>
               </button>
-              <button mat-icon-button class="action-btn action-delete" (click)="deleteCard(card)">
+              <button mat-icon-button class="action-btn action-delete" (click)="deleteCard(card)" aria-label="Delete card" matTooltip="Delete">
                 <mat-icon>delete_outline</mat-icon>
               </button>
             </div>
@@ -227,7 +227,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
         }
       </div>
     }
-    <button class="mobile-add-fab" (click)="openAddCard()"><mat-icon>add</mat-icon></button>
+    <button class="mobile-add-fab" (click)="openAddCard()" aria-label="Add card"><mat-icon>add</mat-icon></button>
     </div>
   `,
   styles: [`
@@ -502,7 +502,7 @@ export class CardListComponent implements OnInit {
         this.loading.set(false);
         this.cdr.detectChanges();
       },
-      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
+      error: () => { this.loading.set(false); this.notify.error('Failed to load cards'); this.cdr.detectChanges(); }
     });
   }
 
@@ -562,14 +562,22 @@ export class CardListComponent implements OnInit {
   }
 
   deleteCard(card: CreditCard): void {
-    if (!this.notify.confirmDelete(card.cardName)) return;
-    this.loading.set(true);
-    this.cardService.delete(card.id).subscribe({
-      next: () => {
-        this.notify.success('Card deleted successfully');
-        this.loadCards();
-      },
-      error: () => { this.loading.set(false); this.notify.error('Failed to delete card'); this.cdr.detectChanges(); }
+    import('../../../shared/confirm-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.ConfirmDialogComponent, {
+        width: '400px',
+        data: { title: 'Delete Credit Card?', message: `Are you sure you want to delete "${card.cardName}"? This action cannot be undone.`, confirmText: 'Delete', color: 'warn' }
+      });
+      dialogRef.afterClosed().subscribe(confirmed => {
+        if (!confirmed) return;
+        this.loading.set(true);
+        this.cardService.delete(card.id).subscribe({
+          next: () => {
+            this.notify.success('Card deleted successfully');
+            this.loadCards();
+          },
+          error: () => { this.loading.set(false); this.notify.error('Failed to delete card'); this.cdr.detectChanges(); }
+        });
+      });
     });
   }
 

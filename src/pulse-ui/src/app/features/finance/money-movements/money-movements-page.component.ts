@@ -14,6 +14,7 @@ import { MoneyMovement, MovementType } from '../../../core/models/money-movement
 import { AddMovementDialogComponent } from '../../../shared/add-movement-dialog.component';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directive';
+import { toLocalDateString } from '../../../core/utils/date-utils';
 
 @Component({
   selector: 'app-money-movements-page',
@@ -681,7 +682,7 @@ export class MoneyMovementsPageComponent implements OnInit {
   }
 
   private toIso(d: Date): string {
-    return d.toISOString().slice(0, 10);
+    return toLocalDateString(d);
   }
 
   private daysAgo(n: number): string {

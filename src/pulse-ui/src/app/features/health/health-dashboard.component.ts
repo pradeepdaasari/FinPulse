@@ -1,6 +1,7 @@
 import { Component, inject, signal, OnInit, ChangeDetectorRef } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
+import { CommonModule, DecimalPipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
@@ -15,7 +16,7 @@ import { NotificationService } from '../../core/services/notification.service';
 @Component({
   selector: 'app-health-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatIconModule, MatButtonModule, DatePipe, DecimalPipe, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [CommonModule, RouterLink, MatIconModule, MatButtonModule, LocalDatePipe, DecimalPipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadData()">
     <div class="header-row">
@@ -48,7 +49,7 @@ import { NotificationService } from '../../core/services/notification.service';
               </div>
               <div class="mc-mid">
                 <span class="mc-label">{{ metric.metricType }}</span>
-                <span class="mc-date">{{ metric.measuredAt | date:'MMM d' }}</span>
+                <span class="mc-date">{{ metric.measuredAt | localDate:'MMM d' }}</span>
               </div>
               <div class="mc-right">
                 <span class="mc-value">{{ metric.value | number:'1.0-1' }}</span>

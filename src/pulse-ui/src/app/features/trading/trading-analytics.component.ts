@@ -202,7 +202,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       @if (dashboard()!.dayOfWeek.length > 0 && dashboard()!.timeOfDay.length > 0) {
         <div class="chart-card chart-wide">
           <h3 class="chart-title"><mat-icon>grid_on</mat-icon> Trade Volume Heatmap</h3>
-          <div class="heatmap-container">
+          <div class="heatmap-container table-wrapper">
             <table class="heatmap-table">
               <thead>
                 <tr>

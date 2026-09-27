@@ -24,4 +24,6 @@ public class CreditCardCreateDto
     public decimal? PromoAprPercent { get; set; }
 
     public DateTime? PromoEndDate { get; set; }
+
+    public DateTime? LastStatementDate { get; set; }
 }

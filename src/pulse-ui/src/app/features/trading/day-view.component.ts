@@ -19,6 +19,7 @@ import {
 import { TradeNoteDialogComponent } from './trade-note-dialog.component';
 import { TradeNotesPanelComponent } from './trade-notes-panel.component';
 import { EmotionArcComponent, EmotionPoint } from './emotion-arc.component';
+import { toLocalDateString } from '../../core/utils/date-utils';
 
 const EMOTION_DISPLAY: Record<TradeNoteEmotion, { icon: string; color: string }> = {
   confident: { icon: '💪', color: 'var(--color-success)' },
@@ -634,8 +635,7 @@ export class DayViewComponent implements OnInit {
   });
 
   isToday = computed(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    return this.currentDate() === today;
+    return this.currentDate() === toLocalDateString(new Date());
   });
 
   hasOpenTrades = computed(() => {
@@ -715,8 +715,7 @@ export class DayViewComponent implements OnInit {
         this.currentDate.set(date);
         this.loadDay(date);
       } else {
-        const today = new Date().toISOString().slice(0, 10);
-        this.currentDate.set(today);
+        this.currentDate.set(toLocalDateString(new Date()));
         this.loadToday();
       }
     });
@@ -741,15 +740,13 @@ export class DayViewComponent implements OnInit {
   prevDay(): void {
     const d = new Date(this.currentDate() + 'T12:00:00');
     d.setDate(d.getDate() - 1);
-    const newDate = d.toISOString().slice(0, 10);
-    this.router.navigate(['/trading/day', newDate]);
+    this.router.navigate(['/trading/day', toLocalDateString(d)]);
   }
 
   nextDay(): void {
     const d = new Date(this.currentDate() + 'T12:00:00');
     d.setDate(d.getDate() + 1);
-    const newDate = d.toISOString().slice(0, 10);
-    this.router.navigate(['/trading/day', newDate]);
+    this.router.navigate(['/trading/day', toLocalDateString(d)]);
   }
 
   goToToday(): void {

@@ -1,4 +1,5 @@
 export type RecurrenceFrequency = 'Daily' | 'Weekly' | 'Biweekly' | 'Monthly';
+export type RecurringType = 'Bill' | 'Budget';
 
 export interface RecurringTransaction {
   id: number;
@@ -11,6 +12,7 @@ export interface RecurringTransaction {
   transactionType: string;
   fundingSourceType: string | null;
   fundingSourceId: number | null;
+  recurringType: RecurringType;
   frequency: RecurrenceFrequency;
   nextRunDate: string;
   endDate: string | null;
@@ -26,6 +28,7 @@ export interface RecurringTransactionCreate {
   transactionType: number;
   fundingSourceType?: number;
   fundingSourceId?: number;
+  recurringType: number;
   frequency: number;
   nextRunDate: string;
   endDate?: string;

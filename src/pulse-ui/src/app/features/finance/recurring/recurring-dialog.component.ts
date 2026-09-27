@@ -63,7 +63,21 @@ import { Observable } from 'rxjs';
           </div>
         </div>
 
+        @if (form.value.transactionType !== 1) {
+        <div class="type-toggle">
+          <div class="type-option" [class.active]="form.value.recurringType === 0" (click)="form.patchValue({recurringType: 0})">
+            <mat-icon>receipt_long</mat-icon>
+            <span>Bill</span>
+          </div>
+          <div class="type-option" [class.active]="form.value.recurringType === 1" (click)="form.patchValue({recurringType: 1})">
+            <mat-icon>savings</mat-icon>
+            <span>Budget</span>
+          </div>
+        </div>
+        }
+
         <div class="amount-hero">
+          <div class="amount-label">{{ form.value.recurringType === 1 ? 'Monthly Budget' : 'Amount' }}</div>
           <div class="amount-input-row">
             <span class="amount-dollar">$</span>
             <input class="amount-value" type="number" inputmode="decimal" formControlName="amount" placeholder="0.00" min="0.01" step="0.01">
@@ -206,6 +220,26 @@ import { Observable } from 'rxjs';
     }
     .header-close:hover { background: rgba(255, 255, 255, 0.25) !important; }
     .header-close mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .type-toggle {
+      display: flex; justify-content: center; gap: 12px; margin-bottom: 8px;
+    }
+    .type-option {
+      display: flex; align-items: center; gap: 6px; padding: 8px 20px;
+      border-radius: var(--radius-full); cursor: pointer;
+      font-size: 0.82rem; font-weight: 600; color: var(--color-text-secondary);
+      background: var(--color-surface-secondary); border: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+    .type-option mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .type-option.active {
+      color: var(--color-primary); background: var(--color-stat-blue-bg);
+      border-color: var(--color-primary);
+    }
+    .amount-label {
+      text-align: center; font-size: 0.72rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--color-text-muted); margin-bottom: 2px;
+    }
     .amount-hero { text-align: center; padding: 8px 0 4px; }
     .amount-input-row { display: flex; align-items: baseline; justify-content: center; gap: 2px; }
     .amount-dollar { font-size: 1.6rem; font-weight: 700; color: var(--color-text-muted); }
@@ -339,6 +373,7 @@ export class RecurringDialogComponent implements OnInit {
     amount: [null, [Validators.required, Validators.min(0.01)]],
     categoryId: [null, Validators.required],
     transactionType: [0],
+    recurringType: [0],
     frequency: [3, Validators.required],
     nextRunDate: [new Date(), Validators.required],
     endDate: [null],
@@ -347,6 +382,7 @@ export class RecurringDialogComponent implements OnInit {
 
   private frequencyMap: Record<string, number> = { Daily: 0, Weekly: 1, Biweekly: 2, Monthly: 3 };
   private typeMap: Record<string, number> = { Expense: 0, Income: 1, Transfer: 2, Refund: 3, CardPayment: 4 };
+  private recurringTypeMap: Record<string, number> = { Bill: 0, Budget: 1 };
 
   ngOnInit(): void {
     if (this.data) {
@@ -356,6 +392,7 @@ export class RecurringDialogComponent implements OnInit {
         amount: this.data.amount,
         categoryId: this.data.categoryId,
         transactionType: this.typeMap[this.data.transactionType] ?? 0,
+        recurringType: this.recurringTypeMap[this.data.recurringType] ?? 0,
         frequency: this.frequencyMap[this.data.frequency] ?? 3,
         nextRunDate: new Date(this.data.nextRunDate),
         endDate: this.data.endDate ? new Date(this.data.endDate) : null,
@@ -377,21 +414,24 @@ export class RecurringDialogComponent implements OnInit {
 
   private loadCategories(): void {
     const type = this.form.value.transactionType === 1 ? 'Income' : 'Expense';
-    this.categoryService.getAll(type).subscribe(cats => {
-      this.categories.set(cats);
-      if (this.data?.categoryId) {
-        const parent = cats.find((c: any) =>
-          c.children?.some((ch: any) => ch.id === this.data!.categoryId)
-        );
-        if (parent) {
-          this.selectedParentId.set(parent.id);
-        } else {
-          const directParent = cats.find((c: any) => c.id === this.data!.categoryId);
-          if (directParent) this.selectedParentId.set(directParent.id);
+    this.categoryService.getAll(type).subscribe({
+      next: (cats) => {
+        this.categories.set(cats);
+        if (this.data?.categoryId) {
+          const parent = cats.find((c: any) =>
+            c.children?.some((ch: any) => ch.id === this.data!.categoryId)
+          );
+          if (parent) {
+            this.selectedParentId.set(parent.id);
+          } else {
+            const directParent = cats.find((c: any) => c.id === this.data!.categoryId);
+            if (directParent) this.selectedParentId.set(directParent.id);
+          }
         }
-      }
-      this.loading.set(false);
-      this.cdr.detectChanges();
+        this.loading.set(false);
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loading.set(false); this.notify.error('Failed to load categories'); this.cdr.detectChanges(); }
     });
   }
 
@@ -409,6 +449,9 @@ export class RecurringDialogComponent implements OnInit {
     this.loadCategories();
     this.selectedParentId.set(0);
     this.form.patchValue({ categoryId: null });
+    if (this.form.value.transactionType === 1) {
+      this.form.patchValue({ recurringType: 0 });
+    }
   }
 
   save(): void {
@@ -421,6 +464,7 @@ export class RecurringDialogComponent implements OnInit {
       amount: val.amount,
       categoryId: val.categoryId,
       transactionType: val.transactionType,
+      recurringType: val.recurringType,
       frequency: val.frequency,
       nextRunDate: toLocalISOString(new Date(val.nextRunDate)),
       endDate: val.endDate ? toLocalISOString(new Date(val.endDate)) : undefined,

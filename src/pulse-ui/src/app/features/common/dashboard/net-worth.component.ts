@@ -423,13 +423,14 @@ export class NetWorthComponent implements OnInit {
       const d = new Date(s.date);
       const weekStart = new Date(d);
       weekStart.setDate(d.getDate() - d.getDay());
-      const key = weekStart.toISOString().slice(0, 10);
+      const key = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
       weekMap.set(key, s);
     }
     return Array.from(weekMap.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([key, s]) => {
-        const d = new Date(key);
+        const [y, m, dy] = key.split('-').map(Number);
+        const d = new Date(y, m - 1, dy);
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         return { label: monthNames[d.getMonth()] + ' ' + d.getDate(), value: s.netWorth };
       });

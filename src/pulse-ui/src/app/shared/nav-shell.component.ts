@@ -67,12 +67,12 @@ import { routeFadeAnimation } from './route-animations';
                 </a>
                 <a class="ios-nav-item" routerLink="/loans" routerLinkActive="active-link" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-indigo"><mat-icon>account_balance</mat-icon></span>
-                  <span class="ios-nav-label">My Loans</span>
+                  <span class="ios-nav-label">Loans</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
                 <a class="ios-nav-item" routerLink="/cards" routerLinkActive="active-link" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-orange"><mat-icon>credit_card</mat-icon></span>
-                  <span class="ios-nav-label">My Cards</span>
+                  <span class="ios-nav-label">Cards</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
                 <a class="ios-nav-item" routerLink="/accounts" routerLinkActive="active-link" (click)="onNavClick()">
@@ -989,8 +989,8 @@ export class NavShellComponent implements OnInit, OnDestroy {
 
   private pageTitles: Record<string, string> = {
     '/dashboard': 'Dashboard',
-    '/loans': 'My Loans',
-    '/cards': 'My Cards',
+    '/loans': 'Loans',
+    '/cards': 'Cards',
     '/accounts': 'Bank Accounts',
     '/strategies': 'Payoff Strategies',
     '/simulator': 'What-If Simulator',

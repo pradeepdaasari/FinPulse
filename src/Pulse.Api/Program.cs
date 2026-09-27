@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Pulse.Core.Data;
@@ -47,6 +48,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 // Add application services
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddPulseCoreServices();
 
 // Add CORS for development
@@ -65,7 +67,7 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
-        // All DateTime values in this app are UTC; SQL Server/EF Core strip DateTimeKind, so mark it explicitly on write
+        // DateTime conversion: Read converts local→UTC for storage, Write converts UTC→local for display
         options.JsonSerializerOptions.Converters.Add(new Pulse.Api.UtcDateTimeConverter());
         options.JsonSerializerOptions.Converters.Add(new Pulse.Api.UtcNullableDateTimeConverter());
     });
@@ -161,6 +163,22 @@ if (!app.Environment.IsDevelopment())
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+Pulse.Api.UtcDateTimeConverter.HttpContextAccessor = app.Services.GetRequiredService<IHttpContextAccessor>();
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true)
+    {
+        var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId != null)
+        {
+            var db = context.RequestServices.GetRequiredService<PulseDbContext>();
+            var tz = await Pulse.Api.TimeZoneHelper.GetUserTimeZone(db, userId);
+            context.Items["UserTimeZone"] = tz;
+        }
+    }
+    await next();
+});
 
 app.UseStaticFiles();
 app.MapControllers();

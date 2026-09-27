@@ -91,12 +91,10 @@ public class WorkoutLogsController : ControllerBase
             s.ExerciseName = s.ExerciseName?.Trim() ?? "";
         }
 
-        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         if (log.Date == default)
             log.Date = DateTime.UtcNow;
-        else
-            log.Date = TimeZoneHelper.ToUtc(log.Date, tz);
 
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         var userNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
         var todayDow = (int)userNow.DayOfWeek;
 
@@ -142,7 +140,6 @@ public class WorkoutLogsController : ControllerBase
             .FirstOrDefaultAsync(l => l.Id == id && l.UserId == UserId);
         if (log == null) return NotFound();
 
-        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         var strategy = _db.Database.CreateExecutionStrategy();
         try
         {
@@ -154,7 +151,7 @@ public class WorkoutLogsController : ControllerBase
                 var l = await _db.WorkoutLogs.Include(x => x.Sets)
                     .FirstAsync(x => x.Id == id && x.UserId == UserId);
 
-                l.Date = TimeZoneHelper.ToUtc(updated.Date, tz);
+                l.Date = updated.Date;
                 l.FocusArea = updated.FocusArea?.Trim();
                 l.DurationMinutes = updated.DurationMinutes;
                 l.Notes = updated.Notes?.Trim();

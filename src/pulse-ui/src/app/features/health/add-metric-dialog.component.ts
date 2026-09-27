@@ -13,7 +13,7 @@ import { DatePipe } from '@angular/common';
 import { HealthMetric } from '../../core/models/health-metric.model';
 import { HealthMetricService } from '../../core/services/health-metric.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { toLocalISOString } from '../../core/utils/date-utils';
+import { toLocalISOString, toLocalDateString } from '../../core/utils/date-utils';
 
 interface MetricConfig {
   type: string;
@@ -279,7 +279,7 @@ export class AddMetricDialogComponent implements OnInit {
       metricType: this.selectedType,
       value: this.value!,
       unit: this.getUnit(),
-      measuredAt: toLocalISOString(new Date(`${this.dateObj.toISOString().slice(0, 10)}T${this.timeValue}`)),
+      measuredAt: toLocalISOString(new Date(`${toLocalDateString(this.dateObj)}T${this.timeValue}`)),
       notes: this.notes || undefined
     };
     const op$ = this.isEdit() && this.data

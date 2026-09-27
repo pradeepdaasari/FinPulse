@@ -32,7 +32,7 @@ import { AddUserDialogComponent } from './add-user-dialog.component';
         </button>
       </div>
 
-      <div class="table-container">
+      <div class="table-container table-wrapper">
         <table mat-table [dataSource]="users()">
           <ng-container matColumnDef="username">
             <th mat-header-cell *matHeaderCellDef>Username</th>

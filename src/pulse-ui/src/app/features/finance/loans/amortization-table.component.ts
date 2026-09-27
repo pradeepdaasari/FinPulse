@@ -39,7 +39,7 @@ import { AmortizationSchedule } from '../../../core/models/dashboard.model';
       </div>
     </div>
 
-    <div class="table-container">
+    <div class="table-container table-wrapper">
       <table mat-table [dataSource]="schedule.entries">
         <ng-container matColumnDef="period">
           <th mat-header-cell *matHeaderCellDef>#</th>

@@ -42,6 +42,7 @@ public class RecurringController : ControllerBase
             TransactionType = r.TransactionType.ToString(),
             FundingSourceType = r.FundingSourceType?.ToString(),
             r.FundingSourceId,
+            RecurringType = r.RecurringType.ToString(),
             Frequency = r.Frequency.ToString(),
             r.NextRunDate,
             r.EndDate,
@@ -71,6 +72,7 @@ public class RecurringController : ControllerBase
             TransactionType = dto.TransactionType,
             FundingSourceType = dto.FundingSourceType,
             FundingSourceId = dto.FundingSourceId,
+            RecurringType = dto.RecurringType,
             Frequency = dto.Frequency,
             NextRunDate = dto.NextRunDate,
             EndDate = dto.EndDate,
@@ -103,6 +105,7 @@ public class RecurringController : ControllerBase
         item.TransactionType = dto.TransactionType;
         item.FundingSourceType = dto.FundingSourceType;
         item.FundingSourceId = dto.FundingSourceId;
+        item.RecurringType = dto.RecurringType;
         item.Frequency = dto.Frequency;
         item.NextRunDate = dto.NextRunDate;
         item.EndDate = dto.EndDate;
@@ -298,7 +301,7 @@ public class RecurringController : ControllerBase
                 _db.ChangeTracker.Clear();
                 generated = 0;
                 var dueItems = await _db.RecurringTransactions
-                    .Where(r => r.UserId == UserId && r.IsActive && r.NextRunDate <= today)
+                    .Where(r => r.UserId == UserId && r.IsActive && r.NextRunDate <= today && r.RecurringType == RecurringType.Bill)
                     .ToListAsync();
 
                 foreach (var item in dueItems)

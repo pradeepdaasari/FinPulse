@@ -65,7 +65,7 @@ import { MultiMonthComparison, MultiMonthTotal, MultiMonthCategory } from '../..
         @if (data()!.categories.length > 0) {
           <mat-card>
             <mat-card-content>
-              <div class="table-scroll">
+              <div class="table-scroll table-wrapper">
                 <table class="compare-table">
                   <thead>
                     <tr>

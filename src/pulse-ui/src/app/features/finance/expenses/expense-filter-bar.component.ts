@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, output, signal, computed, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit, output, input, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -136,7 +136,7 @@ import { ExpenseFilter } from '../../../core/models/daily-expense.model';
     </mat-expansion-panel>
   `,
   styles: [`
-    .filter-panel { margin-bottom: 16px; }
+    .filter-panel { margin-bottom: 16px; border-radius: var(--radius-md) !important; }
     .filter-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -146,12 +146,14 @@ import { ExpenseFilter } from '../../../core/models/daily-expense.model';
     .search-field { grid-column: span 2; }
     .filter-actions { display: flex; gap: 8px; }
     .active-badge {
-      background: #1976d2;
+      background: var(--color-primary);
       color: white;
-      font-size: 0.7rem;
-      padding: 2px 8px;
-      border-radius: 12px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: var(--radius-full);
       margin-left: 8px;
+      letter-spacing: 0.02em;
     }
     .loading-container { display: flex; justify-content: center; align-items: center; padding: 32px 0; }
     .category-search-box {
@@ -176,6 +178,7 @@ export class ExpenseFilterBarComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   filterChange = output<Partial<ExpenseFilter>>();
+  usedCategoryIds = input<Set<number>>(new Set());
 
   loading = signal(true);
   private loadCount = 0;
@@ -183,19 +186,31 @@ export class ExpenseFilterBarComponent implements OnInit {
   categorySearch = signal('');
   filteredCategories = computed(() => {
     const q = this.categorySearch().toLowerCase();
-    if (!q) return this.categories().map(p => ({
+    const usedIds = this.usedCategoryIds();
+    const hasUsedFilter = usedIds.size > 0;
+
+    let cats = this.categories().map(p => {
+      const children = p.children || [];
+      const visibleChildren = hasUsedFilter
+        ? children.filter(c => usedIds.has(c.id))
+        : children;
+      const parentUsed = !hasUsedFilter || usedIds.has(p.id) || visibleChildren.length > 0;
+      return { ...p, allChildren: visibleChildren, parentUsed };
+    }).filter(p => p.parentUsed);
+
+    if (!q) return cats.map(p => ({
       ...p,
-      filteredChildren: p.children || [],
-      showSelf: !p.children || p.children.length === 0
+      filteredChildren: p.allChildren,
+      showSelf: p.allChildren.length === 0
     }));
-    return this.categories()
+    return cats
       .map(p => {
         const parentMatch = p.name.toLowerCase().includes(q);
-        const filteredChildren = (p.children || []).filter(c => c.name.toLowerCase().includes(q));
+        const filteredChildren = p.allChildren.filter(c => c.name.toLowerCase().includes(q));
         return {
           ...p,
-          filteredChildren: parentMatch ? (p.children || []) : filteredChildren,
-          showSelf: parentMatch && (!p.children || p.children.length === 0)
+          filteredChildren: parentMatch ? p.allChildren : filteredChildren,
+          showSelf: parentMatch && p.allChildren.length === 0
         };
       })
       .filter(p => p.filteredChildren.length > 0 || p.showSelf);
@@ -219,7 +234,7 @@ export class ExpenseFilterBarComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.categoryService.getAll('Expense').subscribe(cats => {
+    this.categoryService.getAll().subscribe(cats => {
       this.categories.set(cats);
       this.checkLoaded();
       this.cdr.detectChanges();

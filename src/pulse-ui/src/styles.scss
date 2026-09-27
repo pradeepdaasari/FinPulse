@@ -445,12 +445,15 @@ textarea:focus-visible {
 .table-wrapper {
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  max-height: 70vh;
+  max-height: 1020px;
 }
 
 .mat-mdc-header-row {
   background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface)) !important;
   border-bottom: 2px solid color-mix(in srgb, var(--color-primary) 22%, var(--color-border)) !important;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .mat-mdc-header-cell {

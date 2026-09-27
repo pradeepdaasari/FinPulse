@@ -16,6 +16,7 @@ public class RecurringTransactionCreateDto
     public TransactionType TransactionType { get; set; }
     public FundingSourceType? FundingSourceType { get; set; }
     public int? FundingSourceId { get; set; }
+    public RecurringType RecurringType { get; set; }
     public RecurrenceFrequency Frequency { get; set; }
     public DateTime NextRunDate { get; set; }
     public DateTime? EndDate { get; set; }

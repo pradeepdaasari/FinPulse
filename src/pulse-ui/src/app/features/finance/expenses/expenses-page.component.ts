@@ -95,13 +95,11 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
               <span class="expense-count">{{ filteredExpenses().length }} transactions</span>
             </div>
 
-            <app-expense-filter-bar (filterChange)="onFilterChange($event)"></app-expense-filter-bar>
+            <app-expense-filter-bar [usedCategoryIds]="usedCategoryIds()" (filterChange)="onFilterChange($event)"></app-expense-filter-bar>
 
             @if (filteredExpenses().length > 0) {
               <!-- Desktop table view -->
-              <mat-card class="desktop-only">
-                <mat-card-content>
-                  <div class="table-wrapper">
+              <div class="desktop-only">
                     <table class="grouped-table">
                       <thead>
                         <tr>
@@ -216,9 +214,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                         </tbody>
                       }
                     </table>
-                  </div>
-                </mat-card-content>
-              </mat-card>
+              </div>
 
               <!-- Mobile card view -->
               <div class="mobile-feed">
@@ -276,11 +272,16 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                 }
               </div>
             } @else {
-              <mat-card>
-                <mat-card-content>
-                  <p>No transactions found. Click "Log Transaction" to start tracking.</p>
-                </mat-card-content>
-              </mat-card>
+              <div class="empty-state">
+                <div class="empty-icon-wrap">
+                  <mat-icon>receipt_long</mat-icon>
+                </div>
+                <h3>No transactions yet</h3>
+                <p>Start tracking your spending to see where your money goes.</p>
+                <button mat-raised-button color="primary" (click)="addExpense()">
+                  <mat-icon>add</mat-icon> Log Your First Transaction
+                </button>
+              </div>
             }
           </div>
         </mat-tab>
@@ -372,11 +373,13 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                 }
               </div>
             } @else {
-              <mat-card>
-                <mat-card-content>
-                  <p>No budget categories set up yet. Add variable spending categories in the Budget page first.</p>
-                </mat-card-content>
-              </mat-card>
+              <div class="empty-state">
+                <div class="empty-icon-wrap">
+                  <mat-icon>pie_chart</mat-icon>
+                </div>
+                <h3>No spending summary yet</h3>
+                <p>Set up budget categories on the Budget page to track your spending against targets.</p>
+              </div>
             }
           </div>
         </mat-tab>
@@ -472,9 +475,29 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     .percent { opacity: 0.6; }
 
     .log-header { display: flex; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm); flex-wrap: wrap; }
-    .expense-count { font-size: var(--text-sm); color: var(--color-text-muted); }
-    .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    table { width: 100%; min-width: 700px; }
+    .expense-count {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      background: var(--color-surface-hover);
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      font-weight: var(--weight-semibold);
+    }
+    table { width: 100%; }
+
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 48px 24px; text-align: center;
+    }
+    .empty-icon-wrap {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: var(--color-primary-subtle);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 16px;
+    }
+    .empty-icon-wrap mat-icon { font-size: 32px; width: 32px; height: 32px; color: var(--color-primary); }
+    .empty-state h3 { margin: 0 0 8px; font-size: var(--text-lg); font-weight: var(--weight-bold); color: var(--color-text); }
+    .empty-state p { margin: 0 0 20px; font-size: var(--text-sm); color: var(--color-text-muted); max-width: 320px; line-height: var(--leading-normal); }
     td.mat-column-actions { white-space: nowrap; text-align: right; }
     .action-btn { width: 34px; height: 34px; border-radius: var(--radius-xs) !important; transition: background var(--transition-fast) !important; }
     .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
@@ -508,7 +531,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     .type-transfer { background: var(--color-primary-subtle); color: var(--color-primary); }
     .type-refund { background: var(--color-warning-bg); color: var(--color-warning-text); }
     .type-card { background: var(--color-accent-subtle); color: var(--color-accent); }
-    .type-loan { background: rgba(88, 86, 214, 0.10); color: #5856D6; }
+    .type-loan { background: var(--color-stat-purple-bg); color: var(--color-stat-purple); }
 
     /* Grouped table */
     .grouped-table {
@@ -569,7 +592,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     tr.row-transfer { border-left-color: var(--color-primary); }
     tr.row-refund { border-left-color: var(--color-warning); }
     tr.row-card { border-left-color: var(--color-accent); }
-    tr.row-loan { border-left-color: #5856D6; }
+    tr.row-loan { border-left-color: var(--color-stat-purple); }
 
     .cat-chip {
       display: inline-flex;
@@ -588,7 +611,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     .source-icon { font-size: 16px; width: 16px; height: 16px; opacity: 0.65; }
     .transfer-source { color: var(--color-primary); }
     .card-payment-source { color: var(--color-accent); }
-    .loan-payment-source { color: #5856D6; }
+    .loan-payment-source { color: var(--color-stat-purple); }
     .arrow-icon { font-size: 14px; width: 14px; height: 14px; }
     .tag-badge {
       display: inline-block;
@@ -616,13 +639,13 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
       width: 36px; height: 36px; border-radius: var(--radius-sm);
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
-    .insight-success .insight-icon-wrap { background: rgba(52,199,89,0.15); }
+    .insight-success .insight-icon-wrap { background: var(--color-stat-green-bg); }
     .insight-success .insight-icon-wrap mat-icon { color: var(--color-success); }
-    .insight-info .insight-icon-wrap { background: rgba(0,122,255,0.15); }
+    .insight-info .insight-icon-wrap { background: var(--color-stat-blue-bg); }
     .insight-info .insight-icon-wrap mat-icon { color: var(--color-primary); }
-    .insight-warn .insight-icon-wrap { background: rgba(255,149,0,0.15); }
+    .insight-warn .insight-icon-wrap { background: var(--color-stat-amber-bg); }
     .insight-warn .insight-icon-wrap mat-icon { color: var(--color-warning); }
-    .insight-danger .insight-icon-wrap { background: rgba(255,59,48,0.15); }
+    .insight-danger .insight-icon-wrap { background: var(--color-stat-red-bg); }
     .insight-danger .insight-icon-wrap mat-icon { color: var(--color-danger); }
     .insight-icon-wrap mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .insight-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -704,8 +727,8 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     .txn-cat-dot.dot-refund mat-icon { color: var(--color-warning); }
     .txn-cat-dot.dot-card { background: var(--color-accent-subtle); }
     .txn-cat-dot.dot-card mat-icon { color: var(--color-accent); }
-    .txn-cat-dot.dot-loan { background: rgba(88, 86, 214, 0.10); }
-    .txn-cat-dot.dot-loan mat-icon { color: #5856D6; }
+    .txn-cat-dot.dot-loan { background: var(--color-stat-purple-bg); }
+    .txn-cat-dot.dot-loan mat-icon { color: var(--color-stat-purple); }
     .txn-mid { flex: 1; min-width: 0; }
     .txn-desc { display: block; font-weight: var(--weight-semibold); font-size: var(--text-base); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: var(--leading-snug); }
     .txn-meta { display: block; font-size: var(--text-xs); color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
@@ -735,7 +758,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
       .stat-value { font-size: 1rem; }
       .log-header { justify-content: center; }
       .log-header button[mat-raised-button] { display: none; }
-      .expense-count { width: 100%; text-align: center; font-size: var(--text-xs); }
+      .expense-count { font-size: 0.6875rem; }
       .tab-content { padding: 4px 0; }
     }
   `]
@@ -756,6 +779,13 @@ export class ExpensesPageComponent implements OnInit {
   summary = signal<SpendingSummary[]>([]);
   expenses = signal<DailyExpense[]>([]);
   filteredExpenses = signal<DailyExpense[]>([]);
+  usedCategoryIds = computed(() => {
+    const ids = new Set<number>();
+    for (const e of this.expenses()) {
+      if (e.categoryId) ids.add(e.categoryId);
+    }
+    return ids;
+  });
   groupedExpenses = signal<{ label: string; items: DailyExpense[] }[]>([]);
   loading = signal(true);
   totalBudgeted = signal(0);

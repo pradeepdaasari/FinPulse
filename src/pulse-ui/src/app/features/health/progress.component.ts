@@ -7,7 +7,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
 import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { MatTableModule } from '@angular/material/table';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { FormsModule } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { WorkoutLogService } from '../../core/services/workout-log.service';
@@ -16,7 +17,7 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
 @Component({
   selector: 'app-progress',
   standalone: true,
-  imports: [MatCardModule, MatIconModule, MatButtonModule, MatSelectModule, MatFormFieldModule, MatTableModule, MatProgressSpinnerModule, DatePipe, DecimalPipe, FormsModule, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [MatCardModule, MatIconModule, MatButtonModule, MatSelectModule, MatFormFieldModule, MatTableModule, MatProgressSpinnerModule, LocalDatePipe, DecimalPipe, FormsModule, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadData()">
     @if (loading()) {
@@ -76,6 +77,7 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
       } @else {
         <!-- Desktop Table -->
         <mat-card class="desktop-only">
+          <div class="table-wrapper">
           <table mat-table [dataSource]="records()" class="records-table">
             <ng-container matColumnDef="exercise">
               <th mat-header-cell *matHeaderCellDef>Exercise</th>
@@ -91,11 +93,12 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
             </ng-container>
             <ng-container matColumnDef="date">
               <th mat-header-cell *matHeaderCellDef>Date</th>
-              <td mat-cell *matCellDef="let r">{{ r.bestSet.date | date:'MMM d' }}</td>
+              <td mat-cell *matCellDef="let r">{{ r.bestSet.date | localDate:'MMM d' }}</td>
             </ng-container>
             <tr mat-header-row *matHeaderRowDef="prColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: prColumns;"></tr>
           </table>
+          </div>
         </mat-card>
 
         <!-- Mobile Cards -->
@@ -107,7 +110,7 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
               </div>
               <div class="pr-mid">
                 <span class="pr-name">{{ r.exercise }}</span>
-                <span class="pr-date">{{ r.bestSet.date | date:'MMM d, yyyy' }}</span>
+                <span class="pr-date">{{ r.bestSet.date | localDate:'MMM d, yyyy' }}</span>
               </div>
               <div class="pr-right">
                 <span class="pr-weight">{{ r.maxWeight | number:'1.0-1' }}</span>
@@ -138,7 +141,7 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
         <div class="progress-chart">
           @for (p of progress(); track p.date) {
             <div class="progress-bar-item">
-              <span class="bar-date">{{ p.date | date:'M/d' }}</span>
+              <span class="bar-date">{{ p.date | localDate:'M/d' }}</span>
               <div class="bar-track">
                 <div class="bar-fill" [style.width.%]="getBarWidth(p.maxWeight)"></div>
               </div>

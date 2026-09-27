@@ -1,5 +1,5 @@
 import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
-import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
 import { forkJoin } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -23,6 +23,7 @@ import { PaymentHistory } from '../../../core/models/payment-history.model';
 import { sumCurrency } from '../../../core/utils/currency';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { FundingSourceService } from '../../../core/services/funding-source.service';
+import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directive';
 
 interface CardTransaction {
   id: string | number;
@@ -35,7 +36,7 @@ interface CardTransaction {
 }
 
 interface CardActivityItem {
-  kind: 'transaction' | 'movement';
+  kind: 'transaction' | 'movement' | 'statement-divider' | 'balance-row';
   date: string;
   balance: number;
   txn?: CardTransaction;
@@ -45,10 +46,25 @@ interface CardActivityItem {
 @Component({
   selector: 'app-card-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatTooltipModule, MatChipsModule, CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe, SkeletonLoaderComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatTooltipModule, MatChipsModule, CurrencyPipe, DecimalPipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
+    <div appPullToRefresh (refresh)="loadCard()">
     @if (loading()) {
       <app-skeleton type="card"></app-skeleton>
+    } @else if (loadError()) {
+      <div class="error-state">
+        <mat-icon class="error-icon">error_outline</mat-icon>
+        <h3>Could not load this card</h3>
+        <p>Something went wrong. Please try again.</p>
+        <div class="error-actions">
+          <button mat-raised-button color="primary" (click)="loadError.set(false); loading.set(true); loadCard()">
+            <mat-icon>refresh</mat-icon> Try Again
+          </button>
+          <button mat-stroked-button (click)="goBack()">
+            <mat-icon>arrow_back</mat-icon> Back to Cards
+          </button>
+        </div>
+      </div>
     } @else if (card()) {
       <div class="header-row">
         <div class="header-left">
@@ -57,7 +73,7 @@ interface CardActivityItem {
           </button>
           <h2>{{ card()!.cardName }}</h2>
         </div>
-        <div class="detail-actions">
+        <div class="detail-actions desktop-actions">
           <button mat-raised-button color="primary" (click)="recordPayment()" aria-label="Record payment">
             <mat-icon>payments</mat-icon> Record Payment
           </button>
@@ -68,20 +84,53 @@ interface CardActivityItem {
             <mat-icon>delete</mat-icon> Delete
           </button>
         </div>
+        <div class="detail-actions mobile-actions">
+          <button mat-raised-button color="primary" (click)="recordPayment()" aria-label="Record payment">
+            <mat-icon>payments</mat-icon> Pay
+          </button>
+          <button mat-icon-button (click)="updateBalance()" matTooltip="Update balance" aria-label="Update balance">
+            <mat-icon>account_balance_wallet</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" (click)="deleteCard()" matTooltip="Delete card" aria-label="Delete card">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
       </div>
 
       <mat-card class="detail-card">
         <mat-card-content>
           <div class="detail-grid">
             <div class="detail-item">
-              <span class="label">Current Balance</span>
+              <span class="label">Statement Balance</span>
               <span class="value">{{ card()!.currentBalance | currency }}</span>
+            </div>
+            @if (card()!.lastStatementDate && postStatementCharges() > 0) {
+              <div class="detail-item">
+                <span class="label">+ New Charges</span>
+                <span class="value new-charges">{{ postStatementCharges() | currency }}</span>
+              </div>
+            }
+            @if (card()!.lastStatementDate && postStatementRefunds() > 0) {
+              <div class="detail-item">
+                <span class="label">- Refunds</span>
+                <span class="value" style="color: #2e7d32;">{{ postStatementRefunds() | currency }}</span>
+              </div>
+            }
+            @if (card()!.lastStatementDate && postStatementPayments() > 0) {
+              <div class="detail-item">
+                <span class="label">- Payments</span>
+                <span class="value" style="color: #2e7d32;">{{ postStatementPayments() | currency }}</span>
+              </div>
+            }
+            <div class="detail-item">
+              <span class="label">Total Balance</span>
+              <span class="value total-balance">{{ totalBalance() | currency }}</span>
             </div>
             <div class="detail-item">
               <span class="label">Credit Limit</span>
               <span class="value">{{ card()!.creditLimit | currency }}</span>
             </div>
-            <div class="detail-item">
+            <div class="detail-item" matTooltip="Based on total balance of {{ totalBalance() | currency }} / {{ card()!.creditLimit | currency }} limit">
               <span class="label">Utilization</span>
               <span class="value">
                 <div class="util-detail">
@@ -101,8 +150,8 @@ interface CardActivityItem {
               <span class="value">{{ card()!.minimumPayment | currency }}</span>
             </div>
             <div class="detail-item">
-              <span class="label">Due Day</span>
-              <span class="value">{{ card()!.dueDay }}</span>
+              <span class="label">Next Due</span>
+              <span class="value">@if (nextDueDate()) { {{ nextDueDate() | localDate:'MMM d, y' }} } @else { Day {{ card()!.dueDay }} }</span>
             </div>
             <div class="detail-item">
               <span class="label">Billing Cycle</span>
@@ -128,18 +177,23 @@ interface CardActivityItem {
         <div class="txn-filters">
           <button mat-stroked-button [class.active-filter]="txnMonth() === null" (click)="setTxnMonth(null)">All</button>
           @for (m of availableMonths(); track m.key) {
-            <button mat-stroked-button [class.active-filter]="txnMonth() === m.key" (click)="setTxnMonth(m.key)">{{ m.label }}</button>
+            <button mat-stroked-button [class.active-filter]="txnMonth() === m.key" (click)="setTxnMonth(m.key)">{{ m.label }} ({{ m.count }})</button>
           }
         </div>
       </div>
       @if (activityItems().length > 0) {
         <mat-card class="txn-card">
           <div class="txn-summary">
-            <span class="txn-total-charge">Charges: <strong>-{{ totalCharges() | currency }}</strong></span>
-            @if (totalPayments() > 0) {
-              <span class="txn-total-payment">Payments: <strong>+{{ totalPayments() | currency }}</strong></span>
-            }
-            <span class="txn-count">{{ activityItems().length }} items</span>
+            <div class="txn-summary-left">
+              <span class="txn-total-charge">Charges: <strong>-{{ totalCharges() | currency }}</strong></span>
+              @if (totalRefunds() > 0) {
+                <span class="txn-total-refund">Refunds: <strong>+{{ totalRefunds() | currency }}</strong></span>
+              }
+              @if (totalPayments() > 0) {
+                <span class="txn-total-payment">Payments: <strong>+{{ totalPayments() | currency }}</strong></span>
+              }
+            </div>
+            <span class="txn-count">{{ monthLabel() }} · {{ realItemCount() }} items</span>
           </div>
           <!-- Desktop table -->
           <div class="table-wrapper desktop-only">
@@ -147,14 +201,19 @@ interface CardActivityItem {
               <ng-container matColumnDef="date">
                 <th mat-header-cell *matHeaderCellDef>Date</th>
                 <td mat-cell *matCellDef="let item">
-                  @if (item.kind === 'transaction') { {{ item.txn.date | date:'MMM d, y' }} }
-                  @else { {{ item.movement.movementDate | date:'MMM d, y' }} }
+                  @if (item.kind === 'statement-divider') {
+                    <span class="stmt-divider-label"><mat-icon class="stmt-divider-icon">description</mat-icon> Statement — {{ item.date | localDate:'MMM d, y' }}</span>
+                  } @else if (item.kind === 'balance-row') {
+                    <span class="balance-row-label">Running Balance</span>
+                  } @else if (item.kind === 'transaction') { {{ item.txn.date | localDate:'MMM d, y' }} }
+                  @else { {{ item.movement.movementDate | localDate:'MMM d, y' }} }
                 </td>
               </ng-container>
               <ng-container matColumnDef="description">
                 <th mat-header-cell *matHeaderCellDef>Description</th>
                 <td mat-cell *matCellDef="let item">
-                  @if (item.kind === 'transaction') {
+                  @if (item.kind === 'statement-divider' || item.kind === 'balance-row') {}
+                  @else if (item.kind === 'transaction') {
                     <div class="txn-desc">
                       <span class="txn-name">{{ item.txn.description }}</span>
                       @if (item.txn.merchant) { <span class="txn-merchant">{{ item.txn.merchant }}</span> }
@@ -172,14 +231,16 @@ interface CardActivityItem {
               <ng-container matColumnDef="category">
                 <th mat-header-cell *matHeaderCellDef>Category</th>
                 <td mat-cell *matCellDef="let item">
-                  @if (item.kind === 'transaction') { {{ item.txn.categoryName || '—' }} }
+                  @if (item.kind === 'statement-divider' || item.kind === 'balance-row') {}
+                  @else if (item.kind === 'transaction') { {{ item.txn.categoryName || '—' }} }
                   @else { — }
                 </td>
               </ng-container>
               <ng-container matColumnDef="type">
                 <th mat-header-cell *matHeaderCellDef>Type</th>
                 <td mat-cell *matCellDef="let item">
-                  @if (item.kind === 'transaction') {
+                  @if (item.kind === 'statement-divider' || item.kind === 'balance-row') {}
+                  @else if (item.kind === 'transaction') {
                     <span class="type-badge"
                       [class.type-expense]="item.txn.transactionType === 'Expense'"
                       [class.type-refund]="item.txn.transactionType === 'Refund'"
@@ -197,10 +258,14 @@ interface CardActivityItem {
               <ng-container matColumnDef="amount">
                 <th mat-header-cell *matHeaderCellDef>Amount</th>
                 <td mat-cell *matCellDef="let item"
-                  [class.txn-charge]="(item.kind === 'transaction' && item.txn.transactionType === 'Expense') || (item.kind === 'movement' && !isMovementIncoming(item.movement))"
-                  [class.txn-refund]="(item.kind === 'transaction' && item.txn.transactionType === 'Refund') || (item.kind === 'movement' && isMovementIncoming(item.movement))"
-                  [class.txn-payment]="item.kind === 'transaction' && item.txn.transactionType === 'Payment'">
-                  @if (item.kind === 'transaction') {
+                  [class.txn-charge]="item.kind === 'transaction' && item.txn?.transactionType === 'Expense' || item.kind === 'movement' && !isMovementIncoming(item.movement)"
+                  [class.txn-refund]="item.kind === 'transaction' && item.txn?.transactionType === 'Refund' || item.kind === 'movement' && isMovementIncoming(item.movement)"
+                  [class.txn-payment]="item.kind === 'transaction' && item.txn?.transactionType === 'Payment'"
+                  [class.balance-row-amount]="item.kind === 'balance-row'"
+                  [class.stmt-balance]="item.kind === 'statement-divider'">
+                  @if (item.kind === 'balance-row' || item.kind === 'statement-divider') {
+                    {{ item.balance | currency }}
+                  } @else if (item.kind === 'transaction') {
                     @if (item.txn.transactionType === 'Refund' || item.txn.transactionType === 'Payment') { +{{ item.txn.amount | currency }} }
                     @else { -{{ item.txn.amount | currency }} }
                   } @else {
@@ -209,35 +274,44 @@ interface CardActivityItem {
                   }
                 </td>
               </ng-container>
-              <ng-container matColumnDef="balance">
-                <th mat-header-cell *matHeaderCellDef>Balance</th>
-                <td mat-cell *matCellDef="let item" class="balance-col"
-                    [class.balance-positive]="item.balance <= 0"
-                    [class.balance-negative]="item.balance > 0">
-                  {{ item.balance | currency }}
-                </td>
-              </ng-container>
+
+
               <tr mat-header-row *matHeaderRowDef="txnColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: txnColumns;" [class.movement-row]="row.kind === 'movement'"></tr>
+              <tr mat-row *matRowDef="let row; columns: txnColumns;"
+                  [class.movement-row]="row.kind === 'movement'"
+                  [class.statement-divider-row]="row.kind === 'statement-divider'"
+                  [class.balance-summary-row]="row.kind === 'balance-row'"></tr>
             </table>
           </div>
           <!-- Mobile list -->
           <div class="txn-mobile-list mobile-only">
-            @for (item of activityItems(); track item.kind === 'transaction' ? 'txn-' + item.txn!.id : 'mv-' + item.movement!.id) {
-              @if (item.kind === 'transaction') {
+            @for (item of activityItems(); track item.kind === 'statement-divider' ? 'stmt-div' : item.kind === 'balance-row' ? 'bal-row' : (item.kind === 'transaction' ? 'txn-' + item.txn!.id : 'mv-' + item.movement!.id)) {
+              @if (item.kind === 'statement-divider') {
+                <div class="stmt-divider-mobile">
+                  <div class="stmt-divider-left">
+                    <mat-icon class="stmt-divider-icon">description</mat-icon>
+                    <span>Statement — {{ item.date | localDate:'MMM d, y' }}</span>
+                  </div>
+                  <span class="stmt-balance-mobile" [class.balance-negative]="item.balance > 0">{{ item.balance | currency }}</span>
+                </div>
+              } @else if (item.kind === 'balance-row') {
+                <div class="balance-row-mobile">
+                  <span class="balance-row-label">Running Balance</span>
+                  <span class="balance-row-amount" [class.balance-negative]="item.balance > 0">{{ item.balance | currency }}</span>
+                </div>
+              } @else if (item.kind === 'transaction') {
                 <div class="txn-row">
                   <div class="txn-row-left">
                     <div class="txn-dot" [class.dot-refund]="item.txn!.transactionType === 'Refund'" [class.dot-payment]="item.txn!.transactionType === 'Payment'"></div>
                     <div>
                       <div class="txn-name">{{ item.txn!.description }}</div>
-                      <div class="txn-meta">{{ item.txn!.date | date:'MMM d' }}{{ item.txn!.categoryName ? ' · ' + item.txn!.categoryName : '' }}{{ item.txn!.transactionType === 'Payment' ? ' · Payment' : '' }}</div>
+                      <div class="txn-meta">{{ item.txn!.date | localDate:'MMM d' }}{{ item.txn!.categoryName ? ' · ' + item.txn!.categoryName : '' }}{{ item.txn!.transactionType === 'Payment' ? ' · Payment' : '' }}</div>
                     </div>
                   </div>
                   <div class="txn-right-col">
                     <span [class.txn-charge]="item.txn!.transactionType === 'Expense'" [class.txn-refund]="item.txn!.transactionType === 'Refund'" [class.txn-payment]="item.txn!.transactionType === 'Payment'">
                       @if (item.txn!.transactionType === 'Refund' || item.txn!.transactionType === 'Payment') { +{{ item.txn!.amount | currency }} } @else { -{{ item.txn!.amount | currency }} }
                     </span>
-                    <span class="txn-balance-mobile" [class.balance-positive]="item.balance <= 0" [class.balance-negative]="item.balance > 0">{{ item.balance | currency }}</span>
                   </div>
                 </div>
               } @else {
@@ -247,7 +321,7 @@ interface CardActivityItem {
                     <div>
                       <div class="txn-name">{{ movementLabel(item.movement!.movementType) }}</div>
                       <div class="txn-meta">
-                        {{ item.movement!.movementDate | date:'MMM d' }} · {{ item.movement!.sourceName }} → {{ item.movement!.destinationName }}
+                        {{ item.movement!.movementDate | localDate:'MMM d' }} · {{ item.movement!.sourceName }} → {{ item.movement!.destinationName }}
                         @if (item.movement!.isAutoGenerated) { · Auto }
                       </div>
                     </div>
@@ -257,7 +331,6 @@ interface CardActivityItem {
                       @if (isMovementIncoming(item.movement!)) { +{{ item.movement!.amount | currency }} }
                       @else { -{{ item.movement!.amount | currency }} }
                     </span>
-                    <span class="txn-balance-mobile" [class.balance-positive]="item.balance <= 0" [class.balance-negative]="item.balance > 0">{{ item.balance | currency }}</span>
                   </div>
                 </div>
               }
@@ -265,11 +338,11 @@ interface CardActivityItem {
           </div>
         </mat-card>
       } @else {
-        <div class="empty-txn"><mat-icon>receipt_long</mat-icon><span>No activity for this period</span></div>
+        <div class="empty-txn"><mat-icon>receipt_long</mat-icon><span>{{ allActivityCombined().length === 0 ? 'No activity recorded yet' : 'No activity for this period' }}</span></div>
       }
 
+      <h3>Payment History</h3>
       @if (paymentHistory().length > 0) {
-        <h3>Payment History</h3>
         <mat-card class="history-card">
           <div class="history-summary">
             <span>Total Paid: <strong>{{ totalPaid() | currency }}</strong></span>
@@ -331,10 +404,14 @@ interface CardActivityItem {
             }
           </div>
         </mat-card>
+      } @else {
+        <div class="empty-txn"><mat-icon>payments</mat-icon><span>No payments recorded yet.</span>
+          <button mat-stroked-button color="primary" (click)="recordPayment()">Record Payment</button>
+        </div>
       }
 
-
     }
+    </div>
   `,
   styles: [`
     .header-row {
@@ -347,6 +424,15 @@ interface CardActivityItem {
     }
     .header-row h2 { margin: 0; }
     .header-left { display: flex; align-items: center; gap: var(--spacing-sm); }
+    .error-state {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 64px 24px; text-align: center; color: var(--color-text-muted);
+    }
+    .error-icon { font-size: 48px; width: 48px; height: 48px; color: var(--color-danger, #f44336); margin-bottom: 16px; }
+    .error-state h3 { margin: 0 0 8px; color: var(--color-text); }
+    .error-state p { margin: 0 0 24px; }
+    .error-actions { display: flex; gap: 12px; }
+    .mobile-actions { display: none; }
     .detail-actions {
       display: flex;
       gap: 8px;
@@ -367,6 +453,8 @@ interface CardActivityItem {
     .detail-item { display: flex; flex-direction: column; gap: 2px; }
     .label { font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 500; letter-spacing: 0.05em; }
     .value { font-size: 1rem; font-weight: 600; }
+    .new-charges { color: #e53935; }
+    .total-balance { font-size: 1.1rem; font-weight: 700; color: var(--color-primary); }
     .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table { width: 100%; min-width: 500px; }
     .history-card { margin-bottom: var(--spacing-lg); }
@@ -408,8 +496,10 @@ interface CardActivityItem {
     .txn-filters button { font-size: 0.75rem !important; padding: 0 10px !important; min-height: 30px !important; border-radius: var(--radius-full) !important; }
     .txn-filters button.active-filter { background: var(--color-primary) !important; color: #fff !important; }
     .txn-card { margin-bottom: var(--spacing-lg); overflow: hidden; padding: 0 !important; }
-    .txn-summary { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; font-size: 0.875rem; border-bottom: 1px solid var(--color-border); }
+    .txn-summary { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; font-size: 0.875rem; border-bottom: 1px solid var(--color-border); flex-wrap: wrap; gap: 6px; }
+    .txn-summary-left { display: flex; gap: 16px; flex-wrap: wrap; }
     .txn-total-charge strong { color: var(--color-danger, #f44336); }
+    .txn-total-refund strong { color: #2e7d32; }
     .txn-count { color: var(--color-text-muted); }
     .txn-desc { display: flex; flex-direction: column; }
     .txn-name { font-weight: 500; }
@@ -432,6 +522,37 @@ interface CardActivityItem {
     .flow-arrow-inline { font-size: 14px; width: 14px; height: 14px; opacity: 0.5; }
     .flow-amount { font-weight: 700; color: var(--color-stat-purple); }
     .movement-row { background: color-mix(in srgb, var(--color-stat-purple-bg) 20%, transparent); }
+    .statement-divider-row { background: var(--color-surface-secondary, #f1f5f9) !important; border-top: 2px solid var(--color-primary, #007AFF) !important; }
+    .statement-divider-row td { padding-top: 8px !important; padding-bottom: 8px !important; }
+    .stmt-divider-label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.8rem; font-weight: 700; color: var(--color-primary, #007AFF);
+      text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap;
+    }
+    .stmt-divider-icon { font-size: 16px; width: 16px; height: 16px; color: var(--color-primary, #007AFF); }
+    .stmt-balance { font-weight: 700; color: var(--color-primary, #007AFF) !important; }
+    .balance-summary-row { background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface)) !important; border-bottom: 1px solid color-mix(in srgb, var(--color-primary) 15%, var(--color-border)) !important; }
+    .balance-summary-row td { padding-top: 8px !important; padding-bottom: 8px !important; }
+    .balance-row-label { font-size: 0.82rem; font-weight: 700; color: var(--color-primary, #007AFF); text-transform: uppercase; letter-spacing: 0.03em; }
+    .balance-row-mobile {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; margin: 0 0 4px 0;
+      background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface));
+      border-bottom: 1px solid color-mix(in srgb, var(--color-primary) 15%, var(--color-border));
+      font-size: 0.82rem;
+    }
+    .balance-row-mobile .balance-row-label { font-weight: 700; color: var(--color-primary, #007AFF); }
+    .balance-row-amount { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .stmt-divider-mobile {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 10px 16px; margin: 4px 0;
+      background: var(--color-surface-secondary, #f1f5f9);
+      border-top: 2px solid var(--color-primary, #007AFF);
+      font-size: 0.8rem; font-weight: 700; color: var(--color-primary, #007AFF);
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .stmt-divider-left { display: flex; align-items: center; gap: 8px; }
+    .stmt-balance-mobile { font-variant-numeric: tabular-nums; font-size: 0.85rem; }
     .movement-mobile-row { border-left: 3px solid rgba(0,150,136,0.4); }
     .dot-flow-card { background: #00796b !important; }
     .balance-col { font-weight: 600; font-variant-numeric: tabular-nums; font-size: 0.85rem; }
@@ -486,6 +607,8 @@ interface CardActivityItem {
       .desktop-only { display: none !important; }
       .mobile-only { display: block !important; }
       .mobile-cards { display: block !important; }
+      .desktop-actions { display: none !important; }
+      .mobile-actions { display: flex !important; }
     }
 
     @media (max-width: 599px) {
@@ -539,7 +662,48 @@ export class CardDetailComponent implements OnInit {
   allMovements = signal<MoneyMovement[]>([]);
   totalPaid = signal(0);
   loading = signal(true);
+  loadError = signal(false);
   txnMonth = signal<string | null>(null);
+
+  postStatementCharges = computed(() => {
+    const c = this.card();
+    if (!c?.lastStatementDate) return 0;
+    const stmtDate = c.lastStatementDate.slice(0, 10);
+    return sumCurrency(
+      this.allTransactions()
+        .filter(t => t.date > stmtDate && t.transactionType === 'Expense')
+        .map(t => t.amount)
+    );
+  });
+
+  postStatementRefunds = computed(() => {
+    const c = this.card();
+    if (!c?.lastStatementDate) return 0;
+    const stmtDate = c.lastStatementDate.slice(0, 10);
+    return sumCurrency(
+      this.allTransactions()
+        .filter(t => t.date > stmtDate && t.transactionType === 'Refund')
+        .map(t => t.amount)
+    );
+  });
+
+  postStatementPayments = computed(() => {
+    const c = this.card();
+    if (!c?.lastStatementDate) return 0;
+    const stmtDate = new Date(c.lastStatementDate).getTime();
+    return sumCurrency(
+      this.paymentHistory()
+        .filter(p => new Date(p.paymentDate).getTime() > stmtDate)
+        .map(p => p.amountPaid)
+    );
+  });
+
+  totalBalance = computed(() => {
+    const c = this.card();
+    if (!c) return 0;
+    if (!c.lastStatementDate) return c.currentBalance;
+    return c.currentBalance + this.postStatementCharges() - this.postStatementRefunds() - this.postStatementPayments();
+  });
 
   allCombined = computed(() => {
     const payIds = new Set(this.paymentHistory().map(p => p.id));
@@ -596,13 +760,45 @@ export class CardDetailComponent implements OnInit {
   activityItems = computed(() => {
     const month = this.txnMonth();
     const all = this.allActivityCombined();
-    if (!month) return all;
-    return all.filter(item => item.date.slice(0, 7) === month);
+    const filtered = month ? all.filter(item => item.date.slice(0, 7) === month) : all;
+
+    const stmtDate = this.card()?.lastStatementDate?.slice(0, 10);
+    if (!stmtDate || filtered.length === 0) return filtered;
+
+    const stmtBalance = this.card()?.currentBalance ?? 0;
+    const runningBalance = this.totalBalance();
+    const isCurrentPeriod = !month || filtered.some(item => item.date.slice(0, 10) >= stmtDate);
+    const result: CardActivityItem[] = [];
+    if (isCurrentPeriod) {
+      result.push({ kind: 'balance-row', date: stmtDate, balance: runningBalance });
+    }
+    let dividerInserted = false;
+    for (const item of filtered) {
+      if (!dividerInserted && item.date.slice(0, 10) < stmtDate) {
+        result.push({ kind: 'statement-divider', date: stmtDate, balance: stmtBalance });
+        dividerInserted = true;
+      }
+      result.push(item);
+    }
+    if (!dividerInserted && isCurrentPeriod) {
+      result.push({ kind: 'statement-divider', date: stmtDate, balance: stmtBalance });
+    }
+    return result;
   });
+
+  realItemCount = computed(() =>
+    this.activityItems().filter(a => a.kind === 'transaction' || a.kind === 'movement').length
+  );
 
   totalCharges = computed(() =>
     this.activityItems()
       .filter(a => a.kind === 'transaction' && a.txn!.transactionType === 'Expense')
+      .reduce((s, a) => s + a.txn!.amount, 0)
+  );
+
+  totalRefunds = computed(() =>
+    this.activityItems()
+      .filter(a => a.kind === 'transaction' && a.txn!.transactionType === 'Refund')
       .reduce((s, a) => s + a.txn!.amount, 0)
   );
 
@@ -612,24 +808,55 @@ export class CardDetailComponent implements OnInit {
       .reduce((s, a) => s + a.txn!.amount, 0)
   );
 
+  monthLabel = computed(() => {
+    const m = this.txnMonth();
+    if (!m) return 'All-Time';
+    const [y, mo] = m.split('-').map(Number);
+    return new Date(y, mo - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  });
+
+  nextDueDate = computed(() => {
+    const c = this.card();
+    if (!c?.dueDay) return null;
+    const now = new Date();
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), c.dueDay);
+    const d = thisMonth > now ? thisMonth : new Date(now.getFullYear(), now.getMonth() + 1, c.dueDay);
+    return toLocalDateString(d);
+  });
+
   availableMonths = computed(() => {
     const seen = new Set<string>();
-    return this.allActivityCombined()
+    const items = this.allActivityCombined();
+    const countMap = new Map<string, number>();
+    items.forEach(a => {
+      const m = a.date.slice(0, 7);
+      countMap.set(m, (countMap.get(m) || 0) + 1);
+    });
+    const uniqueMonths = items
       .map(a => a.date.slice(0, 7))
       .filter(m => { if (seen.has(m)) return false; seen.add(m); return true; })
       .sort((a, b) => b.localeCompare(a))
-      .slice(0, 6)
-      .map(key => ({ key, label: new Date(key + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) }));
+      .slice(0, 6);
+    return uniqueMonths.map(key => ({
+        key,
+        label: this.formatMonthKey(key),
+        count: countMap.get(key) || 0
+      }));
   });
 
   paymentColumns = ['paymentDate', 'amountPaid', 'fromAccount', 'notes', 'actions'];
   private accountNameMap = new Map<number, string>();
-  txnColumns = ['date', 'description', 'category', 'type', 'amount', 'balance'];
+  txnColumns = ['date', 'description', 'category', 'type', 'amount'];
+
+  private formatMonthKey(key: string): string {
+    const [y, mo] = key.split('-').map(Number);
+    return new Date(y, mo - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  }
 
   getUtilization(): number {
     const c = this.card();
     if (!c || !c.creditLimit || c.creditLimit === 0) return 0;
-    return Math.min(100, (c.currentBalance / c.creditLimit) * 100);
+    return Math.min(100, (this.totalBalance() / c.creditLimit) * 100);
   }
 
   getUtilColor(): string {
@@ -656,14 +883,15 @@ export class CardDetailComponent implements OnInit {
         this.loading.set(false);
         this.cdr.detectChanges();
       },
-      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
+      error: () => { this.loading.set(false); this.loadError.set(true); this.cdr.detectChanges(); }
     });
     this.cardService.getPayments(id).subscribe({
       next: (payments) => {
         this.paymentHistory.set(payments);
         this.totalPaid.set(sumCurrency(payments.map(p => p.amountPaid)));
         this.cdr.detectChanges();
-      }
+      },
+      error: () => this.notify.error('Failed to load payment history')
     });
     forkJoin({
       purchases: this.expenseService.getExpenses({ fundingSourceId: numId, fundingSourceType: 'CreditCard', allTime: true }),
@@ -686,7 +914,8 @@ export class CardDetailComponent implements OnInit {
       next: (movements) => {
         this.allMovements.set(movements);
         this.cdr.detectChanges();
-      }
+      },
+      error: () => this.notify.error('Failed to load money movements')
     });
   }
 
@@ -753,7 +982,7 @@ export class CardDetailComponent implements OnInit {
         width: '400px',
         data: {
           title: 'Delete Payment?',
-          message: `This will remove the $${payment.amountPaid.toFixed(2)} payment and add it back to the card balance.`,
+          message: `This will permanently remove the $${payment.amountPaid.toFixed(2)} payment record. You may need to update your card balance afterward.`,
           confirmText: 'Delete',
           color: 'warn'
         }

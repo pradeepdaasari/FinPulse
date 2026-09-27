@@ -1094,7 +1094,7 @@ export class CategoryPageComponent implements OnInit {
     if (!this.newParentName.trim()) return;
     const dto: CategoryCreate = { name: this.newParentName.trim(), isFixed: this.newParentFixed, type: this.newParentType, icon: this.newParentIcon, parentId: null };
     this.categoryService.create(dto).subscribe({
-      next: () => { this.closeMobileAddSheet(); this.loadCategories(); },
+      next: () => { this.closeMobileAddSheet(); this.snackBar.open('Category created', 'OK', { duration: 3000 }); this.loadCategories(); },
       error: (err) => this.showError(err)
     });
   }
@@ -1110,7 +1110,7 @@ export class CategoryPageComponent implements OnInit {
     if (!this.newParentName.trim()) return;
     const dto: CategoryCreate = { name: this.newParentName.trim(), isFixed: this.newParentFixed, type: this.newParentType, icon: this.newParentIcon, parentId: null };
     this.categoryService.create(dto).subscribe({
-      next: () => { this.cancelAddParent(); this.loadCategories(); },
+      next: () => { this.cancelAddParent(); this.snackBar.open('Category created', 'OK', { duration: 3000 }); this.loadCategories(); },
       error: (err) => this.showError(err)
     });
   }
@@ -1133,7 +1133,7 @@ export class CategoryPageComponent implements OnInit {
     if (!this.newChildName.trim()) return;
     const dto: CategoryCreate = { name: this.newChildName.trim(), isFixed: this.newChildFixed, type: parent.type, icon: this.newChildIcon, parentId: parent.id };
     this.categoryService.create(dto).subscribe({
-      next: () => { this.cancelAddChild(); this.loadCategories(); },
+      next: () => { this.cancelAddChild(); this.snackBar.open('Subcategory created', 'OK', { duration: 3000 }); this.loadCategories(); },
       error: (err) => this.showError(err)
     });
   }
@@ -1156,7 +1156,7 @@ export class CategoryPageComponent implements OnInit {
     if (!this.editName.trim()) return;
     const dto: CategoryCreate = { name: this.editName.trim(), isFixed: this.editFixed, type: cat.type, icon: this.editIcon, parentId: cat.parentId };
     this.categoryService.update(cat.id, dto).subscribe({
-      next: () => { this.cancelEdit(); this.loadCategories(); },
+      next: () => { this.cancelEdit(); this.snackBar.open('Category updated', 'OK', { duration: 3000 }); this.loadCategories(); },
       error: (err) => this.showError(err)
     });
   }

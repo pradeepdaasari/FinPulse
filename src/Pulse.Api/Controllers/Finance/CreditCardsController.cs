@@ -59,6 +59,7 @@ public class CreditCardsController : ControllerBase
             IsAutopay = dto.IsAutopay,
             PromoAprPercent = dto.PromoAprPercent,
             PromoEndDate = dto.PromoEndDate,
+            LastStatementDate = dto.LastStatementDate,
             UserId = UserId
         };
 
@@ -87,6 +88,7 @@ public class CreditCardsController : ControllerBase
         card.IsAutopay = dto.IsAutopay;
         card.PromoAprPercent = dto.PromoAprPercent;
         card.PromoEndDate = dto.PromoEndDate;
+        card.LastStatementDate = dto.LastStatementDate;
 
         await _db.SaveChangesAsync();
 

@@ -236,7 +236,27 @@ public class DashboardController : ControllerBase
         var loans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
 
         var totalBankBalance = bankAccounts.Sum(a => a.CurrentBalance);
-        var totalCreditCardDebt = creditCards.Sum(c => c.CurrentBalance);
+
+        var cardIds = creditCards.Select(c => c.Id).ToList();
+        var postStmtCharges = new Dictionary<int, decimal>();
+        var postStmtPayments = new Dictionary<int, decimal>();
+        foreach (var c in creditCards.Where(c => c.LastStatementDate.HasValue))
+        {
+            postStmtCharges[c.Id] = await _db.DailyExpenses
+                .Where(e => e.UserId == UserId && e.FundingSourceType == FundingSourceType.CreditCard
+                    && e.FundingSourceId == c.Id && e.Date > c.LastStatementDate.Value
+                    && e.TransactionType != TransactionType.CardPayment)
+                .SumAsync(e => (decimal?)e.Amount ?? 0);
+            postStmtPayments[c.Id] = await _db.PaymentHistories
+                .Where(p => p.UserId == UserId && p.DebtType == DebtType.CreditCard
+                    && p.DebtId == c.Id && p.PaymentDate > c.LastStatementDate.Value)
+                .SumAsync(p => (decimal?)p.AmountPaid ?? 0);
+        }
+
+        var totalCreditCardDebt = creditCards.Sum(c =>
+            c.CurrentBalance
+            + (postStmtCharges.TryGetValue(c.Id, out var ch) ? ch : 0)
+            - (postStmtPayments.TryGetValue(c.Id, out var py) ? py : 0));
         var totalLoanDebt = loans.Sum(l => l.CurrentBalance);
 
         return Ok(new
@@ -260,6 +280,8 @@ public class DashboardController : ControllerBase
                 c.Id,
                 Name = c.CardName,
                 Balance = c.CurrentBalance
+                    + (postStmtCharges.TryGetValue(c.Id, out var ch) ? ch : 0)
+                    - (postStmtPayments.TryGetValue(c.Id, out var py) ? py : 0)
             }),
             Loans = loans.Select(l => new
             {

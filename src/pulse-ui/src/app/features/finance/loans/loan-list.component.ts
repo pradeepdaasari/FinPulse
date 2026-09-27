@@ -1,5 +1,6 @@
 import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
-import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common';
+import { LocalDatePipe } from '../../../shared/local-date.pipe';
 import { Router } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -18,7 +19,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
 @Component({
   selector: 'app-loan-list',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatTooltipModule, CurrencyPipe, DatePipe, DecimalPipe, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatTooltipModule, CurrencyPipe, LocalDatePipe, DecimalPipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadLoans()">
     <div class="header-row">
@@ -97,7 +98,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                 <span class="variable-badge">Variable</span>
               }
               @if (isDeferred(loan)) {
-                <span class="deferred-chip">Paused until {{ loan.nextPaymentDate | date:'MMM yyyy' }}</span>
+                <span class="deferred-chip">Paused until {{ loan.nextPaymentDate | localDate:'MMM yyyy' }}</span>
               }
             </td>
           </ng-container>
@@ -195,7 +196,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                     <span class="variable-badge">Variable</span>
                   }
                   @if (isDeferred(loan)) {
-                    <span class="deferred-chip">Paused until {{ loan.nextPaymentDate | date:'MMM yyyy' }}</span>
+                    <span class="deferred-chip">Paused until {{ loan.nextPaymentDate | localDate:'MMM yyyy' }}</span>
                   }
                 </div>
               </div>

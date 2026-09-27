@@ -197,7 +197,7 @@ export class TodayGlanceComponent implements OnInit {
       if (recurring && recurring.length > 0) {
         const tz = localStorage.getItem('pulse_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
         const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
-        const due = (recurring as RecurringTransaction[]).filter(r => r.isActive && r.nextRunDate.slice(0, 10) <= todayStr);
+        const due = (recurring as RecurringTransaction[]).filter(r => r.isActive && r.recurringType !== 'Budget' && r.nextRunDate.slice(0, 10) <= todayStr);
         this.recurringDue.set(due);
         this.recurringDueTotal.set(due.reduce((sum, r) => sum + r.amount, 0));
       }

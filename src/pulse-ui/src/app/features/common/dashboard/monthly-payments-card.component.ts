@@ -353,7 +353,14 @@ export class MonthlyPaymentsCardComponent implements OnInit {
                 .reduce((s, p) => s + p.amountPaid, 0);
 
           const paymentAmount = debt.perPaymentAmount;
-          const isPaid = nearbyPaid >= paymentAmount;
+          let isPaid: boolean;
+          if (isCard && card?.lastStatementDate && nearbyPaid > 0) {
+            const latestPaymentDate = Math.max(...debtPayments.map(p => new Date(p.paymentDate).getTime()));
+            const stmtDate = new Date(card.lastStatementDate).getTime();
+            isPaid = stmtDate > latestPaymentDate ? true : nearbyPaid >= paymentAmount;
+          } else {
+            isPaid = nearbyPaid >= paymentAmount;
+          }
           const isOverdue = !isPaid && dueDate < today;
           const isDueToday = !isPaid && dueDate.getDate() === today.getDate() && dueDate.getMonth() === today.getMonth();
           const isDueSoon = !isPaid && !isOverdue && !isDueToday && (dueDate.getTime() - today.getTime()) <= 3 * 86400000;

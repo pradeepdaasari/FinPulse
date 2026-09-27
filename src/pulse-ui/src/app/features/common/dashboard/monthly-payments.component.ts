@@ -11,8 +11,10 @@ import { forkJoin } from 'rxjs';
 import { DebtService } from '../../../core/services/debt.service';
 import { UserProfileService } from '../../../core/services/user-profile.service';
 import { PaymentService } from '../../../core/services/payment.service';
+import { CreditCardService } from '../../../core/services/credit-card.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { DebtItem } from '../../../core/models/debt-item.model';
+import { CreditCard } from '../../../core/models/credit-card.model';
 import { roundCurrency, sumCurrency } from '../../../core/utils/currency';
 
 interface MonthlyPayment {
@@ -244,6 +246,7 @@ export class MonthlyPaymentsComponent implements OnInit {
   private debtService = inject(DebtService);
   private profileService = inject(UserProfileService);
   private paymentService = inject(PaymentService);
+  private creditCardService = inject(CreditCardService);
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
   private cdr = inject(ChangeDetectorRef);
@@ -295,11 +298,15 @@ export class MonthlyPaymentsComponent implements OnInit {
   private loadPayments(): void {
     forkJoin({
       debts: this.debtService.getAll(),
-      paymentResponse: this.paymentService.getAll()
-    }).subscribe(({ debts, paymentResponse }) => {
+      paymentResponse: this.paymentService.getAll(),
+      cards: this.creditCardService.getAll()
+    }).subscribe(({ debts, paymentResponse, cards }) => {
       const now = new Date();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
+
+      const cardMap = new Map<number, CreditCard>();
+      for (const c of cards) cardMap.set(Number(c.id), c);
 
       const monthlyPayments: MonthlyPayment[] = [];
       const monthEnd = new Date(currentYear, currentMonth + 1, 0);
@@ -327,7 +334,16 @@ export class MonthlyPaymentsComponent implements OnInit {
             ? paymentAmount
             : (hasActivePromo ? paymentAmount : (paymentAmount > 0 ? paymentAmount : debt.currentBalance));
 
-          const isPaid = roundCurrency(paidAmount) >= roundCurrency(dueAmount);
+          let isPaid: boolean;
+          const card = !isLoan ? cardMap.get(Number(debt.id)) : undefined;
+          if (!isLoan && card?.lastStatementDate && paidAmount > 0) {
+            const cyclePayments = allDebtPayments.filter(p => new Date(p.paymentDate) >= this.getCycleStart(debt.dueDay ?? 1, now));
+            const latestPaymentDate = Math.max(...cyclePayments.map(p => new Date(p.paymentDate).getTime()));
+            const stmtDate = new Date(card.lastStatementDate).getTime();
+            isPaid = stmtDate > latestPaymentDate ? true : roundCurrency(paidAmount) >= roundCurrency(dueAmount);
+          } else {
+            isPaid = roundCurrency(paidAmount) >= roundCurrency(dueAmount);
+          }
           if (isPaid) continue;
 
           let daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));

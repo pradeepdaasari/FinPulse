@@ -10,6 +10,7 @@ export interface CreditCard {
   isAutopay: boolean;
   promoAprPercent?: number;
   promoEndDate?: string;
+  lastStatementDate?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -23,7 +24,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
   imports: [
     CommonModule, ReactiveFormsModule, MatCardModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatSliderModule, MatChipsModule,
-    CurrencyPipe, DatePipe, RichTextEditorComponent, SkeletonLoaderComponent, PullToRefreshDirective,
+    CurrencyPipe, DatePipe, LocalDatePipe, RichTextEditorComponent, SkeletonLoaderComponent, PullToRefreshDirective,
     RouterModule
   ],
   template: `
@@ -229,7 +230,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
           @for (note of history(); track note.id) {
             <div class="history-card" (click)="loadNote(note)">
               <div class="history-header">
-                <span class="history-date">{{ note.date | date:'EEE, MMM d' }}</span>
+                <span class="history-date">{{ note.date | localDate:'EEE, MMM d' }}</span>
                 <span class="mental-dot" [class]="'dot-' + note.mentalState"></span>
                 <span class="history-bias" [class]="'bias-' + note.marketBias">{{ note.marketBias }}</span>
               </div>

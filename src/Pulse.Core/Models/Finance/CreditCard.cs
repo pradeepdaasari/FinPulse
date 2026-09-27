@@ -30,6 +30,8 @@ public class CreditCard
 
     public DateTime? PromoEndDate { get; set; }
 
+    public DateTime? LastStatementDate { get; set; }
+
     public string? UserId { get; set; }
 
     public DateTime CreatedAt { get; set; }

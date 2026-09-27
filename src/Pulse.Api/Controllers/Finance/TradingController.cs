@@ -311,9 +311,6 @@ public class TradingController : ControllerBase
 
         try
         {
-            var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-            var tradeDate = TimeZoneHelper.ToUtc(input.Date, tz);
-
             var commission = input.CommissionFees ?? 0;
             var regExchange = input.RegExchangeFees ?? 0;
             var fees = commission + regExchange;
@@ -321,7 +318,7 @@ public class TradingController : ControllerBase
             var trade = new TradeEntry
             {
                 UserId = UserId,
-                Date = tradeDate,
+                Date = input.Date,
                 SetupId = input.SetupId,
                 Instrument = input.Instrument,
                 Direction = input.Direction,
@@ -390,14 +387,11 @@ public class TradingController : ControllerBase
 
         try
         {
-            var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-            var tradeDate = TimeZoneHelper.ToUtc(input.Date, tz);
-
             var commission = input.CommissionFees ?? 0;
             var regExchange = input.RegExchangeFees ?? 0;
             var fees = commission + regExchange;
 
-            trade.Date = tradeDate;
+            trade.Date = input.Date;
             trade.SetupId = input.SetupId;
             trade.Instrument = input.Instrument;
             trade.Direction = input.Direction;
