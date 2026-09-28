@@ -14,6 +14,7 @@ import { NotificationService } from '../../../core/services/notification.service
 import { AddAccountDialogComponent } from './add-account-dialog.component';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directive';
+import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
 
 @Component({
   selector: 'app-account-list',
@@ -99,7 +100,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
             <th mat-header-cell *matHeaderCellDef>Account Name</th>
             <td mat-cell *matCellDef="let a">
               <div class="acct-name-cell">
-                <mat-icon class="acct-icon" [class.icon-checking]="a.accountType === 'Checking'" [class.icon-savings]="a.accountType === 'Savings'" [class.icon-brokerage]="a.accountType === 'Brokerage'" [class.icon-cash]="a.accountType === 'Cash'">{{ getAccountIcon(a.accountType) }}</mat-icon>
+                <mat-icon class="acct-icon" [class.icon-checking]="a.accountType === 'Checking'" [class.icon-savings]="a.accountType === 'Savings'" [class.icon-brokerage]="a.accountType === 'Brokerage'" [class.icon-cash]="a.accountType === 'Cash'">{{ getAccountIcon(a.accountName, a.accountType) }}</mat-icon>
                 <span class="acct-name-text">{{ a.accountName }}</span>
                 @if (a.isExcluded) { <span class="excluded-badge"><mat-icon class="excluded-badge-icon">pause_circle</mat-icon> Excluded</span> }
               </div>
@@ -151,7 +152,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
           <div class="account-card" [class.excluded-card]="a.isExcluded" (click)="viewAccount(a)">
             <div class="ac-left">
               <div class="ac-icon" [class.icon-checking]="a.accountType === 'Checking'" [class.icon-savings]="a.accountType === 'Savings'" [class.icon-brokerage]="a.accountType === 'Brokerage'" [class.icon-cash]="a.accountType === 'Cash'">
-                <mat-icon>{{ getAccountIcon(a.accountType) }}</mat-icon>
+                <mat-icon>{{ getAccountIcon(a.accountName, a.accountType) }}</mat-icon>
               </div>
             </div>
             <div class="ac-mid">
@@ -423,12 +424,8 @@ export class AccountListComponent implements OnInit {
     });
   }
 
-  getAccountIcon(type: string): string {
-    switch (type) {
-      case 'Savings': return 'savings';
-      case 'Brokerage': return 'trending_up';
-      case 'Cash': return 'wallet';
-      default: return 'account_balance';
-    }
+  getAccountIcon(name: string, type: string): string {
+    const typeFallback = type === 'Savings' ? 'savings' : type === 'Brokerage' ? 'trending_up' : type === 'Cash' ? 'wallet' : 'account_balance';
+    return inferInstitutionIcon(name, typeFallback);
   }
 }

@@ -15,6 +15,7 @@ import { AddLoanDialogComponent } from './add-loan-dialog.component';
 import { EditLoanDialogComponent } from './edit-loan-dialog.component';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directive';
+import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
 
 @Component({
   selector: 'app-loan-list',
@@ -183,7 +184,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
           <div class="loan-card" (click)="viewLoan(loan.id)">
             <div class="loan-top">
               <div class="loan-icon" [style.background]="getLoanTypeBg(loan.loanType)">
-                <mat-icon [style.color]="getLoanTypeColor(loan.loanType)">account_balance</mat-icon>
+                <mat-icon [style.color]="getLoanTypeColor(loan.loanType)">{{ getLenderIcon(loan.lenderName) }}</mat-icon>
               </div>
               <div class="loan-info">
                 <span class="loan-name">{{ loan.lenderName }}</span>
@@ -609,6 +610,10 @@ export class LoanListComponent implements OnInit {
         this.loadLoans();
       }
     });
+  }
+
+  getLenderIcon(name: string): string {
+    return inferInstitutionIcon(name, 'account_balance');
   }
 
   getLoanTypeColor(type: string): string {

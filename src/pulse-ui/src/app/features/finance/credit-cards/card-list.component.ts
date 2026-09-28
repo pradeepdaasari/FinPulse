@@ -15,6 +15,7 @@ import { NotificationService } from '../../../core/services/notification.service
 import { AddCardDialogComponent } from './add-card-dialog.component';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directive';
+import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
 
 @Component({
   selector: 'app-card-list',
@@ -82,7 +83,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
             <th mat-header-cell *matHeaderCellDef>Card Name</th>
             <td mat-cell *matCellDef="let card">
               <div class="card-name-cell">
-                <mat-icon class="card-brand-icon" [style.color]="getCardColor(card)">credit_card</mat-icon>
+                <mat-icon class="card-brand-icon" [style.color]="getCardColor(card)">{{ getCardIcon(card.cardName) }}</mat-icon>
                 <span class="card-name-text">{{ card.cardName }}</span>
                 @if (isPromoActive(card)) {
                   <span class="promo-pill">PROMO</span>
@@ -180,7 +181,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
           <div class="cc-card" [class.card-healthy]="getUtilization(card) <= 30" [class.card-warning]="getUtilization(card) > 30 && getUtilization(card) <= 70" [class.card-danger]="getUtilization(card) > 70" (click)="viewCard(card.id)">
             <div class="cc-top">
               <div class="cc-icon" [style.background]="getCardIconBg(card)">
-                <mat-icon [style.color]="getCardColor(card)">credit_card</mat-icon>
+                <mat-icon [style.color]="getCardColor(card)">{{ getCardIcon(card.cardName) }}</mat-icon>
               </div>
               <div class="cc-info">
                 <span class="cc-name">{{ card.cardName }}</span>
@@ -591,6 +592,10 @@ export class CardListComponent implements OnInit {
         this.loadCards();
       }
     });
+  }
+
+  getCardIcon(name: string): string {
+    return inferInstitutionIcon(name, 'credit_card');
   }
 
   getCardColor(card: CreditCard): string {
