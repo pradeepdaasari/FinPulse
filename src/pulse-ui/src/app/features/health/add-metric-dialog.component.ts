@@ -79,8 +79,8 @@ interface MetricConfig {
           <mat-icon class="dtc-icon">calendar_today</mat-icon>
           <div class="dtc-date-value">{{ dateObj | date:'MMM d, yyyy' }}</div>
           <span class="dtc-sep">|</span>
-          <mat-icon class="dtc-icon" (click)="$event.stopPropagation(); timePicker.showPicker()">schedule</mat-icon>
-          <input #timePicker type="time" class="dtc-time-input" [(ngModel)]="timeValue" (click)="$event.stopPropagation(); timePicker.showPicker()">
+          <mat-icon class="dtc-icon" (click)="$event.stopPropagation(); timePicker.focus()">schedule</mat-icon>
+          <input #timePicker type="time" class="dtc-time-input" [(ngModel)]="timeValue" (click)="$event.stopPropagation()">
           <input matInput [matDatepicker]="picker" [ngModel]="dateObj" (ngModelChange)="onDateChange($event)" class="hidden-date-input">
           <mat-datepicker #picker></mat-datepicker>
         </div>

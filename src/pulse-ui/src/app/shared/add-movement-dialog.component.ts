@@ -253,7 +253,7 @@ export class AddMovementDialogComponent implements OnInit {
       destinationType: v.destinationType as MoneyMovementEntityType,
       destinationId: v.destinationType === 'External' ? null : (v.destinationId != null ? +v.destinationId : null),
       amount: v.amount!,
-      movementDate: v.movementDate!.toISOString(),
+      movementDate: (() => { const d = new Date(v.movementDate!); const now = new Date(); d.setHours(now.getHours(), now.getMinutes(), now.getSeconds()); return d.toISOString(); })(),
       movementType: v.movementType as MovementType,
       note: v.note || undefined
     }).subscribe({

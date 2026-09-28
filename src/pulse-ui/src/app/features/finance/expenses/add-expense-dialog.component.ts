@@ -121,8 +121,8 @@ export interface ExpenseDialogData {
             <mat-datepicker #picker></mat-datepicker>
           </div>
           <span class="dtc-sep">|</span>
-          <mat-icon class="dtc-icon" (click)="expTimeInput.showPicker()">schedule</mat-icon>
-          <input #expTimeInput type="time" formControlName="time" class="dtc-time-input" (click)="expTimeInput.showPicker()">
+          <mat-icon class="dtc-icon" (click)="expTimeInput.focus()">schedule</mat-icon>
+          <input #expTimeInput type="time" formControlName="time" class="dtc-time-input" (click)="$event.stopPropagation()">
         </div>
 
         @if (form.value.transactionType !== 'Transfer' && form.value.transactionType !== 'CardPayment' && form.value.transactionType !== 'LoanPayment') {

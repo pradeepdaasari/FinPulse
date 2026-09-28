@@ -67,8 +67,8 @@ export interface TradeEntryDialogData {
           <mat-icon class="date-icon">calendar_today</mat-icon>
           <div class="date-value">{{ form.value.date | date:'MMM d, yyyy' }}</div>
           <div class="date-sep">|</div>
-          <mat-icon class="date-icon" (click)="$event.stopPropagation(); timeInput.showPicker()">schedule</mat-icon>
-          <input #timeInput type="time" class="time-input" formControlName="time" (click)="$event.stopPropagation(); timeInput.showPicker()">
+          <mat-icon class="date-icon" (click)="$event.stopPropagation(); timeInput.focus()">schedule</mat-icon>
+          <input #timeInput type="time" class="time-input" formControlName="time" (click)="$event.stopPropagation()">
           <input matInput [matDatepicker]="picker" formControlName="date" class="hidden-date-input">
           <mat-datepicker #picker></mat-datepicker>
         </div>
@@ -113,6 +113,9 @@ export interface TradeEntryDialogData {
               <span class="closed-date-value">Closed {{ form.value.closedDate | date:'MMM d, yyyy' }}</span>
               <input matInput [matDatepicker]="closedPicker" formControlName="closedDate" class="hidden-date-input">
               <mat-datepicker #closedPicker></mat-datepicker>
+              <span class="date-sep">|</span>
+              <mat-icon class="date-icon" (click)="$event.stopPropagation(); closedTimeInput.focus()">schedule</mat-icon>
+              <input #closedTimeInput type="time" class="time-input closed-time" formControlName="closedTime" (click)="$event.stopPropagation()">
             </div>
           }
         </div>
@@ -515,6 +518,9 @@ export interface TradeEntryDialogData {
       transition: border-color 0.15s; position: relative;
     }
     .closed-date-field:hover { border-color: var(--color-success); }
+    .closed-date-field .date-sep { color: color-mix(in srgb, var(--color-success) 50%, transparent); font-size: 1rem; }
+    .closed-date-field .date-icon { color: var(--color-success); font-size: 18px; width: 18px; height: 18px; }
+    .closed-time { font-size: 0.8rem; color: var(--color-success); min-width: 50px; width: auto; }
     .closed-date-value { font-size: 0.8rem; font-weight: 600; color: var(--color-success); white-space: nowrap; }
     .toggle-field { display: flex; align-items: center; padding: 4px 0; }
     .dir-toggle, .opt-toggle, .asset-toggle { width: 100%; }
@@ -777,7 +783,8 @@ export class TradeEntryDialogComponent implements OnInit {
     notes: [this.data?.trade?.notes ?? ''],
     tags: [this.data?.trade?.tags?.join(', ') ?? ''],
     status: [this.data?.trade?.status ?? 'Open'],
-    closedDate: [this.data?.trade?.closedDate ? new Date(this.data.trade.closedDate) : new Date()]
+    closedDate: [this.data?.trade?.closedDate ? new Date(this.data.trade.closedDate) : new Date()],
+    closedTime: [this.getTimeStr(this.data?.trade?.closedDate)]
   });
 
   ngOnInit(): void {
@@ -921,6 +928,7 @@ export class TradeEntryDialogComponent implements OnInit {
     d.setHours(hh, mm, 0, 0);
     const payload: Partial<TradeEntry> = {
       date: toLocalISOString(d),
+      entryTime: val.time || undefined,
       setupId: val.setupId!,
       instrument: val.instrument!,
       direction: (val.direction ?? 'long') as TradeDirection,
@@ -955,8 +963,9 @@ export class TradeEntryDialogComponent implements OnInit {
       multiplier: val.multiplier ?? 100,
       status: (val.status as TradeStatus) ?? 'Open',
       closedDate: val.status === 'Closed' && val.closedDate instanceof Date
-        ? toLocalISOString(val.closedDate)
-        : val.status === 'Closed' && val.closedDate ? val.closedDate as unknown as string : undefined
+        ? (() => { const cd = new Date(val.closedDate!); const [ch, cm] = (val.closedTime || '00:00').split(':').map(Number); cd.setHours(ch, cm, 0, 0); return toLocalISOString(cd); })()
+        : val.status === 'Closed' && val.closedDate ? val.closedDate as unknown as string : undefined,
+      exitTime: val.status === 'Closed' ? (val.closedTime || undefined) : undefined
     };
 
     this.saving.set(true);
