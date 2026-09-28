@@ -501,6 +501,11 @@ import { routeFadeAnimation } from './route-animations';
       background: var(--color-border);
     }
 
+    .ios-nav-divider {
+      margin: 8px 16px;
+      border-top: 1px solid var(--color-border);
+    }
+
     .ios-nav-item:active {
       background: var(--color-surface-hover);
     }

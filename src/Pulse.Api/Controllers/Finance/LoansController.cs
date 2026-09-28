@@ -29,7 +29,7 @@ public class LoansController : ControllerBase
     [HttpGet]
     public async Task<ActionResult> GetAll()
     {
-        var loans = await _db.PersonalLoans.Where(l => l.UserId == UserId).OrderByDescending(l => l.StartDate).ToListAsync();
+        var loans = await _db.PersonalLoans.Where(l => l.UserId == UserId).OrderBy(l => l.LenderName).ToListAsync();
         var bankAccountIds = loans.Where(l => l.FundedBankAccountId.HasValue).Select(l => l.FundedBankAccountId!.Value).Distinct().ToList();
         var bankNames = bankAccountIds.Count > 0
             ? await _db.BankAccounts.Where(a => bankAccountIds.Contains(a.Id) && a.UserId == UserId).ToDictionaryAsync(a => a.Id, a => a.AccountName)

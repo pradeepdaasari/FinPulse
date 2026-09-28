@@ -8,12 +8,12 @@ public class PreMarketNote
     public string? UserId { get; set; }
     public DateTime Date { get; set; }
     [MaxLength(20)]
-    public string MarketBias { get; set; } = "neutral";
+    public string? MarketBias { get; set; } = "neutral";
     public string? KeyLevels { get; set; }
     public string? Catalysts { get; set; }
     public string? Plan { get; set; }
     [MaxLength(10)]
-    public string MentalState { get; set; } = "green";
+    public string? MentalState { get; set; } = "green";
     public string? MentalStateNotes { get; set; }
     public string? EmotionalPlan { get; set; }
     public int MaxTrades { get; set; }
