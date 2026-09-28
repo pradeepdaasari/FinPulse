@@ -134,7 +134,7 @@ import { routeFadeAnimation } from './route-animations';
               <div class="ios-section-group">
                 <a class="ios-nav-item" routerLink="/trading" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-purple"><mat-icon>candlestick_chart</mat-icon></span>
-                  <span class="ios-nav-label">Dashboard</span>
+                  <span class="ios-nav-label">Overview</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
                 <a class="ios-nav-item" routerLink="/trading/day" routerLinkActive="active-link" (click)="onNavClick()">
@@ -443,7 +443,7 @@ import { routeFadeAnimation } from './route-animations';
     }
 
     .ios-section-header .section-label {
-      font-size: 0.6875rem;
+      font-size: 0.8125rem;
       font-weight: 700;
       color: var(--color-text-muted);
       text-transform: uppercase;
@@ -557,7 +557,7 @@ import { routeFadeAnimation } from './route-animations';
     .ios-nav-label {
       flex: 1;
       font-family: var(--font-primary);
-      font-size: 0.875rem;
+      font-size: 1rem;
       font-weight: 400;
       color: var(--color-text);
       letter-spacing: -0.01em;
@@ -886,7 +886,7 @@ import { routeFadeAnimation } from './route-animations';
 
     .tab-item span {
       font-family: var(--font-primary);
-      font-size: 0.625rem;
+      font-size: 0.6875rem;
       font-weight: 500;
       letter-spacing: 0.01em;
     }

@@ -445,6 +445,8 @@ export class ReviewComponent implements OnInit {
           this.selectedGrade.set((review.grade as any) ?? null);
           this.followedPlan.set(review.followedPlan ?? null);
           this.followedRules.set(review.followedRules ?? null);
+          this.stoppedAtLimit.set(review.stoppedAtLimit ?? null);
+          this.violatedRules.set(review.rulesViolated ?? []);
         } else {
           this.marketObservation.set('');
           this.lessonsLearned.set('');
@@ -453,6 +455,8 @@ export class ReviewComponent implements OnInit {
           this.selectedGrade.set(null);
           this.followedPlan.set(null);
           this.followedRules.set(null);
+          this.stoppedAtLimit.set(null);
+          this.violatedRules.set([]);
         }
         this.cdr.detectChanges();
       },

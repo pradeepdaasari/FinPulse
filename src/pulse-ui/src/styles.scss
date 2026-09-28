@@ -443,8 +443,7 @@ textarea:focus-visible {
 }
 
 .table-wrapper {
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow-x: visible;
   max-height: 1020px;
 }
 

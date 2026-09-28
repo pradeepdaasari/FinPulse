@@ -173,13 +173,13 @@ interface TimelineEvent {
               @if (dayData()!.premarket!.emotionalPlan) {
                 <div class="field-row emotional-plan-row">
                   <span class="field-label">🧠 Emotional Plan</span>
-                  <p class="field-value emotional-plan-text">{{ dayData()!.premarket!.emotionalPlan }}</p>
+                  <p class="field-value emotional-plan-text" [innerHTML]="dayData()!.premarket!.emotionalPlan"></p>
                 </div>
               }
               @if (dayData()!.premarket!.mentalStateNotes) {
                 <div class="field-row">
                   <span class="field-label">Mental Notes</span>
-                  <p class="field-value">{{ dayData()!.premarket!.mentalStateNotes }}</p>
+                  <p class="field-value" [innerHTML]="dayData()!.premarket!.mentalStateNotes"></p>
                 </div>
               }
             </div>
@@ -307,13 +307,13 @@ interface TimelineEvent {
               @if (dayData()!.review!.lessonsLearned) {
                 <div class="field-row">
                   <span class="field-label">Lessons</span>
-                  <p class="field-value">{{ dayData()!.review!.lessonsLearned }}</p>
+                  <p class="field-value" [innerHTML]="dayData()!.review!.lessonsLearned"></p>
                 </div>
               }
               @if (dayData()!.review!.emotionalSummary) {
                 <div class="field-row">
                   <span class="field-label">Emotional Summary</span>
-                  <p class="field-value">{{ dayData()!.review!.emotionalSummary }}</p>
+                  <p class="field-value" [innerHTML]="dayData()!.review!.emotionalSummary"></p>
                 </div>
               }
             </div>

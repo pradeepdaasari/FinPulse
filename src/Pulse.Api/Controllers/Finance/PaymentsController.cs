@@ -67,6 +67,9 @@ public class PaymentsController : ControllerBase
         var payment = await _db.PaymentHistories.FirstOrDefaultAsync(p => p.Id == id && p.UserId == UserId);
         if (payment is null) return NotFound();
 
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        dto.PaymentDate = TimeZoneHelper.ToUtc(dto.PaymentDate.Date, tz);
+
         if (dto.AmountPaid <= 0)
             return BadRequest(new { error = "Payment amount must be greater than zero." });
 

@@ -56,7 +56,7 @@ import { AuthService } from '../../../core/services/auth.service';
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Password</mat-label>
-            <input matInput [type]="hidePassword() ? 'password' : 'text'" [(ngModel)]="password" name="password" required autocomplete="current-password">
+            <input matInput [type]="hidePassword() ? 'password' : 'text'" [(ngModel)]="password" name="password" required autocomplete="current-password" enterkeyhint="go">
             <mat-icon matPrefix>lock_outline</mat-icon>
             <button mat-icon-button matSuffix type="button" (click)="hidePassword.set(!hidePassword())">
               <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>

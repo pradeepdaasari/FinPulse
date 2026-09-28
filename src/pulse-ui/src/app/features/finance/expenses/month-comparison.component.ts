@@ -8,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directive';
+import { inferCategoryIcon } from '../../../core/utils/category-icon';
 import { DailyExpenseService } from '../../../core/services/daily-expense.service';
 import { MultiMonthComparison, MultiMonthTotal, MultiMonthCategory } from '../../../core/models/daily-expense.model';
 
@@ -80,9 +81,7 @@ import { MultiMonthComparison, MultiMonthTotal, MultiMonthCategory } from '../..
                     @for (cat of data()!.categories; track cat.categoryId) {
                       <tr>
                         <td class="cat-col">
-                          @if (cat.categoryIcon) {
-                            <mat-icon class="cat-icon">{{ cat.categoryIcon }}</mat-icon>
-                          }
+                          <mat-icon class="cat-icon">{{ getIcon(cat.categoryName, cat.categoryIcon) }}</mat-icon>
                           {{ cat.categoryName }}
                         </td>
                         @for (amt of cat.monthlyAmounts; track amt.month) {
@@ -176,6 +175,10 @@ export class MonthComparisonComponent implements OnChanges {
   loading = signal(false);
   avgMonthly = signal(0);
   grandTotal = signal(0);
+
+  getIcon(name: string | null, icon: string | null): string {
+    return inferCategoryIcon(name, icon);
+  }
 
   ngOnChanges(): void {
     this.loadData();

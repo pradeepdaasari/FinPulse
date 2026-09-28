@@ -13,6 +13,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSort, MatSortModule, Sort } from '@angular/material/sort';
 import { MatFabButton } from '@angular/material/button';
 import { toLocalDateString } from '../../../core/utils/date-utils';
+import { inferCategoryIcon } from '../../../core/utils/category-icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
@@ -143,9 +144,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                               <td>
                                 @if (e.categoryName) {
                                   <span class="cat-chip" [style.background]="getCategoryBg(e.categoryName)" [style.color]="getCategoryColor(e.categoryName)">
-                                    @if (e.categoryIcon) {
-                                      <mat-icon class="cat-chip-icon" [style.color]="getCategoryColor(e.categoryName)">{{ e.categoryIcon }}</mat-icon>
-                                    }
+                                    <mat-icon class="cat-chip-icon" [style.color]="getCategoryColor(e.categoryName)">{{ inferCategoryIcon(e.categoryName, e.categoryIcon) }}</mat-icon>
                                     {{ e.categoryName }}
                                   </span>
                                 } @else {
@@ -187,8 +186,8 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                                 @if (e.transactionType === 'Income') { +{{ e.amount | currency }} }
                                 @else if (e.transactionType === 'Transfer') { ⇔ {{ e.amount | currency }} }
                                 @else if (e.transactionType === 'Refund') { ↩ {{ e.amount | currency }} }
-                                @else if (e.transactionType === 'CardPayment') { 💳 {{ e.amount | currency }} }
-                                @else if (e.transactionType === 'LoanPayment') { 🏦 {{ e.amount | currency }} }
+                                @else if (e.transactionType === 'CardPayment') { <mat-icon class="txn-type-icon">credit_card</mat-icon>{{ e.amount | currency }} }
+                                @else if (e.transactionType === 'LoanPayment') { <mat-icon class="txn-type-icon">account_balance</mat-icon>{{ e.amount | currency }} }
                                 @else { {{ e.amount | currency }} }
                               </td>
                               <td>
@@ -261,8 +260,8 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                             @if (e.transactionType === 'Income') { +{{ e.amount | currency }} }
                             @else if (e.transactionType === 'Transfer') { {{ e.amount | currency }} }
                             @else if (e.transactionType === 'Refund') { +{{ e.amount | currency }} }
-                            @else if (e.transactionType === 'CardPayment') { 💳 {{ e.amount | currency }} }
-                            @else if (e.transactionType === 'LoanPayment') { 🏦 {{ e.amount | currency }} }
+                            @else if (e.transactionType === 'CardPayment') { <mat-icon class="txn-type-icon">credit_card</mat-icon>{{ e.amount | currency }} }
+                            @else if (e.transactionType === 'LoanPayment') { <mat-icon class="txn-type-icon">account_balance</mat-icon>{{ e.amount | currency }} }
                             @else { -{{ e.amount | currency }} }
                           </span>
                         </div>
@@ -350,9 +349,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                     <mat-card-content>
                       <div class="summary-header">
                         <span class="cat-name">
-                          @if (item.categoryIcon) {
-                            <mat-icon class="cat-icon">{{ item.categoryIcon }}</mat-icon>
-                          }
+                          <mat-icon class="cat-icon">{{ inferCategoryIcon(item.categoryName, item.categoryIcon) }}</mat-icon>
                           {{ item.categoryName }}
                         </span>
                         <span class="cat-amounts">{{ item.spent | currency }} / {{ item.budgeted | currency }}</span>
@@ -512,6 +509,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     .refund-amount { color: var(--color-success) !important; font-style: italic; }
     .card-payment-amount { color: var(--color-accent); }
     .loan-payment-amount { color: var(--color-stat-purple); }
+    .txn-type-icon { font-size: 14px; width: 14px; height: 14px; vertical-align: middle; margin-right: 2px; }
 
     /* Type badge */
     .type-badge {
@@ -775,6 +773,7 @@ export class ExpensesPageComponent implements OnInit {
   @ViewChild(MatSort) sort!: MatSort;
 
   Math = Math;
+  inferCategoryIcon = inferCategoryIcon;
 
   summary = signal<SpendingSummary[]>([]);
   expenses = signal<DailyExpense[]>([]);
@@ -941,7 +940,8 @@ export class ExpensesPageComponent implements OnInit {
   }
 
   getCategoryIcon(e: DailyExpense): string {
-    if (e.categoryIcon) return e.categoryIcon;
+    const inferred = inferCategoryIcon(e.categoryName, e.categoryIcon);
+    if (inferred !== 'category') return inferred;
     switch (e.transactionType) {
       case 'Income': return 'trending_up';
       case 'Transfer': return 'swap_horiz';

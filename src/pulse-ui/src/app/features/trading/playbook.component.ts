@@ -389,11 +389,19 @@ export class PlaybookComponent implements OnInit {
   }
 
   deleteRule(rule: TradingRule): void {
-    if (!confirm('Delete this rule?')) return;
-    this.loading.set(true);
-    this.tradingService.deleteRule(rule.id).subscribe({
-      next: () => { this.notify.success('Rule deleted'); this.loadRules(); },
-      error: () => { this.loading.set(false); this.notify.error('Failed to delete rule'); this.cdr.detectChanges(); }
+    import('../../shared/confirm-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.ConfirmDialogComponent, {
+        width: '400px',
+        data: { title: 'Delete Rule?', message: 'Delete this rule? This cannot be undone.', confirmText: 'Delete', color: 'warn' }
+      });
+      dialogRef.afterClosed().subscribe(confirmed => {
+        if (!confirmed) return;
+        this.loading.set(true);
+        this.tradingService.deleteRule(rule.id).subscribe({
+          next: () => { this.notify.success('Rule deleted'); this.loadRules(); },
+          error: () => { this.loading.set(false); this.notify.error('Failed to delete rule'); this.cdr.detectChanges(); }
+        });
+      });
     });
   }
 

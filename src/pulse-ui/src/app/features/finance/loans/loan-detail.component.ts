@@ -10,6 +10,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatTabsModule } from '@angular/material/tabs';
 import { LoanService } from '../../../core/services/loan.service';
 import { PaymentService } from '../../../core/services/payment.service';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -25,7 +26,7 @@ import { FundingSourceService } from '../../../core/services/funding-source.serv
 @Component({
   selector: 'app-loan-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatTooltipModule, MatChipsModule, MatProgressBarModule, CurrencyPipe, DecimalPipe, LocalDatePipe, AmortizationTableComponent, SkeletonLoaderComponent, EntityMovementsComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatTabsModule, MatTooltipModule, MatChipsModule, MatProgressBarModule, CurrencyPipe, DecimalPipe, LocalDatePipe, AmortizationTableComponent, SkeletonLoaderComponent, EntityMovementsComponent],
   template: `
     @if (loading()) {
       <app-skeleton type="card"></app-skeleton>
@@ -131,68 +132,111 @@ import { FundingSourceService } from '../../../core/services/funding-source.serv
         </mat-card-content>
       </mat-card>
 
-      @if (paymentHistory().length > 0) {
-        <h3>Payment History</h3>
-        <mat-card class="history-card">
-          <div class="history-summary">
-            <div class="summary-stats">
-              <div class="stat"><span class="stat-label">Total Paid</span><span class="stat-value">{{ totalPaid() | currency }}</span></div>
-              <div class="stat"><span class="stat-label">Principal</span><span class="stat-value principal-color">{{ totalPrincipalPaid() | currency }}</span></div>
-              <div class="stat"><span class="stat-label">Interest</span><span class="stat-value interest-color">{{ totalInterestPaid() | currency }}</span></div>
+      <mat-tab-group class="detail-tabs" animationDuration="200ms">
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">payments</mat-icon> Payments ({{ paymentHistory().length }})
+          </ng-template>
+          @if (paymentHistory().length > 0) {
+            <mat-card class="history-card">
+              <div class="history-summary">
+                <div class="summary-stats">
+                  <div class="stat"><span class="stat-label">Total Paid</span><span class="stat-value">{{ totalPaid() | currency }}</span></div>
+                  <div class="stat"><span class="stat-label">Principal</span><span class="stat-value principal-color">{{ totalPrincipalPaid() | currency }}</span></div>
+                  <div class="stat"><span class="stat-label">Interest</span><span class="stat-value interest-color">{{ totalInterestPaid() | currency }}</span></div>
+                </div>
+                <span class="history-count">{{ paymentHistory().length }} payments</span>
+              </div>
+              <div class="table-wrapper desktop-only">
+                <table mat-table [dataSource]="paymentHistory()">
+                  <ng-container matColumnDef="paymentDate">
+                    <th mat-header-cell *matHeaderCellDef>Date</th>
+                    <td mat-cell *matCellDef="let p">{{ p.paymentDate | localDate:'mediumDate' }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="amountPaid">
+                    <th mat-header-cell *matHeaderCellDef>Amount</th>
+                    <td mat-cell *matCellDef="let p" class="amount-cell">{{ p.amountPaid | currency }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="principal">
+                    <th mat-header-cell *matHeaderCellDef>Principal</th>
+                    <td mat-cell *matCellDef="let p" class="principal-color">{{ (p.principalAmount ?? p.amountPaid) | currency }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="interest">
+                    <th mat-header-cell *matHeaderCellDef>Interest</th>
+                    <td mat-cell *matCellDef="let p" class="interest-color">{{ (p.interestAmount ?? 0) | currency }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="fromAccount">
+                    <th mat-header-cell *matHeaderCellDef>From Account</th>
+                    <td mat-cell *matCellDef="let p">{{ getAccountName(p.fromAccountId) }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="notes">
+                    <th mat-header-cell *matHeaderCellDef>Notes</th>
+                    <td mat-cell *matCellDef="let p">{{ p.notes || '—' }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="actions">
+                    <th mat-header-cell *matHeaderCellDef></th>
+                    <td mat-cell *matCellDef="let p">
+                      <button mat-icon-button (click)="editPayment(p)" matTooltip="Edit payment" aria-label="Edit payment">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button mat-icon-button color="warn" (click)="deletePayment(p)" matTooltip="Delete payment" aria-label="Delete payment">
+                        <mat-icon>delete_outline</mat-icon>
+                      </button>
+                    </td>
+                  </ng-container>
+
+                  <tr mat-header-row *matHeaderRowDef="paymentColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: paymentColumns;"></tr>
+                </table>
+              </div>
+              <div class="mobile-cards">
+                @for (p of paymentHistory(); track p.id) {
+                  <div class="payment-card">
+                    <div class="pc-top">
+                      <span class="pc-date">{{ p.paymentDate | localDate:'mediumDate' }}</span>
+                      <span class="pc-amount">{{ p.amountPaid | currency }}</span>
+                    </div>
+                    <div class="pc-breakdown">
+                      <span class="principal-color">P: {{ (p.principalAmount ?? p.amountPaid) | currency }}</span>
+                      <span class="interest-color">I: {{ (p.interestAmount ?? 0) | currency }}</span>
+                      <span class="pc-source">{{ getAccountName(p.fromAccountId) }}</span>
+                    </div>
+                    @if (p.notes) {
+                      <div class="pc-notes">{{ p.notes }}</div>
+                    }
+                    <div class="pc-actions">
+                      <button mat-icon-button (click)="editPayment(p)" aria-label="Edit payment"><mat-icon>edit</mat-icon></button>
+                      <button mat-icon-button color="warn" (click)="deletePayment(p)" aria-label="Delete payment"><mat-icon>delete_outline</mat-icon></button>
+                    </div>
+                  </div>
+                }
+              </div>
+            </mat-card>
+          } @else {
+            <div class="empty-tab"><mat-icon>payments</mat-icon><span>No payments recorded yet.</span>
+              <button mat-stroked-button color="primary" (click)="recordPayment()">Record Payment</button>
             </div>
-            <span class="history-count">{{ paymentHistory().length }} payments</span>
-          </div>
-          <div class="table-wrapper">
-            <table mat-table [dataSource]="paymentHistory()">
-              <ng-container matColumnDef="paymentDate">
-                <th mat-header-cell *matHeaderCellDef>Date</th>
-                <td mat-cell *matCellDef="let p">{{ p.paymentDate | localDate:'mediumDate' }}</td>
-              </ng-container>
-              <ng-container matColumnDef="amountPaid">
-                <th mat-header-cell *matHeaderCellDef>Amount</th>
-                <td mat-cell *matCellDef="let p" class="amount-cell">{{ p.amountPaid | currency }}</td>
-              </ng-container>
-              <ng-container matColumnDef="principal">
-                <th mat-header-cell *matHeaderCellDef>Principal</th>
-                <td mat-cell *matCellDef="let p" class="principal-color">{{ (p.principalAmount ?? p.amountPaid) | currency }}</td>
-              </ng-container>
-              <ng-container matColumnDef="interest">
-                <th mat-header-cell *matHeaderCellDef>Interest</th>
-                <td mat-cell *matCellDef="let p" class="interest-color">{{ (p.interestAmount ?? 0) | currency }}</td>
-              </ng-container>
-              <ng-container matColumnDef="fromAccount">
-                <th mat-header-cell *matHeaderCellDef>From Account</th>
-                <td mat-cell *matCellDef="let p">{{ getAccountName(p.fromAccountId) }}</td>
-              </ng-container>
-              <ng-container matColumnDef="notes">
-                <th mat-header-cell *matHeaderCellDef>Notes</th>
-                <td mat-cell *matCellDef="let p">{{ p.notes || '—' }}</td>
-              </ng-container>
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef></th>
-                <td mat-cell *matCellDef="let p">
-                  <button mat-icon-button (click)="editPayment(p)" matTooltip="Edit payment" aria-label="Edit payment">
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  <button mat-icon-button color="warn" (click)="deletePayment(p)" matTooltip="Delete payment" aria-label="Delete payment">
-                    <mat-icon>delete_outline</mat-icon>
-                  </button>
-                </td>
-              </ng-container>
+          }
+        </mat-tab>
 
-              <tr mat-header-row *matHeaderRowDef="paymentColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: paymentColumns;"></tr>
-            </table>
-          </div>
-        </mat-card>
-      }
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">table_chart</mat-icon> Amortization
+          </ng-template>
+          @if (amortizationSchedule()) {
+            <app-amortization-table [schedule]="amortizationSchedule()!"></app-amortization-table>
+          } @else {
+            <div class="empty-tab"><mat-icon>table_chart</mat-icon><span>No amortization schedule available.</span></div>
+          }
+        </mat-tab>
 
-      <app-entity-movements entityType="Loan" [entityId]="loan()!.id" />
-
-      @if (amortizationSchedule()) {
-        <h3>Amortization Schedule</h3>
-        <app-amortization-table [schedule]="amortizationSchedule()!"></app-amortization-table>
-      }
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">sync_alt</mat-icon> Money Flows
+          </ng-template>
+          <app-entity-movements entityType="Loan" [entityId]="loan()!.id" />
+        </mat-tab>
+      </mat-tab-group>
     } @else {
       <div class="empty-state">
         <div class="empty-icon-wrap">
@@ -237,8 +281,12 @@ import { FundingSourceService } from '../../../core/services/funding-source.serv
     .detail-item { display: flex; flex-direction: column; gap: 2px; }
     .label { font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 500; letter-spacing: 0.05em; }
     .value { font-size: 1rem; font-weight: 600; }
-    .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    table { width: 100%; min-width: 400px; }
+    .detail-tabs { margin-top: var(--spacing-md); }
+    .tab-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 6px; vertical-align: middle; }
+    .empty-tab { display: flex; align-items: center; gap: 10px; padding: 24px 0; color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: var(--spacing-lg); }
+    .empty-tab mat-icon { font-size: 32px; width: 32px; height: 32px; }
+    .table-wrapper { overflow-x: visible; }
+    table { width: 100%; }
     .history-card { margin-bottom: var(--spacing-lg); }
     .history-summary {
       display: flex;
@@ -271,11 +319,27 @@ import { FundingSourceService } from '../../../core/services/funding-source.serv
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
     }
+    .mobile-cards { display: none; }
+    .payment-card {
+      padding: 12px; border-bottom: 1px solid var(--color-border);
+    }
+    .payment-card:last-child { border-bottom: none; }
+    .pc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .pc-date { font-size: 0.8125rem; color: var(--color-text-secondary); }
+    .pc-amount { font-weight: 700; color: var(--color-success); }
+    .pc-breakdown { display: flex; gap: 12px; font-size: 0.75rem; margin-bottom: 4px; }
+    .pc-source { color: var(--color-text-muted); }
+    .pc-notes { font-size: 0.75rem; color: var(--color-text-muted); font-style: italic; margin-bottom: 4px; }
+    .pc-actions { display: flex; gap: 4px; justify-content: flex-end; }
+    .pc-actions button { width: 36px; height: 36px; }
     @media (max-width: 599px) {
       .detail-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
       .detail-actions { flex-wrap: wrap; }
       .summary-stats { flex-wrap: wrap; gap: var(--spacing-sm); }
       table { min-width: 0; }
+      .desktop-only { display: none; }
+      .mobile-cards { display: block; }
+      .pc-actions button { width: 44px; height: 44px; }
     }
   `]
 })

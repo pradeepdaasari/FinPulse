@@ -1,6 +1,7 @@
 import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
+import { inferCategoryIcon } from '../../../core/utils/category-icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -93,7 +94,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
             <div class="due-card">
               <div class="due-left">
                 <div class="cat-icon-wrap overdue-icon-wrap">
-                  <mat-icon class="cat-icon">{{ r.categoryIcon }}</mat-icon>
+                  <mat-icon class="cat-icon">{{ getIcon(r) }}</mat-icon>
                 </div>
                 <div>
                   <div class="desc-text">{{ r.description }}</div>
@@ -122,7 +123,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
             <div class="due-card">
               <div class="due-left">
                 <div class="cat-icon-wrap due-icon-wrap">
-                  <mat-icon class="cat-icon">{{ r.categoryIcon }}</mat-icon>
+                  <mat-icon class="cat-icon">{{ getIcon(r) }}</mat-icon>
                 </div>
                 <div>
                   <div class="desc-text">{{ r.description }}</div>
@@ -150,7 +151,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
             <td mat-cell *matCellDef="let r">
               <div class="desc-cell">
                 <div class="cat-icon-wrap">
-                  <mat-icon class="cat-icon">{{ r.categoryIcon }}</mat-icon>
+                  <mat-icon class="cat-icon">{{ getIcon(r) }}</mat-icon>
                 </div>
                 <div>
                   <div class="desc-text">{{ r.description }}</div>
@@ -228,7 +229,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
           <div class="rec-card" [class.rec-paused]="!r.isActive" [class.rec-due]="isDue(r) && !isOverdue(r)" [class.rec-overdue]="isOverdue(r)">
             <div class="rec-top">
               <div class="rec-icon-wrap">
-                <mat-icon>{{ r.categoryIcon }}</mat-icon>
+                <mat-icon>{{ getIcon(r) }}</mat-icon>
               </div>
               <div class="rec-info">
                 <span class="rec-name">{{ r.description }}</span>
@@ -548,6 +549,10 @@ export class RecurringPageComponent implements OnInit {
     const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit' });
     const currentYM = formatter.format(now).slice(0, 7);
     return item.nextRunDate.slice(0, 7) === currentYM;
+  }
+
+  getIcon(r: RecurringTransaction): string {
+    return inferCategoryIcon(r.categoryName, r.categoryIcon);
   }
 
   isDue(item: RecurringTransaction): boolean {

@@ -17,6 +17,7 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<CreditCard> CreditCards => Set<CreditCard>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<PaymentHistory> PaymentHistories => Set<PaymentHistory>();
+    public DbSet<StatementHistory> StatementHistories => Set<StatementHistory>();
     public DbSet<MonthlySnapshot> MonthlySnapshots => Set<MonthlySnapshot>();
     public DbSet<BudgetExpense> BudgetExpenses => Set<BudgetExpense>();
     public DbSet<DailyExpense> DailyExpenses => Set<DailyExpense>();
@@ -140,6 +141,16 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
         {
             entity.Property(e => e.AmountPaid).HasPrecision(18, 2);
             entity.HasIndex(e => e.UserId);
+        });
+
+        // StatementHistory decimal precision
+        modelBuilder.Entity<StatementHistory>(entity =>
+        {
+            entity.Property(e => e.StatementBalance).HasPrecision(18, 2);
+            entity.Property(e => e.MinimumPayment).HasPrecision(18, 2);
+            entity.Property(e => e.CreditLimit).HasPrecision(18, 2);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.CreditCardId);
         });
 
         // MonthlySnapshot
@@ -376,6 +387,11 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
                 card.UpdatedAt = now;
                 if (entry.State == EntityState.Added)
                     card.CreatedAt = now;
+            }
+            else if (entry.Entity is StatementHistory stmt)
+            {
+                if (entry.State == EntityState.Added)
+                    stmt.CreatedAt = now;
             }
             else if (entry.Entity is UserProfile profile)
             {

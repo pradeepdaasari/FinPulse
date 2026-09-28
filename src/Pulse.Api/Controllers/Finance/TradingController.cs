@@ -154,7 +154,10 @@ public class TradingController : ControllerBase
     public async Task<ActionResult> GetPreMarketByDate(string date)
     {
         if (!DateTime.TryParse(date, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)) return BadRequest();
-        var note = await _db.PreMarketNotes.FirstOrDefaultAsync(n => n.UserId == UserId && n.Date.Date == d.Date);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var dayStart = TimeZoneHelper.ToUtc(d.Date, tz);
+        var dayEnd = TimeZoneHelper.ToUtc(d.Date.AddDays(1), tz);
+        var note = await _db.PreMarketNotes.FirstOrDefaultAsync(n => n.UserId == UserId && n.Date >= dayStart && n.Date < dayEnd);
         if (note == null) return NotFound();
         return Ok(note);
     }
@@ -162,8 +165,11 @@ public class TradingController : ControllerBase
     [HttpGet("premarket/today")]
     public async Task<ActionResult> GetTodayNote()
     {
-        var today = await GetUserLocalDateAsync();
-        var note = await _db.PreMarketNotes.FirstOrDefaultAsync(n => n.UserId == UserId && n.Date.Date == today);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+        var dayStart = TimeZoneHelper.ToUtc(today, tz);
+        var dayEnd = TimeZoneHelper.ToUtc(today.AddDays(1), tz);
+        var note = await _db.PreMarketNotes.FirstOrDefaultAsync(n => n.UserId == UserId && n.Date >= dayStart && n.Date < dayEnd);
         if (note == null) return NotFound();
         return Ok(note);
     }
@@ -173,6 +179,8 @@ public class TradingController : ControllerBase
     {
         note.Id = 0;
         note.UserId = UserId;
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        note.Date = TimeZoneHelper.ToUtc(note.Date.Date, tz);
         note.KeyLevels = note.KeyLevels?.Trim();
         note.Catalysts = note.Catalysts?.Trim();
         note.Plan = note.Plan?.Trim();
@@ -187,7 +195,8 @@ public class TradingController : ControllerBase
         var note = await _db.PreMarketNotes.FirstOrDefaultAsync(n => n.Id == id && n.UserId == UserId);
         if (note == null) return NotFound();
 
-        note.Date = input.Date;
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        note.Date = TimeZoneHelper.ToUtc(input.Date.Date, tz);
         note.MarketBias = input.MarketBias;
         note.KeyLevels = input.KeyLevels;
         note.Catalysts = input.Catalysts;
@@ -311,6 +320,7 @@ public class TradingController : ControllerBase
 
         try
         {
+            var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
             var commission = input.CommissionFees ?? 0;
             var regExchange = input.RegExchangeFees ?? 0;
             var fees = commission + regExchange;
@@ -318,7 +328,7 @@ public class TradingController : ControllerBase
             var trade = new TradeEntry
             {
                 UserId = UserId,
-                Date = input.Date,
+                Date = TimeZoneHelper.ToUtc(input.Date.Date, tz),
                 SetupId = input.SetupId,
                 Instrument = input.Instrument,
                 Direction = input.Direction,
@@ -387,11 +397,12 @@ public class TradingController : ControllerBase
 
         try
         {
+            var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
             var commission = input.CommissionFees ?? 0;
             var regExchange = input.RegExchangeFees ?? 0;
             var fees = commission + regExchange;
 
-            trade.Date = input.Date;
+            trade.Date = TimeZoneHelper.ToUtc(input.Date.Date, tz);
             trade.SetupId = input.SetupId;
             trade.Instrument = input.Instrument;
             trade.Direction = input.Direction;
@@ -640,10 +651,17 @@ public class TradingController : ControllerBase
     public async Task<ActionResult> GetReviews([FromQuery] string? fromDate, [FromQuery] string? toDate)
     {
         var query = _db.DailyReviews.Where(r => r.UserId == UserId);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         if (DateTime.TryParse(fromDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var from))
-            query = query.Where(r => r.Date >= from.Date);
+        {
+            var fromUtc = TimeZoneHelper.ToUtc(from.Date, tz);
+            query = query.Where(r => r.Date >= fromUtc);
+        }
         if (DateTime.TryParse(toDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var to))
-            query = query.Where(r => r.Date < to.Date.AddDays(1));
+        {
+            var toUtc = TimeZoneHelper.ToUtc(to.Date.AddDays(1), tz);
+            query = query.Where(r => r.Date < toUtc);
+        }
         var reviews = await query.OrderByDescending(r => r.Date).ToListAsync();
         return Ok(reviews);
     }
@@ -651,8 +669,11 @@ public class TradingController : ControllerBase
     [HttpGet("reviews/today")]
     public async Task<ActionResult> GetTodayReview()
     {
-        var today = await GetUserLocalDateAsync();
-        var review = await _db.DailyReviews.FirstOrDefaultAsync(r => r.UserId == UserId && r.Date.Date == today);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+        var dayStart = TimeZoneHelper.ToUtc(today, tz);
+        var dayEnd = TimeZoneHelper.ToUtc(today.AddDays(1), tz);
+        var review = await _db.DailyReviews.FirstOrDefaultAsync(r => r.UserId == UserId && r.Date >= dayStart && r.Date < dayEnd);
         if (review == null) return NotFound();
         return Ok(review);
     }
@@ -662,7 +683,8 @@ public class TradingController : ControllerBase
     {
         review.Id = 0;
         review.UserId = UserId;
-        review.Date = DateTime.SpecifyKind(review.Date.Date, DateTimeKind.Unspecified);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        review.Date = TimeZoneHelper.ToUtc(review.Date.Date, tz);
         review.LessonsLearned = review.LessonsLearned?.Trim();
         review.ImprovementNote = review.ImprovementNote?.Trim();
         _db.DailyReviews.Add(review);
@@ -675,7 +697,8 @@ public class TradingController : ControllerBase
     {
         var review = await _db.DailyReviews.FirstOrDefaultAsync(r => r.Id == id && r.UserId == UserId);
         if (review == null) return NotFound();
-        review.Date = DateTime.SpecifyKind(input.Date.Date, DateTimeKind.Unspecified);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        review.Date = TimeZoneHelper.ToUtc(input.Date.Date, tz);
         review.Grade = input.Grade;
         review.FollowedPlan = input.FollowedPlan;
         review.FollowedRules = input.FollowedRules;

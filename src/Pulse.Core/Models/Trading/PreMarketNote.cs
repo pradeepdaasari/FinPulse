@@ -11,8 +11,7 @@ public class PreMarketNote
     public string MarketBias { get; set; } = "neutral";
     public string? KeyLevels { get; set; }
     public string? Catalysts { get; set; }
-    [Required]
-    public string Plan { get; set; } = string.Empty;
+    public string? Plan { get; set; }
     [MaxLength(10)]
     public string MentalState { get; set; } = "green";
     public string? MentalStateNotes { get; set; }

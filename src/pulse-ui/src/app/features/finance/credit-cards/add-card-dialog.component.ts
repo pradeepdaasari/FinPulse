@@ -1,7 +1,8 @@
 import { Component, ChangeDetectorRef, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { CreditCard } from '../../../core/models/credit-card.model';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -38,8 +39,8 @@ import { CreditCardService } from '../../../core/services/credit-card.service';
           <mat-icon>credit_card</mat-icon>
         </div>
         <div>
-          <h2 mat-dialog-title>Add Credit Card</h2>
-          <p class="dialog-subtitle">Track your credit cards</p>
+          <h2 mat-dialog-title>{{ editCard ? 'Edit' : 'Add' }} Credit Card</h2>
+          <p class="dialog-subtitle">{{ editCard ? 'Update card details' : 'Track your credit cards' }}</p>
         </div>
         <span class="banner-spacer"></span>
         <button mat-icon-button mat-dialog-close class="header-close" matTooltip="Close">
@@ -49,33 +50,27 @@ import { CreditCardService } from '../../../core/services/credit-card.service';
     </div>
     <mat-dialog-content>
       <form [formGroup]="form" class="card-form" (submit)="$event.preventDefault()">
-        <div class="amount-hero">
-          <div class="amount-input-row">
-            <span class="amount-dollar">$</span>
-            <input class="amount-value" type="number" inputmode="decimal" formControlName="currentBalance" placeholder="0.00">
+        @if (!editCard) {
+          <div class="amount-hero">
+            <div class="amount-input-row">
+              <span class="amount-dollar">$</span>
+              <input class="amount-value" type="number" inputmode="decimal" formControlName="currentBalance" placeholder="0.00">
+            </div>
+            <div class="amount-underline"></div>
+            <span class="amount-hint">Current Balance</span>
           </div>
-          <div class="amount-underline"></div>
-          <span class="amount-hint">Statement Balance</span>
-        </div>
+        }
 
         <mat-form-field class="full-width">
           <mat-label>Card Name</mat-label>
           <input matInput formControlName="cardName" placeholder="e.g. Chase Sapphire, Amex Gold">
         </mat-form-field>
 
-        <div class="form-row">
-          <mat-form-field>
-            <mat-label>Credit Limit</mat-label>
-            <input matInput type="number" inputmode="decimal" formControlName="creditLimit">
-            <span matTextPrefix>$&nbsp;</span>
-          </mat-form-field>
-
-          <mat-form-field>
-            <mat-label>Minimum Payment</mat-label>
-            <input matInput type="number" inputmode="decimal" formControlName="minimumPayment">
-            <span matTextPrefix>$&nbsp;</span>
-          </mat-form-field>
-        </div>
+        <mat-form-field class="full-width">
+          <mat-label>Credit Limit</mat-label>
+          <input matInput type="number" inputmode="decimal" formControlName="creditLimit">
+          <span matTextPrefix>$&nbsp;</span>
+        </mat-form-field>
 
         <div class="form-row">
           <mat-form-field>
@@ -140,7 +135,7 @@ import { CreditCardService } from '../../../core/services/credit-card.service';
     <div class="sticky-save-bar">
       <button class="gradient-save-btn" (click)="save()" [disabled]="form.invalid || saving()">
         <mat-icon>check</mat-icon>
-        {{ saving() ? 'Saving...' : 'Add Card' }}
+        {{ saving() ? 'Saving...' : (editCard ? 'Save Changes' : 'Add Card') }}
       </button>
     </div>
   `,
@@ -253,6 +248,7 @@ export class AddCardDialogComponent {
   private cardService = inject(CreditCardService);
   private dialogRef = inject(MatDialogRef<AddCardDialogComponent>);
   private cdr = inject(ChangeDetectorRef);
+  editCard: CreditCard | null = inject(MAT_DIALOG_DATA, { optional: true });
 
   dueDays = Array.from({ length: 31 }, (_, i) => i + 1);
   saving = signal(false);
@@ -262,7 +258,6 @@ export class AddCardDialogComponent {
     cardName: ['', Validators.required],
     creditLimit: [null as number | null, [Validators.required, Validators.min(1)]],
     currentBalance: [null as number | null, [Validators.required, Validators.min(0)]],
-    minimumPayment: [null as number | null, [Validators.required, Validators.min(1)]],
     aprPercent: [null as number | null, [Validators.required, Validators.min(0)]],
     dueDay: [1, Validators.required],
     billingCycleDays: [30, [Validators.required, Validators.min(20), Validators.max(45)]],
@@ -272,6 +267,27 @@ export class AddCardDialogComponent {
     promoEndDate: [null as Date | null]
   });
 
+  constructor() {
+    const c = this.editCard;
+    if (c) {
+      this.form.patchValue({
+        cardName: c.cardName,
+        creditLimit: c.creditLimit,
+        currentBalance: c.currentBalance,
+        aprPercent: c.aprPercent,
+        dueDay: c.dueDay,
+        billingCycleDays: c.billingCycleDays,
+        isAutopay: c.isAutopay,
+        hasPromo: c.promoAprPercent != null,
+        promoAprPercent: c.promoAprPercent ?? null,
+        promoEndDate: c.promoEndDate ? new Date(c.promoEndDate) : null
+      });
+      this.form.get('currentBalance')?.clearValidators();
+      this.form.get('currentBalance')?.updateValueAndValidity();
+      if (c.promoAprPercent != null) this.showMore.set(true);
+    }
+  }
+
   save(): void {
     if (this.form.invalid) return;
     this.saving.set(true);
@@ -280,8 +296,8 @@ export class AddCardDialogComponent {
     const card: any = {
       cardName: value.cardName,
       creditLimit: value.creditLimit,
-      currentBalance: value.currentBalance,
-      minimumPayment: value.minimumPayment,
+      currentBalance: this.editCard ? this.editCard.currentBalance : (value.currentBalance ?? 0),
+      minimumPayment: this.editCard?.minimumPayment ?? 0,
       aprPercent: value.aprPercent,
       dueDay: value.dueDay,
       billingCycleDays: value.billingCycleDays,
@@ -293,9 +309,13 @@ export class AddCardDialogComponent {
       card.promoEndDate = value.promoEndDate;
     }
 
-    this.cardService.create(card).subscribe({
-      next: (created) => {
-        this.dialogRef.close(created);
+    const obs$ = this.editCard
+      ? this.cardService.update(this.editCard.id, { ...this.editCard, ...card }, true)
+      : this.cardService.create(card);
+
+    obs$.subscribe({
+      next: (result) => {
+        this.dialogRef.close(result);
       },
       error: () => {
         this.saving.set(false);

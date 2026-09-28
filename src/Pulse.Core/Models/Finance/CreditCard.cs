@@ -39,4 +39,6 @@ public class CreditCard
     public DateTime UpdatedAt { get; set; }
 
     public ICollection<PaymentHistory> Payments { get; set; } = new List<PaymentHistory>();
+
+    public ICollection<StatementHistory> Statements { get; set; } = new List<StatementHistory>();
 }

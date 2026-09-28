@@ -309,7 +309,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       .action-btn { min-width: 44px; min-height: 44px; }
     }
     .mobile-add-fab {
-      display: flex; position: fixed;
+      display: none; position: fixed;
       bottom: 32px; right: 32px;
       width: 52px; height: 52px; border-radius: 50%;
       background: var(--gradient-primary); color: #fff; border: none;
@@ -322,6 +322,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .mobile-add-fab mat-icon { font-size: 26px; width: 26px; height: 26px; }
     @media (max-width: 599px) {
       .mobile-add-fab {
+        display: flex;
         bottom: calc(env(safe-area-inset-bottom, 0px) + 72px); right: 16px;
         width: 56px; height: 56px;
       }

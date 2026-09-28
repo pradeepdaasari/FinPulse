@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -23,6 +24,7 @@ import { MoneyMovement, MovementType } from '../../../core/models/money-movement
 import { NotificationService } from '../../../core/services/notification.service';
 import { toLocalDateString } from '../../../core/utils/date-utils';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
+import { EntityMovementsComponent } from '../../../shared/entity-movements.component';
 
 interface ActivityItem {
   kind: 'transaction' | 'movement';
@@ -37,9 +39,9 @@ interface ActivityItem {
   standalone: true,
   imports: [
     FormsModule, MatCardModule, MatIconModule, MatButtonModule, MatButtonToggleModule,
-    MatTableModule, MatTooltipModule,
+    MatTableModule, MatTabsModule, MatTooltipModule,
     MatDatepickerModule, MatFormFieldModule, MatInputModule,
-    CurrencyPipe, DatePipe, LocalDatePipe, SkeletonLoaderComponent
+    CurrencyPipe, DatePipe, LocalDatePipe, SkeletonLoaderComponent, EntityMovementsComponent
   ],
   template: `
     @if (loading()) {
@@ -96,10 +98,13 @@ interface ActivityItem {
         </mat-card-content>
       </mat-card>
 
-      <!-- Activity History -->
+      <mat-tab-group class="detail-tabs" animationDuration="200ms">
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">receipt_long</mat-icon> Activity ({{ activity().length }})
+        </ng-template>
       @if (allActivity().length > 0) {
         <div class="txn-header-row">
-          <h3 class="section-title">Activity</h3>
           <div class="period-controls">
             <mat-button-toggle-group [value]="period()" (change)="onPeriodChange($event.value)" hideSingleSelectionIndicator>
               <mat-button-toggle value="1m">1M</mat-button-toggle>
@@ -346,6 +351,15 @@ interface ActivityItem {
           <p>No activity recorded for this account yet.</p>
         </div>
       }
+      </mat-tab>
+
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">sync_alt</mat-icon> Money Flows
+        </ng-template>
+        <app-entity-movements entityType="BankAccount" [entityId]="account()!.id" />
+      </mat-tab>
+      </mat-tab-group>
     }
   `,
   styles: [`
@@ -381,6 +395,10 @@ interface ActivityItem {
     .acct-brokerage { background: var(--color-stat-purple-bg); color: var(--color-stat-purple); }
     .acct-cash { background: #fff3e0; color: #e65100; }
 
+    /* Tabs */
+    .detail-tabs { margin-top: var(--spacing-md); }
+    .tab-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 6px; vertical-align: middle; }
+
     /* Section Title */
     .section-title { font-size: 1rem; font-weight: 700; margin: 0; }
     .txn-header-row {
@@ -392,13 +410,14 @@ interface ActivityItem {
     .period-controls ::ng-deep .mat-button-toggle-label-content { padding: 0 12px; line-height: 36px; font-size: 0.8rem; }
     .custom-range { display: flex; align-items: center; gap: 8px; }
     .date-field { width: 130px; }
+    .date-field ::ng-deep .mat-mdc-form-field-subscript-wrapper { display: none; }
     .date-field ::ng-deep .mat-mdc-form-field-infix { padding-top: 8px !important; padding-bottom: 8px !important; min-height: 36px; }
-    .date-field ::ng-deep .mat-mdc-text-field-wrapper { max-height: 40px; }
+    .date-field ::ng-deep .mat-mdc-text-field-wrapper { max-height: 36px; }
     .date-field ::ng-deep .mat-mdc-floating-label { top: 18px; }
-    .go-btn { height: 36px; min-width: 48px; font-size: 0.8rem; }
+    .go-btn { height: 36px; min-width: 48px; font-size: 0.8rem; border-radius: var(--radius-sm); }
 
     /* History Card */
-    .history-card { overflow: hidden; }
+    .history-card {}
     .history-summary {
       display: flex; justify-content: space-between; align-items: center;
       padding: 14px 20px; border-bottom: 1px solid var(--color-border);
@@ -414,8 +433,8 @@ interface ActivityItem {
     .history-count { font-size: 0.8rem; color: var(--color-text-muted); font-weight: 500; }
 
     /* Table */
-    .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    table { width: 100%; min-width: 600px; }
+    .table-wrapper { overflow-x: visible; }
+    table { width: 100%; }
     .source-cell { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; white-space: nowrap; }
     .source-icon { font-size: 16px; width: 16px; height: 16px; opacity: 0.7; }
     .arrow-icon { font-size: 14px; width: 14px; height: 14px; opacity: 0.5; }
@@ -671,14 +690,20 @@ export class AccountDetailComponent implements OnInit {
   }
 
   deleteAccount(): void {
-    const confirmed = confirm(`Delete "${this.account()!.accountName}"? This cannot be undone.`);
-    if (confirmed) {
-      this.loading.set(true);
-      this.accountService.delete(this.account()!.id).subscribe({
-        next: () => { this.notify.success('Account deleted'); this.goBack(); },
-        error: () => { this.loading.set(false); this.notify.error('Failed to delete'); this.cdr.detectChanges(); }
+    import('../../../shared/confirm-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.ConfirmDialogComponent, {
+        width: '400px',
+        data: { title: 'Delete Account?', message: `Delete "${this.account()!.accountName}"? This cannot be undone.`, confirmText: 'Delete', color: 'warn' }
       });
-    }
+      dialogRef.afterClosed().subscribe(confirmed => {
+        if (!confirmed) return;
+        this.loading.set(true);
+        this.accountService.delete(this.account()!.id).subscribe({
+          next: () => { this.notify.success('Account deleted'); this.goBack(); },
+          error: () => { this.loading.set(false); this.notify.error('Failed to delete'); this.cdr.detectChanges(); }
+        });
+      });
+    });
   }
 
   editTransaction(txn: DailyExpense): void {

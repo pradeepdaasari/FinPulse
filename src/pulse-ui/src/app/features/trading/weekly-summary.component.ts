@@ -276,7 +276,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       position: relative;
       margin: -24px -24px 24px;
       padding: 14px 24px;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      background: var(--gradient-primary);
       border-radius: 0 0 var(--radius-xl) var(--radius-xl);
       overflow: hidden;
     }
@@ -293,7 +293,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; border: 1px solid rgba(255, 255, 255, 0.2);
     }
-    .banner-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #4ecdc4; }
+    .banner-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #fff; }
     h2 { margin: 0; color: #fff; font-size: 1rem; font-weight: 700; }
     .banner-subtitle { color: rgba(255, 255, 255, 0.65); font-size: var(--text-xs); margin: 1px 0 0; }
 

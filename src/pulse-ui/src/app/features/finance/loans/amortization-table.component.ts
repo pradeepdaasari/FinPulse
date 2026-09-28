@@ -110,7 +110,7 @@ import { AmortizationSchedule } from '../../../core/models/dashboard.model';
     .summary-label { font-size: 0.75rem; text-transform: uppercase; font-weight: 500; letter-spacing: 0.05em; color: var(--color-text-muted, #666); }
     .summary-amount { font-size: 1.25rem; font-weight: 700; }
     .summary-detail { font-size: 0.75rem; color: var(--color-text-secondary, #888); }
-    .table-container { overflow-x: auto; }
+    .table-container { overflow-x: visible; }
     table { width: 100%; }
     .row-paid {
       background: rgba(76, 175, 80, 0.06);
@@ -120,7 +120,7 @@ import { AmortizationSchedule } from '../../../core/models/dashboard.model';
 
     @media (max-width: 599px) {
       .summary-cards { grid-template-columns: 1fr; gap: 8px; }
-      .table-container { -webkit-overflow-scrolling: touch; }
+      .table-container { }
       table { font-size: 0.8rem; }
     }
   `]

@@ -12,7 +12,18 @@ import { MoneyMovement, MoneyMovementEntityType, MovementType } from '../core/mo
   standalone: true,
   imports: [CommonModule, MatIconModule, MatButtonModule, CurrencyPipe, LocalDatePipe, RouterLink],
   template: `
-    @if (movements().length > 0) {
+    @if (loading()) {
+      <div class="movements-loading">
+        <div class="loading-spinner"></div>
+        <span>Loading money flows...</span>
+      </div>
+    } @else if (movements().length === 0) {
+      <div class="movements-empty">
+        <mat-icon>sync_alt</mat-icon>
+        <span>No money flows recorded yet</span>
+        <a mat-button routerLink="/money-movements" class="view-all-btn">Go to Money Flow</a>
+      </div>
+    } @else if (movements().length > 0) {
       <div class="movements-section">
         <div class="section-header">
           <h3><mat-icon class="section-icon">sync_alt</mat-icon> Money Flow</h3>
@@ -95,6 +106,21 @@ import { MoneyMovement, MoneyMovementEntityType, MovementType } from '../core/mo
     .flow-arrow { font-size: 14px; width: 14px; height: 14px; color: var(--color-text-muted); }
     .movement-date { font-size: 0.6875rem; color: var(--color-text-muted); }
     .movement-amount { font-weight: 700; font-size: 0.9375rem; color: var(--color-success); white-space: nowrap; }
+    .movements-empty {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 32px 16px; color: var(--color-text-muted); font-size: 0.875rem;
+    }
+    .movements-empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.4; }
+    .movements-loading {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 32px 16px; color: var(--color-text-muted); font-size: 0.875rem;
+    }
+    .loading-spinner {
+      width: 20px; height: 20px; border: 2px solid var(--color-border);
+      border-top-color: var(--color-primary); border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   `]
 })
 export class EntityMovementsComponent implements OnInit {
@@ -105,14 +131,22 @@ export class EntityMovementsComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   movements = signal<MoneyMovement[]>([]);
+  loading = signal(true);
 
   ngOnInit(): void {
     this.movementService.getAll({
       entityType: this.entityType(),
       entityId: +this.entityId()
-    }).subscribe(movements => {
-      this.movements.set(movements);
-      this.cdr.detectChanges();
+    }).subscribe({
+      next: movements => {
+        this.movements.set(movements);
+        this.loading.set(false);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loading.set(false);
+        this.cdr.detectChanges();
+      }
     });
   }
 

@@ -44,7 +44,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     <div class="date-nav">
       <button mat-icon-button (click)="prevDay()"><mat-icon>chevron_left</mat-icon></button>
       <span class="date-label">{{ selectedDate() | date:'EEEE, MMM d, y' }}</span>
-      <button mat-icon-button (click)="nextDay()" [disabled]="isToday()"><mat-icon>chevron_right</mat-icon></button>
+      <button mat-icon-button (click)="nextDay()" [disabled]="isMaxDate()"><mat-icon>chevron_right</mat-icon></button>
     </div>
 
     <!-- Stats Row -->
@@ -470,16 +470,22 @@ export class PremarketComponent implements OnInit {
     marketBias: ['neutral' as MarketBias, Validators.required],
     keyLevels: [''],
     catalysts: [''],
-    plan: ['', Validators.required],
+    plan: [''],
     emotionalPlan: [''],
     maxTrades: [3],
-    maxLoss: [500, [Validators.required, Validators.min(1)]]
+    maxLoss: [500, Validators.min(1)]
   });
 
   isToday = computed(() => {
     const today = new Date();
     const sel = this.selectedDate();
     return sel.toDateString() === today.toDateString();
+  });
+
+  isMaxDate = computed(() => {
+    const max = new Date();
+    max.setDate(max.getDate() + 14);
+    return this.selectedDate().toDateString() === max.toDateString();
   });
 
   ngOnInit(): void {
@@ -545,10 +551,10 @@ export class PremarketComponent implements OnInit {
       marketBias: val.marketBias as MarketBias,
       keyLevels: val.keyLevels || undefined,
       catalysts: val.catalysts || undefined,
-      plan: val.plan!,
+      plan: val.plan || '',
       emotionalPlan: val.emotionalPlan || undefined,
-      maxTrades: val.maxTrades!,
-      maxLoss: val.maxLoss!
+      maxTrades: val.maxTrades ?? 3,
+      maxLoss: val.maxLoss ?? 500
     };
 
     const obs = this.editingId()
@@ -579,7 +585,7 @@ export class PremarketComponent implements OnInit {
   }
 
   nextDay(): void {
-    if (this.isToday()) return;
+    if (this.isMaxDate()) return;
     const d = new Date(this.selectedDate());
     d.setDate(d.getDate() + 1);
     this.selectedDate.set(d);

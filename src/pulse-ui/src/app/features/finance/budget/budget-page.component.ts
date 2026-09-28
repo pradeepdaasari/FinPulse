@@ -12,6 +12,7 @@ import { BudgetService } from '../../../core/services/budget.service';
 import { BudgetPlan, PaycheckBreakdown } from '../../../core/models/budget.model';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directive';
+import { inferCategoryIcon } from '../../../core/utils/category-icon';
 
 @Component({
   selector: 'app-budget-page',
@@ -139,7 +140,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                 @for (row of recurringCategories(); track row.categoryId) {
                   <div class="cat-row" [class.cat-over]="row.remaining < 0">
                     <div class="cat-row-top">
-                      <span class="cat-name-cell"><mat-icon class="cat-icon">{{ row.icon || 'autorenew' }}</mat-icon> {{ row.categoryName }}</span>
+                      <span class="cat-name-cell"><mat-icon class="cat-icon">{{ getIcon(row.categoryName, row.icon) }}</mat-icon> {{ row.categoryName }}</span>
                       <div class="cat-amounts">
                         <span class="cat-spent">{{ row.spent | currency:'USD':'symbol':'1.0-0' }} / {{ row.amount | currency:'USD':'symbol':'1.0-0' }}</span>
                         <span class="cat-remaining" [class.over-budget]="row.remaining < 0" [class.under-budget]="row.remaining >= 0">
@@ -169,7 +170,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                 @for (row of billCategories(); track row.categoryId) {
                   <div class="cat-row" [class.cat-over]="row.remaining < 0">
                     <div class="cat-row-top">
-                      <span class="cat-name-cell"><mat-icon class="cat-icon">{{ row.icon || (row.isFixed ? 'payments' : 'shopping_bag') }}</mat-icon> {{ row.categoryName }}</span>
+                      <span class="cat-name-cell"><mat-icon class="cat-icon">{{ getIcon(row.categoryName, row.icon) }}</mat-icon> {{ row.categoryName }}</span>
                       <div class="cat-amounts">
                         <span class="cat-spent">{{ row.spent | currency:'USD':'symbol':'1.0-0' }} / {{ row.amount | currency:'USD':'symbol':'1.0-0' }}</span>
                         <span class="cat-remaining" [class.over-budget]="row.remaining < 0" [class.under-budget]="row.remaining >= 0">
@@ -540,6 +541,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
 export class BudgetPageComponent implements OnInit {
   protected Math = Math;
   private budgetService = inject(BudgetService);
+  getIcon = (name: string, icon?: string | null) => inferCategoryIcon(name, icon);
 
   plan = signal<BudgetPlan | null>(null);
   loading = signal(true);

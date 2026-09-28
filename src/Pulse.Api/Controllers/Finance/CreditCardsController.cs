@@ -48,6 +48,7 @@ public class CreditCardsController : ControllerBase
         if (exists)
             return Conflict(new { message = $"A credit card named '{dto.CardName.Trim()}' already exists." });
 
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         var card = new CreditCard
         {
             CardName = dto.CardName.Trim(),
@@ -58,8 +59,8 @@ public class CreditCardsController : ControllerBase
             DueDay = dto.DueDay,
             IsAutopay = dto.IsAutopay,
             PromoAprPercent = dto.PromoAprPercent,
-            PromoEndDate = dto.PromoEndDate,
-            LastStatementDate = dto.LastStatementDate,
+            PromoEndDate = dto.PromoEndDate.HasValue ? TimeZoneHelper.ToUtc(dto.PromoEndDate.Value.Date, tz) : dto.PromoEndDate,
+            LastStatementDate = dto.LastStatementDate.HasValue ? TimeZoneHelper.ToUtc(dto.LastStatementDate.Value.Date, tz) : dto.LastStatementDate,
             UserId = UserId
         };
 
@@ -70,14 +71,29 @@ public class CreditCardsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<ActionResult<CreditCard>> Update(int id, CreditCardCreateDto dto)
+    public async Task<ActionResult<CreditCard>> Update(int id, CreditCardCreateDto dto, [FromQuery] bool skipSnapshot = false)
     {
         var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
         if (card is null) return NotFound();
 
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         var duplicate = await _db.CreditCards.AnyAsync(c => c.UserId == UserId && c.Id != id && c.CardName == dto.CardName.Trim());
         if (duplicate)
             return Conflict(new { message = $"A credit card named '{dto.CardName.Trim()}' already exists." });
+
+        if (!skipSnapshot && card.LastStatementDate.HasValue &&
+            (card.LastStatementDate != dto.LastStatementDate || card.CurrentBalance != dto.CurrentBalance))
+        {
+            _db.StatementHistories.Add(new StatementHistory
+            {
+                CreditCardId = card.Id,
+                UserId = UserId,
+                StatementDate = card.LastStatementDate.Value,
+                StatementBalance = card.CurrentBalance,
+                MinimumPayment = card.MinimumPayment,
+                CreditLimit = card.CreditLimit
+            });
+        }
 
         card.CardName = dto.CardName.Trim();
         card.CurrentBalance = dto.CurrentBalance;
@@ -87,8 +103,8 @@ public class CreditCardsController : ControllerBase
         card.DueDay = dto.DueDay;
         card.IsAutopay = dto.IsAutopay;
         card.PromoAprPercent = dto.PromoAprPercent;
-        card.PromoEndDate = dto.PromoEndDate;
-        card.LastStatementDate = dto.LastStatementDate;
+        card.PromoEndDate = dto.PromoEndDate.HasValue ? TimeZoneHelper.ToUtc(dto.PromoEndDate.Value.Date, tz) : dto.PromoEndDate;
+        card.LastStatementDate = dto.LastStatementDate.HasValue ? TimeZoneHelper.ToUtc(dto.LastStatementDate.Value.Date, tz) : dto.LastStatementDate;
 
         await _db.SaveChangesAsync();
 
@@ -104,6 +120,70 @@ public class CreditCardsController : ControllerBase
         _db.CreditCards.Remove(card);
         await _db.SaveChangesAsync();
 
+        return NoContent();
+    }
+
+    [HttpGet("{id}/statements")]
+    public async Task<ActionResult<List<StatementHistory>>> GetStatements(int id)
+    {
+        var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
+        if (card is null) return NotFound();
+
+        var statements = await _db.StatementHistories
+            .Where(s => s.CreditCardId == id && s.UserId == UserId)
+            .OrderByDescending(s => s.StatementDate)
+            .ToListAsync();
+
+        return Ok(statements);
+    }
+
+    [HttpPost("{id}/statements")]
+    public async Task<ActionResult<StatementHistory>> AddStatement(int id, [FromBody] StatementHistory dto)
+    {
+        var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
+        if (card is null) return NotFound();
+
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var statement = new StatementHistory
+        {
+            CreditCardId = id,
+            UserId = UserId,
+            StatementDate = TimeZoneHelper.ToUtc(dto.StatementDate.Date, tz),
+            StatementBalance = dto.StatementBalance,
+            MinimumPayment = dto.MinimumPayment,
+            CreditLimit = dto.CreditLimit
+        };
+
+        _db.StatementHistories.Add(statement);
+        await _db.SaveChangesAsync();
+
+        return Ok(statement);
+    }
+
+    [HttpPut("{id}/statements/{stmtId}")]
+    public async Task<ActionResult<StatementHistory>> UpdateStatement(int id, int stmtId, [FromBody] StatementHistory dto)
+    {
+        var stmt = await _db.StatementHistories.FirstOrDefaultAsync(s => s.Id == stmtId && s.CreditCardId == id && s.UserId == UserId);
+        if (stmt is null) return NotFound();
+
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        stmt.StatementDate = TimeZoneHelper.ToUtc(dto.StatementDate.Date, tz);
+        stmt.StatementBalance = dto.StatementBalance;
+        stmt.MinimumPayment = dto.MinimumPayment;
+        stmt.CreditLimit = dto.CreditLimit;
+
+        await _db.SaveChangesAsync();
+        return Ok(stmt);
+    }
+
+    [HttpDelete("{id}/statements/{stmtId}")]
+    public async Task<ActionResult> DeleteStatement(int id, int stmtId)
+    {
+        var stmt = await _db.StatementHistories.FirstOrDefaultAsync(s => s.Id == stmtId && s.CreditCardId == id && s.UserId == UserId);
+        if (stmt is null) return NotFound();
+
+        _db.StatementHistories.Remove(stmt);
+        await _db.SaveChangesAsync();
         return NoContent();
     }
 
@@ -128,6 +208,9 @@ public class CreditCardsController : ControllerBase
     {
         var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
         if (card is null) return NotFound();
+
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        dto.PaymentDate = TimeZoneHelper.ToUtc(dto.PaymentDate.Date, tz);
 
         var strategy = _db.Database.CreateExecutionStrategy();
         try

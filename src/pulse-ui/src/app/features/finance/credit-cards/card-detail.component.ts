@@ -1,5 +1,6 @@
-import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit, inject, signal, computed, ElementRef, viewChild } from '@angular/core';
 import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
 import { forkJoin } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -7,6 +8,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
@@ -17,6 +19,7 @@ import { toLocalDateString } from '../../../core/utils/date-utils';
 import { DailyExpenseService } from '../../../core/services/daily-expense.service';
 import { MoneyMovementService } from '../../../core/services/money-movement.service';
 import { CreditCard } from '../../../core/models/credit-card.model';
+import { StatementHistory } from '../../../core/models/statement-history.model';
 import { DailyExpense } from '../../../core/models/daily-expense.model';
 import { MoneyMovement, MovementType } from '../../../core/models/money-movement.model';
 import { PaymentHistory } from '../../../core/models/payment-history.model';
@@ -46,7 +49,7 @@ interface CardActivityItem {
 @Component({
   selector: 'app-card-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatTooltipModule, MatChipsModule, CurrencyPipe, DecimalPipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatTabsModule, MatTooltipModule, MatChipsModule, CurrencyPipe, DecimalPipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadCard()">
     @if (loading()) {
@@ -73,26 +76,15 @@ interface CardActivityItem {
           </button>
           <h2>{{ card()!.cardName }}</h2>
         </div>
-        <div class="detail-actions desktop-actions">
+        <div class="detail-actions">
           <button mat-raised-button color="primary" (click)="recordPayment()" aria-label="Record payment">
-            <mat-icon>payments</mat-icon> Record Payment
+            <mat-icon>payments</mat-icon> <span class="btn-label">Record Payment</span>
           </button>
-          <button mat-stroked-button (click)="updateBalance()" aria-label="Update balance">
-            <mat-icon>account_balance_wallet</mat-icon> Update Balance
+          <button mat-stroked-button (click)="editCard()" aria-label="Edit card">
+            <mat-icon>edit</mat-icon> <span class="btn-label">Edit</span>
           </button>
           <button mat-stroked-button color="warn" (click)="deleteCard()" aria-label="Delete card">
-            <mat-icon>delete</mat-icon> Delete
-          </button>
-        </div>
-        <div class="detail-actions mobile-actions">
-          <button mat-raised-button color="primary" (click)="recordPayment()" aria-label="Record payment">
-            <mat-icon>payments</mat-icon> Pay
-          </button>
-          <button mat-icon-button (click)="updateBalance()" matTooltip="Update balance" aria-label="Update balance">
-            <mat-icon>account_balance_wallet</mat-icon>
-          </button>
-          <button mat-icon-button color="warn" (click)="deleteCard()" matTooltip="Delete card" aria-label="Delete card">
-            <mat-icon>delete</mat-icon>
+            <mat-icon>delete</mat-icon> <span class="btn-label">Delete</span>
           </button>
         </div>
       </div>
@@ -101,22 +93,34 @@ interface CardActivityItem {
         <mat-card-content>
           <div class="detail-grid">
             <div class="detail-item">
-              <span class="label">Statement Balance</span>
-              <span class="value">{{ card()!.currentBalance | currency }}</span>
+              <span class="label">@if (remainingStatementBalance() < effectiveStatementBalance()) { Remaining Balance } @else { Statement Balance } @if (effectiveStatementDate()) { <span class="label-date">{{ effectiveStatementDate()! | localDate:'MMM d, y' }}</span> }</span>
+              @if (editingStatement()) {
+                <span class="inline-edit">
+                  <span class="currency-prefix">$</span>
+                  <input #stmtInput type="number" inputmode="decimal" step="0.01" [(ngModel)]="editStatementValue" (keydown.enter)="saveStatementBalance()" (keydown.escape)="editingStatement.set(false)" class="inline-input">
+                  <button mat-icon-button class="inline-btn save" (click)="saveStatementBalance()" matTooltip="Save"><mat-icon>check</mat-icon></button>
+                  <button mat-icon-button class="inline-btn cancel" (click)="editingStatement.set(false)" matTooltip="Cancel"><mat-icon>close</mat-icon></button>
+                </span>
+              } @else {
+                <span class="value editable" (click)="startEditStatement()" matTooltip="Click to update statement balance">{{ remainingStatementBalance() | currency }} <mat-icon class="edit-hint">edit</mat-icon></span>
+                @if (remainingStatementBalance() < effectiveStatementBalance()) {
+                  <span class="original-stmt-bal">Statement was {{ effectiveStatementBalance() | currency }}</span>
+                }
+              }
             </div>
-            @if (card()!.lastStatementDate && postStatementCharges() > 0) {
+            @if (effectiveStatementDate() && postStatementCharges() > 0) {
               <div class="detail-item">
                 <span class="label">+ New Charges</span>
                 <span class="value new-charges">{{ postStatementCharges() | currency }}</span>
               </div>
             }
-            @if (card()!.lastStatementDate && postStatementRefunds() > 0) {
+            @if (effectiveStatementDate() && postStatementRefunds() > 0) {
               <div class="detail-item">
                 <span class="label">- Refunds</span>
                 <span class="value" style="color: #2e7d32;">{{ postStatementRefunds() | currency }}</span>
               </div>
             }
-            @if (card()!.lastStatementDate && postStatementPayments() > 0) {
+            @if (effectiveStatementDate() && postStatementPayments() > 0) {
               <div class="detail-item">
                 <span class="label">- Payments</span>
                 <span class="value" style="color: #2e7d32;">{{ postStatementPayments() | currency }}</span>
@@ -147,7 +151,13 @@ interface CardActivityItem {
             </div>
             <div class="detail-item">
               <span class="label">Minimum Payment</span>
-              <span class="value">{{ card()!.minimumPayment | currency }}</span>
+              <span class="value">
+                @if (remainingMinimumPayment() <= 0 && postStatementPayments() > 0) {
+                  <span style="color: var(--color-success);">Paid</span>
+                } @else {
+                  {{ remainingMinimumPayment() | currency }}
+                }
+              </span>
             </div>
             <div class="detail-item">
               <span class="label">Next Due</span>
@@ -171,9 +181,12 @@ interface CardActivityItem {
         </mat-card-content>
       </mat-card>
 
-      <!-- Activity Section -->
-      <div class="section-header">
-        <h3>Activity</h3>
+      <mat-tab-group class="detail-tabs" animationDuration="200ms">
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">receipt_long</mat-icon> Activity ({{ realItemCount() }})
+        </ng-template>
+      <div class="section-header" style="margin-top: 16px;">
         <div class="txn-filters">
           <button mat-stroked-button [class.active-filter]="txnMonth() === null" (click)="setTxnMonth(null)">All</button>
           @for (m of availableMonths(); track m.key) {
@@ -341,7 +354,11 @@ interface CardActivityItem {
         <div class="empty-txn"><mat-icon>receipt_long</mat-icon><span>{{ allActivityCombined().length === 0 ? 'No activity recorded yet' : 'No activity for this period' }}</span></div>
       }
 
-      <h3>Payment History</h3>
+      </mat-tab>
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">payments</mat-icon> Payments ({{ paymentHistory().length }})
+        </ng-template>
       @if (paymentHistory().length > 0) {
         <mat-card class="history-card">
           <div class="history-summary">
@@ -410,6 +427,114 @@ interface CardActivityItem {
         </div>
       }
 
+      </mat-tab>
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">description</mat-icon> Statements ({{ statementHistory().length }})
+        </ng-template>
+      <div class="section-header" style="margin-top: 16px;">
+        <button mat-stroked-button (click)="toggleAddStatement()">
+          <mat-icon>{{ showAddStatement() ? 'close' : 'add' }}</mat-icon> {{ showAddStatement() ? 'Cancel' : 'Add Statement' }}
+        </button>
+      </div>
+      @if (showAddStatement()) {
+        <mat-card class="add-stmt-form">
+          <div class="stmt-form-row">
+            <div class="stmt-field">
+              <label>Statement Date</label>
+              <input type="date" [(ngModel)]="newStmtDate" class="stmt-input">
+            </div>
+            <div class="stmt-field">
+              <label>Balance</label>
+              <input type="number" inputmode="decimal" step="0.01" [(ngModel)]="newStmtBalance" placeholder="0.00" class="stmt-input">
+            </div>
+            <div class="stmt-field">
+              <label>Min Payment</label>
+              <input type="number" inputmode="decimal" step="0.01" [(ngModel)]="newStmtMinPayment" placeholder="0.00" class="stmt-input">
+            </div>
+            <div class="stmt-field">
+              <label>Credit Limit</label>
+              <input type="number" inputmode="decimal" step="0.01" [(ngModel)]="newStmtCreditLimit" placeholder="0.00" class="stmt-input">
+            </div>
+            <div class="stmt-field stmt-action">
+              <button mat-raised-button color="primary" (click)="editingStmt() ? saveEditedStatement() : addStatement()" [disabled]="!newStmtDate || savingStatement()">
+                @if (savingStatement()) { <mat-icon class="spin">sync</mat-icon> } @else { <mat-icon>check</mat-icon> }
+                {{ editingStmt() ? 'Update' : 'Save' }}
+              </button>
+            </div>
+          </div>
+        </mat-card>
+      }
+      @if (statementHistory().length > 0) {
+        <mat-card class="history-card">
+          <div class="table-wrapper desktop-only">
+            <table mat-table [dataSource]="statementHistory()">
+              <ng-container matColumnDef="statementDate">
+                <th mat-header-cell *matHeaderCellDef>Statement Date</th>
+                <td mat-cell *matCellDef="let s">
+                  {{ s.statementDate | localDate:'mediumDate' }}
+                  @if (latestStatement()?.id === s.id) { <span class="current-stmt-chip">Current</span> }
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="statementBalance">
+                <th mat-header-cell *matHeaderCellDef>Balance</th>
+                <td mat-cell *matCellDef="let s" class="amount-cell">{{ s.statementBalance | currency }}</td>
+              </ng-container>
+              <ng-container matColumnDef="minimumPayment">
+                <th mat-header-cell *matHeaderCellDef>Min Payment</th>
+                <td mat-cell *matCellDef="let s">{{ s.minimumPayment | currency }}</td>
+              </ng-container>
+              <ng-container matColumnDef="creditLimit">
+                <th mat-header-cell *matHeaderCellDef>Credit Limit</th>
+                <td mat-cell *matCellDef="let s">{{ s.creditLimit | currency:'USD':'symbol':'1.0-0' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="utilization">
+                <th mat-header-cell *matHeaderCellDef>Utilization</th>
+                <td mat-cell *matCellDef="let s">
+                  <span [style.color]="s.creditLimit > 0 ? (s.statementBalance / s.creditLimit > 0.7 ? 'var(--color-danger)' : s.statementBalance / s.creditLimit > 0.3 ? 'var(--color-warning)' : 'var(--color-success)') : 'var(--color-text-muted)'" style="font-weight: 600;">
+                    {{ s.creditLimit > 0 ? (s.statementBalance / s.creditLimit * 100 | number:'1.0-0') : '—' }}{{ s.creditLimit > 0 ? '%' : '' }}
+                  </span>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="stmtActions">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let s">
+                  <button mat-icon-button (click)="editStatement(s)" matTooltip="Edit" aria-label="Edit statement">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" (click)="deleteStatementRecord(s)" matTooltip="Delete" aria-label="Delete statement">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="statementColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: statementColumns;"></tr>
+            </table>
+          </div>
+          <div class="mobile-cards">
+            @for (s of statementHistory(); track s.id) {
+              <div class="mobile-card">
+                <div class="mobile-card-row">
+                  <span class="mobile-card-date">{{ s.statementDate | localDate:'mediumDate' }} @if (latestStatement()?.id === s.id) { <span class="current-stmt-chip">Current</span> }</span>
+                  <span class="mobile-card-amount amount-cell">{{ s.statementBalance | currency }}</span>
+                </div>
+                <div class="mobile-card-notes">Min: {{ s.minimumPayment | currency }} · Limit: {{ s.creditLimit | currency:'USD':'symbol':'1.0-0' }}</div>
+                <div class="mobile-card-actions">
+                  <button mat-icon-button (click)="editStatement(s)" aria-label="Edit statement"><mat-icon>edit</mat-icon></button>
+                  <button mat-icon-button color="warn" (click)="deleteStatementRecord(s)" aria-label="Delete statement"><mat-icon>delete_outline</mat-icon></button>
+                </div>
+              </div>
+            }
+          </div>
+        </mat-card>
+      } @else {
+        <div class="empty-txn"><mat-icon>description</mat-icon><span>No previous statements recorded yet.</span>
+          <button mat-stroked-button color="primary" (click)="toggleAddStatement()">Add Statement</button>
+        </div>
+      }
+      </mat-tab>
+      </mat-tab-group>
+
     }
     </div>
   `,
@@ -432,7 +557,6 @@ interface CardActivityItem {
     .error-state h3 { margin: 0 0 8px; color: var(--color-text); }
     .error-state p { margin: 0 0 24px; }
     .error-actions { display: flex; gap: 12px; }
-    .mobile-actions { display: none; }
     .detail-actions {
       display: flex;
       gap: 8px;
@@ -452,11 +576,43 @@ interface CardActivityItem {
     }
     .detail-item { display: flex; flex-direction: column; gap: 2px; }
     .label { font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 500; letter-spacing: 0.05em; }
+    .label-date { font-weight: 600; color: var(--color-primary); text-transform: none; letter-spacing: normal; font-size: 0.7rem; }
+    .original-stmt-bal { display: block; font-size: 0.7rem; color: var(--color-text-muted); font-weight: 400; margin-top: 1px; }
     .value { font-size: 1rem; font-weight: 600; }
+    .value.editable { cursor: pointer; display: inline-flex; align-items: center; gap: 4px; border-radius: var(--radius-xs); padding: 2px 4px; margin: -2px -4px; transition: background var(--transition-fast); }
+    .value.editable:hover { background: var(--color-surface-hover, #f1f5f9); }
+    .value.editable .edit-hint { font-size: 14px; width: 14px; height: 14px; color: var(--color-text-muted); opacity: 0; transition: opacity var(--transition-fast); }
+    .value.editable:hover .edit-hint { opacity: 1; }
+    .inline-edit { display: flex; align-items: center; gap: 2px; }
+    .currency-prefix { font-size: 0.9rem; font-weight: 600; color: var(--color-text); }
+    .inline-input { width: 100px; font-size: 0.95rem; font-weight: 600; border: 1px solid var(--color-primary); border-radius: var(--radius-xs); padding: 4px 8px; outline: none; background: var(--color-surface-solid); color: var(--color-text); }
+    .inline-input:focus { box-shadow: 0 0 0 2px rgba(0,122,255,0.2); }
+    .inline-btn { width: 28px !important; height: 28px !important; }
+    .inline-btn mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .inline-btn.save { color: var(--color-success) !important; }
+    .inline-btn.cancel { color: var(--color-text-muted) !important; }
+    .detail-tabs { margin-top: var(--spacing-md); }
+    .tab-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 6px; vertical-align: middle; }
+    .add-stmt-form { padding: 16px !important; margin-bottom: 12px; }
+    .stmt-form-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+    .stmt-field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 120px; }
+    .stmt-field label { font-size: var(--text-xs); font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+    .stmt-input { font-size: 0.9rem; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-xs); background: var(--color-surface-solid); color: var(--color-text); outline: none; width: 100%; box-sizing: border-box; }
+    .stmt-input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(0,122,255,0.15); }
+    .stmt-action { flex: 0 0 auto; min-width: auto; }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @media (max-width: 599px) { .stmt-form-row { flex-direction: column; } .stmt-field { min-width: 100%; } }
+    .current-stmt-chip {
+      display: inline-block; font-size: 0.6rem; font-weight: 700;
+      padding: 1px 6px; border-radius: var(--radius-full);
+      background: var(--color-success-bg, #e8f5e9); color: var(--color-success, #2e7d32);
+      text-transform: uppercase; letter-spacing: 0.04em; vertical-align: middle; margin-left: 6px;
+    }
     .new-charges { color: #e53935; }
     .total-balance { font-size: 1.1rem; font-weight: 700; color: var(--color-primary); }
-    .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    table { width: 100%; min-width: 500px; }
+    .table-wrapper { overflow-x: visible; }
+    table { width: 100%; }
     .history-card { margin-bottom: var(--spacing-lg); }
     .history-summary {
       display: flex;
@@ -495,7 +651,7 @@ interface CardActivityItem {
     .txn-filters { display: flex; gap: 6px; flex-wrap: wrap; }
     .txn-filters button { font-size: 0.75rem !important; padding: 0 10px !important; min-height: 30px !important; border-radius: var(--radius-full) !important; }
     .txn-filters button.active-filter { background: var(--color-primary) !important; color: #fff !important; }
-    .txn-card { margin-bottom: var(--spacing-lg); overflow: hidden; padding: 0 !important; }
+    .txn-card { margin-bottom: var(--spacing-lg); padding: 0 !important; }
     .txn-summary { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; font-size: 0.875rem; border-bottom: 1px solid var(--color-border); flex-wrap: wrap; gap: 6px; }
     .txn-summary-left { display: flex; gap: 16px; flex-wrap: wrap; }
     .txn-total-charge strong { color: var(--color-danger, #f44336); }
@@ -603,18 +759,12 @@ interface CardActivityItem {
     }
 
 
-    @media (max-width: 1199px) {
-      .desktop-only { display: none !important; }
-      .mobile-only { display: block !important; }
-      .mobile-cards { display: block !important; }
-      .desktop-actions { display: none !important; }
-      .mobile-actions { display: flex !important; }
-    }
-
     @media (max-width: 599px) {
       .desktop-only { display: none !important; }
       .mobile-only { display: block !important; }
       .mobile-cards { display: block !important; }
+      .detail-actions .btn-label { display: none; }
+      .detail-actions button mat-icon { margin-right: 0; }
       .txn-filters button {
         font-size: 0.7rem !important;
         padding: 0 8px !important;
@@ -658,17 +808,48 @@ export class CardDetailComponent implements OnInit {
 
   card = signal<CreditCard | null>(null);
   paymentHistory = signal<PaymentHistory[]>([]);
+  statementHistory = signal<StatementHistory[]>([]);
   allTransactions = signal<DailyExpense[]>([]);
   allMovements = signal<MoneyMovement[]>([]);
   totalPaid = signal(0);
   loading = signal(true);
   loadError = signal(false);
   txnMonth = signal<string | null>(null);
+  editingStatement = signal(false);
+  editStatementValue = 0;
+  stmtInput = viewChild<ElementRef>('stmtInput');
+  showAddStatement = signal(false);
+  savingStatement = signal(false);
+  newStmtDate = '';
+  newStmtBalance = 0;
+  newStmtMinPayment = 0;
+  newStmtCreditLimit = 0;
+
+  latestStatement = computed(() => {
+    const stmts = this.statementHistory();
+    if (!stmts.length) return null;
+    return stmts.reduce((a, b) => a.statementDate > b.statementDate ? a : b);
+  });
+
+  effectiveStatementBalance = computed(() => {
+    const latest = this.latestStatement();
+    return latest ? latest.statementBalance : (this.card()?.currentBalance ?? 0);
+  });
+
+  effectiveStatementDate = computed(() => {
+    const latest = this.latestStatement();
+    if (latest) return latest.statementDate.slice(0, 10);
+    return this.card()?.lastStatementDate?.slice(0, 10) ?? null;
+  });
+
+  effectiveMinimumPayment = computed(() => {
+    const latest = this.latestStatement();
+    return latest ? latest.minimumPayment : (this.card()?.minimumPayment ?? 0);
+  });
 
   postStatementCharges = computed(() => {
-    const c = this.card();
-    if (!c?.lastStatementDate) return 0;
-    const stmtDate = c.lastStatementDate.slice(0, 10);
+    const stmtDate = this.effectiveStatementDate();
+    if (!stmtDate) return 0;
     return sumCurrency(
       this.allTransactions()
         .filter(t => t.date > stmtDate && t.transactionType === 'Expense')
@@ -677,9 +858,8 @@ export class CardDetailComponent implements OnInit {
   });
 
   postStatementRefunds = computed(() => {
-    const c = this.card();
-    if (!c?.lastStatementDate) return 0;
-    const stmtDate = c.lastStatementDate.slice(0, 10);
+    const stmtDate = this.effectiveStatementDate();
+    if (!stmtDate) return 0;
     return sumCurrency(
       this.allTransactions()
         .filter(t => t.date > stmtDate && t.transactionType === 'Refund')
@@ -688,12 +868,12 @@ export class CardDetailComponent implements OnInit {
   });
 
   postStatementPayments = computed(() => {
-    const c = this.card();
-    if (!c?.lastStatementDate) return 0;
-    const stmtDate = new Date(c.lastStatementDate).getTime();
+    const stmtDate = this.effectiveStatementDate();
+    if (!stmtDate) return 0;
+    const stmtTime = new Date(stmtDate).getTime();
     return sumCurrency(
       this.paymentHistory()
-        .filter(p => new Date(p.paymentDate).getTime() > stmtDate)
+        .filter(p => new Date(p.paymentDate).getTime() > stmtTime)
         .map(p => p.amountPaid)
     );
   });
@@ -701,8 +881,24 @@ export class CardDetailComponent implements OnInit {
   totalBalance = computed(() => {
     const c = this.card();
     if (!c) return 0;
-    if (!c.lastStatementDate) return c.currentBalance;
-    return c.currentBalance + this.postStatementCharges() - this.postStatementRefunds() - this.postStatementPayments();
+    const stmtBal = this.effectiveStatementBalance();
+    if (!this.effectiveStatementDate()) return stmtBal;
+    return stmtBal + this.postStatementCharges() - this.postStatementRefunds() - this.postStatementPayments();
+  });
+
+  remainingStatementBalance = computed(() => {
+    const stmtBal = this.effectiveStatementBalance();
+    const stmtDate = this.effectiveStatementDate();
+    const payments = stmtDate ? this.postStatementPayments() : this.totalPayments();
+    const refunds = stmtDate ? this.postStatementRefunds() : this.totalRefunds();
+    return Math.max(0, stmtBal - payments - refunds);
+  });
+
+  remainingMinimumPayment = computed(() => {
+    const minPay = this.effectiveMinimumPayment();
+    const stmtDate = this.effectiveStatementDate();
+    const payments = stmtDate ? this.postStatementPayments() : this.totalPayments();
+    return Math.max(0, minPay - payments);
   });
 
   allCombined = computed(() => {
@@ -740,7 +936,6 @@ export class CardDetailComponent implements OnInit {
   allActivityCombined = computed<CardActivityItem[]>(() => {
     const cardId = this.card()?.id;
     const numCardId = cardId ? parseInt(cardId, 10) : undefined;
-    const currentBal = this.card()?.currentBalance ?? 0;
     const txnIdSet = new Set(this.allTransactions().map(t => t.id));
     const payIdSet = new Set(this.paymentHistory().map(p => p.id));
     const txnItems = this.allCombined().map(t => ({ kind: 'transaction' as const, date: t.date, balance: 0, txn: t }));
@@ -749,7 +944,7 @@ export class CardDetailComponent implements OnInit {
                  && (!m.relatedPaymentId || !payIdSet.has(m.relatedPaymentId)))
       .map(m => ({ kind: 'movement' as const, date: m.movementDate, balance: 0, movement: m }));
     const sorted = [...txnItems, ...mvItems].sort((a, b) => b.date.localeCompare(a.date));
-    let bal = currentBal;
+    let bal = this.totalBalance();
     for (const item of sorted) {
       item.balance = bal;
       bal -= this.getCardBalanceDelta(item, numCardId);
@@ -762,10 +957,10 @@ export class CardDetailComponent implements OnInit {
     const all = this.allActivityCombined();
     const filtered = month ? all.filter(item => item.date.slice(0, 7) === month) : all;
 
-    const stmtDate = this.card()?.lastStatementDate?.slice(0, 10);
+    const stmtDate = this.effectiveStatementDate();
     if (!stmtDate || filtered.length === 0) return filtered;
 
-    const stmtBalance = this.card()?.currentBalance ?? 0;
+    const stmtBalance = this.effectiveStatementBalance();
     const runningBalance = this.totalBalance();
     const isCurrentPeriod = !month || filtered.some(item => item.date.slice(0, 10) >= stmtDate);
     const result: CardActivityItem[] = [];
@@ -845,6 +1040,8 @@ export class CardDetailComponent implements OnInit {
   });
 
   paymentColumns = ['paymentDate', 'amountPaid', 'fromAccount', 'notes', 'actions'];
+  statementColumns = ['statementDate', 'statementBalance', 'minimumPayment', 'creditLimit', 'utilization', 'stmtActions'];
+  editingStmt = signal<StatementHistory | null>(null);
   private accountNameMap = new Map<number, string>();
   txnColumns = ['date', 'description', 'category', 'type', 'amount'];
 
@@ -893,13 +1090,20 @@ export class CardDetailComponent implements OnInit {
       },
       error: () => this.notify.error('Failed to load payment history')
     });
+    this.cardService.getStatements(id).subscribe({
+      next: (statements) => { this.statementHistory.set(statements); this.cdr.detectChanges(); },
+      error: () => {}
+    });
     forkJoin({
       purchases: this.expenseService.getExpenses({ fundingSourceId: numId, fundingSourceType: 'CreditCard', allTime: true }),
       cardPayments: this.expenseService.getExpenses({ toFundingSourceId: numId, allTime: true })
     }).subscribe({
       next: ({ purchases, cardPayments }) => {
         const seenIds = new Set(purchases.map(t => t.id));
-        const merged = [...purchases, ...cardPayments.filter(t => !seenIds.has(t.id))];
+        const relevantPayments = cardPayments.filter(t =>
+          !seenIds.has(t.id) && (t.transactionType === 'CardPayment' || t.transactionType === 'Transfer')
+        );
+        const merged = [...purchases, ...relevantPayments];
         const sorted = merged.sort((a, b) => b.date.localeCompare(a.date));
         this.allTransactions.set(sorted);
         const tz = localStorage.getItem('pulse_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -923,6 +1127,175 @@ export class CardDetailComponent implements OnInit {
     this.txnMonth.set(month);
   }
 
+  startEditStatement(): void {
+    this.editStatementValue = this.effectiveStatementBalance();
+    this.editingStatement.set(true);
+    setTimeout(() => this.stmtInput()?.nativeElement?.focus());
+  }
+
+  saveStatementBalance(): void {
+    const c = this.card();
+    if (!c) return;
+    const newBalance = Math.round(this.editStatementValue * 100) / 100;
+    this.editingStatement.set(false);
+    const latest = this.latestStatement();
+    if (latest) {
+      if (newBalance === latest.statementBalance) return;
+      this.cardService.updateStatement(String(c.id), latest.id, {
+        ...latest,
+        statementBalance: newBalance
+      } as StatementHistory).subscribe({
+        next: () => {
+          this.notify.success('Statement balance updated');
+          this.loadCard();
+        },
+        error: () => this.notify.error('Failed to update balance')
+      });
+    } else {
+      if (newBalance === c.currentBalance) return;
+      this.cardService.update(c.id, { ...c, currentBalance: newBalance }).subscribe({
+        next: (updated) => {
+          this.card.set(updated);
+          this.notify.success('Statement balance updated');
+          this.cdr.detectChanges();
+        },
+        error: () => this.notify.error('Failed to update balance')
+      });
+    }
+  }
+
+  addStatement(): void {
+    const c = this.card();
+    if (!c || !this.newStmtDate) return;
+    this.savingStatement.set(true);
+    const stmtDate = this.newStmtDate;
+    const stmtBalance = this.newStmtBalance;
+    const stmtMinPayment = this.newStmtMinPayment;
+    const stmtCreditLimit = this.newStmtCreditLimit || c.creditLimit;
+    const isLatest = !c.lastStatementDate || stmtDate >= c.lastStatementDate.slice(0, 10);
+
+    this.cardService.addStatement(String(c.id), {
+      statementDate: stmtDate,
+      statementBalance: stmtBalance,
+      minimumPayment: stmtMinPayment,
+      creditLimit: stmtCreditLimit
+    }).subscribe({
+      next: () => {
+        const done = () => {
+          this.savingStatement.set(false);
+          this.showAddStatement.set(false);
+          this.newStmtDate = '';
+          this.newStmtBalance = 0;
+          this.newStmtMinPayment = 0;
+          this.newStmtCreditLimit = 0;
+          this.notify.success('Statement added');
+          this.loadCard();
+        };
+        if (isLatest) {
+          this.cardService.update(String(c.id), {
+            ...c,
+            currentBalance: stmtBalance,
+            minimumPayment: stmtMinPayment,
+            creditLimit: stmtCreditLimit,
+            lastStatementDate: stmtDate
+          }, true).subscribe({ next: (updated) => { this.card.set(updated); done(); }, error: () => done() });
+        } else {
+          done();
+        }
+      },
+      error: () => { this.savingStatement.set(false); this.notify.error('Failed to add statement'); }
+    });
+  }
+
+  toggleAddStatement(): void {
+    if (this.showAddStatement()) {
+      this.showAddStatement.set(false);
+      this.editingStmt.set(null);
+    } else {
+      this.editingStmt.set(null);
+      this.newStmtDate = '';
+      this.newStmtBalance = 0;
+      this.newStmtMinPayment = 0;
+      this.newStmtCreditLimit = this.card()?.creditLimit ?? 0;
+      this.showAddStatement.set(true);
+    }
+  }
+
+  editStatement(s: StatementHistory): void {
+    this.editingStmt.set(s);
+    this.newStmtDate = s.statementDate.slice(0, 10);
+    this.newStmtBalance = s.statementBalance;
+    this.newStmtMinPayment = s.minimumPayment;
+    this.newStmtCreditLimit = s.creditLimit;
+    this.showAddStatement.set(true);
+  }
+
+  saveEditedStatement(): void {
+    const c = this.card();
+    const s = this.editingStmt();
+    if (!c || !s) return;
+    this.savingStatement.set(true);
+    const stmtDate = this.newStmtDate;
+    const stmtBalance = this.newStmtBalance;
+    const stmtMinPayment = this.newStmtMinPayment;
+    const stmtCreditLimit = this.newStmtCreditLimit || c.creditLimit;
+    const isLatest = !c.lastStatementDate || stmtDate >= c.lastStatementDate.slice(0, 10);
+
+    this.cardService.updateStatement(String(c.id), s.id, {
+      statementDate: stmtDate,
+      statementBalance: stmtBalance,
+      minimumPayment: stmtMinPayment,
+      creditLimit: stmtCreditLimit
+    } as StatementHistory).subscribe({
+      next: () => {
+        const done = () => {
+          this.savingStatement.set(false);
+          this.showAddStatement.set(false);
+          this.editingStmt.set(null);
+          this.newStmtDate = '';
+          this.newStmtBalance = 0;
+          this.newStmtMinPayment = 0;
+          this.newStmtCreditLimit = 0;
+          this.notify.success('Statement updated');
+          this.loadCard();
+        };
+        if (isLatest) {
+          this.cardService.update(String(c.id), {
+            ...c,
+            currentBalance: stmtBalance,
+            minimumPayment: stmtMinPayment,
+            creditLimit: stmtCreditLimit,
+            lastStatementDate: stmtDate
+          }, true).subscribe({ next: (updated) => { this.card.set(updated); done(); }, error: () => done() });
+        } else {
+          done();
+        }
+      },
+      error: () => { this.savingStatement.set(false); this.notify.error('Failed to update statement'); }
+    });
+  }
+
+  deleteStatementRecord(s: StatementHistory): void {
+    const c = this.card();
+    if (!c) return;
+    import('../../../shared/confirm-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.ConfirmDialogComponent, {
+        width: '400px',
+        data: { title: 'Delete Statement?', message: 'This will permanently remove this statement record.', confirmText: 'Delete', color: 'warn' }
+      });
+      dialogRef.afterClosed().subscribe(confirmed => {
+        if (!confirmed) return;
+        this.cardService.deleteStatement(String(c.id), s.id).subscribe({
+          next: () => {
+            this.notify.success('Statement deleted');
+            this.cardService.getStatements(String(c.id)).subscribe(stmts => { this.statementHistory.set(stmts); this.cdr.detectChanges(); });
+          },
+          error: () => this.notify.error('Failed to delete statement')
+        });
+      });
+    });
+  }
+
   goBack(): void {
     this.router.navigate(['/cards']);
   }
@@ -944,14 +1317,18 @@ export class CardDetailComponent implements OnInit {
     });
   }
 
-  updateBalance(): void {
-    import('./update-balance-dialog.component').then(m => {
-      const dialogRef = this.dialog.open(m.UpdateBalanceDialogComponent, {
+  editCard(): void {
+    import('./add-card-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.AddCardDialogComponent, {
         width: '440px',
+        maxWidth: '95vw',
         data: this.card()
       });
       dialogRef.afterClosed().subscribe(result => {
-        if (result) this.loadCard();
+        if (result) {
+          this.notify.success('Card updated');
+          this.loadCard();
+        }
       });
     });
   }

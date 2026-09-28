@@ -2,6 +2,7 @@ import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { inferCategoryIcon } from '../../../core/utils/category-icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -1217,74 +1218,8 @@ export class CategoryPageComponent implements OnInit {
     this.snackBar.open(msg, 'Dismiss', { duration: 5000 });
   }
 
-  private static readonly ICON_MAP: Record<string, string> = {
-    rent: 'home', mortgage: 'house', housing: 'home', apartment: 'apartment', maintenance: 'build',
-    furniture: 'weekend', appliances: 'kitchen', cleaning: 'cleaning_services', hoa: 'apartment',
-    gas: 'local_gas_station', fuel: 'local_gas_station', parking: 'local_parking', car: 'directions_car',
-    auto: 'directions_car', uber: 'local_taxi', lyft: 'local_taxi', taxi: 'local_taxi',
-    bus: 'directions_bus', train: 'train', transit: 'directions_bus', tolls: 'toll', toll: 'toll',
-    'car insurance': 'shield', 'car wash': 'local_car_wash', ev: 'ev_station', bike: 'pedal_bike',
-    groceries: 'local_grocery_store', grocery: 'local_grocery_store', restaurant: 'restaurant',
-    'dining out': 'restaurant', 'eating out': 'restaurant', coffee: 'coffee', cafe: 'local_cafe',
-    pizza: 'local_pizza', 'fast food': 'lunch_dining', delivery: 'delivery_dining',
-    snacks: 'icecream', alcohol: 'liquor', beer: 'local_bar', bar: 'local_bar', wine: 'liquor',
-    bakery: 'bakery_dining', brunch: 'brunch_dining', lunch: 'lunch_dining', dinner: 'dinner_dining',
-    food: 'restaurant', takeout: 'takeout_dining',
-    clothing: 'checkroom', clothes: 'checkroom', shoes: 'checkroom', fashion: 'checkroom',
-    amazon: 'shopping_cart', online: 'shopping_cart', shopping: 'shopping_bag',
-    electronics: 'devices', gifts: 'redeem', jewelry: 'diamond',
-    electric: 'bolt', electricity: 'bolt', power: 'bolt', water: 'water_drop',
-    internet: 'wifi', phone: 'phone_android', mobile: 'phone_android', cable: 'live_tv',
-    utilities: 'bolt', utility: 'bolt', sewer: 'water_drop', trash: 'delete',
-    netflix: 'live_tv', hulu: 'live_tv', disney: 'live_tv', streaming: 'live_tv',
-    spotify: 'headphones', music: 'music_note', movies: 'movie', movie: 'movie', games: 'videogame_asset',
-    gaming: 'sports_esports', concerts: 'celebration', entertainment: 'celebration', hobbies: 'palette',
-    books: 'menu_book', subscriptions: 'subscriptions', subscription: 'subscriptions',
-    gym: 'fitness_center', fitness: 'fitness_center', workout: 'fitness_center',
-    doctor: 'local_hospital', medical: 'medical_services', dental: 'medical_services',
-    pharmacy: 'medication', medicine: 'medication', therapy: 'psychology', mental: 'psychology',
-    vision: 'visibility', health: 'favorite', hospital: 'local_hospital', spa: 'spa',
-    yoga: 'self_improvement', swimming: 'pool', supplements: 'medication',
-    tuition: 'school', school: 'school', college: 'school', university: 'school',
-    courses: 'menu_book', textbooks: 'auto_stories', training: 'school', certification: 'verified',
-    'class room': 'school', classroom: 'school', education: 'school', learning: 'menu_book',
-    webinars: 'laptop', webinar: 'laptop', tutorials: 'play_circle',
-    savings: 'savings', investment: 'trending_up', investing: 'trending_up', stocks: 'candlestick_chart',
-    retirement: 'elderly', '401k': 'savings', ira: 'savings', 'credit card': 'credit_card',
-    bank: 'account_balance', fees: 'receipt', 'bank fees': 'account_balance', taxes: 'receipt_long',
-    tax: 'receipt_long', interest: 'percent', loan: 'payments', debt: 'payments',
-    office: 'business_center', supplies: 'inventory_2', tools: 'handyman',
-    software: 'laptop', coworking: 'meeting_room', business: 'business_center',
-    professional: 'work', freelance: 'laptop',
-    kids: 'child_care', children: 'child_care', childcare: 'child_care', daycare: 'child_care',
-    baby: 'child_friendly', pets: 'pets', pet: 'pets', dog: 'pets', cat: 'pets', vet: 'pets',
-    family: 'diversity_3', personal: 'face', grooming: 'face', haircut: 'face',
-    insurance: 'shield', 'home insurance': 'shield', 'health insurance': 'health_and_safety',
-    'life insurance': 'shield', legal: 'gavel', lawyer: 'gavel',
-    vacation: 'flight', travel: 'flight', hotel: 'hotel', airfare: 'flight', flights: 'flight',
-    lodging: 'hotel', camping: 'hiking', beach: 'beach_access',
-    soccer: 'sports_soccer', football: 'sports_football', basketball: 'sports_basketball',
-    tennis: 'sports_tennis', golf: 'sports_golf', baseball: 'sports_baseball',
-    cricket: 'sports_cricket', hockey: 'sports_hockey', rugby: 'sports_rugby',
-    volleyball: 'sports_volleyball', martial: 'sports_martial_arts', boxing: 'sports_mma',
-    skiing: 'downhill_skiing', snowboard: 'snowboarding', surf: 'surfing', skateboard: 'skateboarding',
-    salary: 'payments', paycheck: 'payments', wage: 'payments', bonus: 'card_giftcard',
-    dividend: 'trending_up', dividends: 'trending_up',
-    'side hustle': 'work', refund: 'replay', cashback: 'replay',
-    rental: 'real_estate_agent', 'rental income': 'real_estate_agent',
-    miscellaneous: 'more_horiz', other: 'more_horiz', misc: 'more_horiz',
-    charity: 'volunteer_activism', donation: 'volunteer_activism', donations: 'volunteer_activism',
-    church: 'volunteer_activism', tithe: 'volunteer_activism', tithing: 'volunteer_activism',
-  };
-
   inferIcon(name: string, fallbackIcon: string | null, defaultIcon: string): string {
-    if (fallbackIcon && fallbackIcon !== 'category' && fallbackIcon !== 'label') return fallbackIcon;
-    const key = name.toLowerCase().trim();
-    if (CategoryPageComponent.ICON_MAP[key]) return CategoryPageComponent.ICON_MAP[key];
-    for (const [keyword, icon] of Object.entries(CategoryPageComponent.ICON_MAP)) {
-      if (key.includes(keyword) || keyword.includes(key)) return icon;
-    }
-    return fallbackIcon || defaultIcon;
+    return inferCategoryIcon(name, fallbackIcon, defaultIcon);
   }
 
   getCatColor(name: string): string {

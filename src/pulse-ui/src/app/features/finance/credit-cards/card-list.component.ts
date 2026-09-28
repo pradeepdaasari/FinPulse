@@ -13,7 +13,6 @@ import { CreditCardService } from '../../../core/services/credit-card.service';
 import { CreditCard } from '../../../core/models/credit-card.model';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AddCardDialogComponent } from './add-card-dialog.component';
-import { UpdateBalanceDialogComponent } from './update-balance-dialog.component';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directive';
 
@@ -152,7 +151,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                 <button mat-icon-button class="action-btn action-pay" (click)="$event.stopPropagation(); recordPayment(card)" matTooltip="Record Payment">
                   <mat-icon>payments</mat-icon>
                 </button>
-                <button mat-icon-button class="action-btn action-edit" (click)="$event.stopPropagation(); updateBalance(card)" matTooltip="Update Balance">
+                <button mat-icon-button class="action-btn action-edit" (click)="$event.stopPropagation(); editCard(card)" matTooltip="Edit Card">
                   <mat-icon>edit</mat-icon>
                 </button>
                 <button mat-icon-button class="action-btn action-view" (click)="$event.stopPropagation(); viewCard(card.id)" matTooltip="View Details">
@@ -216,7 +215,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
               <button mat-icon-button class="action-btn action-pay" (click)="recordPayment(card)" aria-label="Record payment" matTooltip="Record Payment">
                 <mat-icon>payments</mat-icon>
               </button>
-              <button mat-icon-button class="action-btn action-edit" (click)="updateBalance(card)" aria-label="Update balance" matTooltip="Update Balance">
+              <button mat-icon-button class="action-btn action-edit" (click)="editCard(card)" aria-label="Edit card" matTooltip="Edit Card">
                 <mat-icon>edit</mat-icon>
               </button>
               <button mat-icon-button class="action-btn action-delete" (click)="deleteCard(card)" aria-label="Delete card" matTooltip="Delete">
@@ -449,7 +448,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       .action-btn { min-width: 44px; min-height: 44px; }
     }
     .mobile-add-fab {
-      display: flex; position: fixed;
+      display: none; position: fixed;
       bottom: 32px; right: 32px;
       width: 52px; height: 52px; border-radius: 50%;
       background: var(--gradient-primary); color: #fff; border: none;
@@ -462,6 +461,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .mobile-add-fab mat-icon { font-size: 26px; width: 26px; height: 26px; }
     @media (max-width: 599px) {
       .mobile-add-fab {
+        display: flex;
         bottom: calc(env(safe-area-inset-bottom, 0px) + 72px); right: 16px;
         width: 56px; height: 56px;
       }
@@ -547,15 +547,15 @@ export class CardListComponent implements OnInit {
     });
   }
 
-  updateBalance(card: CreditCard): void {
-    const dialogRef = this.dialog.open(UpdateBalanceDialogComponent, {
-      width: '420px',
+  editCard(card: CreditCard): void {
+    const dialogRef = this.dialog.open(AddCardDialogComponent, {
+      width: '440px',
       maxWidth: '95vw',
       data: card
     });
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        this.notify.success('Balance updated successfully');
+        this.notify.success('Card updated');
         this.loadCards();
       }
     });

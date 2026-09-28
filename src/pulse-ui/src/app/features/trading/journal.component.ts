@@ -517,7 +517,7 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
     .mobile-feed { display: none; }
     .trade-card {
       display: flex; align-items: center; gap: 12px;
-      padding: 14px 4px; cursor: pointer; position: relative;
+      padding: 14px 44px 14px 4px; cursor: pointer; position: relative;
       -webkit-tap-highlight-color: transparent;
       transition: background var(--transition-fast);
     }
@@ -707,11 +707,19 @@ export class JournalComponent implements OnInit {
   }
 
   deleteTrade(t: TradeEntry): void {
-    if (!confirm('Delete this trade entry?')) return;
-    this.loading.set(true);
-    this.tradingService.deleteTrade(t.id).subscribe({
-      next: () => { this.notify.success('Trade deleted'); this.loadTrades(); },
-      error: () => { this.loading.set(false); this.notify.error('Failed to delete trade'); this.cdr.detectChanges(); }
+    import('../../shared/confirm-dialog.component').then(m => {
+      const dialogRef = this.dialog.open(m.ConfirmDialogComponent, {
+        width: '400px',
+        data: { title: 'Delete Trade?', message: 'Delete this trade entry? This cannot be undone.', confirmText: 'Delete', color: 'warn' }
+      });
+      dialogRef.afterClosed().subscribe(confirmed => {
+        if (!confirmed) return;
+        this.loading.set(true);
+        this.tradingService.deleteTrade(t.id).subscribe({
+          next: () => { this.notify.success('Trade deleted'); this.loadTrades(); },
+          error: () => { this.loading.set(false); this.notify.error('Failed to delete trade'); this.cdr.detectChanges(); }
+        });
+      });
     });
   }
 }

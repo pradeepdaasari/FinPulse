@@ -63,6 +63,7 @@ public class RecurringController : ControllerBase
         if (duplicate)
             return Conflict(new { message = $"A recurring transaction named '{dto.Description}' already exists in this category." });
 
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         var item = new RecurringTransaction
         {
             Description = dto.Description,
@@ -74,8 +75,8 @@ public class RecurringController : ControllerBase
             FundingSourceId = dto.FundingSourceId,
             RecurringType = dto.RecurringType,
             Frequency = dto.Frequency,
-            NextRunDate = dto.NextRunDate,
-            EndDate = dto.EndDate,
+            NextRunDate = TimeZoneHelper.ToUtc(dto.NextRunDate.Date, tz),
+            EndDate = dto.EndDate.HasValue ? TimeZoneHelper.ToUtc(dto.EndDate.Value.Date, tz) : dto.EndDate,
             IsActive = dto.IsActive,
             UserId = UserId
         };
@@ -98,6 +99,7 @@ public class RecurringController : ControllerBase
             r.CategoryId == dto.CategoryId);
         if (duplicate)
             return Conflict(new { message = $"A recurring transaction named '{dto.Description}' already exists in this category." });
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         item.Description = dto.Description;
         item.Merchant = dto.Merchant;
         item.Amount = dto.Amount;
@@ -107,8 +109,8 @@ public class RecurringController : ControllerBase
         item.FundingSourceId = dto.FundingSourceId;
         item.RecurringType = dto.RecurringType;
         item.Frequency = dto.Frequency;
-        item.NextRunDate = dto.NextRunDate;
-        item.EndDate = dto.EndDate;
+        item.NextRunDate = TimeZoneHelper.ToUtc(dto.NextRunDate.Date, tz);
+        item.EndDate = dto.EndDate.HasValue ? TimeZoneHelper.ToUtc(dto.EndDate.Value.Date, tz) : dto.EndDate;
         item.IsActive = dto.IsActive;
 
         await _db.SaveChangesAsync();
@@ -170,6 +172,7 @@ public class RecurringController : ControllerBase
                 break;
         }
 
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         var strategy = _db.Database.CreateExecutionStrategy();
         DailyExpense expense = null!;
         try
@@ -182,7 +185,7 @@ public class RecurringController : ControllerBase
 
                 expense = new DailyExpense
                 {
-                    Date = dto.Date,
+                    Date = TimeZoneHelper.ToUtc(dto.Date.Date, tz),
                     CategoryId = dto.CategoryId ?? item.CategoryId,
                     Amount = dto.Amount,
                     Description = dto.Description,

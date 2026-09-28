@@ -85,6 +85,7 @@ public class LoansController : ControllerBase
             return BadRequest(new { error = "Due day must be 1-28 for monthly loans." });
         }
 
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         var loan = new PersonalLoan
         {
             LenderName = dto.LenderName,
@@ -92,7 +93,7 @@ public class LoansController : ControllerBase
             CurrentBalance = dto.CurrentBalance,
             AprPercent = dto.AprPercent,
             DurationMonths = dto.DurationMonths,
-            StartDate = dto.StartDate,
+            StartDate = TimeZoneHelper.ToUtc(dto.StartDate.Date, tz),
             MonthlyPayment = dto.MonthlyPayment,
             DueDay = dto.DueDay,
             LoanType = dto.LoanType,
@@ -100,7 +101,7 @@ public class LoansController : ControllerBase
             PaymentFrequency = dto.PaymentFrequency,
             RateType = dto.RateType,
             FundedBankAccountId = dto.FundedBankAccountId,
-            NextPaymentDate = dto.NextPaymentDate,
+            NextPaymentDate = dto.NextPaymentDate.HasValue ? TimeZoneHelper.ToUtc(dto.NextPaymentDate.Value.Date, tz) : dto.NextPaymentDate,
             UserId = UserId
         };
 
@@ -176,6 +177,7 @@ public class LoansController : ControllerBase
         var loan = await _db.PersonalLoans.FirstOrDefaultAsync(l => l.Id == id && l.UserId == UserId);
         if (loan is null) return NotFound();
 
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         var oldFundedAccountId = loan.FundedBankAccountId;
         var oldOriginalAmount = loan.OriginalAmount;
 
@@ -183,7 +185,7 @@ public class LoansController : ControllerBase
         loan.OriginalAmount = dto.OriginalAmount;
         loan.AprPercent = dto.AprPercent;
         loan.DurationMonths = dto.DurationMonths;
-        loan.StartDate = dto.StartDate;
+        loan.StartDate = TimeZoneHelper.ToUtc(dto.StartDate.Date, tz);
         loan.MonthlyPayment = dto.MonthlyPayment;
         loan.DueDay = dto.DueDay;
         loan.LoanType = dto.LoanType;
@@ -191,7 +193,7 @@ public class LoansController : ControllerBase
         loan.PaymentFrequency = dto.PaymentFrequency;
         loan.RateType = dto.RateType;
         loan.FundedBankAccountId = dto.FundedBankAccountId;
-        loan.NextPaymentDate = dto.NextPaymentDate;
+        loan.NextPaymentDate = dto.NextPaymentDate.HasValue ? TimeZoneHelper.ToUtc(dto.NextPaymentDate.Value.Date, tz) : dto.NextPaymentDate;
 
         string? interestWarning = null;
         var monthlyEquiv = loan.MonthlyEquivalentPayment;
@@ -360,6 +362,9 @@ public class LoansController : ControllerBase
     {
         var loan = await _db.PersonalLoans.FirstOrDefaultAsync(l => l.Id == id && l.UserId == UserId);
         if (loan is null) return NotFound();
+
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        dto.PaymentDate = TimeZoneHelper.ToUtc(dto.PaymentDate.Date, tz);
 
         if (loan.CurrentBalance <= 0)
             return BadRequest(new { error = "This loan has already been paid off." });

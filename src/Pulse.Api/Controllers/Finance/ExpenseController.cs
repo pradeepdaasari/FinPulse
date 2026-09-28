@@ -620,9 +620,11 @@ public class ExpenseController : ControllerBase
             if (!valid) return BadRequest(new { message = "Invalid funding source." });
         }
 
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+
         var expense = new DailyExpense
         {
-            Date = dto.Date,
+            Date = TimeZoneHelper.ToUtc(dto.Date.Date, tz),
             CategoryId = dto.CategoryId,
             Amount = dto.Amount,
             Description = dto.Description,
@@ -732,6 +734,7 @@ public class ExpenseController : ControllerBase
 
         var groupId = Guid.NewGuid();
         var created = new List<int>();
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
 
         foreach (var dto in splits)
         {
@@ -776,7 +779,7 @@ public class ExpenseController : ControllerBase
                 {
                     var expense = new DailyExpense
                     {
-                        Date = dto.Date,
+                        Date = TimeZoneHelper.ToUtc(dto.Date.Date, tz),
                         CategoryId = dto.CategoryId,
                         Amount = dto.Amount,
                         Description = dto.Description,
@@ -818,6 +821,8 @@ public class ExpenseController : ControllerBase
     {
         var expense = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == id && e.UserId == UserId);
         if (expense is null) return NotFound();
+
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
 
         switch (dto.TransactionType)
         {
@@ -864,7 +869,7 @@ public class ExpenseController : ControllerBase
                 else
                     await ReverseBalance(expense.TransactionType, expense.FundingSourceType, expense.FundingSourceId, expense.Amount);
 
-                expense.Date = dto.Date;
+                expense.Date = TimeZoneHelper.ToUtc(dto.Date.Date, tz);
                 expense.CategoryId = dto.CategoryId;
                 expense.Amount = dto.Amount;
                 expense.Description = dto.Description;
