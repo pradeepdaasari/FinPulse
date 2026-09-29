@@ -7,10 +7,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
 import { LoanService } from '../../../core/services/loan.service';
 import { PersonalLoan } from '../../../core/models/personal-loan.model';
 import { NotificationService } from '../../../core/services/notification.service';
+import { ConfettiService } from '../../../shared/confetti.service';
 import { AddLoanDialogComponent } from './add-loan-dialog.component';
 import { EditLoanDialogComponent } from './edit-loan-dialog.component';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
@@ -20,7 +22,7 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
 @Component({
   selector: 'app-loan-list',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatTooltipModule, CurrencyPipe, LocalDatePipe, DecimalPipe, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatTooltipModule, MatChipsModule, CurrencyPipe, LocalDatePipe, DecimalPipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadLoans()">
     <div class="header-row">
@@ -75,10 +77,17 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
         </div>
       </div>
 
+      <!-- Filter chips -->
+      <mat-chip-set class="filter-chips">
+        <mat-chip [highlighted]="activeFilter() === 'all'" (click)="filterByStatus('all')">All</mat-chip>
+        <mat-chip [highlighted]="activeFilter() === 'Active'" (click)="filterByStatus('Active')">Active</mat-chip>
+        <mat-chip [highlighted]="activeFilter() === 'PaidOff'" (click)="filterByStatus('PaidOff')">Paid Off</mat-chip>
+      </mat-chip-set>
+
       <!-- Desktop table -->
       <mat-card class="desktop-only">
         <div class="table-wrapper">
-        <table mat-table [dataSource]="loans()">
+        <table mat-table [dataSource]="filteredLoans()">
           <ng-container matColumnDef="loanType">
             <th mat-header-cell *matHeaderCellDef>Type</th>
             <td mat-cell *matCellDef="let loan">
@@ -100,6 +109,9 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
               }
               @if (isDeferred(loan)) {
                 <span class="deferred-chip">Paused until {{ loan.nextPaymentDate | localDate:'MMM yyyy' }}</span>
+              }
+              @if (loan.status === 'PaidOff') {
+                <span class="paid-off-badge">Paid Off</span>
               }
             </td>
           </ng-container>
@@ -145,7 +157,7 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
             <td mat-cell *matCellDef="let loan">
               <div class="progress-mini">
                 <div class="progress-bar-mini">
-                  <div class="progress-fill" [style.width.%]="getProgress(loan)"></div>
+                  <div class="progress-fill" [class.progress-complete]="loan.status === 'PaidOff'" [style.width.%]="getProgress(loan)"></div>
                 </div>
                 <span class="progress-text">{{ getProgress(loan) | number:'1.0-0' }}%</span>
               </div>
@@ -156,9 +168,11 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
             <th mat-header-cell *matHeaderCellDef>Actions</th>
             <td mat-cell *matCellDef="let loan">
               <div class="action-group">
-                <button mat-icon-button class="action-btn action-pay" (click)="$event.stopPropagation(); recordPayment(loan)" matTooltip="Record Payment">
-                  <mat-icon>payments</mat-icon>
-                </button>
+                @if (loan.status !== 'PaidOff') {
+                  <button mat-icon-button class="action-btn action-pay" (click)="$event.stopPropagation(); recordPayment(loan)" matTooltip="Record Payment">
+                    <mat-icon>payments</mat-icon>
+                  </button>
+                }
                 <button mat-icon-button class="action-btn action-edit" (click)="$event.stopPropagation(); editLoan(loan)" matTooltip="Edit">
                   <mat-icon>edit</mat-icon>
                 </button>
@@ -173,15 +187,15 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="viewLoan(row.id)" class="clickable-row"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="viewLoan(row.id)" class="clickable-row" [class.paid-off-row]="row.status === 'PaidOff'"></tr>
         </table>
         </div>
       </mat-card>
 
       <!-- Mobile cards -->
       <div class="mobile-cards">
-        @for (loan of loans(); track loan.id) {
-          <div class="loan-card" (click)="viewLoan(loan.id)">
+        @for (loan of filteredLoans(); track loan.id) {
+          <div class="loan-card" [class.paid-off-card]="loan.status === 'PaidOff'" (click)="viewLoan(loan.id)">
             <div class="loan-top">
               <div class="loan-icon" [style.background]="getLoanTypeBg(loan.loanType)">
                 <mat-icon [style.color]="getLoanTypeColor(loan.loanType)">{{ getLenderIcon(loan.lenderName) }}</mat-icon>
@@ -198,6 +212,9 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
                   }
                   @if (isDeferred(loan)) {
                     <span class="deferred-chip">Paused until {{ loan.nextPaymentDate | localDate:'MMM yyyy' }}</span>
+                  }
+                  @if (loan.status === 'PaidOff') {
+                    <span class="paid-off-badge">Paid Off</span>
                   }
                 </div>
               </div>
@@ -222,14 +239,16 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
             </div>
             <div class="progress-mini mobile-progress">
               <div class="progress-bar-mini">
-                <div class="progress-fill" [style.width.%]="getProgress(loan)"></div>
+                <div class="progress-fill" [class.progress-complete]="loan.status === 'PaidOff'" [style.width.%]="getProgress(loan)"></div>
               </div>
               <span class="progress-text">{{ getProgress(loan) | number:'1.0-0' }}% paid</span>
             </div>
             <div class="loan-actions" (click)="$event.stopPropagation()">
-              <button mat-icon-button class="action-btn action-pay" (click)="recordPayment(loan)">
-                <mat-icon>payments</mat-icon>
-              </button>
+              @if (loan.status !== 'PaidOff') {
+                <button mat-icon-button class="action-btn action-pay" (click)="recordPayment(loan)">
+                  <mat-icon>payments</mat-icon>
+                </button>
+              }
               <button mat-icon-button class="action-btn action-edit" (click)="editLoan(loan)">
                 <mat-icon>edit</mat-icon>
               </button>
@@ -437,8 +456,18 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
       overflow: hidden; min-width: 50px;
     }
     .progress-fill { height: 100%; background: var(--color-primary); border-radius: 3px; transition: width 0.3s ease; }
+    .progress-complete { background: var(--color-success) !important; }
     .progress-text { font-size: 0.7rem; font-weight: 600; color: var(--color-text-muted); white-space: nowrap; }
     .mobile-progress { margin-top: 8px; }
+    .filter-chips { margin-bottom: var(--spacing-md); }
+    .paid-off-badge {
+      display: inline-block; font-size: var(--text-xs); font-weight: var(--weight-semibold);
+      padding: 2px 8px; border-radius: var(--radius-full);
+      background: var(--color-success-bg); color: var(--color-success-text);
+      margin-left: 6px; white-space: nowrap;
+    }
+    .paid-off-row { opacity: 0.7; }
+    .paid-off-card { opacity: 0.85; }
 
     /* Empty State */
     .empty-state {
@@ -500,13 +529,22 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
 export class LoanListComponent implements OnInit {
   private loanService = inject(LoanService);
   private notify = inject(NotificationService);
+  private confetti = inject(ConfettiService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private cdr = inject(ChangeDetectorRef);
 
   loans = signal<PersonalLoan[]>([]);
   loading = signal(true);
+  activeFilter = signal<'all' | 'Active' | 'PaidOff'>('Active');
   displayedColumns = ['loanType', 'lenderName', 'currentBalance', 'aprPercent', 'durationMonths', 'monthlyPayment', 'paymentFrequency', 'progress', 'actions'];
+
+  filteredLoans = computed(() => {
+    const filter = this.activeFilter();
+    const all = this.loans();
+    if (filter === 'all') return all;
+    return all.filter(l => l.status === filter);
+  });
 
   totalBalance = computed(() => this.loans().reduce((sum, l) => sum + l.currentBalance, 0));
   totalMonthly = computed(() => this.loans().reduce((sum, l) => sum + (l.monthlyEquivalentPayment || l.monthlyPayment), 0));
@@ -527,12 +565,20 @@ export class LoanListComponent implements OnInit {
   loadLoans(): void {
     this.loanService.getAll().subscribe({
       next: (loans) => {
+        loans.sort((a, b) => {
+          if (a.status === b.status) return 0;
+          return a.status === 'Active' ? -1 : 1;
+        });
         this.loans.set(loans);
         this.loading.set(false);
         this.cdr.detectChanges();
       },
       error: () => { this.loading.set(false); this.notify.error('Failed to load loans'); this.cdr.detectChanges(); }
     });
+  }
+
+  filterByStatus(status: 'all' | 'Active' | 'PaidOff'): void {
+    this.activeFilter.set(status);
   }
 
   recordPayment(loan: PersonalLoan): void {
@@ -548,8 +594,13 @@ export class LoanListComponent implements OnInit {
       });
       dialogRef.afterClosed().subscribe(result => {
         if (result) {
-          this.notify.success('Payment recorded successfully');
           this.loadLoans();
+          if (result.wasPaidOff) {
+            this.confetti.burstOnce(`loan-paid-off-${loan.id}`);
+            this.notify.success(`${loan.lenderName} loan is paid off!`);
+          } else {
+            this.notify.success('Payment recorded successfully');
+          }
         }
       });
     });

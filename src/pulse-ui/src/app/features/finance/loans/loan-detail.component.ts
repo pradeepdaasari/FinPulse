@@ -22,6 +22,7 @@ import { AmortizationTableComponent } from './amortization-table.component';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { EntityMovementsComponent } from '../../../shared/entity-movements.component';
 import { FundingSourceService } from '../../../core/services/funding-source.service';
+import { ConfettiService } from '../../../shared/confetti.service';
 
 @Component({
   selector: 'app-loan-detail',
@@ -42,6 +43,9 @@ import { FundingSourceService } from '../../../core/services/funding-source.serv
           }
           @if (loan()!.rateType === 'Variable') {
             <mat-chip highlighted color="accent">Variable Rate</mat-chip>
+          }
+          @if (loan()!.status === 'PaidOff') {
+            <mat-chip class="chip-paid-off"><mat-icon>check_circle</mat-icon> Paid Off</mat-chip>
           }
         </div>
         <div class="detail-actions">
@@ -111,7 +115,12 @@ import { FundingSourceService } from '../../../core/services/funding-source.serv
                 <span class="value" [class.deferred-value]="isDeferred()">{{ loan()!.nextPaymentDate | localDate:'mediumDate' }}</span>
               </div>
             }
-            @if (projectedPayoffDate()) {
+            @if (loan()!.paidOffDate) {
+              <div class="detail-item">
+                <span class="label">Paid Off On</span>
+                <span class="value paid-off-date">{{ loan()!.paidOffDate | localDate:'mediumDate' }}</span>
+              </div>
+            } @else if (projectedPayoffDate()) {
               <div class="detail-item">
                 <span class="label">Projected Payoff</span>
                 <span class="value">{{ projectedPayoffDate() | localDate:'mediumDate' }}</span>
@@ -123,10 +132,14 @@ import { FundingSourceService } from '../../../core/services/funding-source.serv
               <span class="label">Payoff Progress</span>
               <span class="progress-pct">{{ payoffProgress() | number:'1.1-1' }}%</span>
             </div>
-            <mat-progress-bar mode="determinate" [value]="payoffProgress()"></mat-progress-bar>
+            <mat-progress-bar mode="determinate" [value]="payoffProgress()" [class.progress-bar-success]="loan()!.status === 'PaidOff'"></mat-progress-bar>
             <div class="progress-amounts">
               <span>{{ loan()!.originalAmount - loan()!.currentBalance | currency }} paid</span>
-              <span>{{ loan()!.currentBalance | currency }} remaining</span>
+              @if (loan()!.status === 'PaidOff') {
+                <span class="paid-off-complete">Fully paid off!</span>
+              } @else {
+                <span>{{ loan()!.currentBalance | currency }} remaining</span>
+              }
             </div>
           </div>
         </mat-card-content>
@@ -316,6 +329,10 @@ import { FundingSourceService } from '../../../core/services/funding-source.serv
     .stat-label { font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
     .stat-value { font-weight: 600; font-size: 0.9rem; }
     mat-chip mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; }
+    .chip-paid-off { background: var(--color-success-bg) !important; color: var(--color-success-text) !important; }
+    .paid-off-date { color: var(--color-success-text); }
+    .paid-off-complete { color: var(--color-success-text); font-weight: 600; }
+    .progress-bar-success ::ng-deep .mdc-linear-progress__bar-inner { border-color: var(--color-success) !important; }
     @media (max-width: 768px) {
       .header-row { flex-direction: column; align-items: flex-start; }
     }
@@ -351,6 +368,7 @@ export class LoanDetailComponent implements OnInit {
   private notify = inject(NotificationService);
   private paymentService = inject(PaymentService);
   private fundingSourceService = inject(FundingSourceService);
+  private confetti = inject(ConfettiService);
   private cdr = inject(ChangeDetectorRef);
 
   loan = signal<PersonalLoan | null>(null);
@@ -463,7 +481,13 @@ export class LoanDetailComponent implements OnInit {
         }
       });
       dialogRef.afterClosed().subscribe(result => {
-        if (result) this.loadLoan();
+        if (result) {
+          this.loadLoan();
+          if (result.wasPaidOff) {
+            this.confetti.burstOnce(`loan-paid-off-${this.loan()!.id}`);
+            this.notify.success(`${this.loan()!.lenderName} loan is paid off!`);
+          }
+        }
       });
     });
   }

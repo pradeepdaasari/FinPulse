@@ -34,6 +34,10 @@ public class PersonalLoan
 
     public RateType RateType { get; set; } = RateType.Fixed;
 
+    public LoanStatus Status { get; set; } = LoanStatus.Active;
+
+    public DateTime? PaidOffDate { get; set; }
+
     public int? FundedBankAccountId { get; set; }
 
     public DateTime? NextPaymentDate { get; set; }

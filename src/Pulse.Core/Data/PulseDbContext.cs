@@ -73,6 +73,7 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.CurrentBalance).HasPrecision(18, 2);
             entity.Property(e => e.MonthlyPayment).HasPrecision(18, 2);
             entity.Property(e => e.AprPercent).HasPrecision(5, 3);
+            entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
             entity.HasIndex(e => e.UserId);
         });
 

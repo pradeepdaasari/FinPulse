@@ -1,5 +1,6 @@
 export type LoanType = 'Personal' | 'Vehicle' | 'Mortgage' | 'Student' | 'Business' | 'Other';
 export type RateType = 'Fixed' | 'Variable';
+export type LoanStatus = 'Active' | 'PaidOff';
 
 export interface PersonalLoan {
   id: number;
@@ -19,6 +20,8 @@ export interface PersonalLoan {
   fundedBankAccountId?: number | null;
   fundedBankAccountName?: string | null;
   nextPaymentDate?: string | null;
+  status: LoanStatus;
+  paidOffDate?: string | null;
   createdAt: string;
   updatedAt: string;
 }

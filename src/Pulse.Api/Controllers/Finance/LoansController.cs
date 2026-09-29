@@ -40,7 +40,7 @@ public class LoansController : ControllerBase
             l.Id, l.LenderName, l.OriginalAmount, l.CurrentBalance, l.AprPercent,
             l.DurationMonths, l.StartDate, l.MonthlyPayment, l.DueDay, l.LoanType,
             l.IsAutopay, l.PaymentFrequency, l.RateType, l.FundedBankAccountId, l.NextPaymentDate,
-            l.MonthlyEquivalentPayment,
+            l.MonthlyEquivalentPayment, l.Status, l.PaidOffDate,
             FundedBankAccountName = l.FundedBankAccountId.HasValue && bankNames.ContainsKey(l.FundedBankAccountId.Value)
                 ? bankNames[l.FundedBankAccountId.Value] : null,
             l.CreatedAt, l.UpdatedAt
@@ -66,7 +66,7 @@ public class LoansController : ControllerBase
             loan.Id, loan.LenderName, loan.OriginalAmount, loan.CurrentBalance, loan.AprPercent,
             loan.DurationMonths, loan.StartDate, loan.MonthlyPayment, loan.DueDay, loan.LoanType,
             loan.IsAutopay, loan.PaymentFrequency, loan.RateType, loan.FundedBankAccountId, loan.NextPaymentDate,
-            loan.MonthlyEquivalentPayment,
+            loan.MonthlyEquivalentPayment, loan.Status, loan.PaidOffDate,
             FundedBankAccountName = bankName,
             loan.CreatedAt, loan.UpdatedAt
         });
@@ -404,6 +404,12 @@ public class LoansController : ControllerBase
                 var principalReduction = dto.PrincipalAmount ?? dto.AmountPaid;
                 loan.CurrentBalance = Math.Max(0, loan.CurrentBalance - principalReduction);
 
+                if (loan.CurrentBalance <= 0 && loan.Status != LoanStatus.PaidOff)
+                {
+                    loan.Status = LoanStatus.PaidOff;
+                    loan.PaidOffDate = DateTime.UtcNow;
+                }
+
                 if (dto.FromAccountId.HasValue)
                 {
                     var account = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == dto.FromAccountId && a.UserId == UserId);
@@ -436,7 +442,7 @@ public class LoansController : ControllerBase
 
                 await transaction.CommitAsync();
             });
-            return Ok(payment);
+            return Ok(new { payment, wasPaidOff = loan.Status == LoanStatus.PaidOff, lenderName = loan.LenderName });
         }
         catch
         {

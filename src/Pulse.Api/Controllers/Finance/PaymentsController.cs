@@ -95,6 +95,16 @@ public class PaymentsController : ControllerBase
                     {
                         await _db.Entry(loan).ReloadAsync();
                         loan.CurrentBalance = Math.Max(0, loan.CurrentBalance - principalDiff);
+                        if (loan.CurrentBalance <= 0 && loan.Status != LoanStatus.PaidOff)
+                        {
+                            loan.Status = LoanStatus.PaidOff;
+                            loan.PaidOffDate = DateTime.UtcNow;
+                        }
+                        else if (loan.CurrentBalance > 0 && loan.Status == LoanStatus.PaidOff)
+                        {
+                            loan.Status = LoanStatus.Active;
+                            loan.PaidOffDate = null;
+                        }
                     }
                 }
                 else
@@ -186,6 +196,11 @@ public class PaymentsController : ControllerBase
                     {
                         await _db.Entry(loan).ReloadAsync();
                         loan.CurrentBalance += payment.PrincipalAmount ?? payment.AmountPaid;
+                        if (loan.CurrentBalance > 0 && loan.Status == LoanStatus.PaidOff)
+                        {
+                            loan.Status = LoanStatus.Active;
+                            loan.PaidOffDate = null;
+                        }
                     }
                 }
                 else

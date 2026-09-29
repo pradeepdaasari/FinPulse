@@ -1532,9 +1532,9 @@ export class AddExpenseDialogComponent implements OnInit {
       : this.paymentService.recordPayment(debt.type, debt.id, amount, description, this.buildDateTime(), fromAccountId);
 
     request$.subscribe({
-      next: () => {
+      next: (response: any) => {
         this.savingLoanPayment.set(false);
-        this.dialogRef.close({ loanPayment: true, debtName: debt.name, amount });
+        this.dialogRef.close({ loanPayment: true, debtName: debt.name, amount, wasPaidOff: response?.wasPaidOff ?? false });
       },
       error: (err: any) => {
         this.savingLoanPayment.set(false);
