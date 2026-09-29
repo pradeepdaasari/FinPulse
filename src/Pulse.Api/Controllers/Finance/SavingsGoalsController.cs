@@ -57,13 +57,12 @@ public class SavingsGoalsController : ControllerBase
                 return BadRequest("Invalid linked account.");
         }
 
-        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         var goal = new SavingsGoal
         {
             Name = dto.Name,
             TargetAmount = dto.TargetAmount,
             CurrentAmount = dto.CurrentAmount,
-            TargetDate = dto.TargetDate.HasValue ? TimeZoneHelper.ToUtc(dto.TargetDate.Value.Date, tz) : dto.TargetDate,
+            TargetDate = dto.TargetDate,
             LinkedAccountId = dto.LinkedAccountId,
             Icon = dto.Icon,
             UserId = UserId
@@ -88,11 +87,10 @@ public class SavingsGoalsController : ControllerBase
                 return BadRequest("Invalid linked account.");
         }
 
-        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         goal.Name = dto.Name;
         goal.TargetAmount = dto.TargetAmount;
         goal.CurrentAmount = dto.CurrentAmount;
-        goal.TargetDate = dto.TargetDate.HasValue ? TimeZoneHelper.ToUtc(dto.TargetDate.Value.Date, tz) : dto.TargetDate;
+        goal.TargetDate = dto.TargetDate;
         goal.LinkedAccountId = dto.LinkedAccountId;
         goal.Icon = dto.Icon;
 

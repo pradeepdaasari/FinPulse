@@ -620,11 +620,9 @@ public class ExpenseController : ControllerBase
             if (!valid) return BadRequest(new { message = "Invalid funding source." });
         }
 
-        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-
         var expense = new DailyExpense
         {
-            Date = TimeZoneHelper.ToUtc(dto.Date.Date, tz),
+            Date = dto.Date,
             CategoryId = dto.CategoryId,
             Amount = dto.Amount,
             Description = dto.Description,
@@ -779,7 +777,7 @@ public class ExpenseController : ControllerBase
                 {
                     var expense = new DailyExpense
                     {
-                        Date = TimeZoneHelper.ToUtc(dto.Date.Date, tz),
+                        Date = dto.Date,
                         CategoryId = dto.CategoryId,
                         Amount = dto.Amount,
                         Description = dto.Description,
@@ -869,7 +867,7 @@ public class ExpenseController : ControllerBase
                 else
                     await ReverseBalance(expense.TransactionType, expense.FundingSourceType, expense.FundingSourceId, expense.Amount);
 
-                expense.Date = TimeZoneHelper.ToUtc(dto.Date.Date, tz);
+                expense.Date = dto.Date;
                 expense.CategoryId = dto.CategoryId;
                 expense.Amount = dto.Amount;
                 expense.Description = dto.Description;

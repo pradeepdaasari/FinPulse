@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Pulse.Core.Models;
 using Pulse.Core.Models.Health;
 using Pulse.Core.Models.Trading;
@@ -52,6 +53,14 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<PlannedExercise> PlannedExercises => Set<PlannedExercise>();
     public DbSet<WorkoutLog> WorkoutLogs => Set<WorkoutLog>();
     public DbSet<ExerciseSet> ExerciseSets => Set<ExerciseSet>();
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>()
+            .HaveConversion<UtcDateTimeConverter>();
+        configurationBuilder.Properties<DateTime?>()
+            .HaveConversion<UtcNullableDateTimeConverter>();
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -542,4 +551,22 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
             }
         }
     }
+}
+
+public class UtcDateTimeConverter : ValueConverter<DateTime, DateTime>
+{
+    public UtcDateTimeConverter()
+        : base(
+            v => v,
+            v => DateTime.SpecifyKind(v, DateTimeKind.Utc))
+    { }
+}
+
+public class UtcNullableDateTimeConverter : ValueConverter<DateTime?, DateTime?>
+{
+    public UtcNullableDateTimeConverter()
+        : base(
+            v => v,
+            v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v)
+    { }
 }

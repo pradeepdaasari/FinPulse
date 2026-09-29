@@ -1,4 +1,5 @@
 import { Component, ChangeDetectorRef, inject, signal, computed, OnInit } from '@angular/core';
+import { toLocalISOString } from '../core/utils/date-utils';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -253,7 +254,7 @@ export class AddMovementDialogComponent implements OnInit {
       destinationType: v.destinationType as MoneyMovementEntityType,
       destinationId: v.destinationType === 'External' ? null : (v.destinationId != null ? +v.destinationId : null),
       amount: v.amount!,
-      movementDate: (() => { const d = new Date(v.movementDate!); const now = new Date(); d.setHours(now.getHours(), now.getMinutes(), now.getSeconds()); return d.toISOString(); })(),
+      movementDate: (() => { const d = new Date(v.movementDate!); const now = new Date(); d.setHours(now.getHours(), now.getMinutes(), now.getSeconds()); return toLocalISOString(d); })(),
       movementType: v.movementType as MovementType,
       note: v.note || undefined
     }).subscribe({

@@ -88,10 +88,9 @@ public class HealthMetricsController : ControllerBase
         metric.Notes = metric.Notes?.Trim();
         if (metric.MeasuredAt == default)
             metric.MeasuredAt = DateTime.UtcNow;
-        else
+        else if (metric.MeasuredAt.Kind != DateTimeKind.Utc)
         {
-            var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-            metric.MeasuredAt = TimeZoneHelper.ToUtc(metric.MeasuredAt.Date, tz);
+            metric.MeasuredAt = DateTime.SpecifyKind(metric.MeasuredAt, DateTimeKind.Utc);
         }
 
         var strategy = _db.Database.CreateExecutionStrategy();
@@ -118,8 +117,7 @@ public class HealthMetricsController : ControllerBase
             e.MetricType = metric.MetricType?.Trim() ?? "";
             e.Value = metric.Value;
             e.Unit = metric.Unit?.Trim() ?? "";
-            var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-            e.MeasuredAt = TimeZoneHelper.ToUtc(metric.MeasuredAt.Date, tz);
+            e.MeasuredAt = metric.MeasuredAt;
             e.Notes = metric.Notes?.Trim();
             await _db.SaveChangesAsync();
         });

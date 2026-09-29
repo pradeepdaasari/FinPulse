@@ -130,7 +130,18 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
             <table mat-table [dataSource]="filteredTrades()">
               <ng-container matColumnDef="date">
                 <th mat-header-cell *matHeaderCellDef>Date</th>
-                <td mat-cell *matCellDef="let t">{{ t.date | date:'MMM d, h:mm a' }}</td>
+                <td mat-cell *matCellDef="let t">
+                  <div class="date-cell">
+                    <span>{{ formatTradeDate(t) }}</span>
+                    @if (t.entryTime || t.exitTime) {
+                      <span class="time-range">
+                        @if (t.entryTime) { {{ formatTime12(t.entryTime) }} }
+                        @if (t.entryTime && t.exitTime) { → {{ formatTime12(t.exitTime) }} }
+                        @if (t.entryTime && t.exitTime) { <span class="duration-badge">{{ getDuration(t.entryTime, t.exitTime) }}</span> }
+                      </span>
+                    }
+                  </div>
+                </td>
               </ng-container>
               <ng-container matColumnDef="setup">
                 <th mat-header-cell *matHeaderCellDef>Setup</th>
@@ -265,7 +276,7 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
                 }
                 <span class="setup-badge-sm">{{ t.setupName }}</span>
               </span>
-              <span class="trade-meta">{{ t.date | date:'MMM d, h:mm a' }} · {{ t.quantity }} contracts
+              <span class="trade-meta">{{ formatTradeDate(t) }}@if (t.entryTime && t.exitTime) { · {{ formatTime12(t.entryTime) }}→{{ formatTime12(t.exitTime) }} ({{ getDuration(t.entryTime, t.exitTime) }})} · {{ t.quantity }} contracts
                 @if (t.expirationDate) { · exp {{ t.expirationDate | localDate:'M/d' }} }
                 @if (t.strikePrice) {
                   @if (t.spreadType === 'Vertical' && t.strikePrice2) {
@@ -429,6 +440,14 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
     table { width: 100%; min-width: 650px; }
 
     /* ─── Badges ─── */
+    .date-cell { display: flex; flex-direction: column; gap: 2px; }
+    .time-range { font-size: var(--text-xs); color: var(--color-text-muted); white-space: nowrap; }
+    .duration-badge {
+      display: inline-block; font-size: 0.6rem; font-weight: var(--weight-bold);
+      padding: 1px 5px; border-radius: var(--radius-full);
+      background: var(--color-stat-blue-bg); color: var(--color-stat-blue);
+      margin-left: 4px;
+    }
     .setup-badge {
       display: inline-block; padding: 3px 10px; border-radius: var(--radius-full);
       font-size: var(--text-xs); font-weight: var(--weight-semibold); background: var(--color-stat-blue-bg); color: var(--color-stat-blue);
@@ -721,5 +740,30 @@ export class JournalComponent implements OnInit {
         });
       });
     });
+  }
+
+  formatTradeDate(t: any): string {
+    const d = new Date(t.date);
+    const month = d.toLocaleDateString('en-US', { month: 'short' });
+    const day = d.getDate();
+    return `${month} ${day}`;
+  }
+
+  formatTime12(time: string): string {
+    const [h, m] = time.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+  }
+
+  getDuration(entry: string, exit: string): string {
+    const [eh, em] = entry.split(':').map(Number);
+    const [xh, xm] = exit.split(':').map(Number);
+    let mins = (xh * 60 + xm) - (eh * 60 + em);
+    if (mins < 0) mins += 24 * 60;
+    if (mins < 60) return `${mins}m`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
   }
 }

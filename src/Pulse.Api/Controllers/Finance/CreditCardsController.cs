@@ -48,7 +48,6 @@ public class CreditCardsController : ControllerBase
         if (exists)
             return Conflict(new { message = $"A credit card named '{dto.CardName.Trim()}' already exists." });
 
-        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         var card = new CreditCard
         {
             CardName = dto.CardName.Trim(),
@@ -59,8 +58,8 @@ public class CreditCardsController : ControllerBase
             DueDay = dto.DueDay,
             IsAutopay = dto.IsAutopay,
             PromoAprPercent = dto.PromoAprPercent,
-            PromoEndDate = dto.PromoEndDate.HasValue ? TimeZoneHelper.ToUtc(dto.PromoEndDate.Value.Date, tz) : dto.PromoEndDate,
-            LastStatementDate = dto.LastStatementDate.HasValue ? TimeZoneHelper.ToUtc(dto.LastStatementDate.Value.Date, tz) : dto.LastStatementDate,
+            PromoEndDate = dto.PromoEndDate,
+            LastStatementDate = dto.LastStatementDate,
             UserId = UserId
         };
 
@@ -76,7 +75,6 @@ public class CreditCardsController : ControllerBase
         var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
         if (card is null) return NotFound();
 
-        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         var duplicate = await _db.CreditCards.AnyAsync(c => c.UserId == UserId && c.Id != id && c.CardName == dto.CardName.Trim());
         if (duplicate)
             return Conflict(new { message = $"A credit card named '{dto.CardName.Trim()}' already exists." });
@@ -103,8 +101,8 @@ public class CreditCardsController : ControllerBase
         card.DueDay = dto.DueDay;
         card.IsAutopay = dto.IsAutopay;
         card.PromoAprPercent = dto.PromoAprPercent;
-        card.PromoEndDate = dto.PromoEndDate.HasValue ? TimeZoneHelper.ToUtc(dto.PromoEndDate.Value.Date, tz) : dto.PromoEndDate;
-        card.LastStatementDate = dto.LastStatementDate.HasValue ? TimeZoneHelper.ToUtc(dto.LastStatementDate.Value.Date, tz) : dto.LastStatementDate;
+        card.PromoEndDate = dto.PromoEndDate;
+        card.LastStatementDate = dto.LastStatementDate;
 
         await _db.SaveChangesAsync();
 
@@ -143,12 +141,11 @@ public class CreditCardsController : ControllerBase
         var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
         if (card is null) return NotFound();
 
-        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         var statement = new StatementHistory
         {
             CreditCardId = id,
             UserId = UserId,
-            StatementDate = TimeZoneHelper.ToUtc(dto.StatementDate.Date, tz),
+            StatementDate = dto.StatementDate,
             StatementBalance = dto.StatementBalance,
             MinimumPayment = dto.MinimumPayment,
             CreditLimit = dto.CreditLimit
@@ -166,8 +163,7 @@ public class CreditCardsController : ControllerBase
         var stmt = await _db.StatementHistories.FirstOrDefaultAsync(s => s.Id == stmtId && s.CreditCardId == id && s.UserId == UserId);
         if (stmt is null) return NotFound();
 
-        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        stmt.StatementDate = TimeZoneHelper.ToUtc(dto.StatementDate.Date, tz);
+        stmt.StatementDate = dto.StatementDate;
         stmt.StatementBalance = dto.StatementBalance;
         stmt.MinimumPayment = dto.MinimumPayment;
         stmt.CreditLimit = dto.CreditLimit;
@@ -208,9 +204,6 @@ public class CreditCardsController : ControllerBase
     {
         var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
         if (card is null) return NotFound();
-
-        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        dto.PaymentDate = TimeZoneHelper.ToUtc(dto.PaymentDate.Date, tz);
 
         var strategy = _db.Database.CreateExecutionStrategy();
         try

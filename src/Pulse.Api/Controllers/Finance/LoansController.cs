@@ -93,7 +93,7 @@ public class LoansController : ControllerBase
             CurrentBalance = dto.CurrentBalance,
             AprPercent = dto.AprPercent,
             DurationMonths = dto.DurationMonths,
-            StartDate = TimeZoneHelper.ToUtc(dto.StartDate.Date, tz),
+            StartDate = dto.StartDate,
             MonthlyPayment = dto.MonthlyPayment,
             DueDay = dto.DueDay,
             LoanType = dto.LoanType,
@@ -101,7 +101,7 @@ public class LoansController : ControllerBase
             PaymentFrequency = dto.PaymentFrequency,
             RateType = dto.RateType,
             FundedBankAccountId = dto.FundedBankAccountId,
-            NextPaymentDate = dto.NextPaymentDate.HasValue ? TimeZoneHelper.ToUtc(dto.NextPaymentDate.Value.Date, tz) : dto.NextPaymentDate,
+            NextPaymentDate = dto.NextPaymentDate,
             UserId = UserId
         };
 
@@ -185,7 +185,7 @@ public class LoansController : ControllerBase
         loan.OriginalAmount = dto.OriginalAmount;
         loan.AprPercent = dto.AprPercent;
         loan.DurationMonths = dto.DurationMonths;
-        loan.StartDate = TimeZoneHelper.ToUtc(dto.StartDate.Date, tz);
+        loan.StartDate = dto.StartDate;
         loan.MonthlyPayment = dto.MonthlyPayment;
         loan.DueDay = dto.DueDay;
         loan.LoanType = dto.LoanType;
@@ -193,7 +193,7 @@ public class LoansController : ControllerBase
         loan.PaymentFrequency = dto.PaymentFrequency;
         loan.RateType = dto.RateType;
         loan.FundedBankAccountId = dto.FundedBankAccountId;
-        loan.NextPaymentDate = dto.NextPaymentDate.HasValue ? TimeZoneHelper.ToUtc(dto.NextPaymentDate.Value.Date, tz) : dto.NextPaymentDate;
+        loan.NextPaymentDate = dto.NextPaymentDate;
 
         string? interestWarning = null;
         var monthlyEquiv = loan.MonthlyEquivalentPayment;
@@ -362,9 +362,6 @@ public class LoansController : ControllerBase
     {
         var loan = await _db.PersonalLoans.FirstOrDefaultAsync(l => l.Id == id && l.UserId == UserId);
         if (loan is null) return NotFound();
-
-        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        dto.PaymentDate = TimeZoneHelper.ToUtc(dto.PaymentDate.Date, tz);
 
         if (loan.CurrentBalance <= 0)
             return BadRequest(new { error = "This loan has already been paid off." });

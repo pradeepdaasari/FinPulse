@@ -678,9 +678,11 @@ export class DayViewComponent implements OnInit {
     const events: TimelineEvent[] = [];
 
     for (const trade of data.trades) {
+      const baseDate = new Date(trade.date || trade.createdAt!);
+      const entryTime = this.applyTimeStr(baseDate, trade.entryTime);
       events.push({
         type: 'trade-open',
-        time: new Date(trade.date || trade.createdAt!),
+        time: entryTime,
         trade,
       });
 
@@ -696,9 +698,10 @@ export class DayViewComponent implements OnInit {
       }
 
       if (trade.status === 'Closed' && trade.closedDate) {
+        const closeBase = new Date(trade.closedDate);
         events.push({
           type: 'trade-close',
-          time: new Date(trade.closedDate),
+          time: this.applyTimeStr(closeBase, trade.exitTime),
           trade,
         });
       }
@@ -763,6 +766,13 @@ export class DayViewComponent implements OnInit {
 
   goToReview(): void {
     this.router.navigate(['/trading/review']);
+  }
+
+  private applyTimeStr(base: Date, timeStr?: string): Date {
+    if (!timeStr) return base;
+    const [h, m] = timeStr.split(':').map(Number);
+    const d = new Date(base.getFullYear(), base.getMonth(), base.getDate(), h, m);
+    return d;
   }
 
   trackEvent(index: number, event: TimelineEvent): string {

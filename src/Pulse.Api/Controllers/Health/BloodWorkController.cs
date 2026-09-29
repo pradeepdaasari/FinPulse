@@ -60,8 +60,7 @@ public class BloodWorkController : ControllerBase
     {
         report.Id = 0;
         report.UserId = UserId;
-        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        report.ReportDate = TimeZoneHelper.ToUtc(report.ReportDate.Date, tz);
+        report.ReportDate = report.ReportDate;
         report.LabName = report.LabName?.Trim();
         report.Notes = report.Notes?.Trim();
         foreach (var r in report.Results)
@@ -100,8 +99,7 @@ public class BloodWorkController : ControllerBase
                 var rpt = await _db.BloodWorkReports.Include(r => r.Results)
                     .FirstAsync(r => r.Id == id && r.UserId == UserId);
 
-                var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-                rpt.ReportDate = TimeZoneHelper.ToUtc(updated.ReportDate.Date, tz);
+                rpt.ReportDate = updated.ReportDate;
                 rpt.LabName = updated.LabName?.Trim();
                 rpt.Notes = updated.Notes?.Trim();
 

@@ -180,7 +180,7 @@ public class TradingController : ControllerBase
         note.Id = 0;
         note.UserId = UserId;
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        note.Date = TimeZoneHelper.ToUtc(note.Date.Date, tz);
+        note.Date = note.Date;
         note.KeyLevels = note.KeyLevels?.Trim();
         note.Catalysts = note.Catalysts?.Trim();
         note.Plan = note.Plan?.Trim();
@@ -196,7 +196,7 @@ public class TradingController : ControllerBase
         if (note == null) return NotFound();
 
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        note.Date = TimeZoneHelper.ToUtc(input.Date.Date, tz);
+        note.Date = input.Date;
         note.MarketBias = input.MarketBias;
         note.KeyLevels = input.KeyLevels;
         note.Catalysts = input.Catalysts;
@@ -328,7 +328,7 @@ public class TradingController : ControllerBase
             var trade = new TradeEntry
             {
                 UserId = UserId,
-                Date = TimeZoneHelper.ToUtc(input.Date.Date, tz),
+                Date = input.Date,
                 SetupId = input.SetupId,
                 Instrument = input.Instrument,
                 Direction = input.Direction,
@@ -402,7 +402,7 @@ public class TradingController : ControllerBase
             var regExchange = input.RegExchangeFees ?? 0;
             var fees = commission + regExchange;
 
-            trade.Date = TimeZoneHelper.ToUtc(input.Date.Date, tz);
+            trade.Date = input.Date;
             trade.SetupId = input.SetupId;
             trade.Instrument = input.Instrument;
             trade.Direction = input.Direction;
@@ -684,7 +684,7 @@ public class TradingController : ControllerBase
         review.Id = 0;
         review.UserId = UserId;
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        review.Date = TimeZoneHelper.ToUtc(review.Date.Date, tz);
+        review.Date = review.Date;
         review.LessonsLearned = review.LessonsLearned?.Trim();
         review.ImprovementNote = review.ImprovementNote?.Trim();
         _db.DailyReviews.Add(review);
@@ -698,7 +698,7 @@ public class TradingController : ControllerBase
         var review = await _db.DailyReviews.FirstOrDefaultAsync(r => r.Id == id && r.UserId == UserId);
         if (review == null) return NotFound();
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        review.Date = TimeZoneHelper.ToUtc(input.Date.Date, tz);
+        review.Date = input.Date;
         review.Grade = input.Grade;
         review.FollowedPlan = input.FollowedPlan;
         review.FollowedRules = input.FollowedRules;
@@ -1719,13 +1719,24 @@ public class TradingController : ControllerBase
 
             using var transaction = await _db.Database.BeginTransactionAsync();
 
+            var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+            var localDate = TimeZoneInfo.ConvertTimeFromUtc(
+                DateTime.SpecifyKind(trade.Date, DateTimeKind.Utc), tz);
+            if (!string.IsNullOrEmpty(trade.EntryTime) && trade.EntryTime.Contains(':'))
+            {
+                var parts = trade.EntryTime.Split(':');
+                if (int.TryParse(parts[0], out var h) && int.TryParse(parts[1], out var m))
+                    localDate = localDate.Date.AddHours(h).AddMinutes(m);
+            }
+            var expenseDate = TimeZoneHelper.ToUtc(localDate, tz);
+
             if (trade.LinkedExpenseId != null)
             {
                 var existing = await _db.DailyExpenses.FirstOrDefaultAsync(e => e.Id == trade.LinkedExpenseId && e.UserId == UserId);
                 if (existing != null)
                 {
                     ReverseBalance(account, existing.TransactionType, existing.Amount);
-                    existing.Date = trade.Date;
+                    existing.Date = expenseDate;
                     existing.Amount = amount;
                     existing.TransactionType = txnType;
                     existing.CategoryId = categoryId;
@@ -1739,7 +1750,7 @@ public class TradingController : ControllerBase
 
             var expense = new DailyExpense
             {
-                Date = trade.Date,
+                Date = expenseDate,
                 Amount = amount,
                 Description = description,
                 TransactionType = txnType,

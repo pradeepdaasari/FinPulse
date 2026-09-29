@@ -754,7 +754,7 @@ export class TradeEntryDialogComponent implements OnInit {
 
   form = this.fb.group({
     date: [this.data?.trade?.date ? new Date(this.data.trade.date) : new Date(), Validators.required],
-    time: [this.getTimeStr(this.data?.trade?.date), Validators.required],
+    time: [this.data?.trade?.entryTime || this.getTimeStr(), Validators.required],
     setupId: [this.data?.trade?.setupId ?? null, Validators.required],
     instrument: [this.data?.trade?.instrument ?? 'SPX', Validators.required],
     direction: [this.data?.trade?.direction ?? 'short', Validators.required],
@@ -784,7 +784,7 @@ export class TradeEntryDialogComponent implements OnInit {
     tags: [this.data?.trade?.tags?.join(', ') ?? ''],
     status: [this.data?.trade?.status ?? 'Open'],
     closedDate: [this.data?.trade?.closedDate ? new Date(this.data.trade.closedDate) : new Date()],
-    closedTime: [this.getTimeStr(this.data?.trade?.closedDate)]
+    closedTime: [this.data?.trade?.exitTime || this.getTimeStr(this.data?.trade?.closedDate)]
   });
 
   ngOnInit(): void {
