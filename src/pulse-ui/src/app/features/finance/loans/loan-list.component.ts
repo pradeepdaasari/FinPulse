@@ -589,6 +589,7 @@ export class LoanListComponent implements OnInit {
 
   filterByStatus(status: 'all' | 'Active' | 'PaidOff'): void {
     this.activeFilter.set(status);
+    this.cdr.detectChanges();
   }
 
   recordPayment(loan: PersonalLoan): void {
