@@ -1,8 +1,7 @@
-import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
 import { Router } from '@angular/router';
-import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -22,7 +21,7 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
 @Component({
   selector: 'app-loan-list',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatTooltipModule, MatChipsModule, CurrencyPipe, LocalDatePipe, DecimalPipe, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatTooltipModule, MatChipsModule, CurrencyPipe, LocalDatePipe, DecimalPipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadLoans()">
     <div class="header-row">
@@ -96,107 +95,86 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
       <!-- Desktop table -->
       <mat-card class="desktop-only">
         <div class="table-wrapper">
-        <table mat-table [dataSource]="tableDataSource">
-          <ng-container matColumnDef="loanType">
-            <th mat-header-cell *matHeaderCellDef>Type</th>
-            <td mat-cell *matCellDef="let loan">
-              <span class="loan-type-badge" [style.background]="getLoanTypeBg(loan.loanType)" [style.color]="getLoanTypeColor(loan.loanType)">
-                {{ loan.loanType }}
-              </span>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="lenderName">
-            <th mat-header-cell *matHeaderCellDef>Lender</th>
-            <td mat-cell *matCellDef="let loan">
-              <span class="lender-name">{{ loan.lenderName }}</span>
-              @if (loan.isAutopay) {
-                <mat-icon class="autopay-icon" matTooltip="Autopay enabled">autorenew</mat-icon>
-              }
-              @if (loan.rateType === 'Variable') {
-                <span class="variable-badge">Variable</span>
-              }
-              @if (isDeferred(loan)) {
-                <span class="deferred-chip">Paused until {{ loan.nextPaymentDate | localDate:'MMM yyyy' }}</span>
-              }
-              @if (loan.status === 'PaidOff') {
-                <span class="paid-off-badge">Paid Off</span>
-              }
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="currentBalance">
-            <th mat-header-cell *matHeaderCellDef>Balance</th>
-            <td mat-cell *matCellDef="let loan">
-              <span class="value-balance">{{ loan.currentBalance | currency }}</span>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="aprPercent">
-            <th mat-header-cell *matHeaderCellDef>APR</th>
-            <td mat-cell *matCellDef="let loan">
-              <span class="apr-badge" [class.apr-high]="loan.aprPercent >= 20" [class.apr-mid]="loan.aprPercent >= 10 && loan.aprPercent < 20" [class.apr-low]="loan.aprPercent < 10">
-                {{ loan.aprPercent }}%
-              </span>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="durationMonths">
-            <th mat-header-cell *matHeaderCellDef>Duration</th>
-            <td mat-cell *matCellDef="let loan">{{ loan.durationMonths }} mo</td>
-          </ng-container>
-
-          <ng-container matColumnDef="monthlyPayment">
-            <th mat-header-cell *matHeaderCellDef>Monthly</th>
-            <td mat-cell *matCellDef="let loan">
-              <span class="value-monthly">{{ (loan.monthlyEquivalentPayment || loan.monthlyPayment) | currency }}</span>
-              @if (loan.paymentFrequency !== 'Monthly') {
-                <span class="freq-note">{{ loan.monthlyPayment | currency }}/{{ loan.paymentFrequency === 'Biweekly' ? 'bw' : 'wk' }}</span>
-              }
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="paymentFrequency">
-            <th mat-header-cell *matHeaderCellDef>Frequency</th>
-            <td mat-cell *matCellDef="let loan">{{ loan.paymentFrequency }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="progress">
-            <th mat-header-cell *matHeaderCellDef>Progress</th>
-            <td mat-cell *matCellDef="let loan">
-              <div class="progress-mini">
-                <div class="progress-bar-mini">
-                  <div class="progress-fill" [class.progress-complete]="loan.status === 'PaidOff'" [style.width.%]="getProgress(loan)"></div>
-                </div>
-                <span class="progress-text">{{ getProgress(loan) | number:'1.0-0' }}%</span>
-              </div>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Actions</th>
-            <td mat-cell *matCellDef="let loan">
-              <div class="action-group">
-                @if (loan.status !== 'PaidOff') {
-                  <button mat-icon-button class="action-btn action-pay" (click)="$event.stopPropagation(); recordPayment(loan)" matTooltip="Record Payment">
-                    <mat-icon>payments</mat-icon>
-                  </button>
-                }
-                <button mat-icon-button class="action-btn action-edit" (click)="$event.stopPropagation(); editLoan(loan)" matTooltip="Edit">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button mat-icon-button class="action-btn action-view" (click)="$event.stopPropagation(); viewLoan(loan.id)" matTooltip="View Details">
-                  <mat-icon>visibility</mat-icon>
-                </button>
-                <button mat-icon-button class="action-btn action-delete" (click)="$event.stopPropagation(); deleteLoan(loan)" matTooltip="Delete">
-                  <mat-icon>delete_outline</mat-icon>
-                </button>
-              </div>
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="viewLoan(row.id)" class="clickable-row" [class.paid-off-row]="row.status === 'PaidOff'"></tr>
+        <table class="loan-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Lender</th>
+              <th>Balance</th>
+              <th>APR</th>
+              <th class="col-duration">Duration</th>
+              <th>Monthly</th>
+              <th class="col-frequency">Frequency</th>
+              <th>Progress</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (loan of filteredLoans(); track loan.id) {
+              <tr class="clickable-row" [class.paid-off-row]="loan.status === 'PaidOff'" (click)="viewLoan(loan.id)">
+                <td>
+                  <span class="loan-type-badge" [style.background]="getLoanTypeBg(loan.loanType)" [style.color]="getLoanTypeColor(loan.loanType)">
+                    {{ loan.loanType }}
+                  </span>
+                </td>
+                <td>
+                  <span class="lender-name">{{ loan.lenderName }}</span>
+                  @if (loan.isAutopay) {
+                    <mat-icon class="autopay-icon" matTooltip="Autopay enabled">autorenew</mat-icon>
+                  }
+                  @if (loan.rateType === 'Variable') {
+                    <span class="variable-badge">Variable</span>
+                  }
+                  @if (isDeferred(loan)) {
+                    <span class="deferred-chip">Paused until {{ loan.nextPaymentDate | localDate:'MMM yyyy' }}</span>
+                  }
+                  @if (loan.status === 'PaidOff') {
+                    <span class="paid-off-badge">Paid Off</span>
+                  }
+                </td>
+                <td><span class="value-balance">{{ loan.currentBalance | currency }}</span></td>
+                <td>
+                  <span class="apr-badge" [class.apr-high]="loan.aprPercent >= 20" [class.apr-mid]="loan.aprPercent >= 10 && loan.aprPercent < 20" [class.apr-low]="loan.aprPercent < 10">
+                    {{ loan.aprPercent }}%
+                  </span>
+                </td>
+                <td class="col-duration">{{ loan.durationMonths }} mo</td>
+                <td>
+                  <span class="value-monthly">{{ (loan.monthlyEquivalentPayment || loan.monthlyPayment) | currency }}</span>
+                  @if (loan.paymentFrequency !== 'Monthly') {
+                    <span class="freq-note">{{ loan.monthlyPayment | currency }}/{{ loan.paymentFrequency === 'Biweekly' ? 'bw' : 'wk' }}</span>
+                  }
+                </td>
+                <td class="col-frequency">{{ loan.paymentFrequency }}</td>
+                <td>
+                  <div class="progress-mini">
+                    <div class="progress-bar-mini">
+                      <div class="progress-fill" [class.progress-complete]="loan.status === 'PaidOff'" [style.width.%]="getProgress(loan)"></div>
+                    </div>
+                    <span class="progress-text">{{ getProgress(loan) | number:'1.0-0' }}%</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="action-group">
+                    @if (loan.status !== 'PaidOff') {
+                      <button mat-icon-button class="action-btn action-pay" (click)="$event.stopPropagation(); recordPayment(loan)" matTooltip="Record Payment">
+                        <mat-icon>payments</mat-icon>
+                      </button>
+                    }
+                    <button mat-icon-button class="action-btn action-edit" (click)="$event.stopPropagation(); editLoan(loan)" matTooltip="Edit">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn action-view" (click)="$event.stopPropagation(); viewLoan(loan.id)" matTooltip="View Details">
+                      <mat-icon>visibility</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn action-delete" (click)="$event.stopPropagation(); deleteLoan(loan)" matTooltip="Delete">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
         </table>
         </div>
       </mat-card>
@@ -326,6 +304,31 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
     }
 
     /* Table */
+    .loan-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .loan-table th {
+      text-align: left;
+      padding: 14px 16px;
+      font-size: var(--text-xs);
+      font-weight: var(--weight-semibold);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-wide);
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .loan-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--color-border);
+      font-size: var(--text-sm);
+      vertical-align: middle;
+    }
     .clickable-row { cursor: pointer; transition: background var(--transition-fast); }
     .clickable-row:hover { background: var(--color-surface-hover); }
     mat-card {
@@ -333,7 +336,6 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
       padding: 0 !important;
     }
     .table-wrapper { overflow-x: visible; }
-    table { width: 100%; }
     .loan-type-badge {
       display: inline-block;
       font-size: var(--text-xs);
@@ -508,9 +510,8 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
       .stat-card mat-icon { font-size: 22px; width: 22px; height: 22px; padding: 8px; border-radius: var(--radius-sm); box-sizing: content-box; overflow: visible; }
       .stat-value { font-size: 1rem; }
       table { min-width: 0; }
-      .mat-column-aprPercent,
-      .mat-column-durationMonths,
-      .mat-column-paymentFrequency { display: none; }
+      .col-duration,
+      .col-frequency { display: none; }
       .header-row button { display: none; }
       .action-btn { min-width: 44px; min-height: 44px; }
     }
@@ -542,14 +543,10 @@ export class LoanListComponent implements OnInit {
   private confetti = inject(ConfettiService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
-  private cdr = inject(ChangeDetectorRef);
 
   loans = signal<PersonalLoan[]>([]);
   loading = signal(true);
   activeFilter = signal<'all' | 'Active' | 'PaidOff'>('Active');
-  displayedColumns = ['loanType', 'lenderName', 'currentBalance', 'aprPercent', 'durationMonths', 'monthlyPayment', 'paymentFrequency', 'progress', 'actions'];
-
-  tableDataSource = new MatTableDataSource<PersonalLoan>([]);
 
   filteredLoans = computed(() => {
     const filter = this.activeFilter();
@@ -577,26 +574,22 @@ export class LoanListComponent implements OnInit {
   loadLoans(): void {
     this.loanService.getAll().subscribe({
       next: (loans) => {
+        loans.forEach(l => {
+          if (!l.status) l.status = l.currentBalance <= 0 ? 'PaidOff' : 'Active';
+        });
         loans.sort((a, b) => {
           if (a.status === b.status) return 0;
           return a.status === 'Active' ? -1 : 1;
         });
         this.loans.set(loans);
         this.loading.set(false);
-        this.syncTableData();
       },
-      error: () => { this.loading.set(false); this.notify.error('Failed to load loans'); this.cdr.detectChanges(); }
+      error: () => { this.loading.set(false); this.notify.error('Failed to load loans'); }
     });
   }
 
   filterByStatus(status: 'all' | 'Active' | 'PaidOff'): void {
     this.activeFilter.set(status);
-    this.syncTableData();
-  }
-
-  private syncTableData(): void {
-    this.tableDataSource.data = this.filteredLoans();
-    this.cdr.detectChanges();
   }
 
   recordPayment(loan: PersonalLoan): void {
@@ -660,7 +653,7 @@ export class LoanListComponent implements OnInit {
             this.notify.success('Loan deleted successfully');
             this.loadLoans();
           },
-          error: () => { this.loading.set(false); this.notify.error('Failed to delete loan'); this.cdr.detectChanges(); }
+          error: () => { this.loading.set(false); this.notify.error('Failed to delete loan'); }
         });
       });
     });
