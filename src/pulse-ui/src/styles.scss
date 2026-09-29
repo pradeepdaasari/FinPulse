@@ -451,8 +451,8 @@ textarea:focus-visible {
   background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface)) !important;
   border-bottom: 2px solid color-mix(in srgb, var(--color-primary) 22%, var(--color-border)) !important;
   position: sticky;
-  top: 0;
-  z-index: 10;
+  top: 56px;
+  z-index: 9;
 }
 
 .mat-mdc-header-cell {
@@ -463,8 +463,8 @@ textarea:focus-visible {
   letter-spacing: var(--tracking-wide);
   padding: 12px 16px !important;
   position: sticky;
-  top: 0;
-  z-index: 10;
+  top: 56px;
+  z-index: 9;
   background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface)) !important;
 }
 
