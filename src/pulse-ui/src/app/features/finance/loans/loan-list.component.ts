@@ -2,7 +2,7 @@ import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '
 import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
 import { Router } from '@angular/router';
-import { MatTableModule } from '@angular/material/table';
+import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -96,7 +96,7 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
       <!-- Desktop table -->
       <mat-card class="desktop-only">
         <div class="table-wrapper">
-        <table mat-table [dataSource]="filteredLoans()">
+        <table mat-table [dataSource]="tableDataSource">
           <ng-container matColumnDef="loanType">
             <th mat-header-cell *matHeaderCellDef>Type</th>
             <td mat-cell *matCellDef="let loan">
@@ -549,6 +549,8 @@ export class LoanListComponent implements OnInit {
   activeFilter = signal<'all' | 'Active' | 'PaidOff'>('Active');
   displayedColumns = ['loanType', 'lenderName', 'currentBalance', 'aprPercent', 'durationMonths', 'monthlyPayment', 'paymentFrequency', 'progress', 'actions'];
 
+  tableDataSource = new MatTableDataSource<PersonalLoan>([]);
+
   filteredLoans = computed(() => {
     const filter = this.activeFilter();
     const all = this.loans();
@@ -581,7 +583,7 @@ export class LoanListComponent implements OnInit {
         });
         this.loans.set(loans);
         this.loading.set(false);
-        this.cdr.detectChanges();
+        this.syncTableData();
       },
       error: () => { this.loading.set(false); this.notify.error('Failed to load loans'); this.cdr.detectChanges(); }
     });
@@ -589,6 +591,11 @@ export class LoanListComponent implements OnInit {
 
   filterByStatus(status: 'all' | 'Active' | 'PaidOff'): void {
     this.activeFilter.set(status);
+    this.syncTableData();
+  }
+
+  private syncTableData(): void {
+    this.tableDataSource.data = this.filteredLoans();
     this.cdr.detectChanges();
   }
 
