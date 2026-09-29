@@ -303,11 +303,8 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
       overflow: hidden;
       padding: 0 !important;
     }
-    .table-wrapper {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-    table { width: 100%; min-width: 600px; }
+    .table-wrapper { overflow-x: visible; }
+    table { width: 100%; }
     .loan-type-badge {
       display: inline-block;
       font-size: var(--text-xs);

@@ -571,7 +571,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
 
     /* Table Card */
     .table-card { border-radius: var(--radius-md); }
-    .table-scroll { overflow-x: auto; }
+    .table-scroll { overflow-x: visible; }
     .data-table {
       width: 100%; border-collapse: collapse; font-size: var(--text-sm);
       font-variant-numeric: tabular-nums;

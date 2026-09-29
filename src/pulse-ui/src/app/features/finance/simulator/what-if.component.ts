@@ -248,7 +248,7 @@ interface DebtSlider {
     .stat-label { font-size: 0.75rem; color: var(--color-text-muted); font-weight: 500; letter-spacing: 0.03em; text-transform: uppercase; }
 
     /* Projection table */
-    .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: var(--spacing-sm); }
+    .table-wrapper { overflow-x: visible; margin-top: var(--spacing-sm); }
     .projection-table { width: 100%; }
     .projection-table tr.mat-mdc-row:hover { background: var(--color-stat-blue-bg); }
     .cell-green { color: var(--color-success); font-weight: 600; }

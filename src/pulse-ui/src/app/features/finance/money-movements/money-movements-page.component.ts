@@ -411,8 +411,8 @@ import { toLocalDateString } from '../../../core/utils/date-utils';
     .stat-manual .summary-value { color: var(--color-value-amber); }
 
     /* --- Desktop table --- */
-    .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    table { width: 100%; min-width: 600px; }
+    .table-wrapper { overflow-x: visible; }
+    table { width: 100%; }
     .amount-cell { font-weight: var(--weight-semibold); color: var(--color-success); font-variant-numeric: tabular-nums; }
     .note-cell { color: var(--color-text-secondary); font-size: var(--text-sm); }
     .entity-name { display: flex; align-items: center; gap: 6px; font-size: var(--text-sm); }

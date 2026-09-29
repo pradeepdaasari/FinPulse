@@ -197,7 +197,7 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
     .empty-state h3 { margin: 0 0 var(--spacing-xs); font-size: 1.1rem; }
     .empty-state p { color: var(--color-text-muted); margin: 0 auto var(--spacing-md); max-width: 360px; }
 
-    .desktop-only { overflow-x: auto; }
+    .desktop-only { overflow-x: visible; }
     .records-table { width: 100%; }
 
     .mobile-cards { display: none; }

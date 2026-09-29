@@ -436,8 +436,8 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
     .active-chip { background: var(--color-primary) !important; color: #fff !important; border-color: var(--color-primary) !important; }
 
     /* ─── Table ─── */
-    .table-wrapper { overflow-x: auto; }
-    table { width: 100%; min-width: 650px; }
+    .table-wrapper { overflow-x: visible; }
+    table { width: 100%; }
 
     /* ─── Badges ─── */
     .date-cell { display: flex; flex-direction: column; gap: 2px; }

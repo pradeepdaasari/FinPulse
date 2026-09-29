@@ -296,8 +296,8 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .stat-label { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: var(--tracking-wide); margin-top: 2px; }
 
     mat-card { overflow: hidden; padding: 0 !important; }
-    .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    table { width: 100%; min-width: 600px; }
+    .table-wrapper { overflow-x: visible; }
+    table { width: 100%; }
     .amount { font-weight: var(--weight-bold); color: var(--color-primary); }
     .desc-cell { display: flex; align-items: center; gap: 10px; }
     .cat-icon-wrap {

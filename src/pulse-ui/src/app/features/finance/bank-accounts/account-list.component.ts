@@ -222,8 +222,8 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
     .action-park { color: var(--color-action-park) !important; }
     .action-park:hover { background: var(--color-action-park-bg) !important; }
     mat-card { overflow: hidden; padding: 0 !important; }
-    .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    table { width: 100%; min-width: 400px; }
+    .table-wrapper { overflow-x: visible; }
+    table { width: 100%; }
     .balance { font-weight: var(--weight-bold); color: var(--color-success); }
     .acct-name-cell { display: flex; align-items: center; gap: 10px; }
     .acct-icon { font-size: 20px; width: 20px; height: 20px; }

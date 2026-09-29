@@ -243,8 +243,8 @@ import { NotificationService } from '../../core/services/notification.service';
 
     /* Desktop Table */
     .table-card { overflow: hidden; }
-    .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .metrics-table { width: 100%; min-width: 600px; }
+    .table-wrapper { overflow-x: visible; }
+    .metrics-table { width: 100%; }
     .metric-type-badge {
       display: inline-flex; align-items: center; gap: 6px;
       font-weight: 500; font-size: 0.85rem;

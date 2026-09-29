@@ -281,11 +281,8 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
       overflow: hidden;
       padding: 0 !important;
     }
-    .table-wrapper {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-    table { width: 100%; min-width: 550px; }
+    .table-wrapper { overflow-x: visible; }
+    table { width: 100%; }
     .clickable-row { cursor: pointer; transition: background var(--transition-fast); }
     .clickable-row:hover { background: var(--color-surface-hover); }
     tr.mat-mdc-row { border-left: 3px solid transparent; }

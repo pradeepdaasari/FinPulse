@@ -136,8 +136,8 @@ import { MultiMonthComparison, MultiMonthTotal, MultiMonthCategory } from '../..
     .trend-label { opacity: 0.6; margin-right: 4px; }
     .trend-value { font-weight: 600; }
 
-    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .compare-table { width: 100%; border-collapse: collapse; min-width: 400px; }
+    .table-scroll { overflow-x: visible; }
+    .compare-table { width: 100%; border-collapse: collapse; }
     .compare-table th, .compare-table td { padding: 8px 12px; text-align: right; white-space: nowrap; }
     .compare-table th { font-size: 0.8rem; opacity: 0.7; border-bottom: 2px solid rgba(0,0,0,0.1); }
     .compare-table td { border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 0.9rem; }
