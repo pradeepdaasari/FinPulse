@@ -84,6 +84,15 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
         <mat-chip [highlighted]="activeFilter() === 'PaidOff'" (click)="filterByStatus('PaidOff')">Paid Off</mat-chip>
       </mat-chip-set>
 
+      @if (filteredLoans().length === 0) {
+        <div class="empty-state">
+          <div class="empty-icon-wrap purple">
+            <mat-icon>{{ activeFilter() === 'PaidOff' ? 'celebration' : 'filter_list' }}</mat-icon>
+          </div>
+          <h3>{{ activeFilter() === 'PaidOff' ? 'No paid-off loans yet' : 'No active loans' }}</h3>
+          <p>{{ activeFilter() === 'PaidOff' ? 'Once you pay off a loan, it will appear here.' : 'All your loans have been paid off!' }}</p>
+        </div>
+      } @else {
       <!-- Desktop table -->
       <mat-card class="desktop-only">
         <div class="table-wrapper">
@@ -195,7 +204,7 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
       <!-- Mobile cards -->
       <div class="mobile-cards">
         @for (loan of filteredLoans(); track loan.id) {
-          <div class="loan-card" [class.paid-off-card]="loan.status === 'PaidOff'" (click)="viewLoan(loan.id)">
+          <div class="loan-card" [class.paid-off-card]="loan.status === 'PaidOff'" (click)="viewLoan(loan.id)" >
             <div class="loan-top">
               <div class="loan-icon" [style.background]="getLoanTypeBg(loan.loanType)">
                 <mat-icon [style.color]="getLoanTypeColor(loan.loanType)">{{ getLenderIcon(loan.lenderName) }}</mat-icon>
@@ -259,6 +268,7 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
           </div>
         }
       </div>
+      }
     }
     <button class="mobile-add-fab" (click)="openAddLoan()"><mat-icon>add</mat-icon></button>
     </div>
