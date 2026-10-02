@@ -34,6 +34,8 @@ interface GoalCalendarDay {
   isCurrentMonth: boolean;
   isToday: boolean;
   dateStr: string;
+  totalPnl: number;
+  tradeCount: number;
 }
 
 interface GoalCalendarResult {
@@ -360,8 +362,14 @@ interface MetricDef {
                 (click)="selectGoalWeek(week)">
                 <div class="cal-week-days">
                   @for (day of week.days; track day.dateStr) {
-                    <div class="cal-day" [class.other-month]="!day.isCurrentMonth" [class.is-today]="day.isToday">
+                    <div class="cal-day" [class.other-month]="!day.isCurrentMonth" [class.is-today]="day.isToday"
+                      [class.has-trades]="day.tradeCount > 0">
                       <span class="cal-day-num">{{ day.date }}</span>
+                      @if (day.tradeCount > 0) {
+                        <span class="cal-day-pnl" [class.pnl-positive]="day.totalPnl >= 0" [class.pnl-negative]="day.totalPnl < 0">
+                          {{ day.totalPnl >= 0 ? '+' : '' }}{{ day.totalPnl | currency:'USD':'symbol':'1.0-0' }}
+                        </span>
+                      }
                     </div>
                   }
                 </div>
@@ -542,7 +550,7 @@ interface MetricDef {
 
     .summary-content { display: flex; flex-direction: column; min-width: 0; }
     .summary-value { font-size: 0.95rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .summary-label { font-size: 0.68rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.03em; font-weight: 500; }
+    .summary-label { font-size: 0.68rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 500; }
     .fee-val { color: var(--color-stat-amber); }
 
     .wl-row { display: flex; align-items: baseline; gap: 4px; }
@@ -741,7 +749,7 @@ interface MetricDef {
     .sc-red mat-icon { color: var(--color-stat-red); }
     .sc-value { font-size: 1.3rem; font-weight: 800; font-variant-numeric: tabular-nums; }
     .sc-of { font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted); }
-    .sc-label { font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; text-align: center; }
+    .sc-label { font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; text-align: center; }
     .rate-good { color: var(--color-success); }
     .rate-ok { color: var(--color-warning); }
     .rate-low { color: var(--color-danger); }
@@ -777,7 +785,7 @@ interface MetricDef {
     }
     .cal-weekday {
       text-align: center; font-size: 0.72rem; font-weight: 600;
-      color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; padding: 6px 0;
+      color: var(--color-text-muted); text-transform: uppercase; padding: 6px 0;
     }
     .cal-grid { display: flex; flex-direction: column; gap: 4px; }
     .cal-week-wrapper {
@@ -798,10 +806,13 @@ interface MetricDef {
       display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px;
     }
     .cal-day {
-      text-align: center; padding: 8px 0; min-height: 36px;
-      display: flex; align-items: center; justify-content: center;
+      text-align: center; padding: 4px 0; min-height: 36px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
     }
     .cal-day-num { font-size: 0.82rem; font-weight: 500; }
+    .cal-day-pnl { font-size: 0.75rem; font-weight: 600; line-height: 1; }
+    .cal-day-pnl.pnl-positive { color: var(--color-success); }
+    .cal-day-pnl.pnl-negative { color: var(--color-danger); }
     .cal-day.other-month .cal-day-num { color: var(--color-text-muted); opacity: 0.4; }
     .cal-day.is-today .cal-day-num {
       background: var(--color-primary); color: #fff; border-radius: 50%;
@@ -816,7 +827,7 @@ interface MetricDef {
     .wb-icon { font-size: 16px; width: 16px; height: 16px; flex-shrink: 0; }
     .wb-pass { color: var(--color-success); }
     .wb-miss { color: var(--color-warning); }
-    .wb-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+    .wb-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
     .wb-pass-text { color: var(--color-success); }
     .wb-miss-text { color: var(--color-warning); }
     .week-pnl { font-size: 0.78rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; margin-left: auto; }
@@ -899,7 +910,7 @@ interface MetricDef {
     .live-header { display: flex; align-items: center; gap: 6px; margin-bottom: 14px; }
     .live-dot { font-size: 10px; width: 10px; height: 10px; color: var(--color-success); animation: pulse-dot 2s infinite; }
     @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-    .live-title { font-size: 0.78rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .live-title { font-size: 0.78rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; }
     .live-summary-badge {
       margin-left: auto; font-size: 0.72rem; font-weight: 700;
       padding: 3px 10px; border-radius: var(--radius-full);
@@ -988,8 +999,9 @@ interface MetricDef {
       .sc-value { font-size: 1.1rem; }
       .mentor-message { padding: 10px 12px; }
       .mentor-text { font-size: 0.8rem; }
-      .cal-day { padding: 6px 0; min-height: 32px; }
+      .cal-day { padding: 4px 0; min-height: 32px; }
       .cal-day-num { font-size: 0.75rem; }
+      .cal-day-pnl { font-size: 0.68rem; }
       .cal-day.is-today .cal-day-num { width: 24px; height: 24px; }
       .week-pnl { font-size: 0.72rem; }
       .cal-week-summary-bar { padding: 3px 8px; }
@@ -1057,9 +1069,15 @@ export class TradingCalendarComponent implements OnInit {
     const mo = this.currentMonth();
     const hMap = this.goalHistoryMap();
     const progs = this.goalProgress();
+    const dailyDays = this.calendarDays();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    const dailyMap = new Map<string, CalendarDay>();
+    for (const dd of dailyDays) {
+      dailyMap.set(dd.dateStr, dd);
+    }
 
     const firstDay = new Date(year, mo, 1);
     const lastDay = new Date(year, mo + 1, 0);
@@ -1077,11 +1095,15 @@ export class TradingCalendarComponent implements OnInit {
 
       for (let i = 0; i < 7; i++) {
         const d = new Date(current);
+        const dateStr = d.toISOString().split('T')[0];
+        const daily = dailyMap.get(dateStr);
         weekDays.push({
           date: d.getDate(),
           isCurrentMonth: d.getMonth() === mo,
           isToday: d.toDateString() === today.toDateString(),
-          dateStr: d.toISOString().split('T')[0],
+          dateStr,
+          totalPnl: daily?.totalPnl ?? 0,
+          tradeCount: daily?.tradeCount ?? 0,
         });
         current.setDate(current.getDate() + 1);
       }
@@ -1090,30 +1112,45 @@ export class TradingCalendarComponent implements OnInit {
 
       const mondayKey = weekStart.toISOString().split('T')[0];
       const isFuture = weekStart > today;
+      const isCurrentWeek = weekStart <= today && weekEnd >= today;
 
       const goalResults: GoalCalendarResult[] = [];
       let allAchieved = true;
       let hasData = false;
 
       for (const p of progs) {
-        const h = hMap.get(p.goal.id);
-        if (!h) continue;
-        const snap = h.snapshots.find(s => {
-          const snapDate = new Date(s.periodStart);
-          return snapDate.toISOString().split('T')[0] === mondayKey;
-        });
-        if (snap) {
+        if (isCurrentWeek) {
           hasData = true;
-          if (!snap.achieved) allAchieved = false;
+          if (!p.achieved) allAchieved = false;
           goalResults.push({
             goalId: p.goal.id,
             metric: p.goal.metric,
             operator: p.goal.operator,
-            currentValue: snap.currentValue,
-            targetValue: snap.targetValue,
-            achieved: snap.achieved,
-            percentage: snap.percentage,
+            currentValue: p.currentValue,
+            targetValue: p.goal.targetValue,
+            achieved: p.achieved,
+            percentage: p.percentage,
           });
+        } else {
+          const h = hMap.get(p.goal.id);
+          if (!h) continue;
+          const snap = h.snapshots.find(s => {
+            const snapDate = new Date(s.periodStart);
+            return snapDate.toISOString().split('T')[0] === mondayKey;
+          });
+          if (snap) {
+            hasData = true;
+            if (!snap.achieved) allAchieved = false;
+            goalResults.push({
+              goalId: p.goal.id,
+              metric: p.goal.metric,
+              operator: p.goal.operator,
+              currentValue: snap.currentValue,
+              targetValue: snap.targetValue,
+              achieved: snap.achieved,
+              percentage: snap.percentage,
+            });
+          }
         }
       }
 
@@ -1305,9 +1342,17 @@ export class TradingCalendarComponent implements OnInit {
       'July', 'August', 'September', 'October', 'November', 'December'];
     this.monthLabel.set(`${months[month]} ${year}`);
 
-    const from = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-    const lastDay = new Date(year, month + 1, 0).getDate();
-    const to = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    const firstDay = new Date(year, month, 1);
+    const startOffset = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
+    const calStart = new Date(firstDay);
+    calStart.setDate(calStart.getDate() - startOffset);
+    const lastDay = new Date(year, month + 1, 0);
+    const endOffset = lastDay.getDay() === 0 ? 0 : 7 - lastDay.getDay();
+    const calEnd = new Date(lastDay);
+    calEnd.setDate(calEnd.getDate() + endOffset);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const from = `${calStart.getFullYear()}-${pad(calStart.getMonth() + 1)}-${pad(calStart.getDate())}`;
+    const to = `${calEnd.getFullYear()}-${pad(calEnd.getMonth() + 1)}-${pad(calEnd.getDate())}`;
 
     this.tradingService.getTrades(from, to).subscribe({
       next: trades => {
@@ -1388,30 +1433,32 @@ export class TradingCalendarComponent implements OnInit {
 
     const days: CalendarDay[] = [];
 
+    const makeDateStr = (y: number, m: number, d: number) =>
+      `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const buildDay = (d: number, dateStr: string, isCurrent: boolean): CalendarDay => {
+      const dayTrades = tradesByDate.get(dateStr) || [];
+      const closed = dayTrades.filter(t => t.status !== 'Open');
+      const totalPnl = closed.reduce((sum, t) => sum + (t.netPnl ?? t.pnl ?? 0), 0);
+      return { date: d, isCurrentMonth: isCurrent, isToday: isCurrent && isCurrentMonth && today.getDate() === d,
+        trades: dayTrades, totalPnl: Math.round(totalPnl * 100) / 100, tradeCount: dayTrades.length, dateStr };
+    };
+
+    const prevMonth = month === 0 ? 11 : month - 1;
+    const prevYear = month === 0 ? year - 1 : year;
     for (let i = firstDayOfMonth - 1; i >= 0; i--) {
       const d = daysInPrevMonth - i;
-      days.push({ date: d, isCurrentMonth: false, isToday: false, trades: [], totalPnl: 0, tradeCount: 0, dateStr: `prev-${d}` });
+      days.push(buildDay(d, makeDateStr(prevYear, prevMonth, d), false));
     }
 
     for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      const dayTrades = tradesByDate.get(dateStr) || [];
-      const closedDayTrades = dayTrades.filter(t => t.status !== 'Open');
-      const totalPnl = closedDayTrades.reduce((sum, t) => sum + (t.netPnl ?? t.pnl ?? 0), 0);
-      days.push({
-        date: d,
-        isCurrentMonth: true,
-        isToday: isCurrentMonth && today.getDate() === d,
-        trades: dayTrades,
-        totalPnl: Math.round(totalPnl * 100) / 100,
-        tradeCount: dayTrades.length,
-        dateStr
-      });
+      days.push(buildDay(d, makeDateStr(year, month, d), true));
     }
 
+    const nextMonth = month === 11 ? 0 : month + 1;
+    const nextYear = month === 11 ? year + 1 : year;
     const remaining = 42 - days.length;
     for (let d = 1; d <= remaining; d++) {
-      days.push({ date: d, isCurrentMonth: false, isToday: false, trades: [], totalPnl: 0, tradeCount: 0, dateStr: `next-${d}` });
+      days.push(buildDay(d, makeDateStr(nextYear, nextMonth, d), false));
     }
 
     this.calendarDays.set(days);
