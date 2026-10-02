@@ -354,7 +354,9 @@ export class MonthlyPaymentsCardComponent implements OnInit {
 
           const paymentAmount = debt.perPaymentAmount;
           let isPaid: boolean;
-          if (isCard && card?.lastStatementDate && nearbyPaid > 0) {
+          if (debt.currentBalance <= 0) {
+            isPaid = true;
+          } else if (isCard && card?.lastStatementDate && nearbyPaid > 0) {
             const latestPaymentDate = Math.max(...debtPayments.map(p => new Date(p.paymentDate).getTime()));
             const stmtDate = new Date(card.lastStatementDate).getTime();
             isPaid = stmtDate > latestPaymentDate ? true : nearbyPaid >= paymentAmount;

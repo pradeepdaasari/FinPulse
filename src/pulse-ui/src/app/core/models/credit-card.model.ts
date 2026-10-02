@@ -13,4 +13,11 @@ export interface CreditCard {
   lastStatementDate?: string;
   createdAt: string;
   updatedAt: string;
+  postStatementCharges?: number;
+  postStatementRefunds?: number;
+  postStatementPayments?: number;
+  remainingStatementBalance?: number;
+  remainingMinimumPayment?: number;
+  statementBalance?: number;
+  statementDate?: string;
 }

@@ -142,7 +142,7 @@ import { routeFadeAnimation } from './route-animations';
                   <span class="ios-nav-label">Day View</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
-                <a class="ios-nav-item" routerLink="/trading/premarket" routerLinkActive="active-link" (click)="onNavClick()">
+                <a class="ios-nav-item" routerLink="/trading/premarket" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-amber"><mat-icon>wb_twilight</mat-icon></span>
                   <span class="ios-nav-label">Pre-Market</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>

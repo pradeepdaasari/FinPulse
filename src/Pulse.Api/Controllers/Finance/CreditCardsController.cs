@@ -30,15 +30,53 @@ public class CreditCardsController : ControllerBase
     public async Task<ActionResult<List<CreditCard>>> GetAll()
     {
         var cards = await _db.CreditCards.Where(c => c.UserId == UserId).OrderBy(c => c.CardName).ToListAsync();
+
+        foreach (var card in cards)
+        {
+            var summary = await ComputeCardSummary(card);
+            if (summary.BalanceChanged)
+            {
+                try { await _db.SaveChangesAsync(); }
+                catch { _db.Entry(card).State = EntityState.Unchanged; }
+            }
+        }
+
         return Ok(cards);
     }
 
-    [HttpGet("{id}")]
-    public async Task<ActionResult<CreditCard>> GetById(int id)
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult> GetById(int id)
     {
         var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
         if (card is null) return NotFound();
-        return Ok(card);
+
+        var s = await ComputeCardSummary(card);
+        if (s.BalanceChanged) await _db.SaveChangesAsync();
+
+        return Ok(new
+        {
+            card.Id,
+            card.CardName,
+            card.CurrentBalance,
+            card.CreditLimit,
+            card.AprPercent,
+            card.MinimumPayment,
+            card.DueDay,
+            card.BillingCycleDays,
+            card.IsAutopay,
+            card.PromoAprPercent,
+            card.PromoEndDate,
+            card.LastStatementDate,
+            card.CreatedAt,
+            card.UpdatedAt,
+            s.PostStatementCharges,
+            s.PostStatementRefunds,
+            s.PostStatementPayments,
+            s.RemainingStatementBalance,
+            s.RemainingMinimumPayment,
+            s.StatementBalance,
+            s.StatementDate
+        });
     }
 
     [HttpPost]
@@ -260,6 +298,9 @@ public class CreditCardsController : ControllerBase
 
                 await transaction.CommitAsync();
             });
+
+            await AutoAdvanceMatchingRecurring(card.CardName);
+
             return Ok(payment);
         }
         catch
@@ -280,5 +321,96 @@ public class CreditCardsController : ControllerBase
             .ToListAsync();
 
         return Ok(payments);
+    }
+
+    private record CardSummary(
+        decimal PostStatementCharges, decimal PostStatementRefunds, decimal PostStatementPayments,
+        decimal RemainingStatementBalance, decimal RemainingMinimumPayment,
+        decimal StatementBalance, DateTime? StatementDate, bool BalanceChanged);
+
+    private async Task<CardSummary> ComputeCardSummary(CreditCard card)
+    {
+        var stmt = await _db.StatementHistories
+            .Where(s => s.UserId == UserId && s.CreditCardId == card.Id)
+            .OrderByDescending(s => s.StatementDate)
+            .FirstOrDefaultAsync();
+
+        if (stmt is null)
+            return new(0, 0, 0, card.CurrentBalance, card.MinimumPayment,
+                card.CurrentBalance, null, false);
+
+        var stmtDate = stmt.StatementDate;
+        var stmtBal = stmt.StatementBalance;
+        var minPay = stmt.MinimumPayment;
+
+        var postCharges = await _db.DailyExpenses
+            .Where(e => e.UserId == UserId &&
+                e.FundingSourceType == FundingSourceType.CreditCard &&
+                e.FundingSourceId == card.Id &&
+                e.Date > stmtDate &&
+                e.TransactionType == TransactionType.Expense)
+            .SumAsync(e => e.Amount);
+
+        var postRefunds = await _db.DailyExpenses
+            .Where(e => e.UserId == UserId &&
+                e.FundingSourceType == FundingSourceType.CreditCard &&
+                e.FundingSourceId == card.Id &&
+                e.Date > stmtDate &&
+                e.TransactionType == TransactionType.Refund)
+            .SumAsync(e => e.Amount);
+
+        var postPayments = await _db.PaymentHistories
+            .Where(p => p.UserId == UserId &&
+                p.DebtType == DebtType.CreditCard &&
+                p.DebtId == card.Id &&
+                p.PaymentDate > stmtDate)
+            .SumAsync(p => p.AmountPaid);
+
+        var computed = Math.Round(stmtBal + postCharges - postRefunds - postPayments, 2);
+        var changed = computed != card.CurrentBalance;
+        if (changed) card.CurrentBalance = computed;
+
+        return new(
+            Math.Round(postCharges, 2),
+            Math.Round(postRefunds, 2),
+            Math.Round(postPayments, 2),
+            Math.Round(Math.Max(0, stmtBal - postPayments - postRefunds), 2),
+            Math.Round(Math.Max(0, minPay - postPayments), 2),
+            stmtBal,
+            stmtDate,
+            changed);
+    }
+
+    private async Task AutoAdvanceMatchingRecurring(string debtName)
+    {
+        var today = DateTime.UtcNow.Date;
+        var name = debtName.ToLower();
+        var dueRecurring = await _db.RecurringTransactions
+            .Where(r => r.UserId == UserId && r.IsActive && r.NextRunDate <= today)
+            .ToListAsync();
+
+        var matched = false;
+        foreach (var rec in dueRecurring)
+        {
+            var desc = rec.Description?.ToLower() ?? "";
+            var merch = rec.Merchant?.ToLower() ?? "";
+            if (desc == name || merch == name ||
+                (desc.Length > 0 && (name.Contains(desc) || desc.Contains(name))) ||
+                (merch.Length > 0 && (name.Contains(merch) || merch.Contains(name))))
+            {
+                rec.NextRunDate = rec.Frequency switch
+                {
+                    RecurrenceFrequency.Daily => rec.NextRunDate.AddDays(1),
+                    RecurrenceFrequency.Weekly => rec.NextRunDate.AddDays(7),
+                    RecurrenceFrequency.Biweekly => rec.NextRunDate.AddDays(14),
+                    _ => rec.NextRunDate.AddMonths(1)
+                };
+                if (rec.EndDate.HasValue && rec.NextRunDate > rec.EndDate.Value)
+                    rec.IsActive = false;
+                matched = true;
+            }
+        }
+
+        if (matched) await _db.SaveChangesAsync();
     }
 }

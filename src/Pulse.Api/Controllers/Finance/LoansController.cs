@@ -442,6 +442,9 @@ public class LoansController : ControllerBase
 
                 await transaction.CommitAsync();
             });
+
+            await AutoAdvanceMatchingRecurring(loan.LenderName);
+
             return Ok(new { payment, wasPaidOff = loan.Status == LoanStatus.PaidOff, lenderName = loan.LenderName });
         }
         catch
@@ -531,5 +534,38 @@ public class LoansController : ControllerBase
         {
             return StatusCode(500, new { error = "Failed to backfill payment splits. Please try again." });
         }
+    }
+
+    private async Task AutoAdvanceMatchingRecurring(string debtName)
+    {
+        var today = DateTime.UtcNow.Date;
+        var name = debtName.ToLower();
+        var dueRecurring = await _db.RecurringTransactions
+            .Where(r => r.UserId == UserId && r.IsActive && r.NextRunDate <= today)
+            .ToListAsync();
+
+        var matched = false;
+        foreach (var rec in dueRecurring)
+        {
+            var desc = rec.Description?.ToLower() ?? "";
+            var merch = rec.Merchant?.ToLower() ?? "";
+            if (desc == name || merch == name ||
+                (desc.Length > 0 && (name.Contains(desc) || desc.Contains(name))) ||
+                (merch.Length > 0 && (name.Contains(merch) || merch.Contains(name))))
+            {
+                rec.NextRunDate = rec.Frequency switch
+                {
+                    RecurrenceFrequency.Daily => rec.NextRunDate.AddDays(1),
+                    RecurrenceFrequency.Weekly => rec.NextRunDate.AddDays(7),
+                    RecurrenceFrequency.Biweekly => rec.NextRunDate.AddDays(14),
+                    _ => rec.NextRunDate.AddMonths(1)
+                };
+                if (rec.EndDate.HasValue && rec.NextRunDate > rec.EndDate.Value)
+                    rec.IsActive = false;
+                matched = true;
+            }
+        }
+
+        if (matched) await _db.SaveChangesAsync();
     }
 }

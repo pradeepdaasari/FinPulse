@@ -40,6 +40,7 @@ public class StreakService : IStreakService
 
             foreach (var loan in loans)
             {
+                if (loan.CurrentBalance <= 0) continue;
                 var loanPayments = payments
                     .Where(p => p.DebtId == loan.Id && p.PaymentDate >= startOfMonth && p.PaymentDate < endOfMonth)
                     .Sum(p => p.AmountPaid);
@@ -93,6 +94,7 @@ public class StreakService : IStreakService
 
         foreach (var loan in loans)
         {
+            if (loan.CurrentBalance <= 0) continue;
             var paid = payments
                 .Where(p => p.DebtId == loan.Id && p.PaymentDate >= currentMonthStart && p.PaymentDate < currentMonthEnd)
                 .Sum(p => p.AmountPaid);

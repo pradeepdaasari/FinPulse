@@ -831,75 +831,21 @@ export class CardDetailComponent implements OnInit {
     return stmts.reduce((a, b) => a.statementDate > b.statementDate ? a : b);
   });
 
-  effectiveStatementBalance = computed(() => {
-    const latest = this.latestStatement();
-    return latest ? latest.statementBalance : (this.card()?.currentBalance ?? 0);
-  });
+  effectiveStatementBalance = computed(() => this.card()?.statementBalance ?? this.card()?.currentBalance ?? 0);
 
-  effectiveStatementDate = computed(() => {
-    const latest = this.latestStatement();
-    if (latest) return latest.statementDate.slice(0, 10);
-    return this.card()?.lastStatementDate?.slice(0, 10) ?? null;
-  });
+  effectiveStatementDate = computed(() => this.card()?.statementDate?.slice(0, 10) ?? this.card()?.lastStatementDate?.slice(0, 10) ?? null);
 
-  effectiveMinimumPayment = computed(() => {
-    const latest = this.latestStatement();
-    return latest ? latest.minimumPayment : (this.card()?.minimumPayment ?? 0);
-  });
+  postStatementCharges = computed(() => this.card()?.postStatementCharges ?? 0);
 
-  postStatementCharges = computed(() => {
-    const stmtDate = this.effectiveStatementDate();
-    if (!stmtDate) return 0;
-    return sumCurrency(
-      this.allTransactions()
-        .filter(t => t.date > stmtDate && t.transactionType === 'Expense')
-        .map(t => t.amount)
-    );
-  });
+  postStatementRefunds = computed(() => this.card()?.postStatementRefunds ?? 0);
 
-  postStatementRefunds = computed(() => {
-    const stmtDate = this.effectiveStatementDate();
-    if (!stmtDate) return 0;
-    return sumCurrency(
-      this.allTransactions()
-        .filter(t => t.date > stmtDate && t.transactionType === 'Refund')
-        .map(t => t.amount)
-    );
-  });
+  postStatementPayments = computed(() => this.card()?.postStatementPayments ?? 0);
 
-  postStatementPayments = computed(() => {
-    const stmtDate = this.effectiveStatementDate();
-    if (!stmtDate) return 0;
-    const stmtTime = new Date(stmtDate).getTime();
-    return sumCurrency(
-      this.paymentHistory()
-        .filter(p => new Date(p.paymentDate).getTime() > stmtTime)
-        .map(p => p.amountPaid)
-    );
-  });
+  totalBalance = computed(() => this.card()?.currentBalance ?? 0);
 
-  totalBalance = computed(() => {
-    const c = this.card();
-    if (!c) return 0;
-    const stmtBal = this.effectiveStatementBalance();
-    if (!this.effectiveStatementDate()) return stmtBal;
-    return stmtBal + this.postStatementCharges() - this.postStatementRefunds() - this.postStatementPayments();
-  });
+  remainingStatementBalance = computed(() => this.card()?.remainingStatementBalance ?? 0);
 
-  remainingStatementBalance = computed(() => {
-    const stmtBal = this.effectiveStatementBalance();
-    const stmtDate = this.effectiveStatementDate();
-    const payments = stmtDate ? this.postStatementPayments() : this.totalPayments();
-    const refunds = stmtDate ? this.postStatementRefunds() : this.totalRefunds();
-    return Math.max(0, stmtBal - payments - refunds);
-  });
-
-  remainingMinimumPayment = computed(() => {
-    const minPay = this.effectiveMinimumPayment();
-    const stmtDate = this.effectiveStatementDate();
-    const payments = stmtDate ? this.postStatementPayments() : this.totalPayments();
-    return Math.max(0, minPay - payments);
-  });
+  remainingMinimumPayment = computed(() => this.card()?.remainingMinimumPayment ?? 0);
 
   allCombined = computed(() => {
     const payIds = new Set(this.paymentHistory().map(p => p.id));

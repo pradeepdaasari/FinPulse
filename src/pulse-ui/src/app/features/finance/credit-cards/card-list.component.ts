@@ -2,7 +2,6 @@ import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '
 import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
 import { Router } from '@angular/router';
-import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -20,7 +19,7 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
 @Component({
   selector: 'app-card-list',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatTooltipModule, CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatTooltipModule, CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadCards()">
     <div class="header-row">
@@ -78,99 +77,82 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
       <!-- Desktop table -->
       <mat-card class="desktop-only">
         <div class="table-wrapper">
-        <table mat-table [dataSource]="cards()">
-          <ng-container matColumnDef="cardName">
-            <th mat-header-cell *matHeaderCellDef>Card Name</th>
-            <td mat-cell *matCellDef="let card">
-              <div class="card-name-cell">
-                <mat-icon class="card-brand-icon" [style.color]="getCardColor(card)">{{ getCardIcon(card.cardName) }}</mat-icon>
-                <span class="card-name-text">{{ card.cardName }}</span>
-                @if (isPromoActive(card)) {
-                  <span class="promo-pill">PROMO</span>
-                }
-              </div>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="currentBalance">
-            <th mat-header-cell *matHeaderCellDef>Statement Bal</th>
-            <td mat-cell *matCellDef="let card">
-              <span class="value-balance">{{ card.currentBalance | currency }}</span>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="utilization">
-            <th mat-header-cell *matHeaderCellDef>Utilization</th>
-            <td mat-cell *matCellDef="let card">
-              <div class="util-cell">
-                <div class="util-bar">
-                  <div class="util-fill" [style.width.%]="getUtilization(card)" [class]="getUtilColor(card)"></div>
-                </div>
-                <span class="util-pct" [class]="'pct-' + getUtilColor(card)">{{ getUtilization(card) | number:'1.0-0' }}%</span>
-              </div>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="aprPercent">
-            <th mat-header-cell *matHeaderCellDef>APR</th>
-            <td mat-cell *matCellDef="let card">
-              <span class="apr-badge" [class.apr-high]="card.aprPercent >= 20" [class.apr-mid]="card.aprPercent >= 10 && card.aprPercent < 20" [class.apr-low]="card.aprPercent < 10">
-                {{ card.aprPercent }}%
-              </span>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="minimumPayment">
-            <th mat-header-cell *matHeaderCellDef>Min Payment</th>
-            <td mat-cell *matCellDef="let card">
-              <span class="value-monthly">{{ card.minimumPayment | currency }}</span>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="dueDay">
-            <th mat-header-cell *matHeaderCellDef>Due Day</th>
-            <td mat-cell *matCellDef="let card">
-              <span class="due-badge">{{ card.dueDay }}</span>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="promoEndDate">
-            <th mat-header-cell *matHeaderCellDef>Promo Ends</th>
-            <td mat-cell *matCellDef="let card">
-              @if (isPromoActive(card)) {
-                <span class="promo-date">{{ card.promoEndDate | localDate:'MMM d, y' }}</span>
-              } @else {
-                <span class="no-promo">—</span>
-              }
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Actions</th>
-            <td mat-cell *matCellDef="let card">
-              <div class="action-group">
-                <button mat-icon-button class="action-btn action-pay" (click)="$event.stopPropagation(); recordPayment(card)" matTooltip="Record Payment">
-                  <mat-icon>payments</mat-icon>
-                </button>
-                <button mat-icon-button class="action-btn action-edit" (click)="$event.stopPropagation(); editCard(card)" matTooltip="Edit Card">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button mat-icon-button class="action-btn action-view" (click)="$event.stopPropagation(); viewCard(card.id)" matTooltip="View Details">
-                  <mat-icon>visibility</mat-icon>
-                </button>
-                <button mat-icon-button class="action-btn action-delete" (click)="$event.stopPropagation(); deleteCard(card)" matTooltip="Delete">
-                  <mat-icon>delete_outline</mat-icon>
-                </button>
-              </div>
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"
-              (click)="viewCard(row.id)" class="clickable-row"
-              [class.row-healthy]="getUtilization(row) <= 30"
-              [class.row-warning]="getUtilization(row) > 30 && getUtilization(row) <= 70"
-              [class.row-danger]="getUtilization(row) > 70"></tr>
+        <table>
+          <thead>
+            <tr>
+              <th>Card Name</th>
+              <th>Statement Bal</th>
+              <th>Utilization</th>
+              <th>APR</th>
+              <th>Min Payment</th>
+              <th>Due Day</th>
+              <th>Promo Ends</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (card of cards(); track card.id) {
+              <tr (click)="viewCard(card.id)" class="clickable-row"
+                  [class.row-healthy]="getUtilization(card) <= 30"
+                  [class.row-warning]="getUtilization(card) > 30 && getUtilization(card) <= 70"
+                  [class.row-danger]="getUtilization(card) > 70">
+                <td>
+                  <div class="card-name-cell">
+                    <mat-icon class="card-brand-icon" [style.color]="getCardColor(card)">{{ getCardIcon(card.cardName) }}</mat-icon>
+                    <span class="card-name-text">{{ card.cardName }}</span>
+                    @if (isPromoActive(card)) {
+                      <span class="promo-pill">PROMO</span>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <span class="value-balance">{{ card.currentBalance | currency }}</span>
+                </td>
+                <td>
+                  <div class="util-cell">
+                    <div class="util-bar">
+                      <div class="util-fill" [style.width.%]="getUtilization(card)" [class]="getUtilColor(card)"></div>
+                    </div>
+                    <span class="util-pct" [class]="'pct-' + getUtilColor(card)">{{ getUtilization(card) | number:'1.0-0' }}%</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="apr-badge" [class.apr-high]="card.aprPercent >= 20" [class.apr-mid]="card.aprPercent >= 10 && card.aprPercent < 20" [class.apr-low]="card.aprPercent < 10">
+                    {{ card.aprPercent }}%
+                  </span>
+                </td>
+                <td>
+                  <span class="value-monthly">{{ card.minimumPayment | currency }}</span>
+                </td>
+                <td>
+                  <span class="due-badge">{{ card.dueDay }}</span>
+                </td>
+                <td>
+                  @if (isPromoActive(card)) {
+                    <span class="promo-date">{{ card.promoEndDate | localDate:'MMM d, y' }}</span>
+                  } @else {
+                    <span class="no-promo">—</span>
+                  }
+                </td>
+                <td>
+                  <div class="action-group">
+                    <button mat-icon-button class="action-btn action-pay" (click)="$event.stopPropagation(); recordPayment(card)" matTooltip="Record Payment">
+                      <mat-icon>payments</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn action-edit" (click)="$event.stopPropagation(); editCard(card)" matTooltip="Edit Card">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn action-view" (click)="$event.stopPropagation(); viewCard(card.id)" matTooltip="View Details">
+                      <mat-icon>visibility</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn action-delete" (click)="$event.stopPropagation(); deleteCard(card)" matTooltip="Delete">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
         </table>
         </div>
       </mat-card>
@@ -281,11 +263,19 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
       overflow: hidden;
       padding: 0 !important;
     }
-    .table-wrapper { overflow-x: visible; }
-    table { width: 100%; }
+    .table-wrapper { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      text-align: left; padding: 12px 16px;
+      font-size: var(--text-xs); font-weight: var(--weight-semibold);
+      color: var(--color-primary); text-transform: uppercase;
+      letter-spacing: var(--tracking-wide);
+      border-bottom: 2px solid var(--color-primary);
+    }
+    tbody td { padding: 12px 16px; border-bottom: 1px solid var(--color-border); }
     .clickable-row { cursor: pointer; transition: background var(--transition-fast); }
     .clickable-row:hover { background: var(--color-surface-hover); }
-    tr.mat-mdc-row { border-left: 3px solid transparent; }
+    tr { border-left: 3px solid transparent; }
     tr.row-healthy { border-left-color: var(--color-success); }
     tr.row-warning { border-left-color: var(--color-warning); }
     tr.row-danger { border-left-color: var(--color-danger); }
@@ -477,7 +467,6 @@ export class CardListComponent implements OnInit {
 
   cards = signal<CreditCard[]>([]);
   loading = signal(true);
-  displayedColumns = ['cardName', 'currentBalance', 'utilization', 'aprPercent', 'minimumPayment', 'dueDay', 'promoEndDate', 'actions'];
 
   totalBalance = computed(() => this.cards().reduce((sum, c) => sum + c.currentBalance, 0));
   totalLimit = computed(() => this.cards().reduce((sum, c) => sum + (c.creditLimit || 0), 0));

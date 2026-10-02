@@ -209,7 +209,21 @@ public class RecurringController : ControllerBase
                     var bank = await _db.BankAccounts.FirstOrDefaultAsync(a => a.Id == fundingSourceId && a.UserId == UserId);
                     var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == dto.ToFundingSourceId && c.UserId == UserId);
                     if (bank != null) { await _db.Entry(bank).ReloadAsync(); bank.CurrentBalance -= dto.Amount; }
-                    if (card != null) { await _db.Entry(card).ReloadAsync(); card.CurrentBalance -= dto.Amount; }
+                    if (card != null)
+                    {
+                        await _db.Entry(card).ReloadAsync();
+                        card.CurrentBalance -= dto.Amount;
+                        _db.PaymentHistories.Add(new PaymentHistory
+                        {
+                            DebtType = DebtType.CreditCard,
+                            DebtId = card.Id,
+                            AmountPaid = dto.Amount,
+                            PaymentDate = dto.Date,
+                            Notes = dto.Description,
+                            UserId = UserId,
+                            FromAccountId = fundingSourceId
+                        });
+                    }
                 }
                 else if (fundingSourceType == FundingSourceType.BankAccount && fundingSourceId.HasValue)
                 {
