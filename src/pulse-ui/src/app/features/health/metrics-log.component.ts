@@ -2,7 +2,7 @@ import { Component, inject, signal, computed, OnInit, ChangeDetectorRef } from '
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatTableModule } from '@angular/material/table';
+
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDialog } from '@angular/material/dialog';
@@ -20,7 +20,7 @@ import { NotificationService } from '../../core/services/notification.service';
 @Component({
   selector: 'app-metrics-log',
   standalone: true,
-  imports: [MatCardModule, MatIconModule, MatButtonModule, MatTableModule, MatSelectModule, MatFormFieldModule, MatTooltipModule, DatePipe, DecimalPipe, FormsModule, BaseChartDirective, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [MatCardModule, MatIconModule, MatButtonModule, MatSelectModule, MatFormFieldModule, MatTooltipModule, DatePipe, DecimalPipe, FormsModule, BaseChartDirective, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadMetrics()">
     <!-- Header -->
@@ -114,46 +114,44 @@ import { NotificationService } from '../../core/services/notification.service';
       <mat-card class="table-card desktop-only">
         <mat-card-content>
           <div class="table-wrapper">
-            <table mat-table [dataSource]="metrics()" class="metrics-table">
-              <ng-container matColumnDef="type">
-                <th mat-header-cell *matHeaderCellDef>Type</th>
-                <td mat-cell *matCellDef="let m">
-                  <span class="metric-type-badge">
-                    <mat-icon class="type-icon">{{ getMetricIcon(m.metricType) }}</mat-icon>
-                    {{ getMetricLabel(m.metricType) }}
-                  </span>
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="value">
-                <th mat-header-cell *matHeaderCellDef>Value</th>
-                <td mat-cell *matCellDef="let m">
-                  <span class="metric-value">{{ m.value | number:'1.0-2' }}</span>
-                  <span class="metric-unit">{{ m.unit === 'lbs' ? 'kg' : m.unit }}</span>
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="date">
-                <th mat-header-cell *matHeaderCellDef>Date</th>
-                <td mat-cell *matCellDef="let m">{{ m.measuredAt | date:'MMM d, yyyy h:mm a' }}</td>
-              </ng-container>
-              <ng-container matColumnDef="notes">
-                <th mat-header-cell *matHeaderCellDef>Notes</th>
-                <td mat-cell *matCellDef="let m">
-                  <span class="notes-text">{{ m.notes || '—' }}</span>
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef></th>
-                <td mat-cell *matCellDef="let m">
-                  <button mat-icon-button class="action-btn action-edit" (click)="editMetric(m)" matTooltip="Edit">
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  <button mat-icon-button class="action-btn action-delete" (click)="confirmDelete(m)" matTooltip="Delete">
-                    <mat-icon>delete_outline</mat-icon>
-                  </button>
-                </td>
-              </ng-container>
-              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+            <table class="activity-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Value</th>
+                  <th>Date</th>
+                  <th>Notes</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (m of metrics(); track m.id) {
+                  <tr>
+                    <td>
+                      <span class="metric-type-badge">
+                        <mat-icon class="type-icon">{{ getMetricIcon(m.metricType) }}</mat-icon>
+                        {{ getMetricLabel(m.metricType) }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="metric-value">{{ m.value | number:'1.0-2' }}</span>
+                      <span class="metric-unit">{{ m.unit === 'lbs' ? 'kg' : m.unit }}</span>
+                    </td>
+                    <td>{{ m.measuredAt | date:'MMM d, yyyy h:mm a' }}</td>
+                    <td>
+                      <span class="notes-text">{{ m.notes || '—' }}</span>
+                    </td>
+                    <td>
+                      <button mat-icon-button class="action-btn action-edit" (click)="editMetric(m)" matTooltip="Edit">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button mat-icon-button class="action-btn action-delete" (click)="confirmDelete(m)" matTooltip="Delete">
+                        <mat-icon>delete_outline</mat-icon>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
             </table>
           </div>
         </mat-card-content>
@@ -243,7 +241,12 @@ import { NotificationService } from '../../core/services/notification.service';
 
     /* Desktop Table */
     .table-card { overflow: hidden; }
-    .table-wrapper { overflow-x: visible; }
+    .table-wrapper { overflow-x: auto; scrollbar-width: none; }
+    .table-wrapper::-webkit-scrollbar { display: none; }
+    .activity-table { width: 100%; border-collapse: collapse; }
+    .activity-table th { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--color-primary); padding: 10px 12px; border-bottom: 2px solid var(--color-primary); text-align: left; }
+    .activity-table td { font-size: 0.85rem; padding: 10px 12px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+    .activity-table tbody tr:hover { background: var(--color-surface-hover); }
     .metrics-table { width: 100%; }
     .metric-type-badge {
       display: inline-flex; align-items: center; gap: 6px;

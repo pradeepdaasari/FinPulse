@@ -5,7 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTableModule } from '@angular/material/table';
+
 import { Subject, debounceTime } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DebtService } from '../../../core/services/debt.service';
@@ -26,7 +26,7 @@ interface DebtSlider {
 @Component({
   selector: 'app-what-if',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatSliderModule, MatProgressSpinnerModule, MatTableModule, SkeletonLoaderComponent, CurrencyPipe, DatePipe, LocalDatePipe],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatSliderModule, MatProgressSpinnerModule, SkeletonLoaderComponent, CurrencyPipe, DatePipe, LocalDatePipe],
   template: `
     <p class="page-subtitle">Use the sliders below to see how extra payments affect your payoff timeline.</p>
 
@@ -95,26 +95,25 @@ interface DebtSlider {
             </div>
 
             <div class="table-wrapper">
-              <table mat-table [dataSource]="result()!.projections" class="projection-table">
-                <ng-container matColumnDef="debtName">
-                  <th mat-header-cell *matHeaderCellDef>Debt</th>
-                  <td mat-cell *matCellDef="let p">{{ p.debtName }}</td>
-                </ng-container>
-                <ng-container matColumnDef="monthsSaved">
-                  <th mat-header-cell *matHeaderCellDef>Months Saved</th>
-                  <td mat-cell *matCellDef="let p" [class.cell-green]="p.originalPayoffMonths - p.newPayoffMonths > 0">{{ p.originalPayoffMonths - p.newPayoffMonths }}</td>
-                </ng-container>
-                <ng-container matColumnDef="interestSaved">
-                  <th mat-header-cell *matHeaderCellDef>Interest Saved</th>
-                  <td mat-cell *matCellDef="let p" class="cell-interest">{{ p.interestSaved | currency }}</td>
-                </ng-container>
-                <ng-container matColumnDef="newMonths">
-                  <th mat-header-cell *matHeaderCellDef>New Payoff</th>
-                  <td mat-cell *matCellDef="let p">{{ p.newPayoffMonths }} months</td>
-                </ng-container>
-
-                <tr mat-header-row *matHeaderRowDef="projectionColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: projectionColumns;"></tr>
+              <table class="activity-table projection-table">
+                <thead>
+                  <tr>
+                    <th>Debt</th>
+                    <th>Months Saved</th>
+                    <th>Interest Saved</th>
+                    <th>New Payoff</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of result()!.projections; track p.debtName) {
+                    <tr>
+                      <td>{{ p.debtName }}</td>
+                      <td [class.cell-green]="p.originalPayoffMonths - p.newPayoffMonths > 0">{{ p.originalPayoffMonths - p.newPayoffMonths }}</td>
+                      <td class="cell-interest">{{ p.interestSaved | currency }}</td>
+                      <td>{{ p.newPayoffMonths }} months</td>
+                    </tr>
+                  }
+                </tbody>
               </table>
             </div>
           </mat-card-content>
@@ -248,9 +247,13 @@ interface DebtSlider {
     .stat-label { font-size: 0.75rem; color: var(--color-text-muted); font-weight: 500; letter-spacing: 0.03em; text-transform: uppercase; }
 
     /* Projection table */
-    .table-wrapper { overflow-x: visible; margin-top: var(--spacing-sm); }
+    .table-wrapper { overflow-x: auto; scrollbar-width: none; margin-top: var(--spacing-sm); }
+    .table-wrapper::-webkit-scrollbar { display: none; }
+    .activity-table { width: 100%; border-collapse: collapse; }
+    .activity-table th { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--color-primary); padding: 10px 12px; border-bottom: 2px solid var(--color-primary); text-align: left; }
+    .activity-table td { font-size: 0.85rem; padding: 10px 12px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+    .activity-table tbody tr:hover { background: var(--color-surface-hover); }
     .projection-table { width: 100%; }
-    .projection-table tr.mat-mdc-row:hover { background: var(--color-stat-blue-bg); }
     .cell-green { color: var(--color-success); font-weight: 600; }
     .cell-interest { color: var(--color-success); font-weight: 700; }
 

@@ -18,6 +18,15 @@ export interface RecurringTransaction {
   endDate: string | null;
   isActive: boolean;
   createdAt: string;
+  skipCount: number;
+}
+
+export interface SkipHistory {
+  id: number;
+  recurringTransactionId: number;
+  skippedDate: string;
+  reason: string | null;
+  createdAt: string;
 }
 
 export interface RecurringTransactionCreate {

@@ -5,7 +5,7 @@ import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTableModule } from '@angular/material/table';
+
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -22,7 +22,7 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
   standalone: true,
   imports: [
     CommonModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatTableModule, MatChipsModule, MatDialogModule, MatTooltipModule,
+    MatChipsModule, MatDialogModule, MatTooltipModule,
     CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe,
     SkeletonLoaderComponent, PullToRefreshDirective, TradeNotesPanelComponent
   ],
@@ -127,123 +127,116 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
       <mat-card class="desktop-only">
         <mat-card-content>
           <div class="table-wrapper">
-            <table mat-table [dataSource]="filteredTrades()">
-              <ng-container matColumnDef="date">
-                <th mat-header-cell *matHeaderCellDef>Date</th>
-                <td mat-cell *matCellDef="let t">
-                  <div class="date-cell">
-                    <span>{{ formatTradeDate(t) }}</span>
-                    @if (t.entryTime || t.exitTime) {
-                      <span class="time-range">
-                        @if (t.entryTime) { {{ formatTime12(t.entryTime) }} }
-                        @if (t.entryTime && t.exitTime) { → {{ formatTime12(t.exitTime) }} }
-                        @if (t.entryTime && t.exitTime) { <span class="duration-badge">{{ getDuration(t.entryTime, t.exitTime) }}</span> }
+            <table class="activity-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Setup</th>
+                  <th>Instrument</th>
+                  <th>Dir</th>
+                  <th>P&L</th>
+                  <th>Checklist</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (t of filteredTrades(); track t.id) {
+                  <tr [class.row-non-compliant]="!t.checklistCompleted"
+                      [class.row-open]="t.status === 'Open'">
+                    <td>
+                      <div class="date-cell">
+                        <span>{{ formatTradeDate(t) }}</span>
+                        @if (t.entryTime || t.exitTime) {
+                          <span class="time-range">
+                            @if (t.entryTime) { {{ formatTime12(t.entryTime) }} }
+                            @if (t.entryTime && t.exitTime) { → {{ formatTime12(t.exitTime) }} }
+                            @if (t.entryTime && t.exitTime) { <span class="duration-badge">{{ getDuration(t.entryTime, t.exitTime) }}</span> }
+                          </span>
+                        }
+                      </div>
+                    </td>
+                    <td>
+                      <span class="setup-badge">{{ t.setupName || 'Unknown' }}</span>
+                    </td>
+                    <td>
+                      @if (t.status === 'Open') {
+                        <span class="open-badge">OPEN</span>
+                      }
+                      {{ t.instrument }}
+                      @if (t.spreadType) {
+                        <span class="spread-badge">{{ t.spreadType }}</span>
+                      }
+                      @if (t.optionType && t.spreadType !== 'IronCondor') {
+                        <span class="option-type-badge" [class.badge-call]="t.optionType === 'Call'" [class.badge-put]="t.optionType === 'Put'">{{ t.optionType }}</span>
+                      }
+                      @if (t.expirationDate) {
+                        <span class="expiry-label">{{ t.expirationDate | localDate:'M/d' }}</span>
+                      }
+                      @if (t.strikePrice) {
+                        <div class="strike-info">
+                          @if (t.spreadType === 'Vertical' && t.strikePrice2) {
+                            <span class="strike-label">{{ t.strikePrice }}s / {{ t.strikePrice2 }}l</span>
+                          } @else if (t.spreadType === 'IronCondor' && t.strikePrice2) {
+                            <span class="strike-label">{{ t.strikePrice }}sc {{ t.strikePrice2 }}lc · {{ t.strikePrice3 }}sp {{ t.strikePrice4 }}lp</span>
+                          } @else if (t.spreadType === 'Butterfly' && t.strikePrice2) {
+                            <span class="strike-label">{{ t.strikePrice }} / {{ t.strikePrice2 }} / {{ t.strikePrice3 }}</span>
+                          } @else {
+                            <span class="strike-label">{{ t.strikePrice }}</span>
+                          }
+                        </div>
+                      }
+                    </td>
+                    <td>
+                      <span class="dir-pill" [class.dir-long]="t.direction === 'long'" [class.dir-short]="t.direction === 'short'">
+                        {{ t.direction === 'long' ? 'LONG' : 'SHORT' }}
                       </span>
-                    }
-                  </div>
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="setup">
-                <th mat-header-cell *matHeaderCellDef>Setup</th>
-                <td mat-cell *matCellDef="let t">
-                  <span class="setup-badge">{{ t.setupName || 'Unknown' }}</span>
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="instrument">
-                <th mat-header-cell *matHeaderCellDef>Instrument</th>
-                <td mat-cell *matCellDef="let t">
-                  @if (t.status === 'Open') {
-                    <span class="open-badge">OPEN</span>
-                  }
-                  {{ t.instrument }}
-                  @if (t.spreadType) {
-                    <span class="spread-badge">{{ t.spreadType }}</span>
-                  }
-                  @if (t.optionType && t.spreadType !== 'IronCondor') {
-                    <span class="option-type-badge" [class.badge-call]="t.optionType === 'Call'" [class.badge-put]="t.optionType === 'Put'">{{ t.optionType }}</span>
-                  }
-                  @if (t.expirationDate) {
-                    <span class="expiry-label">{{ t.expirationDate | localDate:'M/d' }}</span>
-                  }
-                  @if (t.strikePrice) {
-                    <div class="strike-info">
-                      @if (t.spreadType === 'Vertical' && t.strikePrice2) {
-                        <span class="strike-label">{{ t.strikePrice }}s / {{ t.strikePrice2 }}l</span>
-                      } @else if (t.spreadType === 'IronCondor' && t.strikePrice2) {
-                        <span class="strike-label">{{ t.strikePrice }}sc {{ t.strikePrice2 }}lc · {{ t.strikePrice3 }}sp {{ t.strikePrice4 }}lp</span>
-                      } @else if (t.spreadType === 'Butterfly' && t.strikePrice2) {
-                        <span class="strike-label">{{ t.strikePrice }} / {{ t.strikePrice2 }} / {{ t.strikePrice3 }}</span>
+                    </td>
+                    <td>
+                      @if (t.status === 'Open') {
+                        <span class="open-pnl-label">—</span>
                       } @else {
-                        <span class="strike-label">{{ t.strikePrice }}</span>
+                        <div class="pnl-breakdown">
+                          <span class="pnl-gross" [class.pnl-positive]="(t.pnl ?? 0) >= 0" [class.pnl-negative]="(t.pnl ?? 0) < 0">
+                            {{ (t.pnl ?? 0) >= 0 ? '+' : '' }}{{ t.pnl | currency }}
+                          </span>
+                          @if (t.totalFees) {
+                            <span class="pnl-fees">-{{ t.totalFees | currency }} fees</span>
+                          }
+                          @if (t.netPnl != null) {
+                            <span class="pnl-net" [class.pnl-positive]="(t.netPnl ?? 0) >= 0" [class.pnl-negative]="(t.netPnl ?? 0) < 0">
+                              Net: {{ (t.netPnl ?? 0) >= 0 ? '+' : '' }}{{ t.netPnl | currency }}
+                            </span>
+                          }
+                        </div>
                       }
-                    </div>
-                  }
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="direction">
-                <th mat-header-cell *matHeaderCellDef>Dir</th>
-                <td mat-cell *matCellDef="let t">
-                  <span class="dir-pill" [class.dir-long]="t.direction === 'long'" [class.dir-short]="t.direction === 'short'">
-                    {{ t.direction === 'long' ? 'LONG' : 'SHORT' }}
-                  </span>
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="pnl">
-                <th mat-header-cell *matHeaderCellDef>P&L</th>
-                <td mat-cell *matCellDef="let t">
-                  @if (t.status === 'Open') {
-                    <span class="open-pnl-label">—</span>
-                  } @else {
-                    <div class="pnl-breakdown">
-                      <span class="pnl-gross" [class.pnl-positive]="(t.pnl ?? 0) >= 0" [class.pnl-negative]="(t.pnl ?? 0) < 0">
-                        {{ (t.pnl ?? 0) >= 0 ? '+' : '' }}{{ t.pnl | currency }}
-                      </span>
-                      @if (t.totalFees) {
-                        <span class="pnl-fees">-{{ t.totalFees | currency }} fees</span>
+                    </td>
+                    <td>
+                      <mat-icon class="compliance-icon" [class.compliant]="t.checklistCompleted" [class.non-compliant]="!t.checklistCompleted">
+                        {{ t.checklistCompleted ? 'check_circle' : 'radio_button_unchecked' }}
+                      </mat-icon>
+                    </td>
+                    <td>
+                      @if (t.status === 'Open') {
+                        <button mat-flat-button class="close-trade-btn" (click)="closeTrade(t)">
+                          <mat-icon>lock</mat-icon> Close
+                        </button>
                       }
-                      @if (t.netPnl != null) {
-                        <span class="pnl-net" [class.pnl-positive]="(t.netPnl ?? 0) >= 0" [class.pnl-negative]="(t.netPnl ?? 0) < 0">
-                          Net: {{ (t.netPnl ?? 0) >= 0 ? '+' : '' }}{{ t.netPnl | currency }}
-                        </span>
-                      }
-                    </div>
-                  }
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="compliance">
-                <th mat-header-cell *matHeaderCellDef>Checklist</th>
-                <td mat-cell *matCellDef="let t">
-                  <mat-icon class="compliance-icon" [class.compliant]="t.checklistCompleted" [class.non-compliant]="!t.checklistCompleted">
-                    {{ t.checklistCompleted ? 'check_circle' : 'radio_button_unchecked' }}
-                  </mat-icon>
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef></th>
-                <td mat-cell *matCellDef="let t">
-                  @if (t.status === 'Open') {
-                    <button mat-flat-button class="close-trade-btn" (click)="closeTrade(t)">
-                      <mat-icon>lock</mat-icon> Close
-                    </button>
-                  }
-                  <button mat-icon-button class="action-btn action-notes" (click)="toggleNotes(t)" matTooltip="Notes">
-                    <mat-icon>sticky_note_2</mat-icon>
-                    @if (t.notesCount) {
-                      <span class="notes-badge">{{ t.notesCount }}</span>
-                    }
-                  </button>
-                  <button mat-icon-button class="action-btn action-edit" (click)="editTrade(t)" matTooltip="Edit">
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  <button mat-icon-button class="action-btn action-delete" (click)="deleteTrade(t)" matTooltip="Delete">
-                    <mat-icon>delete_outline</mat-icon>
-                  </button>
-                </td>
-              </ng-container>
-              <tr mat-header-row *matHeaderRowDef="columns"></tr>
-              <tr mat-row *matRowDef="let row; columns: columns;"
-                  [class.row-non-compliant]="!row.checklistCompleted"
-                  [class.row-open]="row.status === 'Open'"></tr>
+                      <button mat-icon-button class="action-btn action-notes" (click)="toggleNotes(t)" matTooltip="Notes">
+                        <mat-icon>sticky_note_2</mat-icon>
+                        @if (t.notesCount) {
+                          <span class="notes-badge">{{ t.notesCount }}</span>
+                        }
+                      </button>
+                      <button mat-icon-button class="action-btn action-edit" (click)="editTrade(t)" matTooltip="Edit">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button mat-icon-button class="action-btn action-delete" (click)="deleteTrade(t)" matTooltip="Delete">
+                        <mat-icon>delete_outline</mat-icon>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
             </table>
           </div>
           @if (expandedTradeId()) {
@@ -436,8 +429,12 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
     .active-chip { background: var(--color-primary) !important; color: #fff !important; border-color: var(--color-primary) !important; }
 
     /* ─── Table ─── */
-    .table-wrapper { overflow-x: visible; }
-    table { width: 100%; }
+    .table-wrapper { overflow-x: auto; scrollbar-width: none; }
+    .table-wrapper::-webkit-scrollbar { display: none; }
+    .activity-table { width: 100%; border-collapse: collapse; }
+    .activity-table th { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--color-primary); padding: 10px 12px; border-bottom: 2px solid var(--color-primary); text-align: left; }
+    .activity-table td { font-size: 0.85rem; padding: 10px 12px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+    .activity-table tbody tr:hover { background: var(--color-surface-hover); }
 
     /* ─── Badges ─── */
     .date-cell { display: flex; flex-direction: column; gap: 2px; }

@@ -335,7 +335,8 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
       overflow: hidden;
       padding: 0 !important;
     }
-    .table-wrapper { overflow-x: visible; }
+    .table-wrapper { overflow-x: auto; scrollbar-width: none; }
+    .table-wrapper::-webkit-scrollbar { display: none; }
     .loan-type-badge {
       display: inline-block;
       font-size: var(--text-xs);

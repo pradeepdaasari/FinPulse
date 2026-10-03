@@ -7,7 +7,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTableModule } from '@angular/material/table';
+
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -49,7 +49,7 @@ interface CardActivityItem {
 @Component({
   selector: 'app-card-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatTabsModule, MatTooltipModule, MatChipsModule, CurrencyPipe, DecimalPipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatTabsModule, MatTooltipModule, MatChipsModule, CurrencyPipe, DecimalPipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadCard()">
     @if (loading()) {
@@ -210,90 +210,85 @@ interface CardActivityItem {
           </div>
           <!-- Desktop table -->
           <div class="table-wrapper desktop-only">
-            <table mat-table [dataSource]="activityItems()">
-              <ng-container matColumnDef="date">
-                <th mat-header-cell *matHeaderCellDef>Date</th>
-                <td mat-cell *matCellDef="let item">
-                  @if (item.kind === 'statement-divider') {
-                    <span class="stmt-divider-label"><mat-icon class="stmt-divider-icon">description</mat-icon> Statement — {{ item.date | localDate:'MMM d, y' }}</span>
-                  } @else if (item.kind === 'balance-row') {
-                    <span class="balance-row-label">Running Balance</span>
-                  } @else if (item.kind === 'transaction') { {{ item.txn.date | localDate:'MMM d, y' }} }
-                  @else { {{ item.movement.movementDate | localDate:'MMM d, y' }} }
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="description">
-                <th mat-header-cell *matHeaderCellDef>Description</th>
-                <td mat-cell *matCellDef="let item">
-                  @if (item.kind === 'statement-divider' || item.kind === 'balance-row') {}
-                  @else if (item.kind === 'transaction') {
-                    <div class="txn-desc">
-                      <span class="txn-name">{{ item.txn.description }}</span>
-                      @if (item.txn.merchant) { <span class="txn-merchant">{{ item.txn.merchant }}</span> }
-                    </div>
-                  } @else {
-                    <div class="txn-desc">
-                      <span class="txn-name movement-flow-cell">
-                        {{ item.movement.sourceName }} <mat-icon class="flow-arrow-inline">arrow_forward</mat-icon> {{ item.movement.destinationName }}
-                      </span>
-                      @if (item.movement.note) { <span class="txn-merchant">{{ item.movement.note }}</span> }
-                    </div>
-                  }
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="category">
-                <th mat-header-cell *matHeaderCellDef>Category</th>
-                <td mat-cell *matCellDef="let item">
-                  @if (item.kind === 'statement-divider' || item.kind === 'balance-row') {}
-                  @else if (item.kind === 'transaction') { {{ item.txn.categoryName || '—' }} }
-                  @else { — }
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="type">
-                <th mat-header-cell *matHeaderCellDef>Type</th>
-                <td mat-cell *matCellDef="let item">
-                  @if (item.kind === 'statement-divider' || item.kind === 'balance-row') {}
-                  @else if (item.kind === 'transaction') {
-                    <span class="type-badge"
-                      [class.type-expense]="item.txn.transactionType === 'Expense'"
-                      [class.type-refund]="item.txn.transactionType === 'Refund'"
-                      [class.type-payment]="item.txn.transactionType === 'Payment'">
-                      {{ item.txn.transactionType }}
-                    </span>
-                  } @else {
-                    <span class="type-badge type-flow">
-                      <mat-icon class="flow-badge-icon">sync_alt</mat-icon>
-                      {{ movementLabel(item.movement.movementType) }}
-                    </span>
-                  }
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="amount">
-                <th mat-header-cell *matHeaderCellDef>Amount</th>
-                <td mat-cell *matCellDef="let item"
-                  [class.txn-charge]="item.kind === 'transaction' && item.txn?.transactionType === 'Expense' || item.kind === 'movement' && !isMovementIncoming(item.movement)"
-                  [class.txn-refund]="item.kind === 'transaction' && item.txn?.transactionType === 'Refund' || item.kind === 'movement' && isMovementIncoming(item.movement)"
-                  [class.txn-payment]="item.kind === 'transaction' && item.txn?.transactionType === 'Payment'"
-                  [class.balance-row-amount]="item.kind === 'balance-row'"
-                  [class.stmt-balance]="item.kind === 'statement-divider'">
-                  @if (item.kind === 'balance-row' || item.kind === 'statement-divider') {
-                    {{ item.balance | currency }}
-                  } @else if (item.kind === 'transaction') {
-                    @if (item.txn.transactionType === 'Refund' || item.txn.transactionType === 'Payment') { +{{ item.txn.amount | currency }} }
-                    @else { -{{ item.txn.amount | currency }} }
-                  } @else {
-                    @if (isMovementIncoming(item.movement)) { +{{ item.movement.amount | currency }} }
-                    @else { -{{ item.movement.amount | currency }} }
-                  }
-                </td>
-              </ng-container>
-
-
-              <tr mat-header-row *matHeaderRowDef="txnColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: txnColumns;"
-                  [class.movement-row]="row.kind === 'movement'"
-                  [class.statement-divider-row]="row.kind === 'statement-divider'"
-                  [class.balance-summary-row]="row.kind === 'balance-row'"></tr>
+            <table class="activity-table">
+              <thead>
+                <tr>
+                  <th class="col-date">Date</th>
+                  <th class="col-desc">Description</th>
+                  <th class="col-cat">Category</th>
+                  <th class="col-type">Type</th>
+                  <th class="col-amount">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of activityItems(); track $index) {
+                  <tr [class.movement-row]="item.kind === 'movement'"
+                      [class.statement-divider-row]="item.kind === 'statement-divider'"
+                      [class.balance-summary-row]="item.kind === 'balance-row'">
+                    <td class="col-date">
+                      @if (item.kind === 'statement-divider') {
+                        <span class="stmt-divider-label"><mat-icon class="stmt-divider-icon">description</mat-icon> Statement — {{ item.date | localDate:'MMM d, y' }}</span>
+                      } @else if (item.kind === 'balance-row') {
+                        <span class="balance-row-label">Running Balance</span>
+                      } @else if (item.kind === 'transaction') { {{ item.txn!.date | localDate:'MMM d, y' }} }
+                      @else { {{ item.movement!.movementDate | localDate:'MMM d, y' }} }
+                    </td>
+                    <td class="col-desc">
+                      @if (item.kind === 'statement-divider' || item.kind === 'balance-row') {}
+                      @else if (item.kind === 'transaction') {
+                        <div class="txn-desc">
+                          <span class="txn-name">{{ item.txn!.description }}</span>
+                          @if (item.txn!.merchant) { <span class="txn-merchant">{{ item.txn!.merchant }}</span> }
+                        </div>
+                      } @else {
+                        <div class="txn-desc">
+                          <span class="txn-name movement-flow-cell">
+                            {{ item.movement!.sourceName }} <mat-icon class="flow-arrow-inline">arrow_forward</mat-icon> {{ item.movement!.destinationName }}
+                          </span>
+                          @if (item.movement!.note) { <span class="txn-merchant">{{ item.movement!.note }}</span> }
+                        </div>
+                      }
+                    </td>
+                    <td class="col-cat">
+                      @if (item.kind === 'statement-divider' || item.kind === 'balance-row') {}
+                      @else if (item.kind === 'transaction') { {{ item.txn!.categoryName || '—' }} }
+                      @else { — }
+                    </td>
+                    <td class="col-type">
+                      @if (item.kind === 'statement-divider' || item.kind === 'balance-row') {}
+                      @else if (item.kind === 'transaction') {
+                        <span class="type-badge"
+                          [class.type-expense]="item.txn!.transactionType === 'Expense'"
+                          [class.type-refund]="item.txn!.transactionType === 'Refund'"
+                          [class.type-payment]="item.txn!.transactionType === 'Payment'">
+                          {{ item.txn!.transactionType }}
+                        </span>
+                      } @else {
+                        <span class="type-badge type-flow">
+                          <mat-icon class="flow-badge-icon">sync_alt</mat-icon>
+                          {{ movementLabel(item.movement!.movementType) }}
+                        </span>
+                      }
+                    </td>
+                    <td class="col-amount"
+                      [class.txn-charge]="item.kind === 'transaction' && item.txn?.transactionType === 'Expense' || item.kind === 'movement' && !isMovementIncoming(item.movement!)"
+                      [class.txn-refund]="item.kind === 'transaction' && item.txn?.transactionType === 'Refund' || item.kind === 'movement' && isMovementIncoming(item.movement!)"
+                      [class.txn-payment]="item.kind === 'transaction' && item.txn?.transactionType === 'Payment'"
+                      [class.balance-row-amount]="item.kind === 'balance-row'"
+                      [class.stmt-balance]="item.kind === 'statement-divider'">
+                      @if (item.kind === 'balance-row' || item.kind === 'statement-divider') {
+                        {{ item.balance | currency }}
+                      } @else if (item.kind === 'transaction') {
+                        @if (item.txn!.transactionType === 'Refund' || item.txn!.transactionType === 'Payment') { +{{ item.txn!.amount | currency }} }
+                        @else { -{{ item.txn!.amount | currency }} }
+                      } @else {
+                        @if (isMovementIncoming(item.movement!)) { +{{ item.movement!.amount | currency }} }
+                        @else { -{{ item.movement!.amount | currency }} }
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
             </table>
           </div>
           <!-- Mobile list -->
@@ -366,37 +361,34 @@ interface CardActivityItem {
             <span class="history-count">{{ paymentHistory().length }} payments</span>
           </div>
           <div class="table-wrapper desktop-only">
-            <table mat-table [dataSource]="paymentHistory()">
-              <ng-container matColumnDef="paymentDate">
-                <th mat-header-cell *matHeaderCellDef>Date</th>
-                <td mat-cell *matCellDef="let p">{{ p.paymentDate | localDate:'mediumDate' }}</td>
-              </ng-container>
-              <ng-container matColumnDef="amountPaid">
-                <th mat-header-cell *matHeaderCellDef>Amount</th>
-                <td mat-cell *matCellDef="let p" class="amount-cell">{{ p.amountPaid | currency }}</td>
-              </ng-container>
-              <ng-container matColumnDef="fromAccount">
-                <th mat-header-cell *matHeaderCellDef>From Account</th>
-                <td mat-cell *matCellDef="let p">{{ getAccountName(p.fromAccountId) }}</td>
-              </ng-container>
-              <ng-container matColumnDef="notes">
-                <th mat-header-cell *matHeaderCellDef>Notes</th>
-                <td mat-cell *matCellDef="let p">{{ p.notes || '—' }}</td>
-              </ng-container>
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef></th>
-                <td mat-cell *matCellDef="let p">
-                  <button mat-icon-button (click)="editPayment(p)" matTooltip="Edit payment" aria-label="Edit payment">
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  <button mat-icon-button color="warn" (click)="deletePayment(p)" matTooltip="Delete payment" aria-label="Delete payment">
-                    <mat-icon>delete_outline</mat-icon>
-                  </button>
-                </td>
-              </ng-container>
-
-              <tr mat-header-row *matHeaderRowDef="paymentColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: paymentColumns;"></tr>
+            <table class="activity-table">
+              <thead>
+                <tr>
+                  <th class="col-date">Date</th>
+                  <th class="col-amount">Amount</th>
+                  <th>From Account</th>
+                  <th>Notes</th>
+                  <th class="col-actions"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of paymentHistory(); track p.id) {
+                  <tr>
+                    <td>{{ p.paymentDate | localDate:'mediumDate' }}</td>
+                    <td class="col-amount amount-cell">{{ p.amountPaid | currency }}</td>
+                    <td>{{ getAccountName(p.fromAccountId) }}</td>
+                    <td>{{ p.notes || '—' }}</td>
+                    <td class="col-actions">
+                      <button mat-icon-button (click)="editPayment(p)" matTooltip="Edit payment" aria-label="Edit payment">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button mat-icon-button color="warn" (click)="deletePayment(p)" matTooltip="Delete payment" aria-label="Delete payment">
+                        <mat-icon>delete_outline</mat-icon>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
             </table>
           </div>
           <div class="mobile-cards">
@@ -468,47 +460,43 @@ interface CardActivityItem {
       @if (statementHistory().length > 0) {
         <mat-card class="history-card">
           <div class="table-wrapper desktop-only">
-            <table mat-table [dataSource]="statementHistory()">
-              <ng-container matColumnDef="statementDate">
-                <th mat-header-cell *matHeaderCellDef>Statement Date</th>
-                <td mat-cell *matCellDef="let s">
-                  {{ s.statementDate | localDate:'mediumDate' }}
-                  @if (latestStatement()?.id === s.id) { <span class="current-stmt-chip">Current</span> }
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="statementBalance">
-                <th mat-header-cell *matHeaderCellDef>Balance</th>
-                <td mat-cell *matCellDef="let s" class="amount-cell">{{ s.statementBalance | currency }}</td>
-              </ng-container>
-              <ng-container matColumnDef="minimumPayment">
-                <th mat-header-cell *matHeaderCellDef>Min Payment</th>
-                <td mat-cell *matCellDef="let s">{{ s.minimumPayment | currency }}</td>
-              </ng-container>
-              <ng-container matColumnDef="creditLimit">
-                <th mat-header-cell *matHeaderCellDef>Credit Limit</th>
-                <td mat-cell *matCellDef="let s">{{ s.creditLimit | currency:'USD':'symbol':'1.0-0' }}</td>
-              </ng-container>
-              <ng-container matColumnDef="utilization">
-                <th mat-header-cell *matHeaderCellDef>Utilization</th>
-                <td mat-cell *matCellDef="let s">
-                  <span [style.color]="s.creditLimit > 0 ? (s.statementBalance / s.creditLimit > 0.7 ? 'var(--color-danger)' : s.statementBalance / s.creditLimit > 0.3 ? 'var(--color-warning)' : 'var(--color-success)') : 'var(--color-text-muted)'" style="font-weight: 600;">
-                    {{ s.creditLimit > 0 ? (s.statementBalance / s.creditLimit * 100 | number:'1.0-0') : '—' }}{{ s.creditLimit > 0 ? '%' : '' }}
-                  </span>
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="stmtActions">
-                <th mat-header-cell *matHeaderCellDef></th>
-                <td mat-cell *matCellDef="let s">
-                  <button mat-icon-button (click)="editStatement(s)" matTooltip="Edit" aria-label="Edit statement">
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  <button mat-icon-button color="warn" (click)="deleteStatementRecord(s)" matTooltip="Delete" aria-label="Delete statement">
-                    <mat-icon>delete_outline</mat-icon>
-                  </button>
-                </td>
-              </ng-container>
-              <tr mat-header-row *matHeaderRowDef="statementColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: statementColumns;"></tr>
+            <table class="activity-table">
+              <thead>
+                <tr>
+                  <th>Statement Date</th>
+                  <th class="col-amount">Balance</th>
+                  <th>Min Payment</th>
+                  <th>Credit Limit</th>
+                  <th>Utilization</th>
+                  <th class="col-actions"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (s of statementHistory(); track s.id) {
+                  <tr>
+                    <td>
+                      {{ s.statementDate | localDate:'mediumDate' }}
+                      @if (latestStatement()?.id === s.id) { <span class="current-stmt-chip">Current</span> }
+                    </td>
+                    <td class="col-amount amount-cell">{{ s.statementBalance | currency }}</td>
+                    <td>{{ s.minimumPayment | currency }}</td>
+                    <td>{{ s.creditLimit | currency:'USD':'symbol':'1.0-0' }}</td>
+                    <td>
+                      <span [style.color]="s.creditLimit > 0 ? (s.statementBalance / s.creditLimit > 0.7 ? 'var(--color-danger)' : s.statementBalance / s.creditLimit > 0.3 ? 'var(--color-warning)' : 'var(--color-success)') : 'var(--color-text-muted)'" style="font-weight: 600;">
+                        {{ s.creditLimit > 0 ? (s.statementBalance / s.creditLimit * 100 | number:'1.0-0') : '—' }}{{ s.creditLimit > 0 ? '%' : '' }}
+                      </span>
+                    </td>
+                    <td class="col-actions">
+                      <button mat-icon-button (click)="editStatement(s)" matTooltip="Edit" aria-label="Edit statement">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button mat-icon-button color="warn" (click)="deleteStatementRecord(s)" matTooltip="Delete" aria-label="Delete statement">
+                        <mat-icon>delete_outline</mat-icon>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
             </table>
           </div>
           <div class="mobile-cards">
@@ -611,7 +599,18 @@ interface CardActivityItem {
     }
     .new-charges { color: #e53935; }
     .total-balance { font-size: 1.1rem; font-weight: 700; color: var(--color-primary); }
-    .table-wrapper { overflow-x: visible; }
+    .table-wrapper { overflow-x: auto; scrollbar-width: none; }
+    .table-wrapper::-webkit-scrollbar { display: none; }
+    .activity-table { width: 100%; border-collapse: collapse; }
+    .activity-table th { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--color-primary); padding: 10px 12px; border-bottom: 2px solid var(--color-primary); text-align: left; }
+    .activity-table td { font-size: 0.85rem; padding: 10px 12px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+    .activity-table tbody tr:hover { background: var(--color-surface-hover); }
+    .col-date { width: 110px; }
+    .col-desc { width: auto; }
+    .col-cat { width: 100px; }
+    .col-type { width: 90px; }
+    .col-amount { text-align: right; }
+    .col-actions { width: 80px; text-align: center; }
     table { width: 100%; }
     .history-card { margin-bottom: var(--spacing-lg); }
     .history-summary {

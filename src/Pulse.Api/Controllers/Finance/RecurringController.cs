@@ -30,6 +30,12 @@ public class RecurringController : ControllerBase
             .OrderBy(r => r.NextRunDate)
             .ToListAsync();
 
+        var skipCounts = await _db.SkipHistories
+            .Where(s => s.UserId == UserId)
+            .GroupBy(s => s.RecurringTransactionId)
+            .Select(g => new { RecurringId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.RecurringId, x => x.Count);
+
         var result = items.Select(r => new
         {
             r.Id,
@@ -47,7 +53,8 @@ public class RecurringController : ControllerBase
             r.NextRunDate,
             r.EndDate,
             r.IsActive,
-            r.CreatedAt
+            r.CreatedAt,
+            SkipCount = skipCounts.GetValueOrDefault(r.Id, 0)
         });
 
         return Ok(result);
@@ -358,6 +365,47 @@ public class RecurringController : ControllerBase
         {
             return StatusCode(500, new { error = "Failed to generate recurring transactions. Please try again." });
         }
+    }
+
+    [HttpPost("{id}/skip")]
+    public async Task<ActionResult> Skip(int id, [FromBody] SkipRequest request)
+    {
+        var item = await _db.RecurringTransactions.FirstOrDefaultAsync(r => r.Id == id && r.UserId == UserId);
+        if (item is null) return NotFound();
+
+        _db.SkipHistories.Add(new SkipHistory
+        {
+            RecurringTransactionId = id,
+            SkippedDate = item.NextRunDate,
+            Reason = request.Reason,
+            UserId = UserId
+        });
+
+        item.NextRunDate = AdvanceDate(item.NextRunDate, item.Frequency);
+        if (item.EndDate.HasValue && item.NextRunDate > item.EndDate.Value)
+            item.IsActive = false;
+
+        await _db.SaveChangesAsync();
+        return Ok(new { nextRunDate = item.NextRunDate });
+    }
+
+    [HttpGet("{id}/skips")]
+    public async Task<ActionResult> GetSkips(int id)
+    {
+        var item = await _db.RecurringTransactions.FirstOrDefaultAsync(r => r.Id == id && r.UserId == UserId);
+        if (item is null) return NotFound();
+
+        var skips = await _db.SkipHistories
+            .Where(s => s.RecurringTransactionId == id && s.UserId == UserId)
+            .OrderByDescending(s => s.SkippedDate)
+            .ToListAsync();
+
+        return Ok(skips);
+    }
+
+    public class SkipRequest
+    {
+        public string? Reason { get; set; }
     }
 
     private static DateTime AdvanceDate(DateTime date, RecurrenceFrequency frequency)

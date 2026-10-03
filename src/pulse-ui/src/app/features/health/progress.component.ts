@@ -6,7 +6,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
 import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
-import { MatTableModule } from '@angular/material/table';
+
 import { DecimalPipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { FormsModule } from '@angular/forms';
@@ -17,7 +17,7 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
 @Component({
   selector: 'app-progress',
   standalone: true,
-  imports: [MatCardModule, MatIconModule, MatButtonModule, MatSelectModule, MatFormFieldModule, MatTableModule, MatProgressSpinnerModule, LocalDatePipe, DecimalPipe, FormsModule, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [MatCardModule, MatIconModule, MatButtonModule, MatSelectModule, MatFormFieldModule, MatProgressSpinnerModule, LocalDatePipe, DecimalPipe, FormsModule, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadData()">
     @if (loading()) {
@@ -78,25 +78,25 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
         <!-- Desktop Table -->
         <mat-card class="desktop-only">
           <div class="table-wrapper">
-          <table mat-table [dataSource]="records()" class="records-table">
-            <ng-container matColumnDef="exercise">
-              <th mat-header-cell *matHeaderCellDef>Exercise</th>
-              <td mat-cell *matCellDef="let r">{{ r.exercise }}</td>
-            </ng-container>
-            <ng-container matColumnDef="weight">
-              <th mat-header-cell *matHeaderCellDef>Max Weight</th>
-              <td mat-cell *matCellDef="let r">{{ r.maxWeight | number:'1.0-1' }} kg</td>
-            </ng-container>
-            <ng-container matColumnDef="reps">
-              <th mat-header-cell *matHeaderCellDef>Best Set</th>
-              <td mat-cell *matCellDef="let r">{{ r.bestSet.weight }}×{{ r.bestSet.reps }}</td>
-            </ng-container>
-            <ng-container matColumnDef="date">
-              <th mat-header-cell *matHeaderCellDef>Date</th>
-              <td mat-cell *matCellDef="let r">{{ r.bestSet.date | localDate:'MMM d' }}</td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="prColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: prColumns;"></tr>
+          <table class="activity-table">
+            <thead>
+              <tr>
+                <th>Exercise</th>
+                <th>Max Weight</th>
+                <th>Best Set</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of records(); track r.exercise) {
+                <tr>
+                  <td>{{ r.exercise }}</td>
+                  <td>{{ r.maxWeight | number:'1.0-1' }} kg</td>
+                  <td>{{ r.bestSet.weight }}×{{ r.bestSet.reps }}</td>
+                  <td>{{ r.bestSet.date | localDate:'MMM d' }}</td>
+                </tr>
+              }
+            </tbody>
           </table>
           </div>
         </mat-card>
@@ -197,8 +197,12 @@ import { PersonalRecord, ExerciseProgress, WorkoutStats } from '../../core/model
     .empty-state h3 { margin: 0 0 var(--spacing-xs); font-size: 1.1rem; }
     .empty-state p { color: var(--color-text-muted); margin: 0 auto var(--spacing-md); max-width: 360px; }
 
-    .desktop-only { overflow-x: visible; }
-    .records-table { width: 100%; }
+    .desktop-only { overflow-x: auto; scrollbar-width: none; }
+    .desktop-only::-webkit-scrollbar { display: none; }
+    .activity-table { width: 100%; border-collapse: collapse; }
+    .activity-table th { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--color-primary); padding: 10px 12px; border-bottom: 2px solid var(--color-primary); text-align: left; }
+    .activity-table td { font-size: 0.85rem; padding: 10px 12px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+    .activity-table tbody tr:hover { background: var(--color-surface-hover); }
 
     .mobile-cards { display: none; }
     .pr-card {

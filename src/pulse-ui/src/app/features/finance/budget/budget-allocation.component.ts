@@ -1,7 +1,7 @@
 import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
-import { MatTableModule } from '@angular/material/table';
+
 import { MatIconModule } from '@angular/material/icon';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { BaseChartDirective } from 'ng2-charts';
@@ -12,7 +12,7 @@ import { BudgetAllocation } from '../../../core/models/budget.model';
 @Component({
   selector: 'app-budget-allocation',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatTableModule, MatIconModule, SkeletonLoaderComponent, BaseChartDirective, CurrencyPipe],
+  imports: [CommonModule, MatCardModule, MatIconModule, SkeletonLoaderComponent, BaseChartDirective, CurrencyPipe],
   template: `
     <h2><mat-icon class="section-icon">pie_chart</mat-icon> Budget Allocation</h2>
 
@@ -80,43 +80,34 @@ import { BudgetAllocation } from '../../../core/models/budget.model';
           <mat-card-content>
             <!-- Desktop table -->
             <div class="table-wrapper desktop-only">
-              <table mat-table [dataSource]="allocation()!.suggestedAllocations">
-                <ng-container matColumnDef="debtName">
-                  <th mat-header-cell *matHeaderCellDef>Debt</th>
-                  <td mat-cell *matCellDef="let a">
-                    <span class="debt-name-cell">
-                      <mat-icon class="debt-icon" [class.loan-icon]="isLoan(a.debtName)" [class.card-icon]="!isLoan(a.debtName)">
-                        {{ isLoan(a.debtName) ? 'account_balance' : 'credit_card' }}
-                      </mat-icon>
-                      {{ a.debtName }}
-                    </span>
-                  </td>
-                </ng-container>
-                <ng-container matColumnDef="minimumPayment">
-                  <th mat-header-cell *matHeaderCellDef>Min Payment</th>
-                  <td mat-cell *matCellDef="let a">{{ a.minimumPayment | currency }}</td>
-                </ng-container>
-                <ng-container matColumnDef="suggestedPayment">
-                  <th mat-header-cell *matHeaderCellDef>Suggested</th>
-                  <td mat-cell *matCellDef="let a">
-                    <span class="suggested-value">{{ a.suggestedPayment | currency }}</span>
-                  </td>
-                </ng-container>
-                <ng-container matColumnDef="extraPayment">
-                  <th mat-header-cell *matHeaderCellDef>Extra</th>
-                  <td mat-cell *matCellDef="let a">
-                    <span class="extra-value" [class.extra-positive]="a.extraPayment > 0">{{ a.extraPayment | currency }}</span>
-                  </td>
-                </ng-container>
-                <ng-container matColumnDef="reason">
-                  <th mat-header-cell *matHeaderCellDef>Reason</th>
-                  <td mat-cell *matCellDef="let a">
-                    <span class="reason-badge" [ngClass]="getReasonClass(a.reason)">{{ a.reason }}</span>
-                  </td>
-                </ng-container>
-
-                <tr mat-header-row *matHeaderRowDef="allocationColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: allocationColumns;"></tr>
+              <table class="activity-table">
+                <thead>
+                  <tr>
+                    <th>Debt</th>
+                    <th>Min Payment</th>
+                    <th>Suggested</th>
+                    <th>Extra</th>
+                    <th>Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (a of allocation()!.suggestedAllocations; track a.debtName) {
+                    <tr>
+                      <td>
+                        <span class="debt-name-cell">
+                          <mat-icon class="debt-icon" [class.loan-icon]="isLoan(a.debtName)" [class.card-icon]="!isLoan(a.debtName)">
+                            {{ isLoan(a.debtName) ? 'account_balance' : 'credit_card' }}
+                          </mat-icon>
+                          {{ a.debtName }}
+                        </span>
+                      </td>
+                      <td>{{ a.minimumPayment | currency }}</td>
+                      <td><span class="suggested-value">{{ a.suggestedPayment | currency }}</span></td>
+                      <td><span class="extra-value" [class.extra-positive]="a.extraPayment > 0">{{ a.extraPayment | currency }}</span></td>
+                      <td><span class="reason-badge" [ngClass]="getReasonClass(a.reason)">{{ a.reason }}</span></td>
+                    </tr>
+                  }
+                </tbody>
               </table>
             </div>
 
@@ -238,9 +229,14 @@ import { BudgetAllocation } from '../../../core/models/budget.model';
 
     /* Table Styling */
     .table-wrapper {
-      overflow-x: auto;
+      overflow-x: auto; scrollbar-width: none;
       -webkit-overflow-scrolling: touch;
     }
+    .table-wrapper::-webkit-scrollbar { display: none; }
+    .activity-table { width: 100%; border-collapse: collapse; min-width: 500px; }
+    .activity-table th { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--color-primary); padding: 10px 12px; border-bottom: 2px solid var(--color-primary); text-align: left; }
+    .activity-table td { font-size: 0.85rem; padding: 10px 12px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+    .activity-table tbody tr:hover { background: var(--color-surface-hover); }
 
     table {
       width: 100%;

@@ -25,6 +25,7 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<CustomCategory> CustomCategories => Set<CustomCategory>();
     public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
     public DbSet<RecurringTransaction> RecurringTransactions => Set<RecurringTransaction>();
+    public DbSet<SkipHistory> SkipHistories => Set<SkipHistory>();
     public DbSet<SavingsGoal> SavingsGoals => Set<SavingsGoal>();
     public DbSet<MoneyMovement> MoneyMovements => Set<MoneyMovement>();
     public DbSet<NetWorthSnapshot> NetWorthSnapshots => Set<NetWorthSnapshot>();
@@ -126,6 +127,13 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.Amount).HasPrecision(18, 2);
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => new { e.IsActive, e.NextRunDate });
+        });
+
+        // SkipHistory
+        modelBuilder.Entity<SkipHistory>(entity =>
+        {
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.RecurringTransactionId);
         });
 
         // SavingsGoal

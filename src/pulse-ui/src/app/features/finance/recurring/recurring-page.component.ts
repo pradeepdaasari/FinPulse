@@ -2,7 +2,7 @@ import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
 import { inferCategoryIcon } from '../../../core/utils/category-icon';
-import { MatTableModule } from '@angular/material/table';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -25,7 +25,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
 @Component({
   selector: 'app-recurring-page',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatSlideToggleModule, MatTooltipModule, CurrencyPipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatSlideToggleModule, MatTooltipModule, CurrencyPipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadData()">
     <div class="header-row">
@@ -106,6 +106,9 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                 <button mat-raised-button color="warn" class="pay-btn" (click)="markPaid(r)">
                   <mat-icon>check_circle</mat-icon> Mark Paid
                 </button>
+                <button mat-stroked-button class="skip-btn" (click)="skipPayment(r)">
+                  <mat-icon>skip_next</mat-icon> Skip
+                </button>
               </div>
             </div>
           }
@@ -135,6 +138,9 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                 <button mat-raised-button color="primary" class="pay-btn" (click)="markPaid(r)">
                   <mat-icon>check_circle</mat-icon> Mark Paid
                 </button>
+                <button mat-stroked-button class="skip-btn" (click)="skipPayment(r)">
+                  <mat-icon>skip_next</mat-icon> Skip
+                </button>
               </div>
             </div>
           }
@@ -145,80 +151,76 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       @if (billItems().length > 0) {
       <mat-card class="desktop-only">
         <div class="table-wrapper">
-        <table mat-table [dataSource]="billItems()">
-          <ng-container matColumnDef="description">
-            <th mat-header-cell *matHeaderCellDef>Description</th>
-            <td mat-cell *matCellDef="let r">
-              <div class="desc-cell">
-                <div class="cat-icon-wrap">
-                  <mat-icon class="cat-icon">{{ getIcon(r) }}</mat-icon>
-                </div>
-                <div>
-                  <div class="desc-text">{{ r.description }}</div>
-                  @if (r.merchant) { <div class="merchant-text">{{ r.merchant }}</div> }
-                </div>
-              </div>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="amount">
-            <th mat-header-cell *matHeaderCellDef>Amount</th>
-            <td mat-cell *matCellDef="let r" class="amount">{{ r.amount | currency }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="frequency">
-            <th mat-header-cell *matHeaderCellDef>Frequency</th>
-            <td mat-cell *matCellDef="let r">
-              <span class="freq-badge" [class.freq-daily]="r.frequency === 'Daily'"
-                    [class.freq-weekly]="r.frequency === 'Weekly'"
-                    [class.freq-biweekly]="r.frequency === 'Biweekly'"
-                    [class.freq-monthly]="r.frequency === 'Monthly'"
-                    >{{ r.frequency }}</span>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="nextRunDate">
-            <th mat-header-cell *matHeaderCellDef>Next Run</th>
-            <td mat-cell *matCellDef="let r">
-              <span [class.due-highlight]="isDue(r) && !isOverdue(r)" [class.overdue-highlight]="isOverdue(r)">{{ r.nextRunDate | localDate:'mediumDate' }}</span>
-              @if (isOverdue(r)) { <span class="overdue-badge">{{ daysOverdue(r) }}d overdue</span> }
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="status">
-            <th mat-header-cell *matHeaderCellDef>Status</th>
-            <td mat-cell *matCellDef="let r">
-              <mat-slide-toggle
-                [checked]="r.isActive"
-                (change)="toggleStatus(r)"
-                [aria-label]="r.isActive ? 'Pause ' + r.description : 'Activate ' + r.description"
-                color="primary">
-                <span class="toggle-label">{{ r.isActive ? 'Active' : 'Paused' }}</span>
-              </mat-slide-toggle>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Actions</th>
-            <td mat-cell *matCellDef="let r">
-              <div class="action-group">
-                @if (isCurrentMonth(r)) {
-                  <button mat-icon-button class="action-btn action-pay" (click)="markPaid(r)" [matTooltip]="isDue(r) ? 'Mark Paid' : 'Pay Now'">
-                    <mat-icon>{{ isDue(r) ? 'check_circle' : 'payments' }}</mat-icon>
-                  </button>
-                }
-                <button mat-icon-button class="action-btn action-edit" (click)="edit(r)" matTooltip="Edit">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button mat-icon-button class="action-btn action-delete" (click)="deleteItem(r)" matTooltip="Delete">
-                  <mat-icon>delete_outline</mat-icon>
-                </button>
-              </div>
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        <table class="activity-table">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Amount</th>
+              <th>Frequency</th>
+              <th>Next Run</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of billItems(); track r.id) {
+              <tr>
+                <td>
+                  <div class="desc-cell">
+                    <div class="cat-icon-wrap">
+                      <mat-icon class="cat-icon">{{ getIcon(r) }}</mat-icon>
+                    </div>
+                    <div>
+                      <div class="desc-text">{{ r.description }}</div>
+                      @if (r.merchant) { <div class="merchant-text">{{ r.merchant }}</div> }
+                    </div>
+                  </div>
+                </td>
+                <td class="amount">{{ r.amount | currency }}</td>
+                <td>
+                  <span class="freq-badge" [class.freq-daily]="r.frequency === 'Daily'"
+                        [class.freq-weekly]="r.frequency === 'Weekly'"
+                        [class.freq-biweekly]="r.frequency === 'Biweekly'"
+                        [class.freq-monthly]="r.frequency === 'Monthly'"
+                        >{{ r.frequency }}</span>
+                </td>
+                <td>
+                  <span [class.due-highlight]="isDue(r) && !isOverdue(r)" [class.overdue-highlight]="isOverdue(r)">{{ r.nextRunDate | localDate:'mediumDate' }}</span>
+                  @if (isOverdue(r)) { <span class="overdue-badge">{{ daysOverdue(r) }}d overdue</span> }
+                  @if (r.skipCount > 0) { <span class="skip-badge" (click)="viewSkipHistory(r)" matTooltip="Click to view skip history">{{ r.skipCount }} skipped</span> }
+                </td>
+                <td>
+                  <mat-slide-toggle
+                    [checked]="r.isActive"
+                    (change)="toggleStatus(r)"
+                    [aria-label]="r.isActive ? 'Pause ' + r.description : 'Activate ' + r.description"
+                    color="primary">
+                    <span class="toggle-label">{{ r.isActive ? 'Active' : 'Paused' }}</span>
+                  </mat-slide-toggle>
+                </td>
+                <td>
+                  <div class="action-group">
+                    @if (isCurrentMonth(r)) {
+                      <button mat-icon-button class="action-btn action-pay" (click)="markPaid(r)" [matTooltip]="isDue(r) ? 'Mark Paid' : 'Pay Now'">
+                        <mat-icon>{{ isDue(r) ? 'check_circle' : 'payments' }}</mat-icon>
+                      </button>
+                    }
+                    @if (isDue(r)) {
+                      <button mat-icon-button class="action-btn action-skip" (click)="skipPayment(r)" matTooltip="Skip this payment">
+                        <mat-icon>skip_next</mat-icon>
+                      </button>
+                    }
+                    <button mat-icon-button class="action-btn action-edit" (click)="edit(r)" matTooltip="Edit">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn action-delete" (click)="deleteItem(r)" matTooltip="Delete">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
         </table>
         </div>
       </mat-card>
@@ -246,10 +248,16 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
               } @else {
                 <span class="rec-next">Next: {{ r.nextRunDate | localDate:'MMM d' }}</span>
               }
+              @if (r.skipCount > 0) { <span class="skip-badge" (click)="viewSkipHistory(r)">{{ r.skipCount }} skipped</span> }
               <div class="rec-actions">
                 @if (isCurrentMonth(r)) {
                   <button mat-raised-button color="primary" class="pay-btn-sm" (click)="markPaid(r)">
                     <mat-icon>{{ isDue(r) ? 'check_circle' : 'payments' }}</mat-icon> {{ isDue(r) ? 'Pay' : 'Pay Now' }}
+                  </button>
+                }
+                @if (isDue(r)) {
+                  <button mat-stroked-button class="skip-btn-sm" (click)="skipPayment(r)">
+                    <mat-icon>skip_next</mat-icon> Skip
                   </button>
                 }
                 <mat-slide-toggle [checked]="r.isActive" (change)="toggleStatus(r)" color="primary" [aria-label]="r.isActive ? 'Pause ' + r.description : 'Activate ' + r.description"></mat-slide-toggle>
@@ -296,7 +304,12 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .stat-label { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: var(--tracking-wide); margin-top: 2px; }
 
     mat-card { overflow: hidden; padding: 0 !important; }
-    .table-wrapper { overflow-x: visible; }
+    .table-wrapper { overflow-x: auto; scrollbar-width: none; }
+    .table-wrapper::-webkit-scrollbar { display: none; }
+    .activity-table { width: 100%; border-collapse: collapse; }
+    .activity-table th { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--color-primary); padding: 10px 12px; border-bottom: 2px solid var(--color-primary); text-align: left; }
+    .activity-table td { font-size: 0.85rem; padding: 10px 12px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+    .activity-table tbody tr:hover { background: var(--color-surface-hover); }
     table { width: 100%; }
     .amount { font-weight: var(--weight-bold); color: var(--color-primary); }
     .desc-cell { display: flex; align-items: center; gap: 10px; }
@@ -326,6 +339,14 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .action-edit:hover { background: var(--color-action-edit-bg) !important; }
     .action-delete { color: var(--color-action-delete) !important; }
     .action-delete:hover { background: var(--color-action-delete-bg) !important; }
+    .action-skip { color: var(--color-warning) !important; }
+    .action-skip:hover { background: var(--color-stat-amber-bg) !important; }
+
+    .skip-btn, .skip-btn-sm { border-radius: var(--radius-sm) !important; font-size: 0.8rem !important; color: var(--color-warning) !important; border-color: var(--color-warning) !important; }
+    .skip-btn mat-icon, .skip-btn-sm mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; }
+    .skip-btn-sm { font-size: 0.75rem !important; padding: 0 10px !important; }
+
+    .skip-badge { font-size: 0.65rem; font-weight: 600; padding: 1px 6px; border-radius: var(--radius-full); background: var(--color-stat-amber-bg); color: var(--color-warning); margin-left: 6px; white-space: nowrap; }
 
     /* Mobile Cards */
     .mobile-cards { display: none; }
@@ -632,6 +653,34 @@ export class RecurringPageComponent implements OnInit {
         });
       });
     }, error: () => this.notify.error('Failed to load loans') });
+  }
+
+  viewSkipHistory(item: RecurringTransaction): void {
+    this.service.getSkips(item.id).subscribe({
+      next: (skips) => {
+        import('./skip-history-dialog.component').then(m => {
+          this.dialog.open(m.SkipHistoryDialogComponent, {
+            data: { description: item.description, skips },
+            width: '420px',
+            maxHeight: '80vh'
+          });
+        });
+      },
+      error: () => this.notify.error('Failed to load skip history')
+    });
+  }
+
+  skipPayment(item: RecurringTransaction): void {
+    const reason = prompt('Reason for skipping (optional):');
+    if (reason === null) return;
+    this.service.skip(item.id, reason || undefined).subscribe({
+      next: (res) => {
+        const next = new Date(res.nextRunDate);
+        this.notify.success(`Skipped — next due ${next.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`);
+        this.loadData();
+      },
+      error: (err: any) => this.notify.error(err.error?.message || 'Failed to skip')
+    });
   }
 
   deleteItem(item: RecurringTransaction): void {

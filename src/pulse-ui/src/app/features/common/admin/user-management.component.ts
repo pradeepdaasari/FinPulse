@@ -1,6 +1,6 @@
 import { Component, inject, signal, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatTableModule } from '@angular/material/table';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
@@ -18,7 +18,7 @@ import { AddUserDialogComponent } from './add-user-dialog.component';
 @Component({
   selector: 'app-user-management',
   standalone: true,
-  imports: [FormsModule, MatTableModule, MatButtonModule, MatIconModule, MatChipsModule, MatDialogModule, MatTooltipModule, MatProgressSpinnerModule, MatFormFieldModule, MatSelectModule, MatCardModule],
+  imports: [FormsModule, MatButtonModule, MatIconModule, MatChipsModule, MatDialogModule, MatTooltipModule, MatProgressSpinnerModule, MatFormFieldModule, MatSelectModule, MatCardModule],
   template: `
     @if (loading()) {
       <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
@@ -33,55 +33,46 @@ import { AddUserDialogComponent } from './add-user-dialog.component';
       </div>
 
       <div class="table-container table-wrapper">
-        <table mat-table [dataSource]="users()">
-          <ng-container matColumnDef="username">
-            <th mat-header-cell *matHeaderCellDef>Username</th>
-            <td mat-cell *matCellDef="let user">{{ user.username }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="email">
-            <th mat-header-cell *matHeaderCellDef>Email</th>
-            <td mat-cell *matCellDef="let user">{{ user.email }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="role">
-            <th mat-header-cell *matHeaderCellDef>Role</th>
-            <td mat-cell *matCellDef="let user">
-              <mat-chip [highlighted]="user.role === 'Admin'">{{ user.role }}</mat-chip>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="status">
-            <th mat-header-cell *matHeaderCellDef>Status</th>
-            <td mat-cell *matCellDef="let user">
-              <mat-chip [class.active-chip]="user.isActive" [class.inactive-chip]="!user.isActive">
-                {{ user.isActive ? 'Active' : 'Inactive' }}
-              </mat-chip>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Actions</th>
-            <td mat-cell *matCellDef="let user">
-              @if (user.role !== 'Admin') {
-                @if (user.isActive) {
-                  <button mat-icon-button matTooltip="Deactivate" (click)="toggleActive(user)">
-                    <mat-icon>block</mat-icon>
-                  </button>
-                } @else {
-                  <button mat-icon-button matTooltip="Activate" (click)="toggleActive(user)">
-                    <mat-icon>check_circle</mat-icon>
-                  </button>
-                }
-                <button mat-icon-button matTooltip="Delete" color="warn" (click)="deleteUser(user)">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              }
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        <table class="activity-table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of users(); track user.id) {
+              <tr>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td><mat-chip [highlighted]="user.role === 'Admin'">{{ user.role }}</mat-chip></td>
+                <td>
+                  <mat-chip [class.active-chip]="user.isActive" [class.inactive-chip]="!user.isActive">
+                    {{ user.isActive ? 'Active' : 'Inactive' }}
+                  </mat-chip>
+                </td>
+                <td>
+                  @if (user.role !== 'Admin') {
+                    @if (user.isActive) {
+                      <button mat-icon-button matTooltip="Deactivate" (click)="toggleActive(user)">
+                        <mat-icon>block</mat-icon>
+                      </button>
+                    } @else {
+                      <button mat-icon-button matTooltip="Activate" (click)="toggleActive(user)">
+                        <mat-icon>check_circle</mat-icon>
+                      </button>
+                    }
+                    <button mat-icon-button matTooltip="Delete" color="warn" (click)="deleteUser(user)">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
         </table>
       </div>
 
@@ -137,9 +128,10 @@ import { AddUserDialogComponent } from './add-user-dialog.component';
       overflow: hidden;
       box-shadow: var(--shadow-card);
     }
-    table {
-      width: 100%;
-    }
+    .activity-table { width: 100%; border-collapse: collapse; }
+    .activity-table th { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--color-primary); padding: 10px 12px; border-bottom: 2px solid var(--color-primary); text-align: left; }
+    .activity-table td { font-size: 0.85rem; padding: 10px 12px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+    .activity-table tbody tr:hover { background: var(--color-surface-hover); }
     .active-chip {
       --mdc-chip-label-text-color: #2e7d32;
       --mdc-chip-elevated-container-color: #e8f5e9;

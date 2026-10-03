@@ -1,8 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
-import { MatTableModule } from '@angular/material/table';
-import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { AmortizationSchedule } from '../../../core/models/dashboard.model';
@@ -10,7 +8,7 @@ import { AmortizationSchedule } from '../../../core/models/dashboard.model';
 @Component({
   selector: 'app-amortization-table',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatPaginatorModule, MatCardModule, MatIconModule, CurrencyPipe, DatePipe, LocalDatePipe],
+  imports: [CommonModule, MatCardModule, MatIconModule, CurrencyPipe, DatePipe, LocalDatePipe],
   template: `
     <div class="summary-cards">
       <div class="summary-card paid">
@@ -40,43 +38,30 @@ import { AmortizationSchedule } from '../../../core/models/dashboard.model';
     </div>
 
     <div class="table-container table-wrapper">
-      <table mat-table [dataSource]="schedule.entries">
-        <ng-container matColumnDef="period">
-          <th mat-header-cell *matHeaderCellDef>#</th>
-          <td mat-cell *matCellDef="let entry">{{ entry.periodNumber }}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="date">
-          <th mat-header-cell *matHeaderCellDef>Date</th>
-          <td mat-cell *matCellDef="let entry">{{ entry.paymentDate | localDate:'mediumDate' }}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="payment">
-          <th mat-header-cell *matHeaderCellDef>Payment</th>
-          <td mat-cell *matCellDef="let entry">{{ entry.paymentAmount | currency }}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="principal">
-          <th mat-header-cell *matHeaderCellDef>Principal</th>
-          <td mat-cell *matCellDef="let entry">{{ entry.principalPortion | currency }}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="interest">
-          <th mat-header-cell *matHeaderCellDef>Interest</th>
-          <td mat-cell *matCellDef="let entry">{{ entry.interestPortion | currency }}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="balance">
-          <th mat-header-cell *matHeaderCellDef>Balance</th>
-          <td mat-cell *matCellDef="let entry">{{ entry.remainingBalance | currency }}</td>
-        </ng-container>
-
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"
-            [class.row-paid]="row.isPaid"
-            [class.row-pending]="!row.isPaid"></tr>
+      <table class="activity-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Date</th>
+            <th>Payment</th>
+            <th>Principal</th>
+            <th>Interest</th>
+            <th>Balance</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (entry of schedule.entries; track entry.periodNumber) {
+            <tr [class.row-paid]="entry.isPaid" [class.row-pending]="!entry.isPaid">
+              <td>{{ entry.periodNumber }}</td>
+              <td>{{ entry.paymentDate | localDate:'mediumDate' }}</td>
+              <td>{{ entry.paymentAmount | currency }}</td>
+              <td>{{ entry.principalPortion | currency }}</td>
+              <td>{{ entry.interestPortion | currency }}</td>
+              <td>{{ entry.remainingBalance | currency }}</td>
+            </tr>
+          }
+        </tbody>
       </table>
-      <mat-paginator [pageSize]="12" [pageSizeOptions]="[12, 24, 60]" showFirstLastButtons></mat-paginator>
     </div>
   `,
   styles: [`
@@ -110,8 +95,12 @@ import { AmortizationSchedule } from '../../../core/models/dashboard.model';
     .summary-label { font-size: 0.75rem; text-transform: uppercase; font-weight: 500; letter-spacing: 0.05em; color: var(--color-text-muted, #666); }
     .summary-amount { font-size: 1.25rem; font-weight: 700; }
     .summary-detail { font-size: 0.75rem; color: var(--color-text-secondary, #888); }
-    .table-container { overflow-x: visible; }
-    table { width: 100%; }
+    .table-container { overflow-x: auto; scrollbar-width: none; }
+    .table-container::-webkit-scrollbar { display: none; }
+    .activity-table { width: 100%; border-collapse: collapse; }
+    .activity-table th { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--color-primary); padding: 10px 12px; border-bottom: 2px solid var(--color-primary); text-align: left; }
+    .activity-table td { font-size: 0.85rem; padding: 10px 12px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+    .activity-table tbody tr:hover { background: var(--color-surface-hover); }
     .row-paid {
       background: rgba(76, 175, 80, 0.06);
     }

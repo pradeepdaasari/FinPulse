@@ -5,7 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTableModule } from '@angular/material/table';
+
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
@@ -27,7 +27,7 @@ import { ConfettiService } from '../../../shared/confetti.service';
 @Component({
   selector: 'app-loan-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatTabsModule, MatTooltipModule, MatChipsModule, MatProgressBarModule, CurrencyPipe, DecimalPipe, LocalDatePipe, AmortizationTableComponent, SkeletonLoaderComponent, EntityMovementsComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTabsModule, MatTooltipModule, MatChipsModule, MatProgressBarModule, CurrencyPipe, DecimalPipe, LocalDatePipe, AmortizationTableComponent, SkeletonLoaderComponent, EntityMovementsComponent],
   template: `
     @if (loading()) {
       <app-skeleton type="card"></app-skeleton>
@@ -161,45 +161,38 @@ import { ConfettiService } from '../../../shared/confetti.service';
                 <span class="history-count">{{ paymentHistory().length }} payments</span>
               </div>
               <div class="table-wrapper desktop-only">
-                <table mat-table [dataSource]="paymentHistory()">
-                  <ng-container matColumnDef="paymentDate">
-                    <th mat-header-cell *matHeaderCellDef>Date</th>
-                    <td mat-cell *matCellDef="let p">{{ p.paymentDate | localDate:'mediumDate' }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="amountPaid">
-                    <th mat-header-cell *matHeaderCellDef>Amount</th>
-                    <td mat-cell *matCellDef="let p" class="amount-cell">{{ p.amountPaid | currency }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="principal">
-                    <th mat-header-cell *matHeaderCellDef>Principal</th>
-                    <td mat-cell *matCellDef="let p" class="principal-color">{{ (p.principalAmount ?? p.amountPaid) | currency }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="interest">
-                    <th mat-header-cell *matHeaderCellDef>Interest</th>
-                    <td mat-cell *matCellDef="let p" class="interest-color">{{ (p.interestAmount ?? 0) | currency }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="fromAccount">
-                    <th mat-header-cell *matHeaderCellDef>From Account</th>
-                    <td mat-cell *matCellDef="let p">{{ getAccountName(p.fromAccountId) }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="notes">
-                    <th mat-header-cell *matHeaderCellDef>Notes</th>
-                    <td mat-cell *matCellDef="let p">{{ p.notes || '—' }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="actions">
-                    <th mat-header-cell *matHeaderCellDef></th>
-                    <td mat-cell *matCellDef="let p">
-                      <button mat-icon-button (click)="editPayment(p)" matTooltip="Edit payment" aria-label="Edit payment">
-                        <mat-icon>edit</mat-icon>
-                      </button>
-                      <button mat-icon-button color="warn" (click)="deletePayment(p)" matTooltip="Delete payment" aria-label="Delete payment">
-                        <mat-icon>delete_outline</mat-icon>
-                      </button>
-                    </td>
-                  </ng-container>
-
-                  <tr mat-header-row *matHeaderRowDef="paymentColumns"></tr>
-                  <tr mat-row *matRowDef="let row; columns: paymentColumns;"></tr>
+                <table class="activity-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th class="col-amount">Amount</th>
+                      <th>Principal</th>
+                      <th>Interest</th>
+                      <th>From Account</th>
+                      <th>Notes</th>
+                      <th class="col-actions"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (p of paymentHistory(); track p.id) {
+                      <tr>
+                        <td>{{ p.paymentDate | localDate:'mediumDate' }}</td>
+                        <td class="col-amount amount-cell">{{ p.amountPaid | currency }}</td>
+                        <td class="principal-color">{{ (p.principalAmount ?? p.amountPaid) | currency }}</td>
+                        <td class="interest-color">{{ (p.interestAmount ?? 0) | currency }}</td>
+                        <td>{{ getAccountName(p.fromAccountId) }}</td>
+                        <td>{{ p.notes || '—' }}</td>
+                        <td class="col-actions">
+                          <button mat-icon-button (click)="editPayment(p)" matTooltip="Edit payment" aria-label="Edit payment">
+                            <mat-icon>edit</mat-icon>
+                          </button>
+                          <button mat-icon-button color="warn" (click)="deletePayment(p)" matTooltip="Delete payment" aria-label="Delete payment">
+                            <mat-icon>delete_outline</mat-icon>
+                          </button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
                 </table>
               </div>
               <div class="mobile-cards">
@@ -298,8 +291,14 @@ import { ConfettiService } from '../../../shared/confetti.service';
     .tab-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 6px; vertical-align: middle; }
     .empty-tab { display: flex; align-items: center; gap: 10px; padding: 24px 0; color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: var(--spacing-lg); }
     .empty-tab mat-icon { font-size: 32px; width: 32px; height: 32px; }
-    .table-wrapper { overflow-x: visible; }
-    table { width: 100%; }
+    .table-wrapper { overflow-x: auto; scrollbar-width: none; }
+    .table-wrapper::-webkit-scrollbar { display: none; }
+    .activity-table { width: 100%; border-collapse: collapse; }
+    .activity-table th { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--color-primary); padding: 10px 12px; border-bottom: 2px solid var(--color-primary); text-align: left; }
+    .activity-table td { font-size: 0.85rem; padding: 10px 12px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+    .activity-table tbody tr:hover { background: var(--color-surface-hover); }
+    .col-amount { text-align: right; }
+    .col-actions { width: 80px; text-align: center; }
     .history-card { margin-bottom: var(--spacing-lg); }
     .history-summary {
       display: flex;

@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
-import { MatTableModule } from '@angular/material/table';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -19,7 +19,7 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
 @Component({
   selector: 'app-account-list',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatTooltipModule, CurrencyPipe, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule, MatTooltipModule, CurrencyPipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadAccounts()">
     <div class="header-row">
@@ -95,53 +95,49 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
       <!-- Desktop table -->
       <mat-card class="desktop-only">
         <div class="table-wrapper">
-        <table mat-table [dataSource]="accounts()">
-          <ng-container matColumnDef="accountName">
-            <th mat-header-cell *matHeaderCellDef>Account Name</th>
-            <td mat-cell *matCellDef="let a">
-              <div class="acct-name-cell">
-                <mat-icon class="acct-icon" [class.icon-checking]="a.accountType === 'Checking'" [class.icon-savings]="a.accountType === 'Savings'" [class.icon-brokerage]="a.accountType === 'Brokerage'" [class.icon-cash]="a.accountType === 'Cash'">{{ getAccountIcon(a.accountName, a.accountType) }}</mat-icon>
-                <span class="acct-name-text">{{ a.accountName }}</span>
-                @if (a.isExcluded) { <span class="excluded-badge"><mat-icon class="excluded-badge-icon">pause_circle</mat-icon> Excluded</span> }
-              </div>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="accountType">
-            <th mat-header-cell *matHeaderCellDef>Type</th>
-            <td mat-cell *matCellDef="let a">
-              <span class="acct-type-badge"
-                    [class.acct-checking]="a.accountType === 'Checking'"
-                    [class.acct-savings]="a.accountType === 'Savings'"
-                    [class.acct-brokerage]="a.accountType === 'Brokerage'"
-                    [class.acct-cash]="a.accountType === 'Cash'">{{ a.accountType }}</span>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="currentBalance">
-            <th mat-header-cell *matHeaderCellDef>Balance</th>
-            <td mat-cell *matCellDef="let a" class="balance">{{ a.currentBalance | currency }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Actions</th>
-            <td mat-cell *matCellDef="let a">
-              <div class="action-group">
-                <button mat-icon-button class="action-btn action-park" (click)="$event.stopPropagation(); toggleExcluded(a)" [matTooltip]="a.isExcluded ? 'Include in total' : 'Exclude from total'">
-                  <mat-icon>{{ a.isExcluded ? 'play_circle' : 'pause_circle' }}</mat-icon>
-                </button>
-                <button mat-icon-button class="action-btn action-edit" (click)="$event.stopPropagation(); editAccount(a)">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button mat-icon-button class="action-btn action-delete" (click)="$event.stopPropagation(); deleteAccount(a)">
-                  <mat-icon>delete_outline</mat-icon>
-                </button>
-              </div>
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="viewAccount(row)" class="clickable-row" [class.excluded-row]="row.isExcluded"></tr>
+        <table class="activity-table">
+          <thead>
+            <tr>
+              <th>Account Name</th>
+              <th>Type</th>
+              <th>Balance</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of accounts(); track a.id) {
+              <tr (click)="viewAccount(a)" class="clickable-row" [class.excluded-row]="a.isExcluded">
+                <td>
+                  <div class="acct-name-cell">
+                    <mat-icon class="acct-icon" [class.icon-checking]="a.accountType === 'Checking'" [class.icon-savings]="a.accountType === 'Savings'" [class.icon-brokerage]="a.accountType === 'Brokerage'" [class.icon-cash]="a.accountType === 'Cash'">{{ getAccountIcon(a.accountName, a.accountType) }}</mat-icon>
+                    <span class="acct-name-text">{{ a.accountName }}</span>
+                    @if (a.isExcluded) { <span class="excluded-badge"><mat-icon class="excluded-badge-icon">pause_circle</mat-icon> Excluded</span> }
+                  </div>
+                </td>
+                <td>
+                  <span class="acct-type-badge"
+                        [class.acct-checking]="a.accountType === 'Checking'"
+                        [class.acct-savings]="a.accountType === 'Savings'"
+                        [class.acct-brokerage]="a.accountType === 'Brokerage'"
+                        [class.acct-cash]="a.accountType === 'Cash'">{{ a.accountType }}</span>
+                </td>
+                <td class="balance">{{ a.currentBalance | currency }}</td>
+                <td>
+                  <div class="action-group">
+                    <button mat-icon-button class="action-btn action-park" (click)="$event.stopPropagation(); toggleExcluded(a)" [matTooltip]="a.isExcluded ? 'Include in total' : 'Exclude from total'">
+                      <mat-icon>{{ a.isExcluded ? 'play_circle' : 'pause_circle' }}</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn action-edit" (click)="$event.stopPropagation(); editAccount(a)">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn action-delete" (click)="$event.stopPropagation(); deleteAccount(a)">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
         </table>
         </div>
       </mat-card>
@@ -222,7 +218,12 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
     .action-park { color: var(--color-action-park) !important; }
     .action-park:hover { background: var(--color-action-park-bg) !important; }
     mat-card { overflow: hidden; padding: 0 !important; }
-    .table-wrapper { overflow-x: visible; }
+    .table-wrapper { overflow-x: auto; scrollbar-width: none; }
+    .table-wrapper::-webkit-scrollbar { display: none; }
+    .activity-table { width: 100%; border-collapse: collapse; }
+    .activity-table th { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--color-primary); padding: 10px 12px; border-bottom: 2px solid var(--color-primary); text-align: left; }
+    .activity-table td { font-size: 0.85rem; padding: 10px 12px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+    .activity-table tbody tr:hover { background: var(--color-surface-hover); }
     table { width: 100%; }
     .balance { font-weight: var(--weight-bold); color: var(--color-success); }
     .acct-name-cell { display: flex; align-items: center; gap: 10px; }
