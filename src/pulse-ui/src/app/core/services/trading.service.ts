@@ -88,6 +88,11 @@ export class TradingService {
     return this.http.delete<void>(`${this.baseUrl}/trades/${id}`);
   }
 
+  getCalendarStats(year: number, month: number): Observable<any> {
+    const params = new HttpParams().set('year', year).set('month', month + 1);
+    return this.http.get<any>(`${this.baseUrl}/calendar-stats`, { params });
+  }
+
   getTradesByAccount(accountId: number): Observable<TradeEntry[]> {
     return this.http.get<TradeEntry[]>(`${this.baseUrl}/trades/by-account/${accountId}`);
   }

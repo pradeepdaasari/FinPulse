@@ -310,6 +310,96 @@ public class TradingController : ControllerBase
         return Ok(trades);
     }
 
+    [HttpGet("calendar-stats")]
+    public async Task<ActionResult> GetCalendarStats([FromQuery] int year, [FromQuery] int month)
+    {
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var monthStart = new DateTime(year, month, 1);
+        var monthEnd = monthStart.AddMonths(1);
+
+        var firstDay = monthStart;
+        var startOffset = (int)firstDay.DayOfWeek;
+        var calStart = firstDay.AddDays(-startOffset);
+        var lastDay = monthEnd.AddDays(-1);
+        var endOffset = lastDay.DayOfWeek == DayOfWeek.Saturday ? 0 : 6 - (int)lastDay.DayOfWeek;
+        var calEnd = lastDay.AddDays(endOffset + 1);
+
+        var calStartUtc = TimeZoneHelper.ToUtc(calStart, tz);
+        var calEndUtc = TimeZoneHelper.ToUtc(calEnd, tz);
+        var monthStartUtc = TimeZoneHelper.ToUtc(monthStart, tz);
+        var monthEndUtc = TimeZoneHelper.ToUtc(monthEnd, tz);
+
+        var allTrades = await _db.TradeEntries
+            .Where(t => t.UserId == UserId && t.Date >= calStartUtc && t.Date < calEndUtc)
+            .Include(t => t.ChecklistResponses)
+            .Include(t => t.Setup)
+            .OrderBy(t => t.Date)
+            .ToListAsync();
+
+        var dailyPnl = allTrades.GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date)
+            .Select(g => new
+            {
+                Date = g.Key.ToString("yyyy-MM-dd"),
+                Pnl = Math.Round(g.Sum(t => t.Pnl ?? 0), 2),
+                NetPnl = Math.Round(g.Sum(t => t.NetPnl ?? t.Pnl ?? 0), 2),
+                TradeCount = g.Count()
+            })
+            .OrderBy(d => d.Date)
+            .ToList();
+
+        var monthTrades = allTrades.Where(t =>
+        {
+            var localDate = TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz);
+            return localDate.Year == year && localDate.Month == month;
+        }).ToList();
+
+        var closed = monthTrades.Where(t => t.Pnl.HasValue).ToList();
+        var dayPnls = monthTrades.GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date)
+            .Select(g => g.Sum(t => t.Pnl ?? 0)).ToList();
+
+        return Ok(new
+        {
+            MonthStats = new
+            {
+                NetPnl = Math.Round(monthTrades.Sum(t => t.NetPnl ?? t.Pnl ?? 0), 2),
+                GrossPnl = Math.Round(monthTrades.Sum(t => t.Pnl ?? 0), 2),
+                TotalTrades = monthTrades.Count,
+                WinningTrades = closed.Count(t => (t.Pnl ?? 0) > 0),
+                LosingTrades = closed.Count(t => (t.Pnl ?? 0) <= 0),
+                TotalFees = Math.Round(monthTrades.Sum(t => t.TotalFees ?? 0), 2),
+                AvgPnl = closed.Count > 0 ? Math.Round(closed.Sum(t => t.NetPnl ?? t.Pnl ?? 0) / closed.Count, 2) : 0m,
+                WinRate = dayPnls.Count > 0 ? Math.Round((decimal)dayPnls.Count(p => p > 0) / dayPnls.Count * 100) : 0m,
+                ChecklistRate = monthTrades.Count > 0 ? Math.Round((decimal)monthTrades.Count(t => t.ChecklistCompleted) / monthTrades.Count * 100) : 0m,
+                BestDay = dayPnls.Count > 0 ? dayPnls.Max() : 0m,
+                WorstDay = dayPnls.Count > 0 ? dayPnls.Min() : 0m,
+                TradingDays = dayPnls.Count
+            },
+            DailyPnl = dailyPnl,
+            Trades = allTrades.Select(t => new
+            {
+                t.Id,
+                t.Date,
+                LocalDate = TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).ToString("yyyy-MM-dd"),
+                t.SetupId,
+                SetupName = t.Setup != null ? t.Setup.Name : null,
+                t.Instrument, t.Direction, t.EntryPrice, t.ExitPrice, t.Quantity,
+                t.Pnl, t.ChecklistCompleted,
+                ChecklistResponses = t.ChecklistResponses,
+                t.EntryTime, t.ExitTime, t.Notes,
+                Tags = t.Tags != null ? JsonSerializer.Deserialize<string[]>(t.Tags) : null,
+                t.IsRevengeTrading, t.EmotionAtEntry, t.CreatedAt,
+                t.AssetType, t.OptionType, t.SpreadType,
+                t.StrikePrice, t.StrikePrice2, t.StrikePrice3, t.StrikePrice4,
+                t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.Multiplier,
+                t.BankAccountId, t.CommissionFees, t.RegExchangeFees, t.TotalFees, t.NetPnl,
+                t.PlannedRisk,
+                MistakeTags = t.MistakeTags != null ? JsonSerializer.Deserialize<string[]>(t.MistakeTags) : null,
+                t.Status, t.ClosedDate,
+                NotesCount = t.TradeNotes.Count
+            }).ToList()
+        });
+    }
+
     [HttpPost("trades")]
     public async Task<ActionResult> CreateTrade([FromBody] TradeEntryCreateDto input)
     {
@@ -905,12 +995,15 @@ public class TradingController : ControllerBase
             else { curLosses++; curWins = 0; maxConsLosses = Math.Max(maxConsLosses, curLosses); }
         }
 
-        // Daily P&L for best/worst day
-        var dailyPnl = closed.GroupBy(t => t.Date.Date)
+        // Daily P&L for best/worst day (timezone-aware)
+        var dailyPnl = closed.GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date)
             .Select(g => new { Date = g.Key, Pnl = g.Sum(t => t.NetPnl ?? t.Pnl ?? 0) }).ToList();
 
-        // Monthly P&L
-        var monthlyPnl = closed.GroupBy(t => new { t.Date.Year, t.Date.Month })
+        // Monthly P&L (timezone-aware)
+        var monthlyPnl = closed.GroupBy(t => {
+                var local = TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz);
+                return new { local.Year, local.Month };
+            })
             .Select(g => new
             {
                 g.Key.Year, g.Key.Month,

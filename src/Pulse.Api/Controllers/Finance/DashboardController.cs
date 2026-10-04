@@ -656,18 +656,26 @@ public class DashboardController : ControllerBase
             return new { Name = info?.CardName ?? "Unknown", Balance = info?.CurrentBalance ?? 0, Monthly = monthlyAmounts, Total = g.Sum(p => p.AmountPaid) };
         }).OrderByDescending(c => c.Total).ToList();
 
-        // 4. Trading P&L
+        // 4. Trading P&L — use local month boundaries (same as trading calendar)
         var trades = await _db.TradeEntries
-            .Where(t => t.UserId == UserId && t.Pnl.HasValue && t.Date >= startDate && t.Date < endDate)
+            .Where(t => t.UserId == UserId && t.Pnl.HasValue)
             .Select(t => new { t.Date, t.Pnl, t.NetPnl, t.Instrument })
             .ToListAsync();
+
+        // Convert to local time and filter by local month boundaries
+        var localTrades = trades.Select(t => new
+        {
+            LocalDate = TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz),
+            t.Pnl, t.NetPnl, t.Instrument
+        }).Where(t => t.LocalDate.Year >= startMonth.Year && t.LocalDate.Month >= startMonth.Month || t.LocalDate.Year > startMonth.Year)
+         .Where(t => t.LocalDate < startMonth.AddMonths(months))
+         .ToList();
 
         var tradingMonthly = new List<object>();
         for (int i = 0; i < months; i++)
         {
-            var mStart = startDate.AddMonths(i);
-            var mEnd = mStart.AddMonths(1);
-            var mTrades = trades.Where(t => t.Date >= mStart && t.Date < mEnd).ToList();
+            var mLocal = startMonth.AddMonths(i);
+            var mTrades = localTrades.Where(t => t.LocalDate.Year == mLocal.Year && t.LocalDate.Month == mLocal.Month).ToList();
             var wins = mTrades.Count(t => t.Pnl > 0);
             tradingMonthly.Add(new
             {
@@ -677,18 +685,17 @@ public class DashboardController : ControllerBase
                 WinRate = mTrades.Count == 0 ? 0m : Math.Round((decimal)wins / mTrades.Count * 100, 1)
             });
         }
-        var totalNetPnl = trades.Sum(t => t.NetPnl ?? t.Pnl ?? 0);
-        var totalTradeCount = trades.Count;
-        var totalWins = trades.Count(t => t.Pnl > 0);
+        var totalNetPnl = localTrades.Sum(t => t.NetPnl ?? t.Pnl ?? 0);
+        var totalTradeCount = localTrades.Count;
+        var totalWins = localTrades.Count(t => t.Pnl > 0);
 
-        var tradingDetails = trades.GroupBy(t => t.Instrument ?? "Unknown").Select(g =>
+        var tradingDetails = localTrades.GroupBy(t => t.Instrument ?? "Unknown").Select(g =>
         {
             var monthlyPnl = new List<decimal>();
             for (int i = 0; i < months; i++)
             {
-                var mStart = startDate.AddMonths(i);
-                var mEnd = mStart.AddMonths(1);
-                monthlyPnl.Add(g.Where(t => t.Date >= mStart && t.Date < mEnd).Sum(t => t.NetPnl ?? t.Pnl ?? 0));
+                var mLocal = startMonth.AddMonths(i);
+                monthlyPnl.Add(g.Where(t => t.LocalDate.Year == mLocal.Year && t.LocalDate.Month == mLocal.Month).Sum(t => t.NetPnl ?? t.Pnl ?? 0));
             }
             return new { Name = g.Key, Monthly = monthlyPnl, Total = g.Sum(t => t.NetPnl ?? t.Pnl ?? 0), Trades = g.Count() };
         }).OrderByDescending(i => Math.Abs(i.Total)).ToList();

@@ -97,6 +97,72 @@ type Period = '3' | '6' | 'ytd';
           </div>
         </div>
 
+        <!-- Trading P&L Lane -->
+        <div class="lane-card lane-trading">
+          <div class="lane-header" (click)="toggleLane('trading')">
+            <div class="lane-title">
+              <span class="lane-icon-pill pill-indigo"><mat-icon>candlestick_chart</mat-icon></span>
+              <span class="lane-name">Trading P&L</span>
+            </div>
+            <div class="lane-header-right">
+              <span class="trend-badge" [class.trend-good]="d.trading.trend >= 0" [class.trend-bad]="d.trading.trend < 0">
+                <mat-icon class="trend-icon">{{ d.trading.trend >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+                {{ abs(d.trading.trend) | number:'1.1-1' }}%
+              </span>
+              <mat-icon class="expand-icon" [class.expanded]="isExpanded('trading')">expand_more</mat-icon>
+            </div>
+          </div>
+          <div class="month-columns">
+            @for (m of d.trading.monthly; track $index) {
+              <div class="month-col">
+                <span class="month-label">{{ d.months[$index].label }}</span>
+                <span class="month-value" [class.pnl-positive]="asTrading(m).netPnl > 0" [class.pnl-negative]="asTrading(m).netPnl < 0">
+                  {{ asTrading(m).netPnl >= 0 ? '+' : '' }}{{ asTrading(m).netPnl | currency:'USD':'symbol':'1.0-0' }}
+                </span>
+                <span class="month-sub">
+                  {{ asTrading(m).trades }} trades · {{ asTrading(m).winRate | number:'1.0-0' }}% win
+                </span>
+              </div>
+            }
+          </div>
+          @if (isExpanded('trading') && d.trading.details?.length) {
+            <div class="detail-section">
+              <table class="detail-table">
+                <thead>
+                  <tr>
+                    <th class="detail-name-col">Instrument</th>
+                    @for (mo of d.months; track $index) {
+                      <th class="detail-month-col">{{ mo.label }}</th>
+                    }
+                    <th class="detail-total-col">Net P&L</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of d.trading.details; track row.name) {
+                    <tr>
+                      <td class="detail-name">{{ row.name }}</td>
+                      @for (val of row.monthly; track $index) {
+                        <td class="detail-val" [class.pnl-positive]="val > 0" [class.pnl-negative]="val < 0">
+                          {{ val >= 0 ? '+' : '' }}{{ val | currency:'USD':'symbol':'1.0-0' }}
+                        </td>
+                      }
+                      <td class="detail-total" [class.pnl-positive]="row.total > 0" [class.pnl-negative]="row.total < 0">
+                        {{ row.total >= 0 ? '+' : '' }}{{ row.total | currency:'USD':'symbol':'1.0-0' }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+          <div class="lane-summary">
+            <span>Net P&L: <strong [class.pnl-positive]="d.trading.totalNetPnl > 0" [class.pnl-negative]="d.trading.totalNetPnl < 0">
+              {{ d.trading.totalNetPnl >= 0 ? '+' : '' }}{{ d.trading.totalNetPnl | currency:'USD':'symbol':'1.0-0' }}
+            </strong></span>
+            <span>{{ d.trading.totalTrades }} trades · {{ d.trading.overallWinRate | number:'1.0-0' }}% win rate</span>
+          </div>
+        </div>
+
         <!-- Expenses Lane -->
         <div class="lane-card lane-expenses">
           <div class="lane-header" (click)="toggleLane('expenses')">
@@ -262,72 +328,6 @@ type Period = '3' | '6' | 'ytd';
           <div class="lane-summary">
             <span>Avg: <strong>{{ d.cardPayments.avgMonthly | currency:'USD':'symbol':'1.0-0' }}</strong></span>
             <span>Balance: <strong>{{ d.cardPayments.remainingBalance | currency:'USD':'symbol':'1.0-0' }}</strong></span>
-          </div>
-        </div>
-
-        <!-- Trading P&L Lane -->
-        <div class="lane-card lane-trading">
-          <div class="lane-header" (click)="toggleLane('trading')">
-            <div class="lane-title">
-              <span class="lane-icon-pill pill-indigo"><mat-icon>candlestick_chart</mat-icon></span>
-              <span class="lane-name">Trading P&L</span>
-            </div>
-            <div class="lane-header-right">
-              <span class="trend-badge" [class.trend-good]="d.trading.trend >= 0" [class.trend-bad]="d.trading.trend < 0">
-                <mat-icon class="trend-icon">{{ d.trading.trend >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
-                {{ abs(d.trading.trend) | number:'1.1-1' }}%
-              </span>
-              <mat-icon class="expand-icon" [class.expanded]="isExpanded('trading')">expand_more</mat-icon>
-            </div>
-          </div>
-          <div class="month-columns">
-            @for (m of d.trading.monthly; track $index) {
-              <div class="month-col">
-                <span class="month-label">{{ d.months[$index].label }}</span>
-                <span class="month-value" [class.pnl-positive]="asTrading(m).netPnl > 0" [class.pnl-negative]="asTrading(m).netPnl < 0">
-                  {{ asTrading(m).netPnl >= 0 ? '+' : '' }}{{ asTrading(m).netPnl | currency:'USD':'symbol':'1.0-0' }}
-                </span>
-                <span class="month-sub">
-                  {{ asTrading(m).trades }} trades · {{ asTrading(m).winRate | number:'1.0-0' }}% win
-                </span>
-              </div>
-            }
-          </div>
-          @if (isExpanded('trading') && d.trading.details?.length) {
-            <div class="detail-section">
-              <table class="detail-table">
-                <thead>
-                  <tr>
-                    <th class="detail-name-col">Instrument</th>
-                    @for (mo of d.months; track $index) {
-                      <th class="detail-month-col">{{ mo.label }}</th>
-                    }
-                    <th class="detail-total-col">Net P&L</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (row of d.trading.details; track row.name) {
-                    <tr>
-                      <td class="detail-name">{{ row.name }}</td>
-                      @for (val of row.monthly; track $index) {
-                        <td class="detail-val" [class.pnl-positive]="val > 0" [class.pnl-negative]="val < 0">
-                          {{ val >= 0 ? '+' : '' }}{{ val | currency:'USD':'symbol':'1.0-0' }}
-                        </td>
-                      }
-                      <td class="detail-total" [class.pnl-positive]="row.total > 0" [class.pnl-negative]="row.total < 0">
-                        {{ row.total >= 0 ? '+' : '' }}{{ row.total | currency:'USD':'symbol':'1.0-0' }}
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          }
-          <div class="lane-summary">
-            <span>Net P&L: <strong [class.pnl-positive]="d.trading.totalNetPnl > 0" [class.pnl-negative]="d.trading.totalNetPnl < 0">
-              {{ d.trading.totalNetPnl >= 0 ? '+' : '' }}{{ d.trading.totalNetPnl | currency:'USD':'symbol':'1.0-0' }}
-            </strong></span>
-            <span>{{ d.trading.totalTrades }} trades · {{ d.trading.overallWinRate | number:'1.0-0' }}% win rate</span>
           </div>
         </div>
 

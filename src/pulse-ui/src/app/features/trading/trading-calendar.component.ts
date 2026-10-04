@@ -1342,23 +1342,12 @@ export class TradingCalendarComponent implements OnInit {
       'July', 'August', 'September', 'October', 'November', 'December'];
     this.monthLabel.set(`${months[month]} ${year}`);
 
-    const firstDay = new Date(year, month, 1);
-    const startOffset = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
-    const calStart = new Date(firstDay);
-    calStart.setDate(calStart.getDate() - startOffset);
-    const lastDay = new Date(year, month + 1, 0);
-    const endOffset = lastDay.getDay() === 0 ? 0 : 7 - lastDay.getDay();
-    const calEnd = new Date(lastDay);
-    calEnd.setDate(calEnd.getDate() + endOffset);
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const from = `${calStart.getFullYear()}-${pad(calStart.getMonth() + 1)}-${pad(calStart.getDate())}`;
-    const to = `${calEnd.getFullYear()}-${pad(calEnd.getMonth() + 1)}-${pad(calEnd.getDate())}`;
-
-    this.tradingService.getTrades(from, to).subscribe({
-      next: trades => {
+    this.tradingService.getCalendarStats(year, month).subscribe({
+      next: (data: any) => {
+        const trades = data.trades as (TradeEntry & { localDate: string })[];
         this.trades.set(trades);
         this.buildCalendar(trades, year, month);
-        this.computeStats(trades);
+        this.applyBackendStats(data.monthStats);
         this.loading.set(false);
         this.cdr.detectChanges();
       },
@@ -1416,7 +1405,7 @@ export class TradingCalendarComponent implements OnInit {
     }
   }
 
-  private buildCalendar(trades: TradeEntry[], year: number, month: number): void {
+  private buildCalendar(trades: (TradeEntry & { localDate?: string })[], year: number, month: number): void {
     const firstDayOfMonth = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const daysInPrevMonth = new Date(year, month, 0).getDate();
@@ -1426,7 +1415,7 @@ export class TradingCalendarComponent implements OnInit {
 
     const tradesByDate = new Map<string, TradeEntry[]>();
     trades.forEach(t => {
-      const dateKey = toLocalDateKey(t.date);
+      const dateKey = (t as any).localDate || toLocalDateKey(t.date);
       if (!tradesByDate.has(dateKey)) tradesByDate.set(dateKey, []);
       tradesByDate.get(dateKey)!.push(t);
     });
@@ -1462,6 +1451,21 @@ export class TradingCalendarComponent implements OnInit {
     }
 
     this.calendarDays.set(days);
+  }
+
+  private applyBackendStats(stats: any): void {
+    this.netPnl.set(stats.netPnl);
+    this.monthPnl.set(stats.grossPnl);
+    this.totalTrades.set(stats.totalTrades);
+    this.winningTrades.set(stats.winningTrades);
+    this.losingTrades.set(stats.losingTrades);
+    this.totalFees.set(stats.totalFees);
+    this.avgPnl.set(stats.avgPnl);
+    this.winRate.set(stats.winRate);
+    this.checklistRate.set(stats.checklistRate);
+    this.bestDay.set(stats.bestDay);
+    this.worstDay.set(stats.worstDay);
+    this.tradingDays.set(stats.tradingDays);
   }
 
   private computeStats(trades: TradeEntry[]): void {
