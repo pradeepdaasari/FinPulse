@@ -170,7 +170,7 @@ export class MonthComparisonComponent implements OnChanges {
   year = input<number>();
   month = input<number>();
 
-  monthCount = 1;
+  monthCount = 3;
   data = signal<MultiMonthComparison | null>(null);
   loading = signal(false);
   avgMonthly = signal(0);
@@ -185,7 +185,7 @@ export class MonthComparisonComponent implements OnChanges {
   }
 
   loadData(): void {
-    const count = Math.max(1, Math.min(12, this.monthCount || 1));
+    const count = Math.max(1, Math.min(12, this.monthCount || 3));
     this.monthCount = count;
     this.loading.set(true);
     this.expenseService.getMultiComparison(this.year(), this.month(), count).subscribe({

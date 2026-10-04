@@ -52,6 +52,23 @@ import { routeFadeAnimation } from './route-animations';
         </div>
 
         <div class="ios-nav-scroll">
+          <!-- Insights Section -->
+          <div class="ios-section">
+            <button class="ios-section-header" [class.expanded]="expandedSections().includes('insights')" (click)="toggleSection('insights')">
+              <span class="section-label">Insights</span>
+              <mat-icon class="section-chevron">expand_more</mat-icon>
+            </button>
+            @if (expandedSections().includes('insights')) {
+              <div class="ios-section-group">
+                <a class="ios-nav-item last" routerLink="/monthly-pulse" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-indigo"><mat-icon>insights</mat-icon></span>
+                  <span class="ios-nav-label">Monthly Pulse</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+              </div>
+            }
+          </div>
+
           <!-- Finance Section -->
           <div class="ios-section">
             <button class="ios-section-header" [class.expanded]="expandedSections().includes('finance')" (click)="toggleSection('finance')">
@@ -981,7 +998,7 @@ export class NavShellComponent implements OnInit, OnDestroy {
   private initialViewportHeight = 0;
   private viewportHandler = () => this.checkKeyboard();
   pageTitle = signal('Dashboard');
-  expandedSections = signal<string[]>(['finance', 'trading', 'health']);
+  expandedSections = signal<string[]>(['finance', 'insights', 'trading', 'health']);
   activeModule = signal<string>('finance');
   private currentUrl = signal('/dashboard');
   isExpensesRoute = computed(() => this.currentUrl().startsWith('/expenses'));
@@ -994,6 +1011,7 @@ export class NavShellComponent implements OnInit, OnDestroy {
 
   private pageTitles: Record<string, string> = {
     '/dashboard': 'Dashboard',
+    '/monthly-pulse': 'Monthly Pulse',
     '/loans': 'Loans',
     '/cards': 'Cards',
     '/accounts': 'Bank Accounts',
@@ -1137,7 +1155,8 @@ export class NavShellComponent implements OnInit, OnDestroy {
 
   private expandSectionForRoute(url: string): void {
     let section = 'finance';
-    if (url.startsWith('/trading')) section = 'trading';
+    if (url.startsWith('/monthly-pulse')) section = 'insights';
+    else if (url.startsWith('/trading')) section = 'trading';
     else if (url.startsWith('/health')) section = 'health';
     else if (url.startsWith('/admin')) section = 'admin';
 

@@ -33,7 +33,8 @@ public class ExpenseController : ControllerBase
         [FromQuery] string? fundingSourceType, [FromQuery] int? toFundingSourceId,
         [FromQuery] DateTime? dateFrom, [FromQuery] DateTime? dateTo,
         [FromQuery] decimal? minAmount, [FromQuery] decimal? maxAmount,
-        [FromQuery] string? tag, [FromQuery] bool allTime = false)
+        [FromQuery] string? tag, [FromQuery] string? categoryIds,
+        [FromQuery] bool allTime = false)
     {
         var query = _db.DailyExpenses
             .Include(e => e.Category!)
@@ -59,7 +60,12 @@ public class ExpenseController : ControllerBase
         if (!string.IsNullOrWhiteSpace(search))
             query = query.Where(e => e.Description.Contains(search) || (e.Merchant != null && e.Merchant.Contains(search)));
 
-        if (categoryId.HasValue)
+        if (!string.IsNullOrWhiteSpace(categoryIds))
+        {
+            var ids = categoryIds.Split(',').Select(int.Parse).ToList();
+            query = query.Where(e => e.CategoryId.HasValue && ids.Contains(e.CategoryId.Value));
+        }
+        else if (categoryId.HasValue)
             query = query.Where(e => e.CategoryId == categoryId.Value);
 
         if (transactionType.HasValue)
@@ -89,7 +95,13 @@ public class ExpenseController : ControllerBase
             .ThenByDescending(e => e.CreatedAt)
             .ToListAsync();
 
-        // Fetch payment histories for the same date range and merge into results
+        // Skip payment histories when filters narrow to specific categories/types/search
+        var skipPayments = categoryId.HasValue
+            || !string.IsNullOrWhiteSpace(categoryIds)
+            || !string.IsNullOrWhiteSpace(search)
+            || !string.IsNullOrWhiteSpace(tag)
+            || (transactionType.HasValue && transactionType.Value != (int)TransactionType.CardPayment);
+
         var paymentQuery = _db.PaymentHistories.Where(p => p.UserId == UserId);
         if (dateFrom.HasValue && dateTo.HasValue)
         {
@@ -113,7 +125,9 @@ public class ExpenseController : ControllerBase
         if (toFundingSourceId.HasValue)
             paymentQuery = paymentQuery.Where(p => p.DebtId == toFundingSourceId.Value);
 
-        var payments = await paymentQuery.OrderByDescending(p => p.PaymentDate).ToListAsync();
+        var payments = skipPayments
+            ? new List<Pulse.Core.Models.PaymentHistory>()
+            : await paymentQuery.OrderByDescending(p => p.PaymentDate).ToListAsync();
 
         var bankAccountIds = expenses
             .Where(e => e.FundingSourceType == FundingSourceType.BankAccount && e.FundingSourceId.HasValue)
@@ -419,13 +433,18 @@ public class ExpenseController : ControllerBase
     }
 
     [HttpGet("tag-summary")]
-    public async Task<ActionResult> GetTagSummary([FromQuery] string? tagType)
+    public async Task<ActionResult> GetTagSummary([FromQuery] string? tagType, [FromQuery] string? dateFrom, [FromQuery] string? dateTo)
     {
         var query = _db.DailyExpenses
             .Where(e => e.UserId == UserId && e.Tag != null && e.TransactionType == TransactionType.Expense);
 
         if (!string.IsNullOrWhiteSpace(tagType))
             query = query.Where(e => e.TagType == tagType);
+
+        if (DateTime.TryParse(dateFrom, out var from))
+            query = query.Where(e => e.Date >= from);
+        if (DateTime.TryParse(dateTo, out var to))
+            query = query.Where(e => e.Date <= to);
 
         var expenses = await query
             .Select(e => new { e.Tag, e.TagType, e.Amount, e.Date })
@@ -460,10 +479,16 @@ public class ExpenseController : ControllerBase
         var startMonth = new DateTime(endYear, endMonth, 1).AddMonths(-(months - 1));
         var (startDate, _) = TimeZoneHelper.MonthRangeUtc(startMonth.Year, startMonth.Month, tz);
 
+        var tradingCatIds = await _db.CustomCategories
+            .Where(c => c.UserId == UserId && c.Name.Contains("Trading"))
+            .Select(c => c.Id)
+            .ToListAsync();
+
         var expenses = await _db.DailyExpenses
             .Include(e => e.Category)
             .Where(e => e.UserId == UserId && e.TransactionType == TransactionType.Expense
-                && e.Date >= startDate && e.Date < endDate)
+                && e.Date >= startDate && e.Date < endDate
+                && (!e.CategoryId.HasValue || !tradingCatIds.Contains(e.CategoryId.Value)))
             .ToListAsync();
 
         var monthlyTotals = new List<object>();
@@ -521,16 +546,23 @@ public class ExpenseController : ControllerBase
         var prevDate = new DateTime(targetYear, targetMonth, 1).AddMonths(-1);
         var (prevStart, prevEnd) = TimeZoneHelper.MonthRangeUtc(prevDate.Year, prevDate.Month, tz);
 
+        var tradingCatIds = await _db.CustomCategories
+            .Where(c => c.UserId == UserId && c.Name.Contains("Trading"))
+            .Select(c => c.Id)
+            .ToListAsync();
+
         var currentExpenses = await _db.DailyExpenses
             .Include(e => e.Category)
             .Where(e => e.UserId == UserId && e.TransactionType == TransactionType.Expense
-                && e.Date >= currentStart && e.Date < currentEnd)
+                && e.Date >= currentStart && e.Date < currentEnd
+                && (!e.CategoryId.HasValue || !tradingCatIds.Contains(e.CategoryId.Value)))
             .ToListAsync();
 
         var prevExpenses = await _db.DailyExpenses
             .Include(e => e.Category)
             .Where(e => e.UserId == UserId && e.TransactionType == TransactionType.Expense
-                && e.Date >= prevStart && e.Date < prevEnd)
+                && e.Date >= prevStart && e.Date < prevEnd
+                && (!e.CategoryId.HasValue || !tradingCatIds.Contains(e.CategoryId.Value)))
             .ToListAsync();
 
         var currentByCategory = currentExpenses.Where(e => e.CategoryId.HasValue).GroupBy(e => e.CategoryId!.Value)

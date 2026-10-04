@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectorRef, input, effect } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
@@ -173,12 +173,23 @@ export class TagSummaryComponent implements OnInit {
   private expenseService = inject(DailyExpenseService);
   private cdr = inject(ChangeDetectorRef);
 
+  dateFrom = input<string | undefined>();
+  dateTo = input<string | undefined>();
+
   tags = signal<TagSummary[]>([]);
   loading = signal(true);
   selectedTagType = signal('');
   searchQuery = signal('');
 
   availableTagTypes = signal<string[]>([]);
+
+  constructor() {
+    effect(() => {
+      const from = this.dateFrom();
+      const to = this.dateTo();
+      this.loadTags(from, to);
+    });
+  }
 
   filteredTags = computed(() => {
     let result = this.tags();
@@ -234,7 +245,12 @@ export class TagSummaryComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.expenseService.getTagSummary().subscribe({
+    this.expenseService.getTagTypes().subscribe(types => { this.availableTagTypes.set(types); this.cdr.detectChanges(); });
+  }
+
+  private loadTags(dateFrom?: string, dateTo?: string): void {
+    this.loading.set(true);
+    this.expenseService.getTagSummary(undefined, dateFrom, dateTo).subscribe({
       next: (tags) => {
         this.tags.set(tags);
         this.loading.set(false);
@@ -242,6 +258,5 @@ export class TagSummaryComponent implements OnInit {
       },
       error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
-    this.expenseService.getTagTypes().subscribe(types => { this.availableTagTypes.set(types); this.cdr.detectChanges(); });
   }
 }

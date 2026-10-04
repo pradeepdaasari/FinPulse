@@ -139,14 +139,32 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                               <td>{{ e.merchant || '—' }}</td>
                               <td>
                                 {{ e.description }}
-                                @if (e.tag) { <span class="tag-badge">{{ e.tag }}</span> }
+                                @if (e.tag) {
+                                  <div class="txn-labels">
+                                    @if (e.tagType) {
+                                      <span class="label-badge label-tag-type">
+                                        <mat-icon class="label-icon">style</mat-icon>
+                                        {{ e.tagType }}
+                                      </span>
+                                    }
+                                    <span class="label-badge label-tag">
+                                      <mat-icon class="label-icon">label</mat-icon>
+                                      {{ e.tag }}
+                                    </span>
+                                  </div>
+                                }
                               </td>
                               <td>
                                 @if (e.categoryName) {
-                                  <span class="cat-chip" [style.background]="getCategoryBg(e.categoryName)" [style.color]="getCategoryColor(e.categoryName)">
-                                    <mat-icon class="cat-chip-icon" [style.color]="getCategoryColor(e.categoryName)">{{ inferCategoryIcon(e.categoryName, e.categoryIcon) }}</mat-icon>
-                                    {{ e.categoryName }}
-                                  </span>
+                                  <div class="cat-stack">
+                                    @if (e.parentCategoryName) {
+                                      <span class="cat-parent-label">{{ e.parentCategoryName }}</span>
+                                    }
+                                    <span class="cat-chip" [style.background]="getCategoryBg(e.categoryName)" [style.color]="getCategoryColor(e.categoryName)">
+                                      <mat-icon class="cat-chip-icon" [style.color]="getCategoryColor(e.categoryName)">{{ inferCategoryIcon(e.categoryName, e.categoryIcon) }}</mat-icon>
+                                      {{ e.categoryName }}
+                                    </span>
+                                  </div>
                                 } @else {
                                   <span class="cat-chip cat-chip-none">—</span>
                                 }
@@ -248,6 +266,20 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                                   [class.type-loan]="e.transactionType === 'LoanPayment'">{{ e.transactionType === 'LoanPayment' ? 'Loan Payment' : e.transactionType === 'CardPayment' ? 'Card Payment' : (e.transactionType || 'Expense') }}</span>
                             · {{ e.date | date:'shortTime' }}{{ e.categoryName ? ' · ' + e.categoryName : '' }}{{ e.merchant ? ' · ' + e.merchant : '' }}
                           </span>
+                          @if (e.tag) {
+                            <div class="txn-labels mobile-labels">
+                              @if (e.tagType) {
+                                <span class="label-badge label-tag-type">
+                                  <mat-icon class="label-icon">style</mat-icon>
+                                  {{ e.tagType }}
+                                </span>
+                              }
+                              <span class="label-badge label-tag">
+                                <mat-icon class="label-icon">label</mat-icon>
+                                {{ e.tag }}
+                              </span>
+                            </div>
+                          }
                         </div>
                         <div class="txn-right">
                           <span class="txn-amount"
@@ -389,9 +421,9 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
         </mat-tab>
 
         <!-- Tag Summary Tab -->
-        <mat-tab label="Trips & Tags">
+        <mat-tab label="Tags">
           <div class="tab-content">
-            <app-tag-summary></app-tag-summary>
+            <app-tag-summary [dateFrom]="activeFilter.dateFrom" [dateTo]="activeFilter.dateTo"></app-tag-summary>
           </div>
         </mat-tab>
       </mat-tab-group>
@@ -604,6 +636,8 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
     }
     .cat-chip-icon { font-size: 14px; width: 14px; height: 14px; }
     .cat-chip-none { background: var(--color-surface-hover); color: var(--color-text-muted); }
+    .cat-stack { display: flex; flex-direction: column; gap: 2px; }
+    .cat-parent-label { font-size: 0.65rem; color: var(--color-text-muted); font-weight: 500; }
 
     .source-cell { display: flex; align-items: center; gap: 4px; font-size: var(--text-sm); }
     .source-icon { font-size: 16px; width: 16px; height: 16px; opacity: 0.65; }
@@ -622,6 +656,19 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
       font-weight: var(--weight-medium);
       vertical-align: middle;
     }
+    .txn-labels {
+      display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;
+    }
+    .label-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 0.65rem; padding: 1px 8px; border-radius: var(--radius-full);
+      font-weight: 500; line-height: 1.6;
+    }
+    .label-icon { font-size: 12px; width: 12px; height: 12px; opacity: 0.7; }
+    .label-prefix { font-weight: 600; opacity: 0.8; }
+    .label-tag-type { background: rgba(156, 39, 176, 0.08); color: #7b1fa2; }
+    .label-tag { background: rgba(33, 150, 243, 0.08); color: #1565c0; }
+    .mobile-labels { margin-top: 4px; }
 
     /* Insight Banner */
     .insight-banner {
@@ -868,7 +915,11 @@ export class ExpensesPageComponent implements OnInit {
     this.loading.set(true);
 
     const filter: Partial<ExpenseFilter> = { ...this.activeFilter };
-    if (this.viewMode() === 'month') {
+    if (filter.allTime) {
+      // All time — no date constraints
+    } else if (filter.dateFrom || filter.dateTo) {
+      // Filter bar set date range — use it as-is
+    } else if (this.viewMode() === 'month') {
       filter.year = this.currentYear;
       filter.month = this.currentMonth;
     } else {

@@ -30,6 +30,52 @@ import { FinancialSummary, NetWorthSnapshot } from '../../../core/models/dashboa
                 {{ (trend() >= 0 ? '+' : '') }}{{ trend() | currency:'USD':'symbol':'1.0-0' }} vs last month
               </span>
             }
+            @if (dailyChange()) {
+              <span class="nw-daily" [class.up]="dailyChange()!.netWorth >= 0" [class.down]="dailyChange()!.netWorth < 0">
+                <mat-icon class="trend-icon">{{ dailyChange()!.netWorth >= 0 ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                {{ (dailyChange()!.netWorth >= 0 ? '+' : '') }}{{ dailyChange()!.netWorth | currency:'USD':'symbol':'1.0-0' }} since yesterday
+                <button class="daily-detail-toggle" (click)="toggleDailyDetail($event)">
+                  <mat-icon class="detail-chevron" [class.rotated]="dailyDetailExpanded()">expand_more</mat-icon>
+                </button>
+              </span>
+              @if (dailyDetailExpanded()) {
+                <div class="daily-breakdown">
+                  @if (dailyChange()!.bank !== 0) {
+                    <div class="daily-row">
+                      <mat-icon class="daily-icon">account_balance</mat-icon>
+                      <span>Banks</span>
+                      <span class="daily-delta" [class.up]="dailyChange()!.bank > 0" [class.down]="dailyChange()!.bank < 0">
+                        {{ (dailyChange()!.bank > 0 ? '+' : '') }}{{ dailyChange()!.bank | currency:'USD':'symbol':'1.2-2' }}
+                      </span>
+                    </div>
+                  }
+                  @if (dailyChange()!.cc !== 0) {
+                    <div class="daily-row">
+                      <mat-icon class="daily-icon">credit_card</mat-icon>
+                      <span>Credit Cards</span>
+                      <span class="daily-delta" [class.up]="dailyChange()!.cc < 0" [class.down]="dailyChange()!.cc > 0">
+                        {{ (dailyChange()!.cc > 0 ? '+' : '-') }}{{ (dailyChange()!.cc > 0 ? dailyChange()!.cc : -dailyChange()!.cc) | currency:'USD':'symbol':'1.2-2' }} debt
+                      </span>
+                    </div>
+                  }
+                  @if (dailyChange()!.loan !== 0) {
+                    <div class="daily-row">
+                      <mat-icon class="daily-icon">real_estate_agent</mat-icon>
+                      <span>Loans</span>
+                      <span class="daily-delta" [class.up]="dailyChange()!.loan < 0" [class.down]="dailyChange()!.loan > 0">
+                        {{ (dailyChange()!.loan > 0 ? '+' : '-') }}{{ (dailyChange()!.loan > 0 ? dailyChange()!.loan : -dailyChange()!.loan) | currency:'USD':'symbol':'1.2-2' }} debt
+                      </span>
+                    </div>
+                  }
+                  @if (dailyChange()!.bank === 0 && dailyChange()!.cc === 0 && dailyChange()!.loan === 0) {
+                    <div class="daily-row muted">
+                      <mat-icon class="daily-icon">check_circle</mat-icon>
+                      <span>No changes detected</span>
+                    </div>
+                  }
+                </div>
+              }
+            }
           </div>
           <mat-icon class="expand-icon" [class.rotated]="expanded()">expand_more</mat-icon>
         </button>
@@ -177,6 +223,38 @@ import { FinancialSummary, NetWorthSnapshot } from '../../../core/models/dashboa
     .nw-trend.up { color: var(--color-success); }
     .nw-trend.down { color: var(--color-danger); }
     .trend-icon { font-size: 16px; width: 16px; height: 16px; }
+    .nw-daily {
+      display: flex; align-items: center; gap: 4px;
+      font-size: var(--text-xs); font-weight: 500;
+      color: var(--color-text-secondary);
+    }
+    .nw-daily.up { color: var(--color-success); }
+    .nw-daily.down { color: var(--color-danger); }
+    .daily-detail-toggle {
+      background: none; border: none; cursor: pointer;
+      padding: 0; display: flex; align-items: center;
+      color: inherit; opacity: 0.7;
+    }
+    .daily-detail-toggle:hover { opacity: 1; }
+    .detail-chevron {
+      font-size: 16px; width: 16px; height: 16px;
+      transition: transform 0.2s ease;
+    }
+    .detail-chevron.rotated { transform: rotate(180deg); }
+    .daily-breakdown {
+      display: flex; flex-direction: column; gap: 4px;
+      padding: 6px 0 2px 20px;
+      animation: slideDown 0.15s ease;
+    }
+    .daily-row {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.75rem; color: var(--color-text-secondary);
+    }
+    .daily-row.muted { color: var(--color-text-muted); }
+    .daily-icon { font-size: 14px; width: 14px; height: 14px; color: var(--color-text-muted); }
+    .daily-delta { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .daily-delta.up { color: var(--color-success); }
+    .daily-delta.down { color: var(--color-danger); }
 
     /* Breakdown */
     .nw-breakdown {
@@ -308,6 +386,8 @@ export class NetWorthComponent implements OnInit {
   previousSummary = signal<FinancialSummary | null>(null);
   trend = signal<number>(0);
   expanded = signal(false);
+  dailyChange = signal<{ netWorth: number; bank: number; cc: number; loan: number } | null>(null);
+  dailyDetailExpanded = signal(false);
   chartData = signal<ChartConfiguration<'line'>['data'] | null>(null);
   chartLoading = signal(false);
   chartView = signal<'daily' | 'weekly' | 'monthly'>('weekly');
@@ -337,6 +417,12 @@ export class NetWorthComponent implements OnInit {
     }
   };
 
+  toggleDailyDetail(event: Event): void {
+    event.stopPropagation();
+    this.dailyDetailExpanded.set(!this.dailyDetailExpanded());
+    this.cdr.detectChanges();
+  }
+
   toggleExpand(): void {
     this.expanded.set(!this.expanded());
     if (this.expanded() && !this.chartFetched) {
@@ -365,6 +451,19 @@ export class NetWorthComponent implements OnInit {
         this.chartLoading.set(false);
         this.cdr.detectChanges();
       }
+    });
+  }
+
+  private computeDailyChange(snapshots: NetWorthSnapshot[]): void {
+    if (snapshots.length < 2) return;
+    const sorted = [...snapshots].sort((a, b) => b.date.localeCompare(a.date));
+    const today = sorted[0];
+    const yesterday = sorted[1];
+    this.dailyChange.set({
+      netWorth: today.netWorth - yesterday.netWorth,
+      bank: today.totalBankBalance - yesterday.totalBankBalance,
+      cc: today.totalCreditCardDebt - yesterday.totalCreditCardDebt,
+      loan: today.totalLoanDebt - yesterday.totalLoanDebt
     });
   }
 
@@ -463,12 +562,14 @@ export class NetWorthComponent implements OnInit {
 
     forkJoin({
       current: this.dashboardService.getFinancialSummary(currentYear, currentMonth),
-      previous: this.dashboardService.getFinancialSummary(prevYear, prevMonth)
+      previous: this.dashboardService.getFinancialSummary(prevYear, prevMonth),
+      recentSnapshots: this.dashboardService.getNetWorthHistory(1)
     }).subscribe({
-      next: ({ current, previous }) => {
+      next: ({ current, previous, recentSnapshots }) => {
         this.summary.set(current);
         this.previousSummary.set(previous);
         this.trend.set(current.netWorth - previous.netWorth);
+        this.computeDailyChange(recentSnapshots);
         this.loading.set(false);
         this.cdr.detectChanges();
       },

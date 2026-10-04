@@ -7,10 +7,15 @@ export const routes: Routes = [
     path: 'login',
     loadComponent: () => import('./features/common/login/login.component').then(m => m.LoginComponent)
   },
-  { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+  { path: '', redirectTo: 'monthly-pulse', pathMatch: 'full' },
   {
     path: 'dashboard',
     loadComponent: () => import('./features/common/dashboard/dashboard.component').then(m => m.DashboardComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'monthly-pulse',
+    loadComponent: () => import('./features/common/monthly-pulse/monthly-pulse.component').then(m => m.MonthlyPulseComponent),
     canActivate: [authGuard]
   },
   {

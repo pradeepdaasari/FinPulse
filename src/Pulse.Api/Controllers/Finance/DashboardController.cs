@@ -528,4 +528,317 @@ public class DashboardController : ControllerBase
             _ => "Normal"
         };
     }
+
+    [HttpGet("monthly-pulse")]
+    public async Task<ActionResult> GetMonthlyPulse([FromQuery] int months = 3, [FromQuery] int? year = null, [FromQuery] int? month = null, [FromQuery] string? mode = null)
+    {
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var endYear = year ?? DateTime.UtcNow.Year;
+        var endMonth = month ?? DateTime.UtcNow.Month;
+
+        if (mode == "ytd")
+            months = endMonth;
+        else
+            months = Math.Clamp(months, 1, 12);
+
+        var (_, endDate) = TimeZoneHelper.MonthRangeUtc(endYear, endMonth, tz);
+        var startMonth = new DateTime(endYear, endMonth, 1).AddMonths(-(months - 1));
+        var (startDate, _) = TimeZoneHelper.MonthRangeUtc(startMonth.Year, startMonth.Month, tz);
+
+        var labels = new List<object>();
+        for (int i = 0; i < months; i++)
+        {
+            var m = startMonth.AddMonths(i);
+            labels.Add(new { Year = m.Year, Month = m.Month, Label = m.ToString("MMM yyyy", System.Globalization.CultureInfo.InvariantCulture) });
+        }
+
+        // 1. Expenses (exclude trading categories)
+        var tradingCatIds = await _db.CustomCategories
+            .Where(c => c.UserId == UserId && c.Name.Contains("Trading"))
+            .Select(c => c.Id).ToListAsync();
+
+        var expenses = await _db.DailyExpenses
+            .Include(e => e.Category)
+            .Where(e => e.UserId == UserId && e.TransactionType == TransactionType.Expense
+                && e.Date >= startDate && e.Date < endDate
+                && (!e.CategoryId.HasValue || !tradingCatIds.Contains(e.CategoryId.Value)))
+            .Select(e => new { e.Date, e.Amount, e.CategoryId, CategoryName = e.Category != null ? e.Category.Name : "Uncategorized", CategoryIcon = e.Category != null ? e.Category.Icon : null })
+            .ToListAsync();
+
+        var expenseMonthly = new List<object>();
+        for (int i = 0; i < months; i++)
+        {
+            var mStart = startDate.AddMonths(i);
+            var mEnd = mStart.AddMonths(1);
+            expenseMonthly.Add(new { Total = expenses.Where(e => e.Date >= mStart && e.Date < mEnd).Sum(e => e.Amount) });
+        }
+        var expTotals = expenses.Sum(e => e.Amount);
+
+        var expenseCategories = expenses.GroupBy(e => e.CategoryName).Select(g =>
+        {
+            var monthlyAmounts = new List<decimal>();
+            for (int i = 0; i < months; i++)
+            {
+                var mStart = startDate.AddMonths(i);
+                var mEnd = mStart.AddMonths(1);
+                monthlyAmounts.Add(g.Where(e => e.Date >= mStart && e.Date < mEnd).Sum(e => e.Amount));
+            }
+            return new { Name = g.Key, Icon = g.First().CategoryIcon, Monthly = monthlyAmounts, Total = g.Sum(e => e.Amount) };
+        }).OrderByDescending(c => c.Total).ToList();
+
+        // 2. Loan Payments
+        var loanPayments = await _db.PaymentHistories
+            .Where(p => p.UserId == UserId && p.DebtType == DebtType.PersonalLoan
+                && p.PaymentDate >= startDate && p.PaymentDate < endDate)
+            .Select(p => new { p.PaymentDate, p.AmountPaid, p.PrincipalAmount, p.InterestAmount, p.DebtId })
+            .ToListAsync();
+
+        var loanNames = await _db.PersonalLoans.Where(l => l.UserId == UserId)
+            .ToDictionaryAsync(l => l.Id, l => new { Name = l.LenderName, l.CurrentBalance });
+
+        var loanMonthly = new List<object>();
+        for (int i = 0; i < months; i++)
+        {
+            var mStart = startDate.AddMonths(i);
+            var mEnd = mStart.AddMonths(1);
+            var mPayments = loanPayments.Where(p => p.PaymentDate >= mStart && p.PaymentDate < mEnd);
+            loanMonthly.Add(new
+            {
+                Total = mPayments.Sum(p => p.AmountPaid),
+                Principal = mPayments.Sum(p => p.PrincipalAmount ?? 0),
+                Interest = mPayments.Sum(p => p.InterestAmount ?? 0)
+            });
+        }
+        var loanRemaining = loanNames.Values.Sum(l => l.CurrentBalance);
+
+        var loanDetails = loanPayments.GroupBy(p => p.DebtId).Select(g =>
+        {
+            var info = loanNames.GetValueOrDefault(g.Key);
+            var monthlyAmounts = new List<decimal>();
+            for (int i = 0; i < months; i++)
+            {
+                var mStart = startDate.AddMonths(i);
+                var mEnd = mStart.AddMonths(1);
+                monthlyAmounts.Add(g.Where(p => p.PaymentDate >= mStart && p.PaymentDate < mEnd).Sum(p => p.AmountPaid));
+            }
+            return new { Name = info?.Name ?? "Unknown", Balance = info?.CurrentBalance ?? 0, Monthly = monthlyAmounts, Total = g.Sum(p => p.AmountPaid) };
+        }).OrderByDescending(l => l.Total).ToList();
+
+        // 3. Credit Card Payments
+        var ccPayments = await _db.PaymentHistories
+            .Where(p => p.UserId == UserId && p.DebtType == DebtType.CreditCard
+                && p.PaymentDate >= startDate && p.PaymentDate < endDate)
+            .Select(p => new { p.PaymentDate, p.AmountPaid, p.DebtId })
+            .ToListAsync();
+
+        var cardNames = await _db.CreditCards.Where(c => c.UserId == UserId)
+            .ToDictionaryAsync(c => c.Id, c => new { c.CardName, c.CurrentBalance });
+
+        var ccMonthly = new List<object>();
+        for (int i = 0; i < months; i++)
+        {
+            var mStart = startDate.AddMonths(i);
+            var mEnd = mStart.AddMonths(1);
+            ccMonthly.Add(new { Total = ccPayments.Where(p => p.PaymentDate >= mStart && p.PaymentDate < mEnd).Sum(p => p.AmountPaid) });
+        }
+        var ccRemaining = cardNames.Values.Sum(c => c.CurrentBalance);
+
+        var cardDetails = ccPayments.GroupBy(p => p.DebtId).Select(g =>
+        {
+            var info = cardNames.GetValueOrDefault(g.Key);
+            var monthlyAmounts = new List<decimal>();
+            for (int i = 0; i < months; i++)
+            {
+                var mStart = startDate.AddMonths(i);
+                var mEnd = mStart.AddMonths(1);
+                monthlyAmounts.Add(g.Where(p => p.PaymentDate >= mStart && p.PaymentDate < mEnd).Sum(p => p.AmountPaid));
+            }
+            return new { Name = info?.CardName ?? "Unknown", Balance = info?.CurrentBalance ?? 0, Monthly = monthlyAmounts, Total = g.Sum(p => p.AmountPaid) };
+        }).OrderByDescending(c => c.Total).ToList();
+
+        // 4. Trading P&L
+        var trades = await _db.TradeEntries
+            .Where(t => t.UserId == UserId && t.Pnl.HasValue && t.Date >= startDate && t.Date < endDate)
+            .Select(t => new { t.Date, t.Pnl, t.NetPnl, t.Instrument })
+            .ToListAsync();
+
+        var tradingMonthly = new List<object>();
+        for (int i = 0; i < months; i++)
+        {
+            var mStart = startDate.AddMonths(i);
+            var mEnd = mStart.AddMonths(1);
+            var mTrades = trades.Where(t => t.Date >= mStart && t.Date < mEnd).ToList();
+            var wins = mTrades.Count(t => t.Pnl > 0);
+            tradingMonthly.Add(new
+            {
+                NetPnl = mTrades.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+                Trades = mTrades.Count,
+                Wins = wins,
+                WinRate = mTrades.Count == 0 ? 0m : Math.Round((decimal)wins / mTrades.Count * 100, 1)
+            });
+        }
+        var totalNetPnl = trades.Sum(t => t.NetPnl ?? t.Pnl ?? 0);
+        var totalTradeCount = trades.Count;
+        var totalWins = trades.Count(t => t.Pnl > 0);
+
+        var tradingDetails = trades.GroupBy(t => t.Instrument ?? "Unknown").Select(g =>
+        {
+            var monthlyPnl = new List<decimal>();
+            for (int i = 0; i < months; i++)
+            {
+                var mStart = startDate.AddMonths(i);
+                var mEnd = mStart.AddMonths(1);
+                monthlyPnl.Add(g.Where(t => t.Date >= mStart && t.Date < mEnd).Sum(t => t.NetPnl ?? t.Pnl ?? 0));
+            }
+            return new { Name = g.Key, Monthly = monthlyPnl, Total = g.Sum(t => t.NetPnl ?? t.Pnl ?? 0), Trades = g.Count() };
+        }).OrderByDescending(i => Math.Abs(i.Total)).ToList();
+
+        // 5. Net Worth Delta — use same post-statement CC adjustment as Dashboard
+        var nwBankBal = await _db.BankAccounts.Where(a => a.UserId == UserId).SumAsync(a => a.CurrentBalance);
+        var nwCards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
+        var nwCcDebt = 0m;
+        foreach (var c in nwCards)
+        {
+            var adj = c.CurrentBalance;
+            if (c.LastStatementDate.HasValue)
+            {
+                adj += await _db.DailyExpenses
+                    .Where(e => e.UserId == UserId && e.FundingSourceType == FundingSourceType.CreditCard
+                        && e.FundingSourceId == c.Id && e.Date > c.LastStatementDate.Value
+                        && e.TransactionType != TransactionType.CardPayment)
+                    .SumAsync(e => (decimal?)e.Amount ?? 0);
+                adj -= await _db.PaymentHistories
+                    .Where(p => p.UserId == UserId && p.DebtType == DebtType.CreditCard
+                        && p.DebtId == c.Id && p.PaymentDate > c.LastStatementDate.Value)
+                    .SumAsync(p => (decimal?)p.AmountPaid ?? 0);
+            }
+            nwCcDebt += adj;
+        }
+        var nwLoanDebt = await _db.PersonalLoans.Where(l => l.UserId == UserId).SumAsync(l => l.CurrentBalance);
+        var todayDate = DateTime.UtcNow.Date;
+        var snapExistsToday = await _db.NetWorthSnapshots
+            .AnyAsync(s => s.UserId == UserId && s.SnapshotDate == todayDate);
+        if (!snapExistsToday)
+        {
+            _db.NetWorthSnapshots.Add(new Pulse.Core.Models.NetWorthSnapshot
+            {
+                UserId = UserId,
+                SnapshotDate = todayDate,
+                TotalBankBalance = nwBankBal,
+                TotalCreditCardDebt = nwCcDebt,
+                TotalLoanDebt = nwLoanDebt,
+                NetWorth = nwBankBal - nwCcDebt - nwLoanDebt
+            });
+            await _db.SaveChangesAsync();
+        }
+
+        var snapshots = await _db.NetWorthSnapshots
+            .Where(s => s.UserId == UserId && s.SnapshotDate >= startDate.Date && s.SnapshotDate <= endDate.Date)
+            .OrderBy(s => s.SnapshotDate)
+            .ToListAsync();
+
+        var nwMonthly = new List<object>();
+        var nwComponents = new List<object[]>(); // bank, cc, loan deltas per month
+        for (int i = 0; i < months; i++)
+        {
+            var mLocalStart = startMonth.AddMonths(i);
+            var mLocalEnd = mLocalStart.AddMonths(1);
+            var mSnaps = snapshots.Where(s => s.SnapshotDate >= mLocalStart && s.SnapshotDate < mLocalEnd).ToList();
+            if (mSnaps.Count >= 2)
+            {
+                var first = mSnaps.First();
+                var last = mSnaps.Last();
+                nwMonthly.Add(new { Value = last.NetWorth, Delta = last.NetWorth - first.NetWorth });
+                nwComponents.Add(new object[] {
+                    last.TotalBankBalance - first.TotalBankBalance,
+                    -(last.TotalCreditCardDebt - first.TotalCreditCardDebt),
+                    -(last.TotalLoanDebt - first.TotalLoanDebt)
+                });
+            }
+            else if (mSnaps.Count == 1)
+            {
+                nwMonthly.Add(new { Value = mSnaps[0].NetWorth, Delta = 0m });
+                nwComponents.Add(new object[] { 0m, 0m, 0m });
+            }
+            else
+            {
+                nwMonthly.Add(new { Value = (decimal?)null, Delta = 0m });
+                nwComponents.Add(new object[] { 0m, 0m, 0m });
+            }
+        }
+        var currentNw = nwBankBal - nwCcDebt - nwLoanDebt;
+        var firstNw = snapshots.FirstOrDefault()?.NetWorth ?? 0;
+
+        var nwDetails = new[] { "Banks", "Credit Cards", "Loans" }.Select((name, idx) => new
+        {
+            Name = name,
+            Monthly = nwComponents.Select(c => (decimal)c[idx]).ToList(),
+            Total = nwComponents.Sum(c => (decimal)c[idx])
+        }).ToList();
+
+        // Trend calculations
+        static decimal CalcTrend(decimal first, decimal last) =>
+            first == 0 ? 0 : Math.Round((last - first) / Math.Abs(first) * 100, 1);
+
+        var expMonthlyTotals = expenses.GroupBy(e => e.Date.Month).Select(g => g.Sum(e => e.Amount)).ToList();
+        var expFirst = expMonthlyTotals.FirstOrDefault();
+        var expLast = expMonthlyTotals.LastOrDefault();
+
+        var loanFirst = loanPayments.Any() ? loanPayments.Where(p => p.PaymentDate < startDate.AddMonths(1)).Sum(p => p.AmountPaid) : 0;
+        var loanLast = loanPayments.Any() ? loanPayments.Where(p => p.PaymentDate >= startDate.AddMonths(months - 1)).Sum(p => p.AmountPaid) : 0;
+
+        var ccFirst = ccPayments.Any() ? ccPayments.Where(p => p.PaymentDate < startDate.AddMonths(1)).Sum(p => p.AmountPaid) : 0;
+        var ccLast = ccPayments.Any() ? ccPayments.Where(p => p.PaymentDate >= startDate.AddMonths(months - 1)).Sum(p => p.AmountPaid) : 0;
+
+        var tradFirst = trades.Any() ? trades.Where(t => t.Date < startDate.AddMonths(1)).Sum(t => t.NetPnl ?? t.Pnl ?? 0) : 0;
+        var tradLast = trades.Any() ? trades.Where(t => t.Date >= startDate.AddMonths(months - 1)).Sum(t => t.NetPnl ?? t.Pnl ?? 0) : 0;
+
+        return Ok(new
+        {
+            months = labels,
+            expenses = new
+            {
+                monthly = expenseMonthly,
+                grandTotal = expTotals,
+                avgMonthly = months > 0 ? Math.Round(expTotals / months, 2) : 0,
+                trend = CalcTrend(expFirst, expLast),
+                details = expenseCategories
+            },
+            loanPayments = new
+            {
+                monthly = loanMonthly,
+                grandTotal = loanPayments.Sum(p => p.AmountPaid),
+                remainingBalance = loanRemaining,
+                avgMonthly = months > 0 ? Math.Round(loanPayments.Sum(p => p.AmountPaid) / months, 2) : 0,
+                trend = CalcTrend(loanFirst, loanLast),
+                details = loanDetails
+            },
+            cardPayments = new
+            {
+                monthly = ccMonthly,
+                grandTotal = ccPayments.Sum(p => p.AmountPaid),
+                remainingBalance = ccRemaining,
+                avgMonthly = months > 0 ? Math.Round(ccPayments.Sum(p => p.AmountPaid) / months, 2) : 0,
+                trend = CalcTrend(ccFirst, ccLast),
+                details = cardDetails
+            },
+            trading = new
+            {
+                monthly = tradingMonthly,
+                totalNetPnl = totalNetPnl,
+                totalTrades = totalTradeCount,
+                overallWinRate = totalTradeCount == 0 ? 0m : Math.Round((decimal)totalWins / totalTradeCount * 100, 1),
+                trend = CalcTrend(tradFirst, tradLast),
+                details = tradingDetails
+            },
+            netWorth = new
+            {
+                monthly = nwMonthly,
+                currentNetWorth = currentNw,
+                totalChange = currentNw - firstNw,
+                trend = CalcTrend(firstNw, currentNw),
+                details = nwDetails
+            }
+        });
+    }
 }

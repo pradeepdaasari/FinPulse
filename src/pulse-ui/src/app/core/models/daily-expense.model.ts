@@ -55,6 +55,7 @@ export interface ExpenseFilter {
   month?: number;
   search?: string;
   categoryId?: number;
+  categoryIds?: number[];
   transactionType?: number;
   fundingSourceId?: number;
   fundingSourceType?: string;
