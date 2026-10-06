@@ -32,11 +32,19 @@ const EMOTION_DISPLAY: Record<TradeNoteEmotion, { icon: string; color: string }>
 };
 
 interface TimelineEvent {
-  type: 'trade-open' | 'trade-close' | 'note';
+  type: 'trade-open' | 'trade-close' | 'note' | 'carry-over';
   time: Date;
   trade?: TradeEntryWithNotes;
   note?: TradeNote;
   tradeInstrument?: string;
+}
+
+interface TradeGroup {
+  type: 'opened' | 'carry-over';
+  trade: TradeEntryWithNotes;
+  time: Date;
+  notes: { note: TradeNote; time: Date }[];
+  closed?: { time: Date };
 }
 
 @Component({
@@ -188,79 +196,108 @@ interface TimelineEvent {
       }
 
       <!-- Timeline -->
-      @if (timeline().length > 0) {
+      @if (tradeGroups().length > 0) {
         <div class="timeline">
-          @for (event of timeline(); track trackEvent($index, event)) {
-            @if (event.type === 'trade-open') {
-              <div class="tl-event tl-trade-open">
-                <div class="tl-dot dot-open"></div>
-                <div class="tl-content">
-                  <div class="tl-header">
-                    <span class="tl-time">{{ event.time | date:'h:mm a' }}</span>
-                    <span class="open-badge">OPENED</span>
-                    <span class="tl-instrument">{{ event.trade!.instrument }}</span>
-                    @if (event.trade!.optionType) {
-                      <span class="option-badge" [class.badge-call]="event.trade!.optionType === 'Call'" [class.badge-put]="event.trade!.optionType === 'Put'">{{ event.trade!.optionType }}</span>
-                    }
-                    <span class="dir-pill" [class.dir-long]="event.trade!.direction === 'long'" [class.dir-short]="event.trade!.direction === 'short'">
-                      {{ event.trade!.direction | uppercase }}
-                    </span>
-                  </div>
-                  <div class="tl-details">
-                    {{ event.trade!.quantity }} contracts
-                    @if (event.trade!.setupName) { · {{ event.trade!.setupName }} }
-                    @if (event.trade!.strikePrice) { · {{ event.trade!.strikePrice }} strike }
-                    @if (!event.trade!.checklistCompleted) {
-                      <span class="no-checklist-warn">⚠ No checklist</span>
-                    }
-                  </div>
-                  @if (event.trade!.status === 'Open') {
-                    <div class="open-trade-actions">
-                      <button mat-stroked-button class="add-note-inline-btn" (click)="addNoteToTrade(event.trade!)">
-                        <mat-icon>add_comment</mat-icon> Add Note
-                      </button>
-                    </div>
-                  }
-                </div>
-              </div>
-            }
-
-            @if (event.type === 'note') {
-              <div class="tl-event tl-note">
-                <div class="tl-dot dot-note" [style.border-color]="emotionColor(event.note!.emotion)"></div>
-                <div class="tl-content note-bubble">
-                  <div class="tl-header">
-                    <span class="tl-time">{{ event.time | date:'h:mm a' }}</span>
-                    @if (event.note!.emotion) {
-                      <span class="note-emotion" [style.color]="emotionColor(event.note!.emotion)">
-                        {{ emotionIcon(event.note!.emotion) }} {{ event.note!.emotion | titlecase }}
+          @for (group of tradeGroups(); track group.trade.id) {
+            <div class="trade-group" [class.trade-group-carry]="group.type === 'carry-over'">
+              <!-- Trade header -->
+              @if (group.type === 'opened') {
+                <div class="tl-event tl-trade-open">
+                  <div class="tl-dot dot-open"></div>
+                  <div class="tl-content">
+                    <div class="tl-header">
+                      <span class="tl-time">{{ group.time | date:'h:mm a' }}</span>
+                      <span class="open-badge">OPENED</span>
+                      <span class="tl-instrument">{{ group.trade.instrument }}</span>
+                      @if (group.trade.optionType) {
+                        <span class="option-badge" [class.badge-call]="group.trade.optionType === 'Call'" [class.badge-put]="group.trade.optionType === 'Put'">{{ group.trade.optionType }}</span>
+                      }
+                      <span class="dir-pill" [class.dir-long]="group.trade.direction === 'long'" [class.dir-short]="group.trade.direction === 'short'">
+                        {{ group.trade.direction | uppercase }}
                       </span>
-                    }
-                    <span class="note-trade-ref">{{ event.tradeInstrument }}</span>
+                    </div>
+                    <div class="tl-details">
+                      {{ group.trade.quantity }} contracts
+                      @if (group.trade.setupName) { · {{ group.trade.setupName }} }
+                      @if (group.trade.strikePrice) { · {{ group.trade.strikePrice }} strike }
+                      @if (!group.trade.checklistCompleted) {
+                        <span class="no-checklist-warn">⚠ No checklist</span>
+                      }
+                    </div>
                   </div>
-                  <p class="note-text" [innerHTML]="event.note!.note"></p>
                 </div>
-              </div>
-            }
+              } @else {
+                <div class="tl-event tl-carry-over">
+                  <div class="tl-dot dot-carry"></div>
+                  <div class="tl-content carry-over-bubble">
+                    <div class="tl-header">
+                      <span class="carry-badge">OPEN POSITION</span>
+                      <span class="tl-instrument">{{ group.trade.instrument }}</span>
+                      @if (group.trade.optionType) {
+                        <span class="option-badge" [class.badge-call]="group.trade.optionType === 'Call'" [class.badge-put]="group.trade.optionType === 'Put'">{{ group.trade.optionType }}</span>
+                      }
+                      <span class="dir-pill" [class.dir-long]="group.trade.direction === 'long'" [class.dir-short]="group.trade.direction === 'short'">
+                        {{ group.trade.direction | uppercase }}
+                      </span>
+                    </div>
+                    <div class="tl-details">
+                      Opened {{ group.trade.date | date:'MMM d' }} · {{ group.trade.quantity }} contracts
+                      @if (group.trade.setupName) { · {{ group.trade.setupName }} }
+                      @if (group.trade.strikePrice) { · {{ group.trade.strikePrice }} strike }
+                    </div>
+                  </div>
+                </div>
+              }
 
-            @if (event.type === 'trade-close') {
-              <div class="tl-event tl-trade-close">
-                <div class="tl-dot dot-close" [class.dot-win]="(event.trade!.pnl ?? 0) > 0" [class.dot-loss]="(event.trade!.pnl ?? 0) < 0"></div>
-                <div class="tl-content">
-                  <div class="tl-header">
-                    <span class="tl-time">{{ event.time | date:'h:mm a' }}</span>
-                    <span class="closed-badge">CLOSED</span>
-                    <span class="tl-instrument">{{ event.trade!.instrument }}</span>
-                    <span class="pnl-value" [class.pnl-positive]="(event.trade!.netPnl ?? event.trade!.pnl ?? 0) >= 0" [class.pnl-negative]="(event.trade!.netPnl ?? event.trade!.pnl ?? 0) < 0">
-                      {{ (event.trade!.netPnl ?? event.trade!.pnl ?? 0) >= 0 ? '+' : '' }}{{ (event.trade!.netPnl ?? event.trade!.pnl) | currency }}
-                    </span>
+              <!-- Notes for this trade -->
+              @for (n of group.notes; track n.note.id) {
+                <div class="tl-event tl-note tl-note-nested">
+                  <div class="tl-dot dot-note" [style.border-color]="emotionColor(n.note.emotion)"></div>
+                  <div class="tl-content note-bubble">
+                    <div class="tl-header">
+                      <span class="tl-time">{{ n.time | date:'h:mm a' }}</span>
+                      @if (n.note.emotion) {
+                        <span class="note-emotion" [style.color]="emotionColor(n.note.emotion)">
+                          {{ emotionIcon(n.note.emotion) }} {{ n.note.emotion | titlecase }}
+                        </span>
+                      }
+                    </div>
+                    <p class="note-text" [innerHTML]="n.note.note"></p>
                   </div>
-                  @if (event.trade!.totalFees) {
-                    <span class="fee-note">{{ event.trade!.totalFees | currency }} in fees</span>
-                  }
                 </div>
-              </div>
-            }
+              }
+
+              <!-- Add Note button -->
+              @if (group.trade.status === 'Open') {
+                <div class="tl-event tl-add-note">
+                  <div class="tl-dot dot-add"></div>
+                  <div class="tl-content">
+                    <button mat-stroked-button class="add-note-inline-btn" (click)="addNoteToTrade(group.trade)">
+                      <mat-icon>add_comment</mat-icon> Add Note
+                    </button>
+                  </div>
+                </div>
+              }
+
+              <!-- Close event -->
+              @if (group.closed) {
+                <div class="tl-event tl-trade-close">
+                  <div class="tl-dot dot-close" [class.dot-win]="(group.trade.pnl ?? 0) > 0" [class.dot-loss]="(group.trade.pnl ?? 0) < 0"></div>
+                  <div class="tl-content">
+                    <div class="tl-header">
+                      <span class="tl-time">{{ group.closed.time | date:'h:mm a' }}</span>
+                      <span class="closed-badge">CLOSED</span>
+                      <span class="pnl-value" [class.pnl-positive]="(group.trade.netPnl ?? group.trade.pnl ?? 0) >= 0" [class.pnl-negative]="(group.trade.netPnl ?? group.trade.pnl ?? 0) < 0">
+                        {{ (group.trade.netPnl ?? group.trade.pnl ?? 0) >= 0 ? '+' : '' }}{{ (group.trade.netPnl ?? group.trade.pnl) | currency }}
+                      </span>
+                    </div>
+                    @if (group.trade.totalFees) {
+                      <span class="fee-note">{{ group.trade.totalFees | currency }} in fees</span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
           }
         </div>
       } @else if (dayData()!.premarket && dayData()!.stats.totalTrades === 0) {
@@ -494,6 +531,30 @@ interface TimelineEvent {
     .dot-close.dot-win { border-color: var(--color-success); background: var(--color-success-bg); }
     .dot-close.dot-loss { border-color: var(--color-danger); background: color-mix(in srgb, var(--color-danger) 10%, transparent); }
     .dot-note { border-color: var(--color-stat-blue); }
+    .dot-carry { border-color: var(--color-stat-purple); background: var(--color-stat-purple-bg); }
+    .dot-add { border-color: var(--color-border); background: var(--color-surface); }
+    .carry-badge {
+      font-size: 0.625rem; font-weight: var(--weight-bold); padding: 2px 8px;
+      border-radius: var(--radius-full); letter-spacing: var(--tracking-wide);
+      background: var(--color-stat-purple-bg); color: var(--color-stat-purple);
+    }
+    .carry-over-bubble {
+      border-left: 3px solid var(--color-stat-purple);
+      padding-left: 12px;
+    }
+    .trade-group {
+      position: relative;
+      margin-bottom: 8px;
+      padding: 12px 0 4px 0;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-surface-solid);
+    }
+    .trade-group-carry {
+      border-left: 3px solid var(--color-stat-purple);
+    }
+    .tl-note-nested { padding-left: 8px; }
+    .tl-add-note .tl-content { padding-bottom: 4px; }
 
     .tl-content {
       padding: 10px 14px;
@@ -539,7 +600,11 @@ interface TimelineEvent {
     .fee-note { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px; display: block; }
 
     .note-emotion { font-size: var(--text-xs); font-weight: var(--weight-semibold); }
-    .note-trade-ref { font-size: var(--text-xs); color: var(--color-text-muted); margin-left: auto; }
+    .note-trade-ref {
+      font-size: var(--text-xs); font-weight: var(--weight-semibold); margin-left: auto;
+      background: var(--color-primary-bg, rgba(59,130,246,0.1)); color: var(--color-primary);
+      padding: 2px 8px; border-radius: var(--radius-full); white-space: nowrap;
+    }
     .note-text { margin: 6px 0 0; font-size: var(--text-sm); line-height: var(--leading-relaxed); word-break: break-word; }
     .note-text ::ng-deep p { margin: 0; }
 
@@ -676,39 +741,108 @@ export class DayViewComponent implements OnInit {
     const data = this.dayData();
     if (!data) return [];
     const events: TimelineEvent[] = [];
+    const viewDate = this.currentDate();
+    const dayStart = new Date(viewDate + 'T00:00:00');
+    const dayEnd = new Date(viewDate + 'T23:59:59.999');
 
     for (const trade of data.trades) {
       const baseDate = new Date(trade.date || trade.createdAt!);
       const entryTime = this.applyTimeStr(baseDate, trade.entryTime);
-      events.push({
-        type: 'trade-open',
-        time: entryTime,
-        trade,
-      });
+      const tradeOpenedThisDay = entryTime >= dayStart && entryTime <= dayEnd;
+
+      if (tradeOpenedThisDay) {
+        events.push({
+          type: 'trade-open',
+          time: entryTime,
+          trade,
+        });
+      }
+
+      const todayNotes = trade.tradeNotes?.filter(n => {
+        const t = new Date(n.createdAt);
+        return t >= dayStart && t <= dayEnd;
+      }) ?? [];
+
+      if (!tradeOpenedThisDay && todayNotes.length > 0) {
+        events.push({
+          type: 'carry-over',
+          time: todayNotes.length > 0 ? new Date(todayNotes[0].createdAt) : dayStart,
+          trade,
+        });
+      }
 
       if (trade.tradeNotes) {
         for (const note of trade.tradeNotes) {
-          events.push({
-            type: 'note',
-            time: new Date(note.createdAt),
-            note,
-            tradeInstrument: trade.instrument,
-          });
+          const noteTime = new Date(note.createdAt);
+          if (tradeOpenedThisDay || (noteTime >= dayStart && noteTime <= dayEnd)) {
+            events.push({
+              type: 'note',
+              time: noteTime,
+              note,
+              tradeInstrument: trade.instrument,
+            });
+          }
         }
       }
 
       if (trade.status === 'Closed' && trade.closedDate) {
         const closeBase = new Date(trade.closedDate);
-        events.push({
-          type: 'trade-close',
-          time: this.applyTimeStr(closeBase, trade.exitTime),
-          trade,
-        });
+        const closeTime = this.applyTimeStr(closeBase, trade.exitTime);
+        if (closeTime >= dayStart && closeTime <= dayEnd) {
+          events.push({
+            type: 'trade-close',
+            time: closeTime,
+            trade,
+          });
+        }
       }
     }
 
     events.sort((a, b) => a.time.getTime() - b.time.getTime());
     return events;
+  });
+
+  tradeGroups = computed((): TradeGroup[] => {
+    const data = this.dayData();
+    if (!data) return [];
+    const viewDate = this.currentDate();
+    const dayStart = new Date(viewDate + 'T00:00:00');
+    const dayEnd = new Date(viewDate + 'T23:59:59.999');
+    const groups: TradeGroup[] = [];
+
+    for (const trade of data.trades) {
+      const baseDate = new Date(trade.date || trade.createdAt!);
+      const entryTime = this.applyTimeStr(baseDate, trade.entryTime);
+      const openedThisDay = entryTime >= dayStart && entryTime <= dayEnd;
+
+      const todayNotes = (trade.tradeNotes ?? [])
+        .filter(n => {
+          const t = new Date(n.createdAt);
+          return openedThisDay || (t >= dayStart && t <= dayEnd);
+        })
+        .map(n => ({ note: n, time: new Date(n.createdAt) }));
+
+      if (!openedThisDay && todayNotes.length === 0) continue;
+
+      let closed: { time: Date } | undefined;
+      if (trade.status === 'Closed' && trade.closedDate) {
+        const closeTime = this.applyTimeStr(new Date(trade.closedDate), trade.exitTime);
+        if (closeTime >= dayStart && closeTime <= dayEnd) {
+          closed = { time: closeTime };
+        }
+      }
+
+      groups.push({
+        type: openedThisDay ? 'opened' : 'carry-over',
+        trade,
+        time: openedThisDay ? entryTime : (todayNotes[0]?.time ?? dayStart),
+        notes: todayNotes,
+        closed,
+      });
+    }
+
+    groups.sort((a, b) => a.time.getTime() - b.time.getTime());
+    return groups;
   });
 
   ngOnInit(): void {

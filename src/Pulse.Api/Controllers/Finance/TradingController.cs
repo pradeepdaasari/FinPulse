@@ -329,14 +329,28 @@ public class TradingController : ControllerBase
         var monthStartUtc = TimeZoneHelper.ToUtc(monthStart, tz);
         var monthEndUtc = TimeZoneHelper.ToUtc(monthEnd, tz);
 
-        var allTrades = await _db.TradeEntries
+        // Trades entered in calendar range (for display)
+        var entryTrades = await _db.TradeEntries
             .Where(t => t.UserId == UserId && t.Date >= calStartUtc && t.Date < calEndUtc)
             .Include(t => t.ChecklistResponses)
             .Include(t => t.Setup)
             .OrderBy(t => t.Date)
             .ToListAsync();
 
-        var dailyPnl = allTrades.GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date)
+        // Trades closed in calendar range but entered outside it (for P&L attribution)
+        var entryIds = entryTrades.Select(t => t.Id).ToHashSet();
+        var closedInRange = await _db.TradeEntries
+            .Where(t => t.UserId == UserId && t.ClosedDate.HasValue
+                && t.ClosedDate.Value >= calStartUtc && t.ClosedDate.Value < calEndUtc
+                && t.Date < calStartUtc)
+            .Include(t => t.Setup)
+            .ToListAsync();
+
+        var allTrades = entryTrades.Concat(closedInRange).ToList();
+
+        // Daily P&L: attribute realized P&L to the CLOSE date
+        var closedTrades = allTrades.Where(t => t.Pnl.HasValue && t.ClosedDate.HasValue).ToList();
+        var dailyPnl = closedTrades.GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(t.ClosedDate!.Value, tz).Date)
             .Select(g => new
             {
                 Date = g.Key.ToString("yyyy-MM-dd"),
@@ -347,39 +361,47 @@ public class TradingController : ControllerBase
             .OrderBy(d => d.Date)
             .ToList();
 
-        var monthTrades = allTrades.Where(t =>
+        // Monthly stats: trades closed within the target month
+        var monthClosed = closedTrades.Where(t =>
+        {
+            var localDate = TimeZoneInfo.ConvertTimeFromUtc(t.ClosedDate!.Value, tz);
+            return localDate.Year == year && localDate.Month == month;
+        }).ToList();
+
+        // All trades entered in the month (for total count, checklist rate)
+        var monthEntered = entryTrades.Where(t =>
         {
             var localDate = TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz);
             return localDate.Year == year && localDate.Month == month;
         }).ToList();
 
-        var closed = monthTrades.Where(t => t.Pnl.HasValue).ToList();
-        var dayPnls = monthTrades.GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date)
+        var dayPnls = monthClosed.GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(t.ClosedDate!.Value, tz).Date)
             .Select(g => g.Sum(t => t.Pnl ?? 0)).ToList();
 
         return Ok(new
         {
             MonthStats = new
             {
-                NetPnl = Math.Round(monthTrades.Sum(t => t.NetPnl ?? t.Pnl ?? 0), 2),
-                GrossPnl = Math.Round(monthTrades.Sum(t => t.Pnl ?? 0), 2),
-                TotalTrades = monthTrades.Count,
-                WinningTrades = closed.Count(t => (t.Pnl ?? 0) > 0),
-                LosingTrades = closed.Count(t => (t.Pnl ?? 0) <= 0),
-                TotalFees = Math.Round(monthTrades.Sum(t => t.TotalFees ?? 0), 2),
-                AvgPnl = closed.Count > 0 ? Math.Round(closed.Sum(t => t.NetPnl ?? t.Pnl ?? 0) / closed.Count, 2) : 0m,
+                NetPnl = Math.Round(monthClosed.Sum(t => t.NetPnl ?? t.Pnl ?? 0), 2),
+                GrossPnl = Math.Round(monthClosed.Sum(t => t.Pnl ?? 0), 2),
+                TotalTrades = monthEntered.Count,
+                WinningTrades = monthClosed.Count(t => (t.Pnl ?? 0) > 0),
+                LosingTrades = monthClosed.Count(t => (t.Pnl ?? 0) <= 0),
+                TotalFees = Math.Round(monthClosed.Sum(t => t.TotalFees ?? 0), 2),
+                AvgPnl = monthClosed.Count > 0 ? Math.Round(monthClosed.Sum(t => t.NetPnl ?? t.Pnl ?? 0) / monthClosed.Count, 2) : 0m,
                 WinRate = dayPnls.Count > 0 ? Math.Round((decimal)dayPnls.Count(p => p > 0) / dayPnls.Count * 100) : 0m,
-                ChecklistRate = monthTrades.Count > 0 ? Math.Round((decimal)monthTrades.Count(t => t.ChecklistCompleted) / monthTrades.Count * 100) : 0m,
+                ChecklistRate = monthEntered.Count > 0 ? Math.Round((decimal)monthEntered.Count(t => t.ChecklistCompleted) / monthEntered.Count * 100) : 0m,
                 BestDay = dayPnls.Count > 0 ? dayPnls.Max() : 0m,
                 WorstDay = dayPnls.Count > 0 ? dayPnls.Min() : 0m,
                 TradingDays = dayPnls.Count
             },
             DailyPnl = dailyPnl,
-            Trades = allTrades.Select(t => new
+            Trades = entryTrades.Select(t => new
             {
                 t.Id,
                 t.Date,
                 LocalDate = TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).ToString("yyyy-MM-dd"),
+                LocalClosedDate = t.ClosedDate.HasValue ? TimeZoneInfo.ConvertTimeFromUtc(t.ClosedDate.Value, tz).ToString("yyyy-MM-dd") : (string?)null,
                 t.SetupId,
                 SetupName = t.Setup != null ? t.Setup.Name : null,
                 t.Instrument, t.Direction, t.EntryPrice, t.ExitPrice, t.Quantity,
@@ -859,7 +881,10 @@ public class TradingController : ControllerBase
             .FirstOrDefaultAsync();
 
         var trades = await _db.TradeEntries
-            .Where(t => t.UserId == UserId && t.Date >= dayStart && t.Date < dayEnd)
+            .Where(t => t.UserId == UserId &&
+                ((t.Date >= dayStart && t.Date < dayEnd) ||
+                 (t.ClosedDate.HasValue && t.ClosedDate.Value >= dayStart && t.ClosedDate.Value < dayEnd) ||
+                 (t.TradeNotes.Any(n => n.CreatedAt >= dayStart && n.CreatedAt < dayEnd))))
             .Include(t => t.ChecklistResponses)
             .OrderBy(t => t.Date)
             .Select(t => new
@@ -995,13 +1020,14 @@ public class TradingController : ControllerBase
             else { curLosses++; curWins = 0; maxConsLosses = Math.Max(maxConsLosses, curLosses); }
         }
 
-        // Daily P&L for best/worst day (timezone-aware)
-        var dailyPnl = closed.GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date)
+        // Daily P&L by close date (timezone-aware)
+        var closedWithDate = closed.Where(t => t.ClosedDate.HasValue).ToList();
+        var dailyPnl = closedWithDate.GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(t.ClosedDate!.Value, tz).Date)
             .Select(g => new { Date = g.Key, Pnl = g.Sum(t => t.NetPnl ?? t.Pnl ?? 0) }).ToList();
 
-        // Monthly P&L (timezone-aware)
-        var monthlyPnl = closed.GroupBy(t => {
-                var local = TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz);
+        // Monthly P&L by close date (timezone-aware)
+        var monthlyPnl = closedWithDate.GroupBy(t => {
+                var local = TimeZoneInfo.ConvertTimeFromUtc(t.ClosedDate!.Value, tz);
                 return new { local.Year, local.Month };
             })
             .Select(g => new
