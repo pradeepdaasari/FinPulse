@@ -16,3 +16,19 @@ export interface BankAccountCreate {
   currentBalance: number;
   isExcluded?: boolean;
 }
+
+export interface BankAccountSummary {
+  totalBalance: number;
+  excludedBalance: number;
+  checkingCount: number;
+  savingsCount: number;
+  brokerageCount: number;
+  cashCount: number;
+  excludedCount: number;
+}
+
+export interface TransactionSummary {
+  totalIncome: number;
+  totalExpense: number;
+  totalTransfer: number;
+}

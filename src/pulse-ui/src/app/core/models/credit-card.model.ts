@@ -20,4 +20,20 @@ export interface CreditCard {
   remainingMinimumPayment?: number;
   statementBalance?: number;
   statementDate?: string;
+  utilization?: number;
+}
+
+export interface CardSummary {
+  totalBalance: number;
+  totalLimit: number;
+  totalMinPayment: number;
+  avgUtilization: number;
+}
+
+export interface CardActivitySummary {
+  totalCharges: number;
+  totalRefunds: number;
+  totalPayments: number;
+  utilization: number;
+  nextDueDate: string | null;
 }

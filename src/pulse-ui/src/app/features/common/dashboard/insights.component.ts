@@ -2,15 +2,8 @@ import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/c
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { DailyExpenseService } from '../../../core/services/daily-expense.service';
 import { DashboardService } from '../../../core/services/dashboard.service';
-import { MonthComparison } from '../../../core/models/daily-expense.model';
-
-interface Insight {
-  icon: string;
-  text: string;
-  color: 'green' | 'amber' | 'red';
-}
+import { DashboardInsight } from '../../../core/models/dashboard.model';
 
 @Component({
   selector: 'app-insights',
@@ -116,86 +109,16 @@ interface Insight {
   `]
 })
 export class InsightsComponent implements OnInit {
-  private expenseService = inject(DailyExpenseService);
   private dashboardService = inject(DashboardService);
   private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
-  insights = signal<Insight[]>([]);
+  insights = signal<DashboardInsight[]>([]);
 
   ngOnInit(): void {
-    this.expenseService.getComparison().subscribe({
-      next: (data) => this.generateInsights(data),
+    this.dashboardService.getInsights().subscribe({
+      next: (insights) => { this.insights.set(insights); this.loading.set(false); this.cdr.detectChanges(); },
       error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
-  }
-
-  private generateInsights(data: MonthComparison): void {
-    const results: Insight[] = [];
-
-    // If no previous data, skip
-    if (data.previousTotal === 0 && data.currentTotal === 0) { this.loading.set(false); this.cdr.detectChanges(); return; }
-
-    // Overall spending trend
-    if (data.previousTotal > 0) {
-      const percentChange = ((data.currentTotal - data.previousTotal) / data.previousTotal) * 100;
-      if (percentChange < -5) {
-        results.push({
-          icon: 'lightbulb',
-          text: `Spending down ${Math.abs(Math.round(percentChange))}% this month`,
-          color: 'green'
-        });
-      } else if (percentChange > 10) {
-        results.push({
-          icon: 'trending_up',
-          text: `Spending up ${Math.round(percentChange)}% vs last month`,
-          color: 'amber'
-        });
-      }
-    }
-
-    // Category-level insights (significant increases > 20%)
-    if (data.categories && data.categories.length > 0) {
-      const significantIncreases = data.categories
-        .filter(c => c.previousMonthAmount > 0 && c.percentChange > 20)
-        .sort((a, b) => b.percentChange - a.percentChange);
-
-      for (const cat of significantIncreases.slice(0, 2)) {
-        results.push({
-          icon: 'warning',
-          text: `${cat.categoryName} up ${Math.round(cat.percentChange)}% vs last month`,
-          color: 'amber'
-        });
-        if (results.length >= 3) break;
-      }
-    }
-
-    // Positive cash flow insight (fetch financial summary)
-    if (results.length < 3) {
-      const now = new Date();
-      this.dashboardService.getFinancialSummary(now.getFullYear(), now.getMonth() + 1).subscribe({
-        next: (fs) => {
-          if (fs.netCashFlow > 0) {
-            results.push({
-              icon: 'savings',
-              text: `Positive cash flow of $${fs.netCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
-              color: 'green'
-            });
-          }
-          this.insights.set(results.slice(0, 3));
-          this.loading.set(false);
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          this.insights.set(results.slice(0, 3));
-          this.loading.set(false);
-          this.cdr.detectChanges();
-        }
-      });
-    } else {
-      this.insights.set(results.slice(0, 3));
-      this.loading.set(false);
-      this.cdr.detectChanges();
-    }
   }
 }

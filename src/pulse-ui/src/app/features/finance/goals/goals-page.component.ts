@@ -1,6 +1,7 @@
-import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
+import { forkJoin } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -9,7 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { SavingsGoalService } from '../../../core/services/savings-goal.service';
-import { SavingsGoal } from '../../../core/models/savings-goal.model';
+import { SavingsGoal, GoalsSummary } from '../../../core/models/savings-goal.model';
 import { NotificationService } from '../../../core/services/notification.service';
 import { GoalDialogComponent } from './goal-dialog.component';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
@@ -32,28 +33,28 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
         <div class="stat-card stat-blue">
           <mat-icon>savings</mat-icon>
           <div class="stat-content">
-            <span class="stat-value">{{ totalSaved() | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="stat-value">{{ summary().totalSaved | currency:'USD':'symbol':'1.0-0' }}</span>
             <span class="stat-label">Total Saved</span>
           </div>
         </div>
         <div class="stat-card stat-purple">
           <mat-icon>flag</mat-icon>
           <div class="stat-content">
-            <span class="stat-value">{{ totalTarget() | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="stat-value">{{ summary().totalTarget | currency:'USD':'symbol':'1.0-0' }}</span>
             <span class="stat-label">Total Target</span>
           </div>
         </div>
         <div class="stat-card stat-green">
           <mat-icon>trending_up</mat-icon>
           <div class="stat-content">
-            <span class="stat-value">{{ avgProgress() | number:'1.0-0' }}%</span>
+            <span class="stat-value">{{ summary().avgProgress | number:'1.0-0' }}%</span>
             <span class="stat-label">Avg Progress</span>
           </div>
         </div>
         <div class="stat-card stat-orange">
           <mat-icon>emoji_events</mat-icon>
           <div class="stat-content">
-            <span class="stat-value">{{ completedGoals() }}/{{ goals().length }}</span>
+            <span class="stat-value">{{ summary().completedGoals }}/{{ summary().totalGoals }}</span>
             <span class="stat-label">Completed</span>
           </div>
         </div>
@@ -273,30 +274,29 @@ export class GoalsPageComponent implements OnInit {
 
   goals = signal<SavingsGoal[]>([]);
   loading = signal(true);
-
-  totalSaved = computed(() => this.goals().reduce((s, g) => s + g.currentAmount, 0));
-  totalTarget = computed(() => this.goals().reduce((s, g) => s + g.targetAmount, 0));
-  avgProgress = computed(() => {
-    const g = this.goals();
-    if (!g.length) return 0;
-    return g.reduce((s, goal) => s + this.getProgress(goal), 0) / g.length;
-  });
-  completedGoals = computed(() => this.goals().filter(g => this.getProgress(g) >= 100).length);
+  summary = signal<GoalsSummary>({ totalSaved: 0, totalTarget: 0, avgProgress: 0, completedGoals: 0, totalGoals: 0 });
 
   ngOnInit(): void {
     this.loadData();
   }
 
   loadData(): void {
-    this.service.getAll().subscribe({
-      next: (goals) => { this.goals.set(goals); this.loading.set(false); this.cdr.detectChanges(); },
+    forkJoin({
+      goals: this.service.getAll(),
+      summary: this.service.getSummary()
+    }).subscribe({
+      next: ({ goals, summary }) => {
+        this.goals.set(goals);
+        this.summary.set(summary);
+        this.loading.set(false);
+        this.cdr.detectChanges();
+      },
       error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 
   getProgress(goal: SavingsGoal): number {
-    if (goal.targetAmount <= 0) return 0;
-    return Math.min(100, (goal.currentAmount / goal.targetAmount) * 100);
+    return goal.progress ?? 0;
   }
 
   openAdd(): void {

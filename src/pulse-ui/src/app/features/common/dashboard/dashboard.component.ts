@@ -6,6 +6,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { catchError, of, forkJoin } from 'rxjs';
 import { DashboardService } from '../../../core/services/dashboard.service';
 import { DashboardSummary } from '../../../core/models/dashboard.model';
+import { BudgetService } from '../../../core/services/budget.service';
+import { BudgetPlan } from '../../../core/models/budget.model';
 import { TradingService } from '../../../core/services/trading.service';
 import { TradingStats } from '../../../core/models/trading.model';
 import { WorkoutLogService } from '../../../core/services/workout-log.service';
@@ -15,9 +17,6 @@ import { WorkoutStats } from '../../../core/models/workout-log.model';
 import { TodayPlanResponse } from '../../../core/models/workout-plan.model';
 import { HealthMetric } from '../../../core/models/health-metric.model';
 import { PaymentStreakComponent } from './payment-streak.component';
-import { BudgetHealthComponent } from './budget-health.component';
-import { UpcomingPaymentsComponent } from './upcoming-payments.component';
-import { MonthlyPaymentsCardComponent } from './monthly-payments-card.component';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { NetWorthComponent } from './net-worth.component';
 import { TodayGlanceComponent } from './today-glance.component';
@@ -29,8 +28,8 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
   imports: [
     CommonModule, CurrencyPipe, DecimalPipe, RouterLink,
     MatCardModule, MatIconModule,
-    PaymentStreakComponent, BudgetHealthComponent, UpcomingPaymentsComponent,
-    MonthlyPaymentsCardComponent, SkeletonLoaderComponent, PullToRefreshDirective,
+    PaymentStreakComponent,
+    SkeletonLoaderComponent, PullToRefreshDirective,
     NetWorthComponent, TodayGlanceComponent
   ],
   template: `
@@ -42,24 +41,49 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     } @else if (summary()) {
       <app-net-worth></app-net-worth>
       <app-today-glance></app-today-glance>
-      <div class="dashboard-grid">
-        <app-budget-health></app-budget-health>
-        <app-payment-streak></app-payment-streak>
-      </div>
 
-      <!-- Monthly Payments -->
-      <div class="section-block">
-        <div class="section-header">
-          <div class="section-title-row">
-            <div class="section-icon-wrap payments-icon"><mat-icon>calendar_month</mat-icon></div>
-            <h3>This Month's Payments</h3>
+      @if (budgetPlan()) {
+        <div class="budget-stats-row" routerLink="/budget">
+          <div class="bs-card bs-blue">
+            <mat-icon>account_balance_wallet</mat-icon>
+            <div class="bs-content">
+              <span class="bs-value">{{ budgetPlan()!.monthlyOverview.totalIncome | currency:'USD':'symbol':'1.0-0' }}</span>
+              <span class="bs-label">Income ({{ budgetPlan()!.monthlyOverview.paychecksThisMonth }})</span>
+            </div>
           </div>
-          <a class="view-all" routerLink="/money-movements">View All <mat-icon>chevron_right</mat-icon></a>
+          <div class="bs-card bs-amber">
+            <mat-icon>assignment</mat-icon>
+            <div class="bs-content">
+              <span class="bs-value">{{ budgetPlan()!.monthlyOverview.totalExpenses | currency:'USD':'symbol':'1.0-0' }}</span>
+              <span class="bs-label">Budgeted</span>
+            </div>
+          </div>
+          <div class="bs-card bs-purple">
+            <mat-icon>shopping_cart</mat-icon>
+            <div class="bs-content">
+              <span class="bs-value">{{ budgetPlan()!.monthlyOverview.totalSpent | currency:'USD':'symbol':'1.0-0' }}</span>
+              <span class="bs-label">Spent</span>
+            </div>
+          </div>
+          <div class="bs-card" [class.bs-green]="!budgetPlan()!.monthlyOverview.isOverBudget" [class.bs-red]="budgetPlan()!.monthlyOverview.isOverBudget">
+            <mat-icon>{{ budgetPlan()!.monthlyOverview.isOverBudget ? 'money_off' : 'savings' }}</mat-icon>
+            <div class="bs-content">
+              <span class="bs-value" [class.color-green]="!budgetPlan()!.monthlyOverview.isOverBudget" [class.color-red]="budgetPlan()!.monthlyOverview.isOverBudget">{{ budgetPlan()!.monthlyOverview.isOverBudget ? '-' : '' }}{{ budgetPlan()!.monthlyOverview.absRemaining | currency:'USD':'symbol':'1.0-0' }}</span>
+              <span class="bs-label">{{ budgetPlan()!.monthlyOverview.isOverBudget ? 'Over Budget' : 'Remaining to Pay' }}</span>
+            </div>
+          </div>
+          <div class="bs-card" [class.bs-green]="!budgetPlan()!.monthlyOverview.isDeficit" [class.bs-red]="budgetPlan()!.monthlyOverview.isDeficit">
+            <mat-icon>{{ budgetPlan()!.monthlyOverview.isDeficit ? 'trending_down' : 'trending_up' }}</mat-icon>
+            <div class="bs-content">
+              <span class="bs-value" [class.color-green]="!budgetPlan()!.monthlyOverview.isDeficit" [class.color-red]="budgetPlan()!.monthlyOverview.isDeficit">{{ budgetPlan()!.monthlyOverview.isDeficit ? '-' : '+' }}{{ budgetPlan()!.monthlyOverview.absSurplus | currency:'USD':'symbol':'1.0-0' }}</span>
+              <span class="bs-label">{{ budgetPlan()!.monthlyOverview.isDeficit ? 'Deficit' : 'Surplus' }}</span>
+            </div>
+          </div>
         </div>
-        <div class="payments-card">
-          <app-monthly-payments-card></app-monthly-payments-card>
-        </div>
-      </div>
+      }
+
+      <app-payment-streak></app-payment-streak>
+
     }
 
     <!-- ═══════ TRADING ═══════ -->
@@ -74,17 +98,34 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       @if (tradingLoading()) {
         <div class="glance-skeleton"><app-skeleton type="card" [count]="1"></app-skeleton></div>
       } @else if (tradingStats()) {
-        <div class="glance-card">
+        <div class="trading-pnl-row">
+          <div class="bs-card" [class.bs-green]="tradingStats()!.pnlToday >= 0" [class.bs-red]="tradingStats()!.pnlToday < 0">
+            <mat-icon>{{ tradingStats()!.pnlToday >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+            <div class="bs-content">
+              <span class="bs-value" [class.color-green]="tradingStats()!.pnlToday >= 0" [class.color-red]="tradingStats()!.pnlToday < 0">{{ tradingStats()!.pnlToday >= 0 ? '+' : '' }}{{ tradingStats()!.pnlToday | currency:'USD':'symbol':'1.0-0' }}</span>
+              <span class="bs-label">Today</span>
+            </div>
+          </div>
+          <div class="bs-card" [class.bs-green]="tradingStats()!.pnlThisWeek >= 0" [class.bs-red]="tradingStats()!.pnlThisWeek < 0">
+            <mat-icon>{{ tradingStats()!.pnlThisWeek >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+            <div class="bs-content">
+              <span class="bs-value" [class.color-green]="tradingStats()!.pnlThisWeek >= 0" [class.color-red]="tradingStats()!.pnlThisWeek < 0">{{ tradingStats()!.pnlThisWeek >= 0 ? '+' : '' }}{{ tradingStats()!.pnlThisWeek | currency:'USD':'symbol':'1.0-0' }}</span>
+              <span class="bs-label">This Week</span>
+            </div>
+          </div>
+          <div class="bs-card" [class.bs-green]="tradingStats()!.pnlThisMonth >= 0" [class.bs-red]="tradingStats()!.pnlThisMonth < 0">
+            <mat-icon>{{ tradingStats()!.pnlThisMonth >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+            <div class="bs-content">
+              <span class="bs-value" [class.color-green]="tradingStats()!.pnlThisMonth >= 0" [class.color-red]="tradingStats()!.pnlThisMonth < 0">{{ tradingStats()!.pnlThisMonth >= 0 ? '+' : '' }}{{ tradingStats()!.pnlThisMonth | currency:'USD':'symbol':'1.0-0' }}</span>
+              <span class="bs-label">This Month</span>
+            </div>
+          </div>
+        </div>
+        <div class="glance-card" style="margin-top: 10px;">
           <div class="glance-stats-row">
             <div class="glance-stat">
-              <span class="gs-value" [class.positive]="tradingStats()!.pnlToday >= 0" [class.negative]="tradingStats()!.pnlToday < 0">
-                {{ tradingStats()!.pnlToday | currency:'USD':'symbol':'1.0-0' }}
-              </span>
-              <span class="gs-label">Today's P&L</span>
-            </div>
-            <div class="glance-stat">
-              <span class="gs-value">{{ tradingStats()!.tradesToday }}</span>
-              <span class="gs-label">Trades Today</span>
+              <span class="gs-value">{{ tradingStats()!.tradesToday }} <span class="gs-dim">/ {{ tradingStats()!.tradesThisWeek }} / {{ tradingStats()!.tradesThisMonth }}</span></span>
+              <span class="gs-label">Trades (D / W / M)</span>
             </div>
             <div class="glance-stat">
               <span class="gs-value">{{ tradingStats()!.winRate | number:'1.0-1' }}%</span>
@@ -97,11 +138,15 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
               </span>
               <span class="gs-label">Rule Streak</span>
             </div>
+            <div class="glance-stat">
+              <span class="gs-value" [class.positive]="tradingStats()!.checklistComplianceRate >= 80" [class.negative]="tradingStats()!.checklistComplianceRate < 80">{{ tradingStats()!.checklistComplianceRate | number:'1.0-0' }}%</span>
+              <span class="gs-label">Compliance</span>
+            </div>
           </div>
           @if (tradingStats()!.checklistComplianceRate < 80) {
             <div class="alert-banner warn">
               <mat-icon>warning</mat-icon>
-              <span>Checklist compliance at {{ tradingStats()!.checklistComplianceRate }}% — stay disciplined</span>
+              <span>Checklist compliance at {{ tradingStats()!.checklistComplianceRate | number:'1.0-0' }}% — stay disciplined</span>
             </div>
           }
         </div>
@@ -171,13 +216,49 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
   styles: [`
     :host { display: block; }
 
-    .dashboard-grid {
-      display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-md);
-      margin-top: var(--spacing-md);
+    /* Budget Stats Row */
+    .budget-stats-row {
+      display: grid; grid-template-columns: repeat(5, 1fr);
+      gap: 10px; margin-top: var(--spacing-md); cursor: pointer;
+      transition: opacity var(--transition-fast);
     }
-    @media (max-width: 1024px) {
-      .dashboard-grid { grid-template-columns: 1fr; }
+    .budget-stats-row:hover { opacity: 0.9; }
+    .bs-card {
+      display: flex; align-items: center; gap: 10px; padding: 14px 12px;
+      border-radius: var(--radius-md); background: var(--color-surface-solid);
+      border: 1px solid var(--color-border); box-shadow: var(--shadow-xs);
     }
+    .bs-card mat-icon {
+      font-size: 22px; width: 22px; height: 22px; padding: 8px;
+      border-radius: var(--radius-sm); box-sizing: content-box; flex-shrink: 0;
+    }
+    .bs-blue mat-icon { color: var(--color-stat-blue); background: var(--color-stat-blue-bg); }
+    .bs-amber mat-icon { color: var(--color-stat-amber); background: var(--color-stat-amber-bg); }
+    .bs-purple mat-icon { color: var(--color-stat-purple); background: var(--color-stat-purple-bg); }
+    .bs-green mat-icon { color: var(--color-stat-green); background: var(--color-stat-green-bg); }
+    .bs-red mat-icon { color: var(--color-danger); background: var(--color-danger-bg); }
+    .bs-content { display: flex; flex-direction: column; min-width: 0; }
+    .bs-value {
+      font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .bs-label {
+      font-size: 0.6rem; color: var(--color-text-muted);
+      text-transform: uppercase; letter-spacing: 0.04em;
+      font-weight: 600; margin-top: 2px;
+    }
+    .color-green { color: #34C759 !important; }
+    .color-red { color: #FF3B30 !important; }
+
+    /* Trading P&L Row */
+    .trading-pnl-row {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .gs-dim {
+      font-size: 0.85em; font-weight: 500; opacity: 0.45;
+    }
+
 
     /* Section blocks */
     .section-block {
@@ -283,16 +364,16 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
 
     .glance-skeleton { min-height: 80px; }
 
-    /* Monthly Payments */
-    .payments-icon { background: #5AC8FA; }
-    .payments-card {
-      background: var(--color-surface-solid); border-radius: var(--radius-md);
-      border: 1px solid var(--color-border); overflow: hidden;
-      box-shadow: var(--shadow-xs);
+    @media (max-width: 1024px) {
+      .budget-stats-row { grid-template-columns: repeat(3, 1fr); }
     }
 
     /* Mobile */
     @media (max-width: 599px) {
+      .budget-stats-row { grid-template-columns: repeat(2, 1fr); }
+      .bs-card { padding: 10px 8px; gap: 8px; }
+      .bs-card mat-icon { font-size: 18px; width: 18px; height: 18px; padding: 7px; }
+      .bs-value { font-size: 0.95rem; }
       .glance-stats-row { grid-template-columns: repeat(2, 1fr); }
       .glance-stat { border-bottom: 1px solid var(--color-border); }
       .glance-stat:nth-child(odd) { border-right: 1px solid var(--color-border); }
@@ -305,6 +386,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
 })
 export class DashboardComponent implements OnInit {
   private dashboardService = inject(DashboardService);
+  private budgetService = inject(BudgetService);
   private tradingService = inject(TradingService);
   private workoutLogService = inject(WorkoutLogService);
   private workoutPlanService = inject(WorkoutPlanService);
@@ -313,6 +395,7 @@ export class DashboardComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   summary = signal<DashboardSummary | null>(null);
+  budgetPlan = signal<BudgetPlan | null>(null);
   loading = signal(true);
 
   tradingStats = signal<TradingStats | null>(null);
@@ -351,6 +434,14 @@ export class DashboardComponent implements OnInit {
         this.loading.set(false);
         this.cdr.detectChanges();
       }
+    });
+
+    const now = new Date();
+    this.budgetService.getPlan(now.getFullYear(), now.getMonth() + 1).pipe(
+      catchError(() => of(null))
+    ).subscribe(plan => {
+      this.budgetPlan.set(plan);
+      this.cdr.detectChanges();
     });
 
     this.tradingService.getStats().pipe(

@@ -6,6 +6,7 @@ public class BudgetPlanDto
 {
     public MonthlyOverviewDto MonthlyOverview { get; set; } = new();
     public List<PaycheckBreakdownDto> PaycheckBreakdowns { get; set; } = new();
+    public int? DaysUntilPaycheck { get; set; }
 }
 
 public class MonthlyOverviewDto
@@ -19,8 +20,17 @@ public class MonthlyOverviewDto
     public decimal TotalSpent { get; set; }
     public decimal TotalRemaining { get; set; }
     public decimal Surplus { get; set; }
+    public decimal AbsSurplus { get; set; }
+    public bool IsDeficit { get; set; }
+    public decimal AbsRemaining { get; set; }
+    public bool IsOverBudget { get; set; }
     public int PaychecksThisMonth { get; set; }
     public List<CategorySummaryDto> ByCategory { get; set; } = new();
+    public decimal RecurringTotal { get; set; }
+    public decimal DebtTotal { get; set; }
+    public decimal LoanTotal { get; set; }
+    public decimal BillsTotal { get; set; }
+    public decimal OverallPercent { get; set; }
 }
 
 public class CategorySummaryDto
@@ -34,6 +44,7 @@ public class CategorySummaryDto
     public bool IsFixed { get; set; }
     public string? Icon { get; set; }
     public bool IsDebt { get; set; }
+    public bool IsLoan { get; set; }
     public bool IsRecurring { get; set; }
     public int? DebtId { get; set; }
     public DebtType? DebtType { get; set; }

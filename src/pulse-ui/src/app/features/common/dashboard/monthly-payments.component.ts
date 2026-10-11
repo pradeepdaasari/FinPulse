@@ -1,466 +1,441 @@
-import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
-import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
-import { LocalDatePipe } from '../../../shared/local-date.pipe';
-import { MatCardModule } from '@angular/material/card';
+import { Component, OnInit, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
+import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDialog } from '@angular/material/dialog';
-import { forkJoin } from 'rxjs';
-import { DebtService } from '../../../core/services/debt.service';
-import { UserProfileService } from '../../../core/services/user-profile.service';
-import { PaymentService } from '../../../core/services/payment.service';
-import { CreditCardService } from '../../../core/services/credit-card.service';
+import { RouterModule } from '@angular/router';
+import { DashboardService } from '../../../core/services/dashboard.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import { DebtItem } from '../../../core/models/debt-item.model';
-import { CreditCard } from '../../../core/models/credit-card.model';
-import { roundCurrency, sumCurrency } from '../../../core/utils/currency';
-
-interface MonthlyPayment {
-  id: string | number;
-  name: string;
-  type: 'Loan' | 'Credit Card';
-  amount: number;
-  minimumPayment: number | null;
-  minimumPaid: boolean;
-  isAutopay: boolean;
-  currentBalance: number;
-  aprPercent?: number;
-  paymentFrequency?: 'Monthly' | 'Biweekly' | 'Weekly';
-  fundedBankAccountId?: number | null;
-  paidAmount: number;
-  dueDate: Date;
-  nextDueDate: Date;
-  daysUntilDue: number;
-  status: 'overdue' | 'due-soon' | 'upcoming' | 'paid';
-}
+import { MonthlyPaymentRow, MonthlyPaymentsData } from '../../../core/models/dashboard.model';
 
 @Component({
   selector: 'app-monthly-payments',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, MatTooltipModule, MatProgressSpinnerModule, CurrencyPipe, DatePipe, LocalDatePipe],
+  imports: [CommonModule, CurrencyPipe, DecimalPipe, MatIconModule, MatButtonModule, MatTooltipModule, MatProgressBarModule, RouterModule],
   template: `
-    @if (loading()) {
-      <div class="loading-container"><mat-spinner diameter="32"></mat-spinner></div>
-    } @else {
-    <mat-card class="payments-card">
-      <mat-card-header>
-        <mat-card-title>
-          <div class="card-title-row">
-            <span class="card-title-text"><mat-icon class="card-title-icon">receipt_long</mat-icon> Upcoming Payments</span>
-            <span class="payment-count">{{ payments().length }} due in next 30 days</span>
-          </div>
-        </mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        @if (paycheckDay()) {
-          <div class="paycheck-info">
+    <div class="page-wrap">
+      @if (loading()) {
+        <div class="loading-container">
+          <div class="shimmer-bar"></div>
+          <div class="shimmer-bar short"></div>
+          <div class="shimmer-bar"></div>
+        </div>
+      } @else {
+        <!-- Paycheck banner -->
+        @if (data()?.nextPaycheckDate) {
+          <div class="paycheck-banner">
             <mat-icon>account_balance_wallet</mat-icon>
-            <span>Next paycheck: <strong>{{ paycheckDateLabel() }}</strong></span>
-            <span class="paycheck-days">({{ daysUntilPaycheck() }} days away)</span>
+            <div class="paycheck-text">
+              <span class="paycheck-label">Next Paycheck</span>
+              <span class="paycheck-date">{{ data()!.nextPaycheckDate! | date:'EEE, MMM d' }}</span>
+            </div>
+            <span class="paycheck-days">{{ data()!.daysUntilPaycheck === 0 ? 'Today' : data()!.daysUntilPaycheck + 'd away' }}</span>
           </div>
         }
-        @if (payments().length === 0) {
-          <div class="empty-state">
-            <mat-icon>check_circle</mat-icon>
-            <span>All payments are up to date!</span>
-          </div>
-        } @else {
-          <div class="payment-header">
-            <span class="col-account">Account</span>
-            <span class="col-due">Due</span>
-            <span class="col-balance">Balance</span>
-            <span class="col-paid">Paid</span>
-            <span class="col-date">Due Date</span>
-            <span class="col-status">Status</span>
-            <span class="col-actions"></span>
-          </div>
 
-          @for (p of payments(); track p.id) {
-            <div class="payment-row" (click)="recordPayment(p)">
-              <div class="col-account">
-                <mat-icon class="account-icon">{{ p.type === 'Loan' ? 'account_balance' : 'credit_card' }}</mat-icon>
-                <div>
-                  <span class="account-name">{{ p.name }}</span>
-                  <span class="account-type">{{ p.type }}
-                    @if (p.isAutopay) {
-                      <span class="autopay-badge"><mat-icon>autorenew</mat-icon>Auto</span>
+        <!-- Summary stats -->
+        <div class="summary-bar">
+          <div class="summary-stat">
+            <span class="ss-value">{{ data()!.totalDue | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="ss-label">Total This Month</span>
+          </div>
+          <div class="summary-stat">
+            <span class="ss-value paid-color">{{ data()!.totalPaid | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="ss-label">Paid</span>
+          </div>
+          <div class="summary-stat">
+            <span class="ss-value" [class.danger-color]="data()!.totalPending > 0">{{ data()!.totalPending | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="ss-label">Still Needed</span>
+          </div>
+          <div class="summary-stat">
+            <span class="ss-value">{{ data()!.paidPercent | number:'1.0-0' }}%</span>
+            <span class="ss-label">Covered</span>
+          </div>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-wrap">
+          <mat-progress-bar mode="determinate" [value]="data()!.paidPercent" [color]="data()!.overdueCount > 0 ? 'warn' : 'primary'"></mat-progress-bar>
+          <div class="progress-labels">
+            <span>{{ data()!.paidCount }}/{{ allRows().length }} payments completed</span>
+            <span class="days-left">{{ daysLeftInMonth() }}d left in month</span>
+          </div>
+          @if (data()!.overdueCount > 0) {
+            <div class="overdue-banner">
+              <mat-icon>warning</mat-icon>
+              <span>{{ data()!.overdueCount }} payment{{ data()!.overdueCount > 1 ? 's' : '' }} overdue</span>
+            </div>
+          }
+        </div>
+
+        <!-- Filter chips -->
+        <div class="filter-row">
+          <button class="filter-chip" [class.active]="filter() === 'all'" (click)="filter.set('all')">
+            All <span class="chip-count">{{ allRows().length }}</span>
+          </button>
+          <button class="filter-chip" [class.active]="filter() === 'unpaid'" (click)="filter.set('unpaid')">
+            Unpaid <span class="chip-count">{{ unpaidCount() }}</span>
+          </button>
+          <button class="filter-chip" [class.active]="filter() === 'loan'" (click)="filter.set('loan')">
+            Loans <span class="chip-count">{{ loanCount() }}</span>
+          </button>
+          <button class="filter-chip" [class.active]="filter() === 'card'" (click)="filter.set('card')">
+            Cards <span class="chip-count">{{ cardCount() }}</span>
+          </button>
+          <button class="filter-chip" [class.active]="filter() === 'recurring'" (click)="filter.set('recurring')">
+            Bills <span class="chip-count">{{ recurringCount() }}</span>
+          </button>
+        </div>
+
+        <!-- Payment rows -->
+        <div class="rows-container">
+          @for (row of filteredRows(); track row.id + row.kind + row.dueDate) {
+            <div class="pay-row" [class]="'status-' + row.status" (click)="recordPayment(row)">
+              <div class="pay-icon" [style.background]="row.iconColor">
+                <mat-icon>{{ row.icon }}</mat-icon>
+              </div>
+              <div class="pay-main">
+                <div class="pay-top-line">
+                  <span class="pay-name">
+                    {{ row.name }}
+                    @if (row.isAutopay) {
+                      <mat-icon class="autopay-badge" matTooltip="Autopay enabled">autorenew</mat-icon>
                     }
                   </span>
+                  <span class="pay-amount" [class.paid-through]="row.status === 'paid'">{{ row.amount | currency }}</span>
                 </div>
-              </div>
-              <div class="col-due">
-                <span class="due-amount">{{ p.amount | currency }}</span>
-                @if (p.minimumPayment != null && p.minimumPayment > 0) {
-                  <span class="min-label">Min: {{ p.minimumPayment | currency }}</span>
+                <div class="pay-meta-line">
+                  <span class="pay-due">
+                    @if (row.status === 'overdue') {
+                      <mat-icon class="meta-icon overdue">error</mat-icon>
+                    } @else if (row.status === 'paid') {
+                      <mat-icon class="meta-icon paid">check_circle</mat-icon>
+                    }
+                    {{ row.dueLabel }}
+                  </span>
+                  <div class="pay-pills">
+                    @if (row.kind === 'loan') {
+                      <span class="pill pill-loan">Loan</span>
+                    } @else if (row.kind === 'card') {
+                      <span class="pill pill-card">Card</span>
+                    } @else {
+                      <span class="pill pill-bill">Bill</span>
+                    }
+                    @if (row.minimumPayment !== null && row.minimumPayment > 0) {
+                      <span class="pill pill-min">Min {{ row.minimumPayment | currency:'USD':'symbol':'1.0-0' }}</span>
+                    }
+                    @if (row.apr !== null && row.apr! > 0) {
+                      <span class="pill pill-apr">{{ row.apr | number:'1.1-1' }}%</span>
+                    }
+                    @if (row.subType) {
+                      <span class="pill pill-type">{{ row.subType }}</span>
+                    }
+                  </div>
+                </div>
+                @if (row.balance !== null && row.balance !== undefined) {
+                  <div class="pay-balance-line">
+                    <span class="bal-label">Balance</span>
+                    <span class="bal-value">{{ row.balance | currency }}</span>
+                    @if (row.paidAmount > 0 && row.status !== 'paid') {
+                      <span class="bal-paid">{{ row.paidAmount | currency }} paid</span>
+                    }
+                  </div>
                 }
               </div>
-              <div class="col-balance">{{ p.currentBalance | currency }}</div>
-              <div class="col-paid">
-                @if (p.paidAmount > 0) {
-                  <span class="paid-amount">{{ p.paidAmount | currency }}</span>
-                  <span class="paid-remaining">({{ p.amount - p.paidAmount | currency }} left)</span>
+              <div class="pay-status-col">
+                @if (row.status === 'paid') {
+                  <span class="status-badge s-paid"><mat-icon>check</mat-icon></span>
                 } @else {
-                  <span class="paid-remaining">({{ p.amount | currency }} left)</span>
+                  <button class="record-btn" (click)="recordPayment(row); $event.stopPropagation()" matTooltip="Record payment">
+                    <mat-icon>payments</mat-icon>
+                  </button>
                 }
-              </div>
-              <div class="col-date">{{ p.dueDate | date:'MMM d, y' }}</div>
-              <div class="col-status">
-                <span class="status-badge" [class]="'status-' + p.status">
-                  @if (p.status === 'overdue') {
-                    {{ -p.daysUntilDue }}d overdue
-                  } @else if (p.status === 'due-soon') {
-                    Due in {{ p.daysUntilDue }}d
-                  } @else {
-                    {{ p.daysUntilDue }} days
-                  }
-                </span>
-              </div>
-              <div class="col-actions">
-                @if (p.minimumPaid) {
-                  <mat-icon class="min-paid-check" matTooltip="Minimum paid">check_circle_outline</mat-icon>
-                }
-                <button mat-icon-button color="primary" (click)="recordPayment(p); $event.stopPropagation()" aria-label="Record Payment">
-                  <mat-icon>payments</mat-icon>
-                </button>
               </div>
             </div>
           }
 
-          <div class="total-row">
-            <span>Total Due This Month</span>
-            <span class="total-amount">{{ totalDue() | currency }}</span>
-          </div>
-        }
-      </mat-card-content>
-    </mat-card>
-    }
+          @if (filteredRows().length === 0) {
+            <div class="empty-row">
+              <mat-icon>celebration</mat-icon>
+              <span>{{ filter() === 'all' ? 'No payments due this month' : 'No matching payments' }}</span>
+            </div>
+          }
+        </div>
+      }
+    </div>
   `,
   styles: [`
-    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
-    .payments-card { margin-top: var(--spacing-md); }
-    .card-title-row {
-      display: flex; justify-content: space-between; align-items: center; width: 100%;
-    }
-    .card-title-text { display: flex; align-items: center; }
-    .card-title-icon { font-size: 20px; width: 20px; height: 20px; margin-right: 8px; color: #5856D6; }
-    .payment-count {
-      font-size: 0.875rem; font-weight: 500; color: var(--color-text-secondary);
-      background: var(--color-bg); padding: 4px 12px; border-radius: 20px;
+    :host { display: block; }
+
+    .page-wrap {
+      max-width: 720px; margin: 0 auto; padding: 0 16px 32px;
     }
 
-    /* Desktop table layout */
-    .payment-header, .payment-row {
-      display: grid;
-      grid-template-columns: 2fr 1.2fr 1fr 1.2fr 1fr 0.8fr 70px;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 12px;
+    .loading-container { padding: 24px 0; display: flex; flex-direction: column; gap: 16px; }
+    .shimmer-bar {
+      height: 56px; border-radius: var(--radius-sm); background: var(--color-surface-secondary);
+      animation: shimmer 1.2s ease-in-out infinite alternate;
     }
-    .payment-header {
-      font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted);
-      text-transform: uppercase; letter-spacing: 0.04em;
-      border-bottom: 1px solid var(--color-border);
-    }
-    .payment-row {
-      border-bottom: 1px solid var(--color-border-light, rgba(0,0,0,0.04));
-    }
-    .payment-row:last-of-type { border-bottom: none; }
+    .shimmer-bar.short { width: 60%; }
+    @keyframes shimmer { from { opacity: 0.5; } to { opacity: 1; } }
 
-    .col-account { display: flex; align-items: center; gap: 10px; }
-    .account-icon { color: var(--color-primary); font-size: 20px; width: 20px; height: 20px; }
-    .account-name { display: block; font-weight: 500; }
-    .account-type { display: block; font-size: 0.75rem; color: var(--color-text-muted); }
-    .due-amount { font-weight: 600; }
-    .min-label { display: block; font-size: 0.7rem; color: var(--color-text-muted); }
-    .col-balance { font-weight: 500; color: var(--color-text-secondary); }
-    .col-date { white-space: nowrap; }
-    .paid-amount { font-weight: 600; color: var(--color-success); }
-    .paid-remaining { color: var(--color-text-muted); font-size: 0.75rem; display: block; }
-    .col-actions { display: flex; align-items: center; gap: 2px; justify-content: flex-end; }
-    .min-paid-check { color: var(--color-success); font-size: 20px; width: 20px; height: 20px; }
-
-    .status-badge {
-      padding: 4px 10px; border-radius: 20px; font-size: 0.6875rem;
-      font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
-    }
-    .status-overdue { background-color: var(--color-danger-bg); color: var(--color-danger); }
-    .status-due-soon { background-color: var(--color-warning-bg); color: var(--color-warning); }
-    .status-upcoming { background-color: var(--color-success-bg); color: var(--color-success); }
-    .status-paid { background-color: var(--color-success-bg); color: var(--color-success); }
-
-    .autopay-badge {
-      display: inline-flex; align-items: center; gap: 2px; margin-left: 6px;
-      font-size: 0.625rem; font-weight: 600; color: var(--color-primary-dark);
-      background: var(--gradient-icon-blue); padding: 1px 5px; border-radius: 8px;
-    }
-    .autopay-badge mat-icon { font-size: 11px; width: 11px; height: 11px; }
-
-    .total-row {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: var(--spacing-md) var(--spacing-md) 0; margin-top: var(--spacing-md);
-      border-top: 1px solid var(--color-border); font-weight: 600;
-    }
-    .total-amount { font-size: 1.125rem; color: var(--color-primary); }
-
-    .empty-state {
+    /* Paycheck banner */
+    .paycheck-banner {
       display: flex; align-items: center; gap: 12px;
-      padding: var(--spacing-md); color: var(--color-success);
+      padding: 14px 16px; margin-bottom: 16px;
+      background: linear-gradient(135deg, #E3F2FD, #F3E5F5);
+      border-radius: var(--radius-md); border: 1px solid rgba(21, 101, 192, 0.12);
     }
-    .empty-state mat-icon { font-size: 28px; width: 28px; height: 28px; }
+    .paycheck-banner > mat-icon { font-size: 22px; width: 22px; height: 22px; color: #1565C0; }
+    .paycheck-text { display: flex; flex-direction: column; flex: 1; }
+    .paycheck-label { font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .paycheck-date { font-size: 0.95rem; font-weight: 700; color: #1565C0; }
+    .paycheck-days {
+      font-size: 0.82rem; font-weight: 700; color: #1565C0;
+      background: rgba(21, 101, 192, 0.1); padding: 4px 12px; border-radius: 20px;
+    }
 
-    .paycheck-info {
-      display: flex; align-items: center; gap: 10px;
-      padding: var(--spacing-sm) var(--spacing-md); margin-bottom: var(--spacing-md);
-      background: var(--gradient-icon-blue); border: 1px solid rgba(21, 101, 192, 0.15);
-      border-radius: var(--radius-sm); font-size: 0.875rem; color: var(--color-primary-dark);
+    /* Summary stats */
+    .summary-bar {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      background: var(--color-surface); border-radius: var(--radius-md);
+      border: 1px solid var(--color-border); overflow: hidden; margin-bottom: 12px;
     }
-    .paycheck-info mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); }
-    .paycheck-days { color: var(--color-text-secondary); font-size: 0.8125rem; }
+    .summary-stat {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 16px 8px; gap: 4px;
+      border-right: 1px solid var(--color-border);
+    }
+    .summary-stat:last-child { border-right: none; }
+    .ss-value { font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .ss-label { font-size: 0.62rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .paid-color { color: var(--color-success); }
+    .danger-color { color: var(--color-danger); }
+
+    /* Progress */
+    .progress-wrap { padding: 0 0 12px; }
+    .progress-labels {
+      display: flex; justify-content: space-between; margin-top: 6px;
+      font-size: 0.72rem; font-weight: 600; color: var(--color-text-muted);
+    }
+    .days-left { color: var(--color-text-muted); }
+    .overdue-banner {
+      display: flex; align-items: center; gap: 6px; margin-top: 8px;
+      padding: 6px 10px; border-radius: var(--radius-sm);
+      background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+      font-size: 0.75rem; font-weight: 600; color: var(--color-danger);
+    }
+    .overdue-banner mat-icon { font-size: 15px; width: 15px; height: 15px; }
+
+    /* Filter chips */
+    .filter-row {
+      display: flex; gap: 8px; padding: 0 0 12px;
+      overflow-x: auto; scrollbar-width: none;
+    }
+    .filter-row::-webkit-scrollbar { display: none; }
+    .filter-chip {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 20px; border: 1px solid var(--color-border);
+      background: var(--color-surface); font-size: 0.78rem; font-weight: 600;
+      color: var(--color-text-muted); cursor: pointer; white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .filter-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .filter-chip.active {
+      background: var(--color-primary); color: #fff; border-color: var(--color-primary);
+    }
+    .chip-count {
+      font-size: 0.68rem; font-weight: 700;
+      background: rgba(0,0,0,0.08); padding: 1px 6px; border-radius: 10px;
+    }
+    .filter-chip.active .chip-count { background: rgba(255,255,255,0.25); }
+
+    /* Payment rows */
+    .rows-container {
+      background: var(--color-surface); border-radius: var(--radius-md);
+      border: 1px solid var(--color-border); overflow: hidden;
+    }
+
+    .pay-row {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 14px 16px; border-bottom: 1px solid var(--color-border);
+      transition: background 0.15s; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .pay-row:last-child { border-bottom: none; }
+    .pay-row:hover { background: var(--color-surface-secondary); }
+    .pay-row.status-overdue { background: color-mix(in srgb, var(--color-danger) 5%, var(--color-surface)); }
+    .pay-row.status-paid { opacity: 0.55; }
+
+    .pay-icon {
+      width: 36px; height: 36px; min-width: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      margin-top: 2px;
+    }
+    .pay-icon mat-icon { font-size: 18px; width: 18px; height: 18px; color: #fff; }
+
+    .pay-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+    .pay-top-line { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .pay-name {
+      font-size: 0.88rem; font-weight: 600; display: flex; align-items: center; gap: 4px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+    }
+    .autopay-badge { font-size: 14px; width: 14px; height: 14px; color: var(--color-primary); flex-shrink: 0; }
+    .pay-amount { font-size: 0.92rem; font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+    .paid-through { text-decoration: line-through; opacity: 0.5; }
+
+    .pay-meta-line {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      flex-wrap: wrap;
+    }
+    .pay-due {
+      font-size: 0.75rem; color: var(--color-text-muted); font-weight: 500;
+      display: flex; align-items: center; gap: 3px;
+    }
+    .meta-icon { font-size: 13px; width: 13px; height: 13px; }
+    .meta-icon.overdue { color: var(--color-danger); }
+    .meta-icon.paid { color: var(--color-success); }
+    .pay-pills { display: flex; gap: 4px; flex-wrap: wrap; }
+    .pill {
+      font-size: 0.58rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.03em; padding: 1px 6px; border-radius: var(--radius-full);
+    }
+    .pill-loan { background: color-mix(in srgb, #007AFF 12%, transparent); color: #007AFF; }
+    .pill-card { background: color-mix(in srgb, #5856D6 12%, transparent); color: #5856D6; }
+    .pill-bill { background: color-mix(in srgb, #FF9500 12%, transparent); color: #FF9500; }
+    .pill-min { background: color-mix(in srgb, var(--color-warning) 12%, transparent); color: var(--color-warning); }
+    .pill-apr { background: color-mix(in srgb, var(--color-danger) 10%, transparent); color: var(--color-danger); }
+    .pill-type { background: var(--color-surface-secondary); color: var(--color-text-muted); }
+
+    .pay-balance-line {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.72rem; color: var(--color-text-muted); margin-top: 2px;
+    }
+    .bal-label { font-weight: 500; }
+    .bal-value { font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums; }
+    .bal-paid { color: var(--color-success); font-weight: 600; margin-left: auto; }
+
+    .pay-status-col {
+      display: flex; align-items: center; flex-shrink: 0; margin-top: 2px;
+    }
+    .status-badge {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .status-badge mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .s-paid { background: var(--color-success); color: #fff; }
+    .record-btn {
+      width: 34px; height: 34px; border: 1px solid var(--color-border);
+      border-radius: 10px; background: var(--color-surface); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.15s;
+    }
+    .record-btn:hover { border-color: var(--color-success); background: color-mix(in srgb, var(--color-success) 8%, var(--color-surface)); }
+    .record-btn mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--color-success); }
+
+    .empty-row {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 40px 16px; color: var(--color-text-muted); font-size: 0.88rem;
+    }
+    .empty-row mat-icon { color: var(--color-success); }
 
     @media (max-width: 599px) {
-      .payment-header { display: none; }
-      .payment-row {
-        grid-template-columns: 1fr auto;
-        gap: 4px 12px;
-        padding: 12px 4px;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
+      .page-wrap { padding: 0 0 24px; }
+      .summary-bar {
+        display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch;
+        scrollbar-width: none; border-radius: var(--radius-sm);
       }
-      .payment-row:active { opacity: 0.7; }
-      .col-balance, .col-paid, .col-date, .col-status, .col-actions { display: none; }
-      .col-account { grid-column: 1; }
-      .col-due { grid-column: 2; text-align: right; }
-      .account-name { font-size: 0.9375rem; }
-      .account-icon { font-size: 20px; width: 20px; height: 20px; }
-      .due-amount { font-size: 1rem; }
-      .card-title-row { flex-direction: column; align-items: flex-start; gap: 4px; }
-      .payment-count { font-size: 0.75rem; }
-      .paycheck-info { flex-wrap: wrap; font-size: 0.8rem; }
-      .total-row { padding: var(--spacing-sm) 0 0; font-size: 0.9rem; }
+      .summary-bar::-webkit-scrollbar { display: none; }
+      .summary-stat {
+        flex: 0 0 auto; min-width: 90px; border-bottom: none;
+        border-right: 1px solid var(--color-border); padding: 12px 8px;
+      }
+      .summary-stat:last-child { border-right: none; }
+      .ss-value { font-size: 0.95rem; }
+      .pay-row { padding: 12px 14px; gap: 10px; }
+      .pay-icon { width: 32px; height: 32px; min-width: 32px; }
+      .pay-amount { font-size: 0.85rem; }
+      .pay-pills { gap: 3px; }
+      .filter-row { padding: 0 0 8px; }
+      .paycheck-banner { padding: 12px 14px; margin-bottom: 12px; }
     }
   `]
 })
 export class MonthlyPaymentsComponent implements OnInit {
-  private debtService = inject(DebtService);
-  private profileService = inject(UserProfileService);
-  private paymentService = inject(PaymentService);
-  private creditCardService = inject(CreditCardService);
+  private dashboardService = inject(DashboardService);
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
   private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
-  payments = signal<MonthlyPayment[]>([]);
-  totalDue = signal(0);
-  paycheckDay = signal<number | null>(null);
-  paycheckDateLabel = signal('');
-  daysUntilPaycheck = signal(0);
+  data = signal<MonthlyPaymentsData | null>(null);
+  filter = signal<'all' | 'unpaid' | 'loan' | 'card' | 'recurring'>('all');
+
+  daysLeftInMonth = computed(() => {
+    const now = new Date();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    return lastDay - now.getDate();
+  });
+  allRows = computed(() => this.data()?.rows ?? []);
+  unpaidCount = computed(() => this.allRows().filter(r => r.status !== 'paid').length);
+  loanCount = computed(() => this.allRows().filter(r => r.kind === 'loan').length);
+  cardCount = computed(() => this.allRows().filter(r => r.kind === 'card').length);
+  recurringCount = computed(() => this.allRows().filter(r => r.kind === 'recurring').length);
+
+  filteredRows = computed(() => {
+    const rows = this.allRows();
+    switch (this.filter()) {
+      case 'unpaid': return rows.filter(r => r.status !== 'paid');
+      case 'loan': return rows.filter(r => r.kind === 'loan');
+      case 'card': return rows.filter(r => r.kind === 'card');
+      case 'recurring': return rows.filter(r => r.kind === 'recurring');
+      default: return rows;
+    }
+  });
 
   ngOnInit(): void {
-    this.profileService.getProfile().subscribe({
-      next: (profile) => {
-        if (profile.nextPayDate) {
-          const anchor = new Date(profile.nextPayDate);
-          this.paycheckDay.set(anchor.getDate());
-          this.calculatePaycheckInfo(anchor, profile.payFrequency);
-          this.cdr.detectChanges();
-        }
-      },
-      error: () => {}
-    });
-
-    this.loadPayments();
+    this.loadData();
   }
 
-  recordPayment(payment: MonthlyPayment): void {
+  loadData(): void {
+    this.loading.set(true);
+    this.dashboardService.getMonthlyPayments().subscribe({
+      next: (data) => { this.data.set(data); this.loading.set(false); this.cdr.detectChanges(); },
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
+    });
+  }
+
+  recordPayment(row: MonthlyPaymentRow): void {
+    if (row.kind === 'recurring') {
+      import('../../finance/expenses/add-expense-dialog.component').then(m => {
+        const dialogRef = this.dialog.open(m.AddExpenseDialogComponent, {
+          panelClass: 'expense-dialog-panel',
+          data: { expense: null }
+        });
+        dialogRef.afterClosed().subscribe(result => {
+          if (result) { this.notify.success('Payment recorded'); this.loadData(); }
+        });
+      });
+      return;
+    }
+
+    if (!row.debtType) return;
     import('../../finance/expenses/add-expense-dialog.component').then(m => {
-      const debtType = payment.type === 'Loan' ? 'PersonalLoan' : 'CreditCard';
+      const preselectedType = row.debtType === 'CreditCard' ? 'CardPayment' : 'LoanPayment';
       const dialogRef = this.dialog.open(m.AddExpenseDialogComponent, {
-        width: '520px',
-        maxHeight: '90vh',
+        panelClass: 'expense-dialog-panel',
         data: {
           expense: null,
-          preselectedType: debtType === 'PersonalLoan' ? 'LoanPayment' : 'CardPayment',
-          preselectedDebtKey: `${debtType}:${payment.id}`
+          preselectedType,
+          preselectedDebtKey: `${row.debtType}:${row.id}`
         }
       });
       dialogRef.afterClosed().subscribe(result => {
-        if (result) {
-          this.notify.success('Payment recorded successfully');
-          this.loadPayments();
-        }
+        if (result) { this.notify.success('Payment recorded'); this.loadData(); }
       });
     });
-  }
-
-  private loadPayments(): void {
-    forkJoin({
-      debts: this.debtService.getAll(),
-      paymentResponse: this.paymentService.getAll(),
-      cards: this.creditCardService.getAll()
-    }).subscribe(({ debts, paymentResponse, cards }) => {
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
-
-      const cardMap = new Map<number, CreditCard>();
-      for (const c of cards) cardMap.set(Number(c.id), c);
-
-      const monthlyPayments: MonthlyPayment[] = [];
-      const monthEnd = new Date(currentYear, currentMonth + 1, 0);
-
-      for (const debt of debts) {
-        if (debt.nextPaymentDate && new Date(debt.nextPaymentDate) > now) continue;
-        const isLoan = debt.type === 'PersonalLoan';
-        const freq = debt.paymentFrequency || 'Monthly';
-        const allDebtPayments = paymentResponse.payments.filter(
-          p => String(p.debtId) === String(debt.id) && (p.debtType === debt.type || String(p.debtType) === String(isLoan ? 0 : 1))
-        );
-
-        const dueDates = this.getDueDatesInMonth(debt, currentYear, currentMonth, monthEnd);
-
-        for (const dueDate of dueDates) {
-          const windowStart = new Date(dueDate.getTime() - 7 * 86400000);
-          const windowEnd = new Date(dueDate.getTime() + 7 * 86400000);
-          const paidAmount = freq === 'Monthly'
-            ? sumCurrency(allDebtPayments.filter(p => new Date(p.paymentDate) >= this.getCycleStart(debt.dueDay ?? 1, now)).map(p => p.amountPaid))
-            : sumCurrency(allDebtPayments.filter(p => { const d = new Date(p.paymentDate); return d >= windowStart && d <= windowEnd; }).map(p => p.amountPaid));
-
-          const paymentAmount = debt.perPaymentAmount;
-          const hasActivePromo = !isLoan && debt.promoAprPercent === 0 && debt.promoEndDate && new Date(debt.promoEndDate) > now;
-          const dueAmount = isLoan
-            ? paymentAmount
-            : (hasActivePromo ? paymentAmount : (paymentAmount > 0 ? paymentAmount : debt.currentBalance));
-
-          let isPaid: boolean;
-          const card = !isLoan ? cardMap.get(Number(debt.id)) : undefined;
-          if (!isLoan && card?.lastStatementDate && paidAmount > 0) {
-            const cyclePayments = allDebtPayments.filter(p => new Date(p.paymentDate) >= this.getCycleStart(debt.dueDay ?? 1, now));
-            const latestPaymentDate = Math.max(...cyclePayments.map(p => new Date(p.paymentDate).getTime()));
-            const stmtDate = new Date(card.lastStatementDate).getTime();
-            isPaid = stmtDate > latestPaymentDate ? true : roundCurrency(paidAmount) >= roundCurrency(dueAmount);
-          } else {
-            isPaid = roundCurrency(paidAmount) >= roundCurrency(dueAmount);
-          }
-          if (isPaid) continue;
-
-          let daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          if (daysUntilDue < -30 || daysUntilDue > 30) continue;
-
-          let status: MonthlyPayment['status'];
-          if (daysUntilDue < 0) {
-            status = 'overdue';
-          } else if (daysUntilDue <= 5) {
-            status = 'due-soon';
-          } else {
-            status = 'upcoming';
-          }
-
-          const minimumPaid = !isLoan && (
-            (paymentAmount === 0 && paidAmount > 0) ||
-            (paymentAmount > 0 && roundCurrency(paidAmount) >= roundCurrency(paymentAmount))
-          );
-
-          monthlyPayments.push({
-            id: debt.id,
-            name: debt.name,
-            type: isLoan ? 'Loan' : 'Credit Card',
-            amount: dueAmount,
-            minimumPayment: !isLoan && paymentAmount > 0 ? paymentAmount : null,
-            minimumPaid,
-            isAutopay: debt.isAutopay,
-            currentBalance: debt.currentBalance,
-            aprPercent: isLoan ? debt.aprPercent : undefined,
-            paymentFrequency: isLoan ? (debt as any).paymentFrequency : undefined,
-            fundedBankAccountId: isLoan ? (debt as any).fundedBankAccountId : undefined,
-            paidAmount,
-            dueDate,
-            nextDueDate: dueDates[dueDates.length - 1] || dueDate,
-            daysUntilDue,
-            status
-          });
-        }
-      }
-
-      monthlyPayments.sort((a, b) => a.daysUntilDue - b.daysUntilDue);
-      this.payments.set(monthlyPayments);
-      this.totalDue.set(sumCurrency(monthlyPayments.map(p => p.amount)));
-      this.loading.set(false);
-      this.cdr.detectChanges();
-    });
-  }
-
-  private getDueDatesInMonth(debt: DebtItem, year: number, month: number, monthEnd: Date): Date[] {
-    const freq = debt.paymentFrequency || 'Monthly';
-    if (freq === 'Monthly') {
-      const day = Math.min(debt.dueDay ?? 1, monthEnd.getDate());
-      return [new Date(year, month, day)];
-    }
-    const interval = freq === 'Biweekly' ? 14 : 7;
-    const anchor = debt.startDate ? new Date(debt.startDate) : new Date(year, month, debt.dueDay ?? 1);
-    const monthStart = new Date(year, month, 1);
-    const dates: Date[] = [];
-    let current = new Date(anchor);
-    while (current <= monthEnd) {
-      if (current >= monthStart) dates.push(new Date(current));
-      current = new Date(current.getTime() + interval * 86400000);
-    }
-    current = new Date(anchor.getTime() - interval * 86400000);
-    while (current >= monthStart) {
-      dates.push(new Date(current));
-      current = new Date(current.getTime() - interval * 86400000);
-    }
-    dates.sort((a, b) => a.getTime() - b.getTime());
-    return dates.length > 0 ? dates : [new Date(year, month, Math.min(debt.dueDay ?? 1, monthEnd.getDate()))];
-  }
-
-  private getCycleStart(dueDay: number, now: Date): Date {
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const today = now.getDate();
-    if (today >= dueDay) {
-      return new Date(year, month, dueDay);
-    }
-    return new Date(year, month - 1, dueDay);
-  }
-
-  private calculatePaycheckInfo(anchor: Date, frequency: string): void {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    let nextPaycheckDate: Date;
-
-    if (frequency === 'Biweekly' || frequency === 'Weekly') {
-      const intervalDays = frequency === 'Biweekly' ? 14 : 7;
-      nextPaycheckDate = new Date(anchor);
-      if (nextPaycheckDate > today) {
-        while (nextPaycheckDate.getTime() - intervalDays * 86400000 > today.getTime()) {
-          nextPaycheckDate = new Date(nextPaycheckDate.getTime() - intervalDays * 86400000);
-        }
-      } else {
-        while (nextPaycheckDate <= today) {
-          nextPaycheckDate = new Date(nextPaycheckDate.getTime() + intervalDays * 86400000);
-        }
-      }
-    } else {
-      const day = anchor.getDate();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
-      if (day > now.getDate()) {
-        nextPaycheckDate = new Date(currentYear, currentMonth, day);
-      } else {
-        nextPaycheckDate = new Date(currentYear, currentMonth + 1, day);
-      }
-    }
-
-    const diffTime = nextPaycheckDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    this.daysUntilPaycheck.set(diffDays);
-    this.paycheckDateLabel.set(nextPaycheckDate.toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric'
-    }));
   }
 }

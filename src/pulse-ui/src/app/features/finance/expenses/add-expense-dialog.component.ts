@@ -245,15 +245,15 @@ export interface ExpenseDialogData {
                 <span class="debt-info-value">{{ selectedDebt()!.aprPercent }}%</span>
               </div>
               <div class="debt-info-row">
-                <span class="debt-info-label">Due Day</span>
-                <span class="debt-info-value">{{ selectedDebt()!.dueDay }}th of month</span>
+                <span class="debt-info-label">Next Due</span>
+                <span class="debt-info-value">{{ selectedDebt()!.nextPaymentDate | date:'MMM d, y' }}</span>
               </div>
             </div>
 
             <div class="pay-mode-row">
               <div class="pay-mode-chip" [class.active]="loanPaymentMode() === 'full'" (click)="onLoanPaymentModeChange('full')">
                 <span class="pmc-label">Full</span>
-                <span class="pmc-value">{{ selectedDebt()!.monthlyPayment | currency }}</span>
+                <span class="pmc-value">{{ selectedDebt()!.perPaymentAmount | currency }}</span>
               </div>
               <div class="pay-mode-chip" [class.active]="loanPaymentMode() === 'minimum'" (click)="onLoanPaymentModeChange('minimum')">
                 <span class="pmc-label">Minimum</span>
@@ -310,15 +310,15 @@ export interface ExpenseDialogData {
                 <span class="debt-info-value">{{ selectedDebt()!.aprPercent }}%</span>
               </div>
               <div class="debt-info-row">
-                <span class="debt-info-label">Due Day</span>
-                <span class="debt-info-value">{{ selectedDebt()!.dueDay }}th of month</span>
+                <span class="debt-info-label">Next Due</span>
+                <span class="debt-info-value">{{ selectedDebt()!.nextPaymentDate | date:'MMM d, y' }}</span>
               </div>
             </div>
 
             <div class="pay-mode-row">
               <div class="pay-mode-chip" [class.active]="loanPaymentMode() === 'full'" (click)="onLoanPaymentModeChange('full')">
                 <span class="pmc-label">Full</span>
-                <span class="pmc-value">{{ selectedDebt()!.monthlyPayment | currency }}</span>
+                <span class="pmc-value">{{ selectedDebt()!.perPaymentAmount | currency }}</span>
               </div>
               <div class="pay-mode-chip" [class.active]="loanPaymentMode() === 'minimum'" (click)="onLoanPaymentModeChange('minimum')">
                 <span class="pmc-label">Minimum</span>
@@ -1549,7 +1549,7 @@ export class AddExpenseDialogComponent implements OnInit {
     this.selectedDebt.set(debt);
     if (debt && !preserveAmount) {
       this.loanPaymentMode.set('full');
-      this.form.patchValue({ amount: debt.monthlyPayment });
+      this.form.patchValue({ amount: debt.perPaymentAmount });
     }
   }
 
@@ -1558,19 +1558,20 @@ export class AddExpenseDialogComponent implements OnInit {
     const debt = this.selectedDebt();
     if (!debt) return;
     if (mode === 'full') {
-      this.form.patchValue({ amount: debt.monthlyPayment });
+      this.form.patchValue({ amount: debt.perPaymentAmount });
     } else if (mode === 'minimum') {
       const minPay = debt.type === 'CreditCard'
-        ? (this.cardMinPayments.get(debt.id) ?? debt.monthlyPayment)
-        : debt.monthlyPayment;
+        ? (this.cardMinPayments.get(debt.id) ?? debt.perPaymentAmount)
+        : debt.perPaymentAmount;
       this.form.patchValue({ amount: minPay });
     }
   }
 
   getMinPayment(debt: DebtItem): number {
-    if (debt.type === 'CreditCard') return this.cardMinPayments.get(debt.id) ?? debt.monthlyPayment;
-    return debt.monthlyPayment;
+    if (debt.type === 'CreditCard') return this.cardMinPayments.get(debt.id) ?? debt.perPaymentAmount;
+    return debt.perPaymentAmount;
   }
+
 
   private buildDateTime(): Date {
     const val = this.form.value;

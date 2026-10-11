@@ -251,8 +251,8 @@ export class TagSummaryComponent implements OnInit {
   private loadTags(dateFrom?: string, dateTo?: string): void {
     this.loading.set(true);
     this.expenseService.getTagSummary(undefined, dateFrom, dateTo).subscribe({
-      next: (tags) => {
-        this.tags.set(tags);
+      next: (response) => {
+        this.tags.set(response.tags);
         this.loading.set(false);
         this.cdr.detectChanges();
       },

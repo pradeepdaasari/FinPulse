@@ -1,9 +1,11 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Pulse.Core.Data;
 using Pulse.Core.DTOs;
+using Pulse.Core.Models;
 using Pulse.Core.Models.Enums;
 
 namespace Pulse.Api.Controllers;
@@ -14,14 +16,22 @@ namespace Pulse.Api.Controllers;
 public class DebtsController : ControllerBase
 {
     private readonly PulseDbContext _db;
+    private readonly UserManager<ApplicationUser> _userManager;
 
-    public DebtsController(PulseDbContext db) => _db = db;
+    public DebtsController(PulseDbContext db, UserManager<ApplicationUser> userManager)
+    {
+        _db = db;
+        _userManager = userManager;
+    }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
     [HttpGet]
     public async Task<ActionResult<List<DebtItemDto>>> GetAll()
     {
+        var user = await _userManager.GetUserAsync(User);
+        var userToday = GetUserToday(user?.PreferredTimezone);
+
         var loans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
         var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
 
@@ -42,7 +52,7 @@ public class DebtsController : ControllerBase
                 DueDay = loan.DueDay,
                 IsAutopay = loan.IsAutopay,
                 SubType = loan.LoanType.ToString(),
-                NextPaymentDate = loan.NextPaymentDate,
+                NextPaymentDate = AdvanceNextDueDate(loan.NextPaymentDate, loan.PaymentFrequency, loan.DueDay, userToday),
                 PaymentFrequency = loan.PaymentFrequency.ToString(),
                 StartDate = loan.StartDate
             });
@@ -64,10 +74,64 @@ public class DebtsController : ControllerBase
                 SubType = null,
                 PromoAprPercent = card.PromoAprPercent,
                 PromoEndDate = card.PromoEndDate,
-                PerPaymentAmount = card.MinimumPayment
+                PerPaymentAmount = card.MinimumPayment,
+                PaymentFrequency = "Monthly",
+                NextPaymentDate = AdvanceNextDueDate(null, PaymentFrequency.Monthly, card.DueDay, userToday)
             });
         }
 
         return Ok(debts.OrderBy(d => d.Name).ToList());
+    }
+
+    private static DateTime GetUserToday(string? timezone)
+    {
+        if (!string.IsNullOrEmpty(timezone))
+        {
+            try
+            {
+                var tz = TimeZoneInfo.FindSystemTimeZoneById(timezone);
+                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+            }
+            catch { }
+        }
+        return DateTime.Today;
+    }
+
+    private static DateTime? AdvanceNextDueDate(DateTime? anchor, PaymentFrequency frequency, int dueDay, DateTime today)
+    {
+        if (anchor.HasValue)
+        {
+            var d = anchor.Value.Date;
+            while (d < today)
+            {
+                d = frequency switch
+                {
+                    PaymentFrequency.Weekly => d.AddDays(7),
+                    PaymentFrequency.Biweekly => d.AddDays(14),
+                    _ => d.AddMonths(1)
+                };
+            }
+            return d;
+        }
+
+        if (frequency == PaymentFrequency.Monthly)
+        {
+            var day = Math.Min(dueDay, DateTime.DaysInMonth(today.Year, today.Month));
+            var thisMonth = new DateTime(today.Year, today.Month, day);
+            if (thisMonth >= today) return thisMonth;
+            var next = today.AddMonths(1);
+            day = Math.Min(dueDay, DateTime.DaysInMonth(next.Year, next.Month));
+            return new DateTime(next.Year, next.Month, day);
+        }
+
+        if (frequency is PaymentFrequency.Biweekly or PaymentFrequency.Weekly)
+        {
+            var targetDow = (DayOfWeek)dueDay;
+            var daysUntil = ((int)targetDow - (int)today.DayOfWeek + 7) % 7;
+            if (daysUntil == 0) return today;
+            return today.AddDays(daysUntil);
+        }
+
+        return null;
     }
 }

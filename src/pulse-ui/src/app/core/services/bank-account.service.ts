@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { BankAccount, BankAccountCreate } from '../models/bank-account.model';
+import { BankAccount, BankAccountCreate, BankAccountSummary, TransactionSummary } from '../models/bank-account.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -31,5 +31,17 @@ export class BankAccountService {
 
   toggleExcluded(id: number): Observable<BankAccount> {
     return this.http.patch<BankAccount>(`${this.baseUrl}/${id}/excluded`, {});
+  }
+
+  getSummary(): Observable<BankAccountSummary> {
+    return this.http.get<BankAccountSummary>(`${this.baseUrl}/summary`);
+  }
+
+  getTransactionSummary(id: number, from?: string, to?: string): Observable<TransactionSummary> {
+    const params: string[] = [];
+    if (from) params.push(`from=${from}`);
+    if (to) params.push(`to=${to}`);
+    const query = params.length ? `?${params.join('&')}` : '';
+    return this.http.get<TransactionSummary>(`${this.baseUrl}/${id}/transaction-summary${query}`);
   }
 }

@@ -35,16 +35,16 @@ public class DashboardController : ControllerBase
     {
         var allLoans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
         var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
-        var loans = allLoans.Where(l => l.NextPaymentDate == null || l.NextPaymentDate <= DateTime.UtcNow).ToList();
+        var activeLoans = allLoans.Where(l => l.CurrentBalance > 0).ToList();
 
         var totalDebt = allLoans.Sum(l => l.CurrentBalance) + cards.Sum(c => c.CurrentBalance);
-        var totalMonthlyPayment = loans.Sum(l => l.MonthlyEquivalentPayment) + cards.Sum(c => c.MinimumPayment);
+        var totalMonthlyPayment = activeLoans.Sum(l => l.MonthlyEquivalentPayment) + cards.Sum(c => c.MinimumPayment);
         var numberOfDebts = allLoans.Count + cards.Count;
 
         // Calculate estimated debt-free date (max of all individual payoff dates)
         var payoffDates = new List<DateTime>();
 
-        foreach (var loan in loans)
+        foreach (var loan in activeLoans)
         {
             var remainingMonths = _calcService.CalculateRemainingMonths(loan);
             if (remainingMonths > 0 && remainingMonths < 999)
@@ -71,7 +71,7 @@ public class DashboardController : ControllerBase
         var today = DateTime.UtcNow.Date;
         var upcomingPayments = new List<UpcomingPaymentDto>();
 
-        foreach (var loan in loans)
+        foreach (var loan in activeLoans)
         {
             var dueDate = GetNextLoanDueDate(loan, today);
             var daysUntilDue = (dueDate - today).Days;
@@ -146,8 +146,7 @@ public class DashboardController : ControllerBase
     public async Task<ActionResult<DebtFreeCountdownDto>> GetCountdown()
     {
         var loans = await _db.PersonalLoans
-            .Where(l => l.UserId == UserId)
-            .Where(l => l.NextPaymentDate == null || l.NextPaymentDate <= DateTime.UtcNow)
+            .Where(l => l.UserId == UserId && l.CurrentBalance > 0)
             .ToListAsync();
         var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
 
@@ -259,6 +258,27 @@ public class DashboardController : ControllerBase
             - (postStmtPayments.TryGetValue(c.Id, out var py) ? py : 0));
         var totalLoanDebt = loans.Sum(l => l.CurrentBalance);
 
+        var totalDebt = totalCreditCardDebt + totalLoanDebt;
+        var totalMonthlyPayment = loans.Sum(l => l.MonthlyEquivalentPayment) + creditCards.Sum(c => c.MinimumPayment);
+        var debtPaidPercent = totalDebt <= 0 ? 0m
+            : Math.Min(100, Math.Round(totalMonthlyPayment / (totalDebt + totalMonthlyPayment) * 100, 1));
+
+        var daysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
+        var dayOfMonth = now.Day;
+        var paceRatio = (decimal)dayOfMonth / daysInMonth;
+        var spendRatio = totalIncome > 0 ? totalExpenses / totalIncome : (totalExpenses > 0 ? 2m : 0m);
+        var paceStatus = spendRatio <= paceRatio * 0.85m ? "ahead"
+            : spendRatio <= paceRatio * 1.1m ? "on-track" : "over";
+        var daysLeft = daysInMonth - dayOfMonth;
+        var spentPct = totalIncome > 0 ? (int)Math.Round(totalExpenses / totalIncome * 100) : 0;
+        var paceMessage = totalIncome <= 0
+            ? (totalExpenses == 0
+                ? $"No spending recorded yet — {daysLeft} days left this month."
+                : $"Spent {totalExpenses:C0} with {daysLeft} days left. Log income to track pace.")
+            : paceStatus == "ahead" ? $"{spentPct}% of income spent, {daysLeft} days left — under budget!"
+            : paceStatus == "on-track" ? $"{spentPct}% of income spent, {daysLeft} days left — on track."
+            : $"{spentPct}% of income spent, {daysLeft} days left — over budget.";
+
         return Ok(new
         {
             TotalIncome = totalIncome,
@@ -292,7 +312,10 @@ public class DashboardController : ControllerBase
             TotalBankBalance = totalBankBalance,
             TotalCreditCardDebt = totalCreditCardDebt,
             TotalLoanDebt = totalLoanDebt,
-            NetWorth = totalBankBalance - totalCreditCardDebt - totalLoanDebt
+            NetWorth = totalBankBalance - totalCreditCardDebt - totalLoanDebt,
+            DebtPaidPercent = debtPaidPercent,
+            PaceStatus = paceStatus,
+            PaceMessage = paceMessage
         });
     }
 
@@ -529,6 +552,484 @@ public class DashboardController : ControllerBase
         };
     }
 
+    [HttpGet("today-glance")]
+    public async Task<ActionResult> GetTodayGlance()
+    {
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var userToday = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+
+        // Payments due today (from upcoming payments within 7 days)
+        var allLoans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
+        var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
+        var paymentsDueToday = new List<object>();
+        decimal paymentsTotalDue = 0;
+
+        foreach (var loan in allLoans)
+        {
+            var dueDate = GetNextLoanDueDate(loan, userToday);
+            if (dueDate == userToday)
+            {
+                paymentsDueToday.Add(new { DebtName = loan.LenderName, Amount = loan.MonthlyPayment, DebtType = "PersonalLoan" });
+                paymentsTotalDue += loan.MonthlyPayment;
+            }
+        }
+        foreach (var card in cards)
+        {
+            var dueDate = GetNextDueDate(card.DueDay, userToday);
+            if (dueDate == userToday)
+            {
+                paymentsDueToday.Add(new { DebtName = card.CardName, Amount = card.MinimumPayment, DebtType = "CreditCard" });
+                paymentsTotalDue += card.MinimumPayment;
+            }
+        }
+
+        // Today's spending
+        var (dayStart, dayEnd) = TimeZoneHelper.MonthRangeUtc(userToday.Year, userToday.Month, tz);
+        var todayUtcStart = userToday.Date - tz.GetUtcOffset(userToday);
+        var todayUtcEnd = todayUtcStart.AddDays(1);
+        var todaySpending = await _db.DailyExpenses
+            .Where(e => e.UserId == UserId && e.Date >= todayUtcStart && e.Date < todayUtcEnd
+                && (e.TransactionType == TransactionType.Expense || e.TransactionType == null))
+            .SumAsync(e => (decimal?)e.Amount ?? 0);
+
+        // Recurring bills due today or overdue
+        var recurring = await _db.RecurringTransactions
+            .Where(r => r.UserId == UserId && r.IsActive && r.RecurringType != RecurringType.Budget
+                && r.NextRunDate.Date <= userToday)
+            .Select(r => new { Name = r.Description, r.Amount, r.NextRunDate })
+            .ToListAsync();
+        var recurringDueTotal = recurring.Sum(r => r.Amount);
+
+        // Upcoming payments in the next 5 days (excluding today) — skip already-paid
+        var upcomingLimit = userToday.AddDays(5);
+        var upcomingPayments = new List<UpcomingGlanceItem>();
+
+        var (utcMonthStart, utcMonthEnd) = TimeZoneHelper.MonthRangeUtc(userToday.Year, userToday.Month, tz);
+        var monthPayments = await _db.PaymentHistories
+            .Where(p => p.UserId == UserId && p.PaymentDate >= utcMonthStart && p.PaymentDate < utcMonthEnd)
+            .ToListAsync();
+
+        foreach (var loan in allLoans)
+        {
+            if (loan.CurrentBalance <= 0) continue;
+            var dueDate = GetNextLoanDueDate(loan, userToday);
+            var days = (int)(dueDate - userToday).TotalDays;
+            if (days >= 1 && days <= 5)
+            {
+                var paid = monthPayments
+                    .Where(p => p.DebtId == loan.Id && p.DebtType == DebtType.PersonalLoan)
+                    .Sum(p => p.AmountPaid);
+                if (paid >= loan.MonthlyPayment) continue;
+                upcomingPayments.Add(new(loan.LenderName, loan.MonthlyPayment, dueDate.ToString("yyyy-MM-dd"), days, "loan", loan.IsAutopay));
+            }
+        }
+        foreach (var card in cards)
+        {
+            var dueDate = GetNextDueDate(card.DueDay, userToday);
+            var days = (int)(dueDate - userToday).TotalDays;
+            if (days >= 1 && days <= 5)
+            {
+                if (card.CurrentBalance <= 0) continue;
+                var paid = monthPayments
+                    .Where(p => p.DebtId == card.Id && p.DebtType == DebtType.CreditCard)
+                    .Sum(p => p.AmountPaid);
+                if (paid >= card.MinimumPayment) continue;
+                upcomingPayments.Add(new(card.CardName, card.MinimumPayment, dueDate.ToString("yyyy-MM-dd"), days, "card", card.IsAutopay));
+            }
+        }
+        var upcomingRecurring = await _db.RecurringTransactions
+            .Where(r => r.UserId == UserId && r.IsActive && r.RecurringType != RecurringType.Budget
+                && r.NextRunDate.Date > userToday && r.NextRunDate.Date <= upcomingLimit)
+            .Select(r => new { r.Description, r.Amount, r.NextRunDate })
+            .ToListAsync();
+        foreach (var bill in upcomingRecurring)
+        {
+            var days = (int)(bill.NextRunDate.Date - userToday).TotalDays;
+            upcomingPayments.Add(new(bill.Description, bill.Amount, bill.NextRunDate.Date.ToString("yyyy-MM-dd"), days, "recurring", false));
+        }
+        upcomingPayments = upcomingPayments.OrderBy(p => p.DaysUntilDue).ToList();
+        var upcomingTotal = upcomingPayments.Sum(p => p.MonthlyPayment);
+
+        return Ok(new
+        {
+            PaymentsDueToday = paymentsDueToday,
+            PaymentsTotalDue = paymentsTotalDue,
+            TodaySpending = todaySpending,
+            RecurringDue = recurring,
+            RecurringDueCount = recurring.Count,
+            RecurringDueTotal = recurringDueTotal,
+            UpcomingPayments = upcomingPayments,
+            UpcomingTotal = upcomingTotal
+        });
+    }
+
+    [HttpGet("insights")]
+    public async Task<ActionResult> GetInsights()
+    {
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var (currentStart, currentEnd) = TimeZoneHelper.MonthRangeUtc(now.Year, now.Month, tz);
+        var prevDate = new DateTime(now.Year, now.Month, 1).AddMonths(-1);
+        var (prevStart, prevEnd) = TimeZoneHelper.MonthRangeUtc(prevDate.Year, prevDate.Month, tz);
+
+        var tradingCatIds = await _db.CustomCategories
+            .Where(c => c.UserId == UserId && c.Name.Contains("Trading"))
+            .Select(c => c.Id).ToListAsync();
+
+        var currentExpenses = await _db.DailyExpenses
+            .Include(e => e.Category)
+            .Where(e => e.UserId == UserId && e.TransactionType == TransactionType.Expense
+                && e.Date >= currentStart && e.Date < currentEnd
+                && (!e.CategoryId.HasValue || !tradingCatIds.Contains(e.CategoryId.Value)))
+            .ToListAsync();
+
+        var prevExpenses = await _db.DailyExpenses
+            .Include(e => e.Category)
+            .Where(e => e.UserId == UserId && e.TransactionType == TransactionType.Expense
+                && e.Date >= prevStart && e.Date < prevEnd
+                && (!e.CategoryId.HasValue || !tradingCatIds.Contains(e.CategoryId.Value)))
+            .ToListAsync();
+
+        var currentTotal = currentExpenses.Sum(e => e.Amount);
+        var previousTotal = prevExpenses.Sum(e => e.Amount);
+
+        var results = new List<object>();
+
+        if (previousTotal > 0)
+        {
+            var percentChange = (currentTotal - previousTotal) / previousTotal * 100;
+            if (percentChange < -5)
+                results.Add(new { Icon = "lightbulb", Text = $"Spending down {Math.Abs(Math.Round(percentChange))}% this month", Color = "green" });
+            else if (percentChange > 10)
+                results.Add(new { Icon = "trending_up", Text = $"Spending up {Math.Round(percentChange)}% vs last month", Color = "amber" });
+        }
+
+        // Category-level insights
+        var currentByCategory = currentExpenses.Where(e => e.CategoryId.HasValue).GroupBy(e => e.CategoryId!.Value)
+            .ToDictionary(g => g.Key, g => g.Sum(e => e.Amount));
+        var prevByCategory = prevExpenses.Where(e => e.CategoryId.HasValue).GroupBy(e => e.CategoryId!.Value)
+            .ToDictionary(g => g.Key, g => g.Sum(e => e.Amount));
+        var categoryInfo = currentExpenses.Concat(prevExpenses)
+            .Where(e => e.CategoryId.HasValue).GroupBy(e => e.CategoryId!.Value)
+            .ToDictionary(g => g.Key, g => g.First().Category?.Name ?? "Unknown");
+
+        var significantIncreases = currentByCategory
+            .Where(kv => prevByCategory.TryGetValue(kv.Key, out var prev) && prev > 0 && ((kv.Value - prev) / prev * 100) > 20)
+            .Select(kv => new { Name = categoryInfo.GetValueOrDefault(kv.Key, "Unknown"), Change = Math.Round((kv.Value - prevByCategory[kv.Key]) / prevByCategory[kv.Key] * 100) })
+            .OrderByDescending(c => c.Change)
+            .Take(2);
+
+        foreach (var cat in significantIncreases)
+        {
+            results.Add(new { Icon = "warning", Text = $"{cat.Name} up {cat.Change}% vs last month", Color = "amber" });
+            if (results.Count >= 3) break;
+        }
+
+        // Positive cash flow
+        if (results.Count < 3)
+        {
+            var income = await _db.DailyExpenses
+                .Where(e => e.UserId == UserId && e.TransactionType == TransactionType.Income
+                    && e.Date >= currentStart && e.Date < currentEnd)
+                .SumAsync(e => (decimal?)e.Amount ?? 0);
+            var netCashFlow = income - currentTotal;
+            if (netCashFlow > 0)
+                results.Add(new { Icon = "savings", Text = $"Positive cash flow of {netCashFlow:C0}", Color = "green" });
+        }
+
+        return Ok(results.Take(3));
+    }
+
+    [HttpGet("monthly-payments")]
+    public async Task<ActionResult> GetMonthlyPayments()
+    {
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var year = now.Year;
+        var month = now.Month;
+        var today = now.Date;
+        var monthStart = new DateTime(year, month, 1);
+        var monthEnd = new DateTime(year, month, DateTime.DaysInMonth(year, month));
+
+        var loans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
+        var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
+
+        var (utcMonthStart, utcMonthEnd) = TimeZoneHelper.MonthRangeUtc(year, month, tz);
+        var allPayments = await _db.PaymentHistories
+            .Where(p => p.UserId == UserId && p.PaymentDate >= utcMonthStart && p.PaymentDate < utcMonthEnd)
+            .ToListAsync();
+
+        var rows = new List<object>();
+
+        foreach (var loan in loans)
+        {
+            if (loan.CurrentBalance <= 0) continue;
+            if (IsLoanDeferred(loan, today)) continue;
+
+            var freq = loan.PaymentFrequency;
+            var debtPayments = allPayments.Where(p => p.DebtId == loan.Id && p.DebtType == DebtType.PersonalLoan).ToList();
+            var anchor = loan.NextPaymentDate?.Date ?? loan.StartDate.Date;
+            var dueDates = GetDueDatesInMonth(loan.DueDay, freq, anchor, year, month, monthEnd);
+
+            foreach (var dueDate in dueDates)
+            {
+                var nearbyPaid = freq == PaymentFrequency.Monthly
+                    ? debtPayments.Sum(p => p.AmountPaid)
+                    : debtPayments.Where(p => {
+                        var pd = TimeZoneInfo.ConvertTimeFromUtc(p.PaymentDate, tz).Date;
+                        return pd >= dueDate.AddDays(-7) && pd <= dueDate.AddDays(7);
+                      }).Sum(p => p.AmountPaid);
+
+                var amount = loan.MonthlyPayment;
+                var isPaid = loan.CurrentBalance <= 0 || nearbyPaid >= amount;
+                var (status, statusLabel) = ComputeStatus(isPaid, dueDate, today);
+
+                var daysUntil = (int)(dueDate - today).TotalDays;
+
+                rows.Add(new
+                {
+                    Id = loan.Id, Name = loan.LenderName, Kind = "loan",
+                    Icon = "account_balance", IconColor = "#007AFF",
+                    DueDay = dueDate.Day, DueDate = dueDate.ToString("o"),
+                    DueLabel = statusLabel, Amount = amount,
+                    MinimumPayment = amount, PaidAmount = nearbyPaid,
+                    Balance = loan.CurrentBalance, Apr = loan.AprPercent,
+                    IsAutopay = loan.IsAutopay, Status = status, StatusLabel = statusLabel,
+                    DebtType = "PersonalLoan", SubType = loan.LoanType.ToString(),
+                    DaysUntilDue = daysUntil, MinimumPaid = false,
+                    RecurringId = (int?)null
+                });
+            }
+        }
+
+        foreach (var card in cards)
+        {
+            var debtPayments = allPayments.Where(p => p.DebtId == card.Id && p.DebtType == DebtType.CreditCard).ToList();
+            var dueDate = new DateTime(year, month, Math.Min(card.DueDay, monthEnd.Day));
+
+            var nearbyPaid = debtPayments.Sum(p => p.AmountPaid);
+            var amount = card.MinimumPayment;
+            bool isPaid;
+            if (card.CurrentBalance <= 0)
+                isPaid = true;
+            else if (card.LastStatementDate.HasValue && nearbyPaid > 0)
+            {
+                var latestPaymentDate = debtPayments.Max(p => p.PaymentDate);
+                isPaid = card.LastStatementDate.Value > latestPaymentDate || nearbyPaid >= amount;
+            }
+            else
+                isPaid = nearbyPaid >= amount;
+
+            var (status, statusLabel) = ComputeStatus(isPaid, dueDate, today);
+
+            var cardDaysUntil = (int)(dueDate - today).TotalDays;
+            var cardMinPaid = nearbyPaid > 0 && nearbyPaid >= amount;
+
+            rows.Add(new
+            {
+                Id = card.Id, Name = card.CardName, Kind = "card",
+                Icon = "credit_card", IconColor = "#5856D6",
+                DueDay = dueDate.Day, DueDate = dueDate.ToString("o"),
+                DueLabel = statusLabel, Amount = amount,
+                MinimumPayment = amount, PaidAmount = nearbyPaid,
+                Balance = card.CurrentBalance, Apr = card.AprPercent,
+                IsAutopay = card.IsAutopay, Status = status, StatusLabel = statusLabel,
+                DebtType = "CreditCard", SubType = (string?)null,
+                DaysUntilDue = cardDaysUntil, MinimumPaid = cardMinPaid,
+                RecurringId = (int?)null
+            });
+        }
+
+        // Recurring bills
+        var bills = await _db.RecurringTransactions
+            .Include(r => r.Category)
+            .Where(r => r.UserId == UserId && r.IsActive && r.RecurringType == RecurringType.Bill)
+            .ToListAsync();
+
+        var dailyExpenses = await _db.DailyExpenses
+            .Where(e => e.UserId == UserId && e.Date >= utcMonthStart && e.Date < utcMonthEnd
+                   && e.TransactionType == TransactionType.Expense)
+            .ToListAsync();
+
+        foreach (var bill in bills)
+        {
+            var dueDates = GetRecurringDueDatesInMonth(bill.NextRunDate, bill.Frequency, monthStart, monthEnd);
+            foreach (var dueDate in dueDates)
+            {
+                var paidAmount = dailyExpenses
+                    .Where(e => e.CategoryId == bill.CategoryId)
+                    .Sum(e => e.Amount);
+                var isPaid = paidAmount >= bill.Amount;
+                var (status, statusLabel) = ComputeStatus(isPaid, dueDate, today);
+                var daysUntil = (int)(dueDate - today).TotalDays;
+
+                rows.Add(new
+                {
+                    Id = bill.Id, Name = bill.Description, Kind = "recurring",
+                    Icon = bill.Category?.Icon ?? "autorenew", IconColor = "#FF9500",
+                    DueDay = dueDate.Day, DueDate = dueDate.ToString("o"),
+                    DueLabel = statusLabel, Amount = bill.Amount,
+                    MinimumPayment = (decimal?)null, PaidAmount = paidAmount,
+                    Balance = (decimal?)null, Apr = (decimal?)null,
+                    IsAutopay = true, Status = status, StatusLabel = statusLabel,
+                    DebtType = (string?)null, SubType = (string?)null,
+                    DaysUntilDue = daysUntil, MinimumPaid = false,
+                    RecurringId = (int?)bill.Id
+                });
+            }
+        }
+
+        var sorted = rows.Cast<dynamic>().OrderBy(r => r.Status switch
+        {
+            "overdue" => 0, "due-today" => 1, "due-soon" => 2, "upcoming" => 3, "paid" => 4, _ => 5
+        }).ThenBy(r => (int)r.DueDay).ToList();
+
+        var totalDue = sorted.Sum(r => (decimal)r.Amount);
+        var totalMinimum = sorted.Sum(r => (decimal)(r.MinimumPayment ?? r.Amount));
+        var totalPaid = sorted.Where(r => r.Status == "paid").Sum(r => (decimal)r.Amount);
+        var totalPending = sorted.Where(r => r.Status != "paid").Sum(r => (decimal)r.Amount);
+        var paidCount = sorted.Count(r => r.Status == "paid");
+        var overdueCount = sorted.Count(r => r.Status == "overdue");
+        var paidPercent = sorted.Count == 0 ? 100m : Math.Round((decimal)paidCount / sorted.Count * 100, 1);
+
+        // Paycheck info
+        string? nextPaycheckDate = null;
+        int? daysUntilPaycheck = null;
+        var profile = await _db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == UserId);
+        if (profile?.NextPayDate != null)
+        {
+            var anchor = profile.NextPayDate.Value;
+            var frequency = profile.PayFrequency;
+            DateTime nextPay;
+
+            if (frequency == PaymentFrequency.Biweekly || frequency == PaymentFrequency.Weekly)
+            {
+                var intervalDays = frequency == PaymentFrequency.Biweekly ? 14 : 7;
+                nextPay = anchor.Date;
+                if (nextPay > today)
+                {
+                    while (nextPay.AddDays(-intervalDays) > today) nextPay = nextPay.AddDays(-intervalDays);
+                }
+                else
+                {
+                    while (nextPay <= today) nextPay = nextPay.AddDays(intervalDays);
+                }
+            }
+            else
+            {
+                var day = anchor.Day;
+                nextPay = today.Day < day
+                    ? new DateTime(today.Year, today.Month, day)
+                    : new DateTime(today.Year, today.Month, 1).AddMonths(1).AddDays(day - 1);
+            }
+
+            nextPaycheckDate = nextPay.ToString("o");
+            daysUntilPaycheck = (int)Math.Ceiling((nextPay - today).TotalDays);
+        }
+
+        // Today's spending
+        var todayUtcStart = today - tz.GetUtcOffset(today);
+        var todayUtcEnd = todayUtcStart.AddDays(1);
+        var todaySpending = await _db.DailyExpenses
+            .Where(e => e.UserId == UserId && e.Date >= todayUtcStart && e.Date < todayUtcEnd
+                && (e.TransactionType == TransactionType.Expense || e.TransactionType == null))
+            .SumAsync(e => (decimal?)e.Amount ?? 0);
+
+        // Pre-compute due-today total for dashboard glance
+        var dueTodayRows = sorted.Where(r => {
+            var status = ((dynamic)r).Status;
+            return status == "due-today" || status == "overdue";
+        });
+        var dueTodayTotal = dueTodayRows.Sum(r => (decimal)((dynamic)r).Amount);
+
+        return Ok(new
+        {
+            Rows = sorted,
+            TotalDue = totalDue,
+            TotalMinimum = totalMinimum,
+            TotalPaid = totalPaid,
+            TotalPending = totalPending,
+            PaidCount = paidCount,
+            OverdueCount = overdueCount,
+            PaidPercent = paidPercent,
+            NextPaycheckDate = nextPaycheckDate,
+            DaysUntilPaycheck = daysUntilPaycheck,
+            TodaySpending = todaySpending,
+            DueTodayTotal = dueTodayTotal
+        });
+    }
+
+    private static List<DateTime> GetDueDatesInMonth(int dueDay, PaymentFrequency freq, DateTime startDate, int year, int month, DateTime monthEnd)
+    {
+        if (freq == PaymentFrequency.Monthly)
+        {
+            var day = Math.Min(dueDay, monthEnd.Day);
+            return new List<DateTime> { new(year, month, day) };
+        }
+        var interval = freq == PaymentFrequency.Biweekly ? 14 : 7;
+        var anchor = startDate.Date;
+        var monthStart = new DateTime(year, month, 1);
+        var dates = new List<DateTime>();
+        var current = anchor;
+        while (current <= monthEnd) { if (current >= monthStart) dates.Add(current); current = current.AddDays(interval); }
+        current = anchor.AddDays(-interval);
+        while (current >= monthStart) { dates.Add(current); current = current.AddDays(-interval); }
+        dates.Sort();
+        return dates.Count > 0 ? dates : new List<DateTime> { new(year, month, Math.Min(dueDay, monthEnd.Day)) };
+    }
+
+    private static bool IsLoanDeferred(PersonalLoan loan, DateTime today)
+    {
+        if (!loan.NextPaymentDate.HasValue || loan.CurrentBalance <= 0) return false;
+        var daysAway = (loan.NextPaymentDate.Value.Date - today).TotalDays;
+        var cycleDays = loan.PaymentFrequency == PaymentFrequency.Weekly ? 7
+            : loan.PaymentFrequency == PaymentFrequency.Biweekly ? 14 : 31;
+        return daysAway > cycleDays + 7;
+    }
+
+    private static List<DateTime> GetRecurringDueDatesInMonth(DateTime nextRunDate, RecurrenceFrequency freq, DateTime monthStart, DateTime monthEnd)
+    {
+        if (freq == RecurrenceFrequency.Monthly)
+        {
+            var day = Math.Min(nextRunDate.Day, monthEnd.Day);
+            return new List<DateTime> { new(monthStart.Year, monthStart.Month, day) };
+        }
+
+        var interval = freq switch
+        {
+            RecurrenceFrequency.Weekly => 7,
+            RecurrenceFrequency.Biweekly => 14,
+            RecurrenceFrequency.Daily => 1,
+            _ => 30
+        };
+        var anchor = nextRunDate.Date;
+        var dates = new List<DateTime>();
+        var current = anchor;
+        while (current <= monthEnd) { if (current >= monthStart) dates.Add(current); current = current.AddDays(interval); }
+        current = anchor.AddDays(-interval);
+        while (current >= monthStart) { dates.Add(current); current = current.AddDays(-interval); }
+        dates.Sort();
+        if (dates.Count == 0)
+        {
+            var day = Math.Min(nextRunDate.Day, monthEnd.Day);
+            dates.Add(new DateTime(monthStart.Year, monthStart.Month, day));
+        }
+        return dates;
+    }
+
+    private static (string status, string label) ComputeStatus(bool isPaid, DateTime dueDate, DateTime today)
+    {
+        if (isPaid) return ("paid", "Paid");
+        if (dueDate < today)
+        {
+            var daysLate = (int)(today - dueDate).TotalDays;
+            return ("overdue", $"{daysLate}d overdue — was due {dueDate:MMM d}");
+        }
+        if (dueDate == today) return ("due-today", "Due today");
+        if ((dueDate - today).TotalDays <= 3) return ("due-soon", $"Due {dueDate:MMM d}");
+        return ("upcoming", $"Due {dueDate:MMM d}");
+    }
+
     [HttpGet("monthly-pulse")]
     public async Task<ActionResult> GetMonthlyPulse([FromQuery] int months = 3, [FromQuery] int? year = null, [FromQuery] int? month = null, [FromQuery] string? mode = null)
     {
@@ -656,16 +1157,16 @@ public class DashboardController : ControllerBase
             return new { Name = info?.CardName ?? "Unknown", Balance = info?.CurrentBalance ?? 0, Monthly = monthlyAmounts, Total = g.Sum(p => p.AmountPaid) };
         }).OrderByDescending(c => c.Total).ToList();
 
-        // 4. Trading P&L — use local month boundaries (same as trading calendar)
+        // 4. Trading P&L — attribute to close date (same as trading calendar)
         var trades = await _db.TradeEntries
-            .Where(t => t.UserId == UserId && t.Pnl.HasValue)
-            .Select(t => new { t.Date, t.Pnl, t.NetPnl, t.Instrument })
+            .Where(t => t.UserId == UserId && t.Pnl.HasValue && t.ClosedDate.HasValue)
+            .Select(t => new { t.ClosedDate, t.Pnl, t.NetPnl, t.Instrument })
             .ToListAsync();
 
-        // Convert to local time and filter by local month boundaries
+        // Convert close date to local time and filter by local month boundaries
         var localTrades = trades.Select(t => new
         {
-            LocalDate = TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz),
+            LocalDate = TimeZoneInfo.ConvertTimeFromUtc(t.ClosedDate!.Value, tz),
             t.Pnl, t.NetPnl, t.Instrument
         }).Where(t => t.LocalDate.Year >= startMonth.Year && t.LocalDate.Month >= startMonth.Month || t.LocalDate.Year > startMonth.Year)
          .Where(t => t.LocalDate < startMonth.AddMonths(months))
@@ -797,8 +1298,8 @@ public class DashboardController : ControllerBase
         var ccFirst = ccPayments.Any() ? ccPayments.Where(p => p.PaymentDate < startDate.AddMonths(1)).Sum(p => p.AmountPaid) : 0;
         var ccLast = ccPayments.Any() ? ccPayments.Where(p => p.PaymentDate >= startDate.AddMonths(months - 1)).Sum(p => p.AmountPaid) : 0;
 
-        var tradFirst = trades.Any() ? trades.Where(t => t.Date < startDate.AddMonths(1)).Sum(t => t.NetPnl ?? t.Pnl ?? 0) : 0;
-        var tradLast = trades.Any() ? trades.Where(t => t.Date >= startDate.AddMonths(months - 1)).Sum(t => t.NetPnl ?? t.Pnl ?? 0) : 0;
+        var tradFirst = localTrades.Any() ? localTrades.Where(t => t.LocalDate < startMonth.AddMonths(1)).Sum(t => t.NetPnl ?? t.Pnl ?? 0) : 0;
+        var tradLast = localTrades.Any() ? localTrades.Where(t => t.LocalDate >= startMonth.AddMonths(months - 1)).Sum(t => t.NetPnl ?? t.Pnl ?? 0) : 0;
 
         return Ok(new
         {
@@ -848,4 +1349,6 @@ public class DashboardController : ControllerBase
             }
         });
     }
+
+    private record UpcomingGlanceItem(string Name, decimal MonthlyPayment, string DueDate, int DaysUntilDue, string Kind, bool IsAutopay);
 }

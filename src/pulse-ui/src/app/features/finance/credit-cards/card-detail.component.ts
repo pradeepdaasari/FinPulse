@@ -23,7 +23,6 @@ import { StatementHistory } from '../../../core/models/statement-history.model';
 import { DailyExpense } from '../../../core/models/daily-expense.model';
 import { MoneyMovement, MovementType } from '../../../core/models/money-movement.model';
 import { PaymentHistory } from '../../../core/models/payment-history.model';
-import { sumCurrency } from '../../../core/utils/currency';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { FundingSourceService } from '../../../core/services/funding-source.service';
 import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directive';
@@ -139,9 +138,9 @@ interface CardActivityItem {
               <span class="value">
                 <div class="util-detail">
                   <div class="util-bar-detail">
-                    <div class="util-fill-detail" [style.width.%]="getUtilization()" [class]="getUtilColor()"></div>
+                    <div class="util-fill-detail" [style.width.%]="utilization()" [class]="getUtilColor()"></div>
                   </div>
-                  <span [class]="getUtilColor()">{{ getUtilization() | number:'1.0-0' }}%</span>
+                  <span [class]="getUtilColor()">{{ utilization() | number:'1.0-0' }}%</span>
                 </div>
               </span>
             </div>
@@ -930,23 +929,9 @@ export class CardDetailComponent implements OnInit {
     this.activityItems().filter(a => a.kind === 'transaction' || a.kind === 'movement').length
   );
 
-  totalCharges = computed(() =>
-    this.activityItems()
-      .filter(a => a.kind === 'transaction' && a.txn!.transactionType === 'Expense')
-      .reduce((s, a) => s + a.txn!.amount, 0)
-  );
-
-  totalRefunds = computed(() =>
-    this.activityItems()
-      .filter(a => a.kind === 'transaction' && a.txn!.transactionType === 'Refund')
-      .reduce((s, a) => s + a.txn!.amount, 0)
-  );
-
-  totalPayments = computed(() =>
-    this.activityItems()
-      .filter(a => a.kind === 'transaction' && a.txn!.transactionType === 'Payment')
-      .reduce((s, a) => s + a.txn!.amount, 0)
-  );
+  totalCharges = signal(0);
+  totalRefunds = signal(0);
+  totalPayments = signal(0);
 
   monthLabel = computed(() => {
     const m = this.txnMonth();
@@ -955,14 +940,8 @@ export class CardDetailComponent implements OnInit {
     return new Date(y, mo - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   });
 
-  nextDueDate = computed(() => {
-    const c = this.card();
-    if (!c?.dueDay) return null;
-    const now = new Date();
-    const thisMonth = new Date(now.getFullYear(), now.getMonth(), c.dueDay);
-    const d = thisMonth > now ? thisMonth : new Date(now.getFullYear(), now.getMonth() + 1, c.dueDay);
-    return toLocalDateString(d);
-  });
+  nextDueDate = signal<string | null>(null);
+  utilization = signal(0);
 
   availableMonths = computed(() => {
     const seen = new Set<string>();
@@ -995,14 +974,8 @@ export class CardDetailComponent implements OnInit {
     return new Date(y, mo - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   }
 
-  getUtilization(): number {
-    const c = this.card();
-    if (!c || !c.creditLimit || c.creditLimit === 0) return 0;
-    return Math.min(100, (this.totalBalance() / c.creditLimit) * 100);
-  }
-
   getUtilColor(): string {
-    const util = this.getUtilization();
+    const util = this.utilization();
     if (util > 70) return 'util-red';
     if (util > 30) return 'util-orange';
     return 'util-green';
@@ -1028,9 +1001,9 @@ export class CardDetailComponent implements OnInit {
       error: () => { this.loading.set(false); this.loadError.set(true); this.cdr.detectChanges(); }
     });
     this.cardService.getPayments(id).subscribe({
-      next: (payments) => {
-        this.paymentHistory.set(payments);
-        this.totalPaid.set(sumCurrency(payments.map(p => p.amountPaid)));
+      next: (resp) => {
+        this.paymentHistory.set(resp.payments);
+        this.totalPaid.set(resp.totalPaid);
         this.cdr.detectChanges();
       },
       error: () => this.notify.error('Failed to load payment history')
@@ -1066,10 +1039,41 @@ export class CardDetailComponent implements OnInit {
       },
       error: () => this.notify.error('Failed to load money movements')
     });
+    this.loadActivitySummary();
   }
 
   setTxnMonth(month: string | null): void {
     this.txnMonth.set(month);
+    this.loadActivitySummary();
+  }
+
+  private loadActivitySummary(): void {
+    const id = this.route.snapshot.paramMap.get('id')!;
+    const month = this.txnMonth();
+    if (month) {
+      const [y, m] = month.split('-').map(Number);
+      this.cardService.getActivitySummary(id, y, m).subscribe({
+        next: (s) => {
+          this.totalCharges.set(s.totalCharges);
+          this.totalRefunds.set(s.totalRefunds);
+          this.totalPayments.set(s.totalPayments);
+          this.utilization.set(s.utilization);
+          if (s.nextDueDate) this.nextDueDate.set(s.nextDueDate);
+          this.cdr.detectChanges();
+        }
+      });
+    } else {
+      this.cardService.getActivitySummary(id).subscribe({
+        next: (s) => {
+          this.totalCharges.set(s.totalCharges);
+          this.totalRefunds.set(s.totalRefunds);
+          this.totalPayments.set(s.totalPayments);
+          this.utilization.set(s.utilization);
+          if (s.nextDueDate) this.nextDueDate.set(s.nextDueDate);
+          this.cdr.detectChanges();
+        }
+      });
+    }
   }
 
   startEditStatement(): void {

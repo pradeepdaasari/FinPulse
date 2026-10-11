@@ -5,7 +5,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { BudgetService } from '../../../core/services/budget.service';
-import { UserProfileService } from '../../../core/services/user-profile.service';
 
 @Component({
   selector: 'app-budget-health',
@@ -125,7 +124,6 @@ import { UserProfileService } from '../../../core/services/user-profile.service'
 })
 export class BudgetHealthComponent implements OnInit {
   private budgetService = inject(BudgetService);
-  private profileService = inject(UserProfileService);
   private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
@@ -156,14 +154,12 @@ export class BudgetHealthComponent implements OnInit {
     const now = new Date();
     this.budgetService.getPlan(now.getFullYear(), now.getMonth() + 1).subscribe({
       next: (plan) => {
-        const all = plan.monthlyOverview.byCategory;
-        const budgeted = all.reduce((s, c) => s + c.amount, 0);
-        const spent = all.reduce((s, c) => s + c.spent, 0);
-        const remaining = budgeted - spent;
-        this.totalBudgeted.set(budgeted);
-        this.totalSpent.set(spent);
-        this.totalRemaining.set(remaining);
-        this.overallPercent.set(budgeted > 0 ? Math.round(spent / budgeted * 100) : 0);
+        const ov = plan.monthlyOverview;
+        this.totalBudgeted.set(ov.totalExpenses);
+        this.totalSpent.set(ov.totalSpent);
+        this.totalRemaining.set(ov.totalRemaining);
+        this.overallPercent.set(ov.overallPercent);
+        this.daysUntilPay.set(plan.daysUntilPaycheck ?? null);
         this.loaded.set(true);
         this.loading.set(false);
         this.cdr.detectChanges();
@@ -171,36 +167,6 @@ export class BudgetHealthComponent implements OnInit {
       error: () => {
         this.loading.set(false);
         this.cdr.detectChanges();
-      }
-    });
-
-    this.profileService.getProfile().subscribe({
-      next: (profile) => {
-        if (profile?.nextPayDate) {
-          const anchor = new Date(profile.nextPayDate);
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          anchor.setHours(0, 0, 0, 0);
-
-          let next = new Date(anchor);
-          const freq = profile.payFrequency;
-          if (freq === 'Biweekly' || freq === 'Weekly') {
-            const interval = freq === 'Biweekly' ? 14 : 7;
-            if (next > today) {
-              while (next.getTime() - interval * 86400000 > today.getTime()) {
-                next = new Date(next.getTime() - interval * 86400000);
-              }
-            } else {
-              while (next <= today) {
-                next = new Date(next.getTime() + interval * 86400000);
-              }
-            }
-          }
-
-          const diff = Math.ceil((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-          this.daysUntilPay.set(diff >= 0 ? diff : null);
-          this.cdr.detectChanges();
-        }
       }
     });
   }

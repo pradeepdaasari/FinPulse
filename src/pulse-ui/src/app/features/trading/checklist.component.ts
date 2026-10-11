@@ -605,7 +605,7 @@ export class ChecklistComponent implements OnInit {
   tradesToday = computed(() => this.todayTrades().length);
   maxTrades = computed(() => this.limits().maxTradesPerDay);
   maxLoss = computed(() => this.limits().maxDailyLoss);
-  pnlToday = computed(() => this.todayTrades().filter(t => t.status !== 'Open').reduce((sum, t) => sum + (t.pnl ?? 0), 0));
+  pnlToday = signal(0);
 
   tradeLimitHit = computed(() => this.tradesToday() >= this.maxTrades());
   lossLimitHit = computed(() => this.pnlToday() <= -this.maxLoss());
@@ -662,11 +662,12 @@ export class ChecklistComponent implements OnInit {
 
     forkJoin([
       this.tradingService.getSetups().pipe(catchError(() => of([]))),
-      this.tradingService.getTrades(today, today).pipe(catchError(() => of([]))),
+      this.tradingService.getTradesWithStats(today, today).pipe(catchError(() => of({ trades: [], stats: { totalPnl: 0 } }))),
       this.tradingService.getLimits().pipe(catchError(() => of(this.limits())))
-    ]).subscribe(([setups, trades, limits]) => {
+    ]).subscribe(([setups, tradesData, limits]) => {
       this.setups.set((setups as TradingSetupSummary[]).filter(s => s.isActive));
-      this.todayTrades.set(trades as TradeEntry[]);
+      this.todayTrades.set((tradesData as any).trades as TradeEntry[]);
+      this.pnlToday.set((tradesData as any).stats?.totalPnl ?? 0);
       this.limits.set(limits as DailyLimits);
       this.loading.set(false);
       this.cdr.detectChanges();
@@ -717,7 +718,10 @@ export class ChecklistComponent implements OnInit {
       next: () => {
         this.notify.success('Trade logged successfully');
         const todayStr = toLocalDateString(new Date());
-        this.tradingService.getTrades(todayStr, todayStr).subscribe(t => this.todayTrades.set(t));
+        this.tradingService.getTradesWithStats(todayStr, todayStr).subscribe(d => {
+          this.todayTrades.set(d.trades);
+          this.pnlToday.set(d.stats.totalPnl);
+        });
         this.resetForm();
         this.cdr.detectChanges();
       },

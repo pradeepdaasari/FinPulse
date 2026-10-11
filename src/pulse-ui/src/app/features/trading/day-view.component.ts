@@ -261,6 +261,9 @@ interface TradeGroup {
                           {{ emotionIcon(n.note.emotion) }} {{ n.note.emotion | titlecase }}
                         </span>
                       }
+                    <button mat-icon-button class="note-edit-btn" (click)="editNote(group.trade, n.note)" matTooltip="Edit note">
+                      <mat-icon>edit</mat-icon>
+                    </button>
                     </div>
                     <p class="note-text" [innerHTML]="n.note.note"></p>
                   </div>
@@ -605,6 +608,12 @@ interface TradeGroup {
       background: var(--color-primary-bg, rgba(59,130,246,0.1)); color: var(--color-primary);
       padding: 2px 8px; border-radius: var(--radius-full); white-space: nowrap;
     }
+    .note-edit-btn {
+      width: 28px; height: 28px; margin-left: auto; opacity: 0;
+      transition: opacity var(--transition-fast);
+    }
+    .note-edit-btn mat-icon { font-size: 16px; width: 16px; height: 16px; color: var(--color-text-muted); }
+    .note-bubble:hover .note-edit-btn { opacity: 1; }
     .note-text { margin: 6px 0 0; font-size: var(--text-sm); line-height: var(--leading-relaxed); word-break: break-word; }
     .note-text ::ng-deep p { margin: 0; }
 
@@ -928,6 +937,16 @@ export class DayViewComponent implements OnInit {
     const ref = this.dialog.open(TradeNoteDialogComponent, {
       panelClass: 'responsive-dialog-panel',
       data: { tradeId: trade.id, instrument: trade.instrument }
+    });
+    ref.afterClosed().subscribe(r => {
+      if (r) this.loadDay(this.currentDate());
+    });
+  }
+
+  editNote(trade: TradeEntryWithNotes, note: TradeNote): void {
+    const ref = this.dialog.open(TradeNoteDialogComponent, {
+      panelClass: 'responsive-dialog-panel',
+      data: { tradeId: trade.id, instrument: trade.instrument, note }
     });
     ref.afterClosed().subscribe(r => {
       if (r) this.loadDay(this.currentDate());

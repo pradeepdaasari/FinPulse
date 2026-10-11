@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { SavingsGoal, SavingsGoalCreate } from '../models/savings-goal.model';
+import { SavingsGoal, SavingsGoalCreate, GoalsSummary } from '../models/savings-goal.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -27,5 +27,9 @@ export class SavingsGoalService {
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
+  getSummary(): Observable<GoalsSummary> {
+    return this.http.get<GoalsSummary>(`${this.baseUrl}/summary`);
   }
 }

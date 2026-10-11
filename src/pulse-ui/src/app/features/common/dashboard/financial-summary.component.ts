@@ -1,12 +1,10 @@
-import { Component, OnInit, Input, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, Input, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DashboardService } from '../../../core/services/dashboard.service';
-import { BankAccountService } from '../../../core/services/bank-account.service';
-import { DashboardSummary } from '../../../core/models/dashboard.model';
-import { FinancialSummary } from '../../../core/models/dashboard.model';
+import { DashboardSummary, FinancialSummary } from '../../../core/models/dashboard.model';
 
 @Component({
   selector: 'app-financial-summary',
@@ -26,7 +24,7 @@ import { FinancialSummary } from '../../../core/models/dashboard.model';
             <div class="metrics-grid">
               <div class="metric">
                 <span class="metric-label">Bank Balance</span>
-                <span class="metric-value blue">{{ totalBankBalance() | currency }}</span>
+                <span class="metric-value blue">{{ data()!.totalBankBalance | currency }}</span>
               </div>
               <div class="metric">
                 <span class="metric-label">Income</span>
@@ -44,10 +42,10 @@ import { FinancialSummary } from '../../../core/models/dashboard.model';
               </div>
             </div>
             <div class="pace-bar">
-              <mat-icon class="pace-icon" [class.pace-ahead]="paceStatus() === 'ahead'" [class.pace-on]="paceStatus() === 'on-track'" [class.pace-over]="paceStatus() === 'over'">
-                {{ paceStatus() === 'over' ? 'warning' : 'check_circle' }}
+              <mat-icon class="pace-icon" [class.pace-ahead]="data()!.paceStatus === 'ahead'" [class.pace-on]="data()!.paceStatus === 'on-track'" [class.pace-over]="data()!.paceStatus === 'over'">
+                {{ data()!.paceStatus === 'over' ? 'warning' : 'check_circle' }}
               </mat-icon>
-              <span class="pace-text">{{ paceMessage() }}</span>
+              <span class="pace-text">{{ data()!.paceMessage }}</span>
             </div>
             @if (data()!.tradingGains !== 0 || data()!.tradingLosses !== 0) {
               <div class="trading-strip">
@@ -88,9 +86,9 @@ import { FinancialSummary } from '../../../core/models/dashboard.model';
               </div>
               <div class="debt-progress">
                 <div class="debt-bar-track">
-                  <div class="debt-bar-fill" [style.width.%]="debtPaidPercent()"></div>
+                  <div class="debt-bar-fill" [style.width.%]="data()!.debtPaidPercent"></div>
                 </div>
-                <span class="debt-bar-label">{{ debtPaidPercent() | number:'1.0-0' }}% paid off this month</span>
+                <span class="debt-bar-label">{{ data()!.debtPaidPercent | number:'1.0-0' }}% paid off this month</span>
               </div>
           </div>
         }
@@ -232,61 +230,14 @@ export class FinancialSummaryComponent implements OnInit {
   @Input() debtSummary: DashboardSummary | null = null;
 
   private dashboardService = inject(DashboardService);
-  private bankAccountService = inject(BankAccountService);
   private cdr = inject(ChangeDetectorRef);
   loading = signal(true);
   data = signal<FinancialSummary | null>(null);
-  totalBankBalance = signal(0);
-
-  debtPaidPercent = computed(() => {
-    if (!this.debtSummary || this.debtSummary.totalDebt <= 0) return 0;
-    const monthlyPmt = this.debtSummary.totalMonthlyPayment;
-    const total = this.debtSummary.totalDebt + monthlyPmt;
-    return Math.min(100, (monthlyPmt / total) * 100);
-  });
-
-  paceStatus = computed(() => {
-    const d = this.data();
-    if (!d) return 'on-track';
-    if (d.totalIncome <= 0) {
-      return d.totalExpenses > 0 ? 'over' : 'on-track';
-    }
-    const now = new Date();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const dayOfMonth = now.getDate();
-    const paceRatio = dayOfMonth / daysInMonth;
-    const spendRatio = d.totalExpenses / d.totalIncome;
-    if (spendRatio <= paceRatio * 0.85) return 'ahead';
-    if (spendRatio <= paceRatio * 1.1) return 'on-track';
-    return 'over';
-  });
-
-  paceMessage = computed(() => {
-    const d = this.data();
-    if (!d) return '';
-    const now = new Date();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const daysLeft = daysInMonth - now.getDate();
-    const spent = d.totalExpenses;
-    const income = d.totalIncome;
-    if (income <= 0) {
-      if (spent === 0) return `No spending recorded yet — ${daysLeft} days left this month.`;
-      return `Spent ${spent.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 })} with ${daysLeft} days left. Log income to track pace.`;
-    }
-    const pct = Math.round((spent / income) * 100);
-    if (this.paceStatus() === 'ahead') return `${pct}% of income spent, ${daysLeft} days left — under budget!`;
-    if (this.paceStatus() === 'on-track') return `${pct}% of income spent, ${daysLeft} days left — on track.`;
-    return `${pct}% of income spent, ${daysLeft} days left — over budget.`;
-  });
 
   ngOnInit(): void {
     this.dashboardService.getFinancialSummary().subscribe({
       next: (summary) => { this.data.set(summary); this.loading.set(false); this.cdr.detectChanges(); },
       error: () => { this.loading.set(false); this.cdr.detectChanges(); }
-    });
-    this.bankAccountService.getAll().subscribe({
-      next: (accounts) => { this.totalBankBalance.set(accounts.reduce((sum, a) => sum + a.currentBalance, 0)); this.cdr.detectChanges(); },
-      error: () => {}
     });
   }
 }

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { RecurringTransaction, RecurringTransactionCreate, SkipHistory } from '../models/recurring.model';
+import { RecurringTransaction, RecurringTransactionCreate, RecurringSummary, SkipHistory } from '../models/recurring.model';
 import { DailyExpenseCreate } from '../models/daily-expense.model';
 import { environment } from '../../../environments/environment';
 
@@ -44,5 +44,9 @@ export class RecurringService {
 
   generate(): Observable<{ generated: number }> {
     return this.http.post<{ generated: number }>(`${this.baseUrl}/generate`, {});
+  }
+
+  getSummary(): Observable<RecurringSummary> {
+    return this.http.get<RecurringSummary>(`${this.baseUrl}/summary`);
   }
 }

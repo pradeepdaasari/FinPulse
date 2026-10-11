@@ -55,7 +55,7 @@ import { inferCategoryIcon } from '../../../core/utils/category-icon';
         <mat-tab label="Monthly Overview">
           <div class="tab-content">
             <!-- Stat Cards -->
-            <div class="stats-row">
+            <div class="stats-row five-col">
               <div class="stat-card stat-blue">
                 <mat-icon>account_balance_wallet</mat-icon>
                 <div class="stat-content">
@@ -77,23 +77,20 @@ import { inferCategoryIcon } from '../../../core/utils/category-icon';
                   <span class="stat-label">Spent</span>
                 </div>
               </div>
-              @if (plan()!.monthlyOverview.totalRemaining >= 0) {
-                <div class="stat-card stat-green">
-                  <mat-icon>savings</mat-icon>
-                  <div class="stat-content">
-                    <span class="stat-value">{{ plan()!.monthlyOverview.totalRemaining | currency:'USD':'symbol':'1.0-0' }}</span>
-                    <span class="stat-label">Remaining</span>
-                  </div>
+              <div class="stat-card" [class.stat-green]="!isOverBudget()" [class.stat-red]="isOverBudget()">
+                <mat-icon>{{ isOverBudget() ? 'money_off' : 'savings' }}</mat-icon>
+                <div class="stat-content">
+                  <span class="stat-value" [class.color-green]="!isOverBudget()" [class.color-red]="isOverBudget()">{{ isOverBudget() ? '-' : '' }}{{ absRemaining() | currency:'USD':'symbol':'1.0-0' }}</span>
+                  <span class="stat-label">{{ isOverBudget() ? 'Over Budget' : 'Remaining to Pay' }}</span>
                 </div>
-              } @else {
-                <div class="stat-card stat-red">
-                  <mat-icon>trending_down</mat-icon>
-                  <div class="stat-content">
-                    <span class="stat-value">{{ -plan()!.monthlyOverview.totalRemaining | currency:'USD':'symbol':'1.0-0' }}</span>
-                    <span class="stat-label">Over Budget</span>
-                  </div>
+              </div>
+              <div class="stat-card" [class.stat-green]="!isDeficit()" [class.stat-red]="isDeficit()">
+                <mat-icon>{{ isDeficit() ? 'trending_down' : 'trending_up' }}</mat-icon>
+                <div class="stat-content">
+                  <span class="stat-value" [class.color-green]="!isDeficit()" [class.color-red]="isDeficit()">{{ isDeficit() ? '-' : '+' }}{{ absSurplus() | currency:'USD':'symbol':'1.0-0' }}</span>
+                  <span class="stat-label">{{ isDeficit() ? 'Deficit' : 'Surplus' }}</span>
                 </div>
-              }
+              </div>
             </div>
 
             <!-- Overall Progress -->
@@ -190,11 +187,41 @@ import { inferCategoryIcon } from '../../../core/utils/category-icon';
               </div>
             }
 
-            <!-- Debt Payments -->
+            <!-- Loan Payments -->
+            @if (loanCategories().length > 0) {
+              <div class="section-block">
+                <div class="section-header">
+                  <div class="section-title"><span class="section-icon-wrap loan-wrap"><mat-icon>account_balance</mat-icon></span> Loan Payments</div>
+                  <span class="section-total loan">{{ loanTotal() | currency:'USD':'symbol':'1.0-0' }}</span>
+                </div>
+                @for (row of loanCategories(); track row.categoryName) {
+                  <div class="cat-row" [class.cat-paid]="row.spent >= row.amount">
+                    <div class="cat-row-top">
+                      <span class="cat-name-cell"><mat-icon class="cat-icon loan-icon">account_balance</mat-icon> {{ row.categoryName }}</span>
+                      <div class="cat-amounts">
+                        <span class="cat-spent">{{ row.spent | currency:'USD':'symbol':'1.0-0' }} / {{ row.amount | currency:'USD':'symbol':'1.0-0' }}</span>
+                        <span class="cat-remaining" [class.debt-paid]="row.spent >= row.amount" [class.debt-pending]="row.spent < row.amount">
+                          {{ row.spent >= row.amount ? 'Paid' : (row.amount - row.spent | currency:'USD':'symbol':'1.0-0') + ' pending' }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="cat-progress-row">
+                      <mat-progress-bar mode="determinate"
+                        [value]="Math.min(row.percentUsed, 100)"
+                        [color]="row.percentUsed >= 100 ? 'primary' : row.percentUsed > 0 ? 'accent' : 'warn'">
+                      </mat-progress-bar>
+                      <span class="cat-pct">{{ row.percentUsed | number:'1.0-0' }}%</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Credit Card Payments -->
             @if (debtCategories().length > 0) {
               <div class="section-block">
                 <div class="section-header">
-                  <div class="section-title"><span class="section-icon-wrap debt-wrap"><mat-icon>credit_score</mat-icon></span> Debt Payments</div>
+                  <div class="section-title"><span class="section-icon-wrap debt-wrap"><mat-icon>credit_score</mat-icon></span> Credit Card Payments</div>
                   <span class="section-total debt">{{ debtTotal() | currency:'USD':'symbol':'1.0-0' }}</span>
                 </div>
                 @for (row of debtCategories(); track row.categoryName) {
@@ -319,6 +346,7 @@ import { inferCategoryIcon } from '../../../core/utils/category-icon';
       display: grid; grid-template-columns: repeat(4, 1fr);
       gap: var(--spacing-sm); margin-bottom: var(--spacing-md);
     }
+    .stats-row.five-col { grid-template-columns: repeat(5, 1fr); }
     .stat-card {
       display: flex; align-items: center; gap: 12px; padding: 16px;
       border-radius: var(--radius-md); background: var(--color-surface-solid);
@@ -337,6 +365,8 @@ import { inferCategoryIcon } from '../../../core/utils/category-icon';
     .stat-purple mat-icon { color: var(--color-stat-purple); background: var(--color-stat-purple-bg); }
     .stat-green mat-icon { color: var(--color-stat-green); background: var(--color-stat-green-bg); }
     .stat-red mat-icon { color: var(--color-danger); background: var(--color-danger-bg); }
+    .color-green { color: #34C759 !important; }
+    .color-red { color: #FF3B30 !important; }
     .stat-content { display: flex; flex-direction: column; min-width: 0; }
     .stat-value {
       font-size: 1.25rem; font-weight: var(--weight-bold); color: var(--color-text);
@@ -417,10 +447,12 @@ import { inferCategoryIcon } from '../../../core/utils/category-icon';
     .section-icon-wrap mat-icon { font-size: 17px; width: 17px; height: 17px; }
     .recurring-wrap { background: var(--color-stat-purple-bg); color: var(--color-stat-purple); }
     .bills-wrap { background: var(--color-stat-blue-bg); color: var(--color-stat-blue); }
+    .loan-wrap { background: rgba(0,105,92,0.1); color: #00695c; }
     .debt-wrap { background: var(--color-danger-bg); color: var(--color-danger-text); }
     .section-total { font-size: var(--text-base); font-weight: var(--weight-bold); }
     .section-total.recurring { color: var(--color-stat-purple); }
     .section-total.bills { color: var(--color-stat-blue); }
+    .section-total.loan { color: #00695c; }
     .section-total.debt { color: var(--color-danger-text); }
 
     /* Category Rows (unified responsive) */
@@ -446,6 +478,7 @@ import { inferCategoryIcon } from '../../../core/utils/category-icon';
       min-width: 0; flex: 1;
     }
     .cat-icon { font-size: 18px; width: 18px; height: 18px; opacity: 0.6; flex-shrink: 0; }
+    .cat-icon.loan-icon { color: #00695c; opacity: 0.8; }
     .cat-icon.debt-icon { color: var(--color-danger); opacity: 0.8; }
     .cat-amounts { text-align: right; flex-shrink: 0; }
     .cat-spent { font-size: var(--text-sm); font-weight: var(--weight-medium); display: block; }
@@ -521,8 +554,11 @@ import { inferCategoryIcon } from '../../../core/utils/category-icon';
     .error-state p { color: var(--color-text-muted); font-size: var(--text-sm); max-width: 320px; margin: 0 auto 20px; }
 
     /* Responsive */
+    @media (max-width: 1024px) {
+      .stats-row.five-col { grid-template-columns: repeat(3, 1fr); }
+    }
     @media (max-width: 768px) {
-      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .stats-row, .stats-row.five-col { grid-template-columns: repeat(2, 1fr); }
       .progress-card-header { flex-direction: column; }
       .progress-meta { text-align: left; }
       .paycheck-header { flex-direction: column; align-items: flex-start; gap: 4px; }
@@ -547,17 +583,21 @@ export class BudgetPageComponent implements OnInit {
   loading = signal(true);
   hasError = signal(false);
 
+  surplus = computed(() => this.plan()?.monthlyOverview.surplus ?? 0);
+  absSurplus = computed(() => this.plan()?.monthlyOverview.absSurplus ?? 0);
+  isDeficit = computed(() => this.plan()?.monthlyOverview.isDeficit ?? false);
+  absRemaining = computed(() => this.plan()?.monthlyOverview.absRemaining ?? 0);
+  isOverBudget = computed(() => this.plan()?.monthlyOverview.isOverBudget ?? false);
+
   recurringCategories = computed(() => this.plan()?.monthlyOverview.byCategory.filter(c => c.isRecurring) ?? []);
   billCategories = computed(() => this.plan()?.monthlyOverview.byCategory.filter(c => !c.isDebt && !c.isRecurring) ?? []);
-  debtCategories = computed(() => this.plan()?.monthlyOverview.byCategory.filter(c => c.isDebt) ?? []);
-  recurringTotal = computed(() => this.recurringCategories().reduce((sum, c) => sum + c.amount, 0));
-  debtTotal = computed(() => this.debtCategories().reduce((sum, c) => sum + c.amount, 0));
-  billsTotal = computed(() => this.billCategories().reduce((sum, c) => sum + c.amount, 0));
-  overallPercent = computed(() => {
-    const overview = this.plan()?.monthlyOverview;
-    if (!overview || overview.totalExpenses === 0) return 0;
-    return Math.round(overview.totalSpent / overview.totalExpenses * 100);
-  });
+  debtCategories = computed(() => this.plan()?.monthlyOverview.byCategory.filter(c => c.isDebt && !c.isLoan) ?? []);
+  loanCategories = computed(() => this.plan()?.monthlyOverview.byCategory.filter(c => c.isLoan) ?? []);
+  recurringTotal = computed(() => this.plan()?.monthlyOverview.recurringTotal ?? 0);
+  debtTotal = computed(() => this.plan()?.monthlyOverview.debtTotal ?? 0);
+  loanTotal = computed(() => this.plan()?.monthlyOverview.loanTotal ?? 0);
+  billsTotal = computed(() => this.plan()?.monthlyOverview.billsTotal ?? 0);
+  overallPercent = computed(() => this.plan()?.monthlyOverview.overallPercent ?? 0);
 
   isCurrentMonth = computed(() => {
     const now = new Date();

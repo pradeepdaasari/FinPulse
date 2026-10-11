@@ -16,4 +16,5 @@ public class DebtSnapshotDto
     public string PaymentFrequency { get; set; } = "Monthly";
     public DateTime? StartDate { get; set; }
     public decimal PerPaymentAmount { get; set; }
+    public DateTime? NextPaymentDate { get; set; }
 }

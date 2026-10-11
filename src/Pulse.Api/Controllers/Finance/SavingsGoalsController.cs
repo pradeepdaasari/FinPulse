@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Pulse.Core.Data;
 using Pulse.Core.DTOs;
 using Pulse.Core.Models;
+using Pulse.Core.Services;
 
 namespace Pulse.Api.Controllers;
 
@@ -14,8 +15,13 @@ namespace Pulse.Api.Controllers;
 public class SavingsGoalsController : ControllerBase
 {
     private readonly PulseDbContext _db;
+    private readonly IDebtAggregationService _aggregationService;
 
-    public SavingsGoalsController(PulseDbContext db) => _db = db;
+    public SavingsGoalsController(PulseDbContext db, IDebtAggregationService aggregationService)
+    {
+        _db = db;
+        _aggregationService = aggregationService;
+    }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
@@ -28,19 +34,26 @@ public class SavingsGoalsController : ControllerBase
             .OrderBy(g => g.Name)
             .ToListAsync();
 
-        var result = goals.Select(g => new
+        var result = goals.Select(g =>
         {
-            g.Id,
-            g.Name,
-            g.TargetAmount,
-            CurrentAmount = g.LinkedAccountId.HasValue && g.LinkedAccount != null
+            var current = g.LinkedAccountId.HasValue && g.LinkedAccount != null
                 ? g.LinkedAccount.CurrentBalance
-                : g.CurrentAmount,
-            g.TargetDate,
-            g.LinkedAccountId,
-            LinkedAccountName = g.LinkedAccount?.AccountName,
-            g.Icon,
-            g.CreatedAt
+                : g.CurrentAmount;
+            return new
+            {
+                g.Id,
+                g.Name,
+                g.TargetAmount,
+                CurrentAmount = current,
+                g.TargetDate,
+                g.LinkedAccountId,
+                LinkedAccountName = g.LinkedAccount?.AccountName,
+                g.Icon,
+                g.CreatedAt,
+                Progress = g.TargetAmount > 0
+                    ? Math.Min(100, Math.Round((double)current / (double)g.TargetAmount * 100, 1))
+                    : 0
+            };
         });
 
         return Ok(result);
@@ -143,5 +156,11 @@ public class SavingsGoalsController : ControllerBase
         _db.SavingsGoals.Remove(goal);
         await _db.SaveChangesAsync();
         return NoContent();
+    }
+
+    [HttpGet("summary")]
+    public async Task<ActionResult<GoalsSummaryDto>> GetSummary()
+    {
+        return Ok(await _aggregationService.GetGoalsSummaryAsync(UserId));
     }
 }

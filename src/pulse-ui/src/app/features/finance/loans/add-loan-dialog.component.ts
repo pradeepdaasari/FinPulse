@@ -127,18 +127,11 @@ import { toLocalISOString } from '../../../core/utils/date-utils';
         </div>
 
         <mat-form-field>
-          <mat-label>{{ dueDayLabel() }}</mat-label>
-          <mat-select formControlName="dueDay">
-            @if (isWeeklyOrBiweekly()) {
-              @for (day of weekDays; track day; let i = $index) {
-                <mat-option [value]="i">{{ day }}</mat-option>
-              }
-            } @else {
-              @for (day of dueDays; track day) {
-                <mat-option [value]="day">{{ day }}</mat-option>
-              }
-            }
-          </mat-select>
+          <mat-label>Next Payment Date</mat-label>
+          <input matInput [matDatepicker]="nextPayPicker" formControlName="nextPaymentDate">
+          <mat-datepicker-toggle matIconSuffix [for]="nextPayPicker"></mat-datepicker-toggle>
+          <mat-datepicker #nextPayPicker></mat-datepicker>
+          <mat-hint>Set your next due date — future dates auto-calculated from here</mat-hint>
         </mat-form-field>
 
         <div class="more-options-toggle" (click)="showMore.set(!showMore())">
@@ -163,14 +156,6 @@ import { toLocalISOString } from '../../../core/utils/date-utils';
                   </mat-option>
                 }
               </mat-select>
-            </mat-form-field>
-
-            <mat-form-field>
-              <mat-label>Next Payment Date</mat-label>
-              <input matInput [matDatepicker]="nextPayPicker" formControlName="nextPaymentDate">
-              <mat-datepicker-toggle matIconSuffix [for]="nextPayPicker"></mat-datepicker-toggle>
-              <mat-datepicker #nextPayPicker></mat-datepicker>
-              <mat-hint>Leave empty if payments are due every month</mat-hint>
             </mat-form-field>
 
             <div class="toggle-row">
@@ -309,8 +294,6 @@ export class AddLoanDialogComponent implements OnInit {
   private notify = inject(NotificationService);
   private cdr = inject(ChangeDetectorRef);
 
-  dueDays = Array.from({ length: 28 }, (_, i) => i + 1);
-  weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   saving = signal(false);
   showMore = signal(false);
   bankSources = signal<FundingSource[]>([]);
@@ -320,11 +303,6 @@ export class AddLoanDialogComponent implements OnInit {
     return q ? this.bankSources().filter(s => s.name.toLowerCase().includes(q)) : this.bankSources();
   });
   paymentFrequencyValue = signal('Monthly');
-  isWeeklyOrBiweekly = computed(() => {
-    const f = this.paymentFrequencyValue();
-    return f === 'Weekly' || f === 'Biweekly';
-  });
-  dueDayLabel = computed(() => this.isWeeklyOrBiweekly() ? 'Due Day of Week' : 'Due Day of Month');
   emiLabel = computed(() => {
     const freq = this.paymentFrequencyValue();
     if (freq === 'Biweekly') return 'Biweekly Payment';
@@ -338,8 +316,6 @@ export class AddLoanDialogComponent implements OnInit {
 
   onFrequencyChange(value: string): void {
     this.paymentFrequencyValue.set(value);
-    const isWeekly = value === 'Weekly' || value === 'Biweekly';
-    this.form.patchValue({ dueDay: isWeekly ? 1 : 1 });
   }
 
   ngOnInit(): void {
@@ -361,7 +337,6 @@ export class AddLoanDialogComponent implements OnInit {
     durationMonths: [null as number | null, [Validators.required, Validators.min(1)]],
     startDate: [null as Date | null, Validators.required],
     monthlyPayment: [null as number | null, [Validators.required, Validators.min(1)]],
-    dueDay: [1, Validators.required],
     paymentFrequency: ['Monthly' as string, Validators.required],
     rateType: ['Fixed' as string],
     fundedBankAccountId: [null as number | null],
@@ -383,7 +358,7 @@ export class AddLoanDialogComponent implements OnInit {
       durationMonths: Math.round(value.durationMonths!),
       startDate: value.startDate ? toLocalISOString(value.startDate) : null,
       monthlyPayment: value.monthlyPayment,
-      dueDay: Math.round(value.dueDay!),
+      dueDay: 1,
       paymentFrequency: value.paymentFrequency,
       rateType: value.rateType,
       fundedBankAccountId: value.fundedBankAccountId,

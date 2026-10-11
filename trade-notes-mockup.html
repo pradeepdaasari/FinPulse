@@ -1,0 +1,621 @@
+<title>Trade Notes Mockup</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap');
+
+  :root {
+    --bg: #f7f8fa;
+    --surface: #ffffff;
+    --surface-alt: #f0f2f5;
+    --border: #e2e5ea;
+    --text: #1a1d23;
+    --text-secondary: #5f6672;
+    --text-muted: #8c919c;
+    --accent: #1565c0;
+    --accent-bg: rgba(21,101,192,0.08);
+    --green: #2e7d32;
+    --green-bg: rgba(46,125,50,0.08);
+    --amber: #e65100;
+    --amber-bg: rgba(230,81,0,0.08);
+    --red: #c62828;
+    --red-bg: rgba(198,40,40,0.08);
+    --purple: #6a1b9a;
+    --purple-bg: rgba(106,27,154,0.08);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #111318;
+      --surface: #1a1d24;
+      --surface-alt: #22252d;
+      --border: #2e3240;
+      --text: #e8eaed;
+      --text-secondary: #9aa0ad;
+      --text-muted: #6b7080;
+      --accent: #5c9ce6;
+      --accent-bg: rgba(92,156,230,0.12);
+      --green: #66bb6a;
+      --green-bg: rgba(102,187,106,0.12);
+      --amber: #ffa726;
+      --amber-bg: rgba(255,167,38,0.12);
+      --red: #ef5350;
+      --red-bg: rgba(239,83,80,0.12);
+      --purple: #ba68c8;
+      --purple-bg: rgba(186,104,200,0.12);
+      --shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #111318;
+    --surface: #1a1d24;
+    --surface-alt: #22252d;
+    --border: #2e3240;
+    --text: #e8eaed;
+    --text-secondary: #9aa0ad;
+    --text-muted: #6b7080;
+    --accent: #5c9ce6;
+    --accent-bg: rgba(92,156,230,0.12);
+    --green: #66bb6a;
+    --green-bg: rgba(102,187,106,0.12);
+    --amber: #ffa726;
+    --amber-bg: rgba(255,167,38,0.12);
+    --red: #ef5350;
+    --red-bg: rgba(239,83,80,0.12);
+    --purple: #ba68c8;
+    --purple-bg: rgba(186,104,200,0.12);
+    --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    padding: 24px 16px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin: 0 0 6px;
+    letter-spacing: -0.02em;
+  }
+  .page-subtitle {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    margin-bottom: 32px;
+  }
+
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .panel-header .badge {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+  .badge-current { background: var(--surface-alt); color: var(--text-muted); }
+  .badge-proposed { background: var(--accent-bg); color: var(--accent); }
+  .panel-header h3 {
+    font-size: 0.88rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .panel-body { padding: 16px 18px; }
+
+  /* Trade card mock */
+  .trade-mock {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .trade-banner {
+    background: linear-gradient(135deg, #1565c0, #1976d2);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .trade-banner-icon {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: #fff;
+  }
+  .trade-banner h4 {
+    margin: 0; color: #fff; font-size: 0.85rem; font-weight: 700;
+  }
+  .trade-banner p {
+    margin: 1px 0 0; color: rgba(255,255,255,0.65); font-size: 0.65rem;
+  }
+
+  .trade-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .field {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+  }
+  .field-label {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+  }
+  .field-value {
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+  .full { grid-column: 1 / -1; }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 20px;
+  }
+  .status-open { background: var(--amber-bg); color: var(--amber); }
+
+  .emotion-row {
+    display: flex; gap: 6px;
+  }
+  .emotion-chip {
+    padding: 5px 10px; border-radius: 20px; font-size: 0.72rem;
+    border: 1px solid var(--border); background: var(--surface-alt);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .emotion-chip.selected {
+    background: var(--accent-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .notes-field {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    min-height: 36px;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-style: italic;
+  }
+
+  /* PROPOSED: Trade Notes Timeline */
+  .notes-timeline {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .timeline-header {
+    padding: 10px 14px;
+    background: var(--surface-alt);
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .timeline-header h5 {
+    margin: 0; font-size: 0.75rem; font-weight: 700;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .timeline-header h5 .icon { font-size: 14px; opacity: 0.6; }
+  .note-count {
+    font-size: 0.62rem; font-weight: 600; color: var(--text-muted);
+    background: var(--surface); padding: 2px 8px; border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .timeline-entries { padding: 0; }
+
+  .timeline-entry {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .timeline-entry:last-child { border-bottom: none; }
+
+  .entry-header {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 4px;
+  }
+  .entry-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: var(--accent);
+    background: var(--accent-bg);
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+  .entry-emotion {
+    font-size: 0.65rem;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  .emotion-confident { background: var(--green-bg); color: var(--green); }
+  .emotion-anxious { background: var(--amber-bg); color: var(--amber); }
+  .emotion-fomo { background: var(--red-bg); color: var(--red); }
+  .emotion-calm { background: var(--accent-bg); color: var(--accent); }
+  .emotion-frustrated { background: var(--purple-bg); color: var(--purple); }
+
+  .entry-text {
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+  }
+
+  .add-note-bar {
+    padding: 10px 14px;
+    background: var(--surface-alt);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .add-note-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 7px 14px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: inherit;
+  }
+  .add-note-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 7px 14px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  /* Save button mock */
+  .save-bar {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+  }
+  .save-btn-mock {
+    width: 100%;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: linear-gradient(135deg, #1565c0, #1976d2);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 700;
+    font-family: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    cursor: default;
+  }
+
+  /* Annotation callouts */
+  .callout {
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 0.72rem;
+    line-height: 1.55;
+    display: flex;
+    gap: 8px;
+  }
+  .callout-icon {
+    flex-shrink: 0;
+    font-size: 16px;
+    line-height: 1.4;
+  }
+  .callout-current {
+    background: var(--surface-alt);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+  .callout-new {
+    background: var(--accent-bg);
+    color: var(--accent);
+    border: 1px solid rgba(21,101,192,0.15);
+  }
+  .callout strong { font-weight: 700; }
+
+  /* Journal row mock */
+  .journal-section { margin-top: 36px; }
+  .journal-section h2 {
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .journal-subtitle {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    margin-bottom: 16px;
+  }
+
+  .journal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .journal-row {
+    display: grid;
+    grid-template-columns: 3fr 1fr 1fr 1fr 80px;
+    align-items: center;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    font-size: 0.8rem;
+  }
+  .journal-row:last-child { border-bottom: none; }
+  .journal-row.header {
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--surface-alt);
+    padding: 8px 18px;
+  }
+
+  .trade-info { display: flex; flex-direction: column; gap: 2px; }
+  .trade-title { font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .trade-sub { font-size: 0.68rem; color: var(--text-muted); }
+  .open-border { border-left: 3px solid var(--amber); padding-left: 15px; }
+
+  .notes-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.65rem; font-weight: 600;
+    padding: 3px 8px; border-radius: 10px;
+    background: var(--accent-bg); color: var(--accent);
+  }
+  .no-notes {
+    font-size: 0.72rem; color: var(--text-muted);
+  }
+
+  .pnl-positive { color: var(--green); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .pnl-negative { color: var(--red); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .pnl-open { color: var(--amber); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .action-btns { display: flex; gap: 4px; }
+  .action-btn {
+    width: 28px; height: 28px; border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: var(--text-muted);
+    cursor: default;
+  }
+  .close-btn { background: var(--green-bg); color: var(--green); border-color: transparent; }
+
+  @media (max-width: 700px) {
+    .compare-grid { grid-template-columns: 1fr; }
+    .journal-row { grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.75rem; }
+    .journal-row.header .col-notes,
+    .journal-row.header .col-actions { display: none; }
+    .journal-row .col-actions { display: none; }
+  }
+</style>
+
+<h1>Trade Notes — Before &amp; After</h1>
+<p class="page-subtitle">Comparison of the current trade dialog vs. the proposed running notes timeline</p>
+
+<div class="compare-grid">
+  <!-- CURRENT -->
+  <div>
+    <div class="panel">
+      <div class="panel-header">
+        <span class="badge badge-current">Current</span>
+        <h3>Trade Entry Dialog</h3>
+      </div>
+      <div class="panel-body">
+        <div class="trade-mock">
+          <div class="trade-banner">
+            <div class="trade-banner-icon">📊</div>
+            <div>
+              <h4>Log Trade</h4>
+              <p>Capture your trade with discipline</p>
+            </div>
+          </div>
+          <div class="trade-body">
+            <div class="field-row">
+              <div class="field"><div class="field-label">Setup</div><div class="field-value">0DTE Credit Spread</div></div>
+              <div class="field"><div class="field-label">Instrument</div><div class="field-value">SPX</div></div>
+            </div>
+            <div class="field-row">
+              <div class="field full">
+                <div class="field-label">Status</div>
+                <span class="status-pill status-open">🔓 Open</span>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field"><div class="field-label">Direction</div><div class="field-value">Short</div></div>
+              <div class="field"><div class="field-label">Entry Premium</div><div class="field-value">$1.45</div></div>
+            </div>
+            <div>
+              <div class="field-label" style="margin-bottom:6px;">How are you feeling?</div>
+              <div class="emotion-row">
+                <span class="emotion-chip">😰 Fearful</span>
+                <span class="emotion-chip selected">😎 Confident</span>
+                <span class="emotion-chip">😐 Neutral</span>
+              </div>
+            </div>
+            <div>
+              <div class="field-label" style="margin-bottom:4px;">Notes</div>
+              <div class="notes-field">Quick notes...</div>
+            </div>
+          </div>
+          <div class="save-bar">
+            <button class="save-btn-mock">🔓 Open Trade</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel-body" style="padding-top: 0;">
+        <div class="callout callout-current">
+          <span class="callout-icon">⚠️</span>
+          <div>
+            <strong>Limitation:</strong> One emotion snapshot + one notes field captured only at entry. Once the trade is open, there's no way to record how you're feeling as the trade moves. By close time, you've forgotten the emotional journey.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROPOSED -->
+  <div>
+    <div class="panel">
+      <div class="panel-header">
+        <span class="badge badge-proposed">Proposed</span>
+        <h3>Running Trade Notes</h3>
+      </div>
+      <div class="panel-body">
+        <div class="trade-mock">
+          <div class="trade-banner" style="background: linear-gradient(135deg, #e65100, #ef6c00);">
+            <div class="trade-banner-icon">🔓</div>
+            <div>
+              <h4>SPX · 0DTE Credit Spread</h4>
+              <p>Open since Sep 23, 2026 · Short Put Vertical</p>
+            </div>
+          </div>
+          <div class="trade-body" style="padding:0;">
+            <div class="notes-timeline">
+              <div class="timeline-header">
+                <h5><span class="icon">📝</span> Trade Notes</h5>
+                <span class="note-count">3 notes</span>
+              </div>
+              <div class="timeline-entries">
+                <div class="timeline-entry">
+                  <div class="entry-header">
+                    <span class="entry-time">9:35 AM</span>
+                    <span class="entry-emotion emotion-confident">Confident</span>
+                  </div>
+                  <div class="entry-text">
+                    Entered the trade per plan. SPX sitting at 5485, sold 5440/5430 put spread. Premium looks good at 1.45. Market structure is bullish, following my premarket bias.
+                  </div>
+                </div>
+                <div class="timeline-entry">
+                  <div class="entry-header">
+                    <span class="entry-time">10:48 AM</span>
+                    <span class="entry-emotion emotion-anxious">Anxious</span>
+                  </div>
+                  <div class="entry-text">
+                    SPX dropped to 5462 on that CPI revision. Getting nervous — spread went from 1.45 to 2.10. Tempted to close but it's still 22 points away from my short strike. Sticking to the plan.
+                  </div>
+                </div>
+                <div class="timeline-entry">
+                  <div class="entry-header">
+                    <span class="entry-time">1:15 PM</span>
+                    <span class="entry-emotion emotion-calm">Calm</span>
+                  </div>
+                  <div class="entry-text">
+                    Bounced back to 5478. Spread decayed to 0.60. Glad I held through the drawdown. Taking off at 60% profit per rules. Discipline > impulse today.
+                  </div>
+                </div>
+              </div>
+              <div class="add-note-bar">
+                <input class="add-note-input" placeholder="How are you feeling right now?" readonly>
+                <button class="add-note-btn">+ Add Note</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel-body" style="padding-top: 0;">
+        <div class="callout callout-new">
+          <span class="callout-icon">✨</span>
+          <div>
+            <strong>New:</strong> Timestamped notes with emotion tags you can add anytime while the trade is open. See the full emotional arc — from entry confidence through mid-trade anxiety to exit calm. Powerful for pattern recognition across trades.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Journal View -->
+<div class="journal-section">
+  <h2>Journal View — Notes Column</h2>
+  <p class="journal-subtitle">Open trades show a notes count badge, giving you a reason to revisit and add notes throughout the day</p>
+
+  <div class="journal-card">
+    <div class="journal-row header">
+      <div>Trade</div>
+      <div>Status</div>
+      <div class="col-notes">Notes</div>
+      <div>P&L</div>
+      <div class="col-actions"></div>
+    </div>
+    <div class="journal-row">
+      <div class="trade-info open-border">
+        <span class="trade-title">SPX · Put Vertical <span class="status-pill status-open" style="font-size:0.55rem;padding:2px 6px;">Open</span></span>
+        <span class="trade-sub">0DTE Credit Spread · Short · Sep 23</span>
+      </div>
+      <div><span class="status-pill status-open">Open</span></div>
+      <div class="col-notes"><span class="notes-badge">📝 3 notes</span></div>
+      <div class="pnl-open">—</div>
+      <div class="action-btns col-actions">
+        <span class="action-btn close-btn" title="Close">✓</span>
+        <span class="action-btn" title="Notes">📝</span>
+        <span class="action-btn" title="Edit">✎</span>
+      </div>
+    </div>
+    <div class="journal-row">
+      <div class="trade-info">
+        <span class="trade-title">SPX · Iron Condor</span>
+        <span class="trade-sub">0DTE · Short · Sep 22</span>
+      </div>
+      <div><span class="status-pill" style="background:var(--green-bg);color:var(--green);">Closed</span></div>
+      <div class="col-notes"><span class="notes-badge">📝 5 notes</span></div>
+      <div class="pnl-positive">+$340</div>
+      <div class="action-btns col-actions">
+        <span class="action-btn" title="Notes">📝</span>
+        <span class="action-btn" title="Edit">✎</span>
+      </div>
+    </div>
+    <div class="journal-row">
+      <div class="trade-info">
+        <span class="trade-title">NDX · Call Vertical</span>
+        <span class="trade-sub">Weekly · Long · Sep 20</span>
+      </div>
+      <div><span class="status-pill" style="background:var(--red-bg);color:var(--red);">Closed</span></div>
+      <div class="col-notes"><span class="no-notes">—</span></div>
+      <div class="pnl-negative">-$180</div>
+      <div class="action-btns col-actions">
+        <span class="action-btn" title="Edit">✎</span>
+      </div>
+    </div>
+  </div>
+</div>

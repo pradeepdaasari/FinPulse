@@ -12,7 +12,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
 import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { TradingService } from '../../core/services/trading.service';
-import { TradeEntry, TradingSetupSummary } from '../../core/models/trading.model';
+import { TradeEntry, TradeStats, TradingSetupSummary } from '../../core/models/trading.model';
 import { NotificationService } from '../../core/services/notification.service';
 import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
 import { TradeNotesPanelComponent } from './trade-notes-panel.component';
@@ -627,31 +627,11 @@ export class JournalComponent implements OnInit {
   closedTrades = computed(() => this.trades().filter(t => t.status !== 'Open'));
   openCount = computed(() => this.trades().filter(t => t.status === 'Open').length);
 
-  winRate = computed(() => {
-    const t = this.closedTrades();
-    if (!t.length) return 0;
-    return (t.filter(x => (x.pnl ?? 0) > 0).length / t.length) * 100;
-  });
-
-  avgPnl = computed(() => {
-    const t = this.closedTrades();
-    if (!t.length) return 0;
-    return t.reduce((s, x) => s + (x.pnl ?? 0), 0) / t.length;
-  });
-
-  totalFees = computed(() => {
-    return this.closedTrades().reduce((s, x) => s + (x.totalFees ?? 0), 0);
-  });
-
-  totalNetPnl = computed(() => {
-    return this.closedTrades().reduce((s, x) => s + (x.netPnl ?? x.pnl ?? 0), 0);
-  });
-
-  complianceRate = computed(() => {
-    const t = this.trades();
-    if (!t.length) return 0;
-    return (t.filter(x => x.checklistCompleted).length / t.length) * 100;
-  });
+  winRate = signal(0);
+  avgPnl = signal(0);
+  totalFees = signal(0);
+  totalNetPnl = signal(0);
+  complianceRate = signal(0);
 
   ngOnInit(): void {
     this.updateMonthLabel();
@@ -666,8 +646,17 @@ export class JournalComponent implements OnInit {
     const from = `${this.currentYear}-${String(this.currentMonth).padStart(2, '0')}-01`;
     const lastDay = new Date(this.currentYear, this.currentMonth, 0).getDate();
     const to = `${this.currentYear}-${String(this.currentMonth).padStart(2, '0')}-${lastDay}`;
-    this.tradingService.getTrades(from, to).subscribe({
-      next: data => { this.trades.set(data); this.loading.set(false); this.cdr.detectChanges(); },
+    this.tradingService.getTradesWithStats(from, to).subscribe({
+      next: data => {
+        this.trades.set(data.trades);
+        this.winRate.set(data.stats.winRate);
+        this.avgPnl.set(data.stats.avgPnl);
+        this.totalFees.set(data.stats.totalFees);
+        this.totalNetPnl.set(data.stats.totalNetPnl);
+        this.complianceRate.set(data.stats.complianceRate);
+        this.loading.set(false);
+        this.cdr.detectChanges();
+      },
       error: () => { this.trades.set([]); this.loading.set(false); this.cdr.detectChanges(); }
     });
   }

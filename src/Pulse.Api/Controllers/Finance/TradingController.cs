@@ -241,7 +241,7 @@ public class TradingController : ControllerBase
     // ─── Trade Entries ────────────────────────────────────
 
     [HttpGet("trades")]
-    public async Task<ActionResult> GetTrades([FromQuery] string? fromDate, [FromQuery] string? toDate)
+    public async Task<ActionResult> GetTrades([FromQuery] string? fromDate, [FromQuery] string? toDate, [FromQuery] bool includeStats = false)
     {
         IQueryable<TradeEntry> query = _db.TradeEntries
             .Where(t => t.UserId == UserId)
@@ -280,7 +280,22 @@ public class TradingController : ControllerBase
                 NotesCount = t.TradeNotes.Count
             })
             .ToListAsync();
-        return Ok(trades);
+
+        if (!includeStats)
+            return Ok(trades);
+
+        var closed = trades.Where(t => t.Status == "Closed").ToList();
+        var stats = new
+        {
+            WinRate = closed.Count > 0 ? Math.Round((double)closed.Count(t => (t.Pnl ?? 0) > 0) / closed.Count * 100, 1) : 0,
+            AvgPnl = closed.Count > 0 ? Math.Round((double)closed.Sum(t => (decimal)(t.Pnl ?? 0)) / closed.Count, 2) : 0,
+            TotalFees = closed.Sum(t => t.TotalFees ?? 0),
+            TotalNetPnl = closed.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+            TotalPnl = closed.Sum(t => t.Pnl ?? 0),
+            ComplianceRate = trades.Count > 0 ? Math.Round((double)trades.Count(t => t.ChecklistCompleted) / trades.Count * 100, 1) : 0
+        };
+
+        return Ok(new { Trades = trades, Stats = stats });
     }
 
     [HttpGet("trades/by-account/{accountId}")]
@@ -932,7 +947,8 @@ public class TradingController : ControllerBase
                 TotalPnl = closedTrades.Sum(t => t.Pnl ?? 0),
                 TotalNetPnl = closedTrades.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
                 TotalFees = closedTrades.Sum(t => t.TotalFees ?? 0),
-                WinRate = closedTrades.Count > 0 ? Math.Round((double)closedTrades.Count(t => (t.Pnl ?? 0) > 0) / closedTrades.Count * 100, 1) : 0
+                WinRate = closedTrades.Count > 0 ? Math.Round((double)closedTrades.Count(t => (t.Pnl ?? 0) > 0) / closedTrades.Count * 100, 1) : 0,
+                ComplianceRate = trades.Count > 0 ? Math.Round((double)trades.Count(t => t.ChecklistCompleted) / trades.Count * 100) : 0
             }
         });
     }
@@ -951,6 +967,23 @@ public class TradingController : ControllerBase
         var closedTrades = trades.Where(t => t.Pnl.HasValue).ToList();
         var today = await GetUserLocalDateAsync();
 
+        var weekStart = today.DayOfWeek == DayOfWeek.Sunday
+            ? today.AddDays(-6)
+            : today.AddDays(-(int)today.DayOfWeek + 1);
+        var monthStart = new DateTime(today.Year, today.Month, 1);
+
+        var closedWithLocalDate = closedTrades.Select(t => new
+        {
+            Trade = t,
+            LocalDate = TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date
+        }).ToList();
+
+        var tradesWithLocalDate = trades.Select(t => new
+        {
+            Trade = t,
+            LocalDate = TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date
+        }).ToList();
+
         var setupIds = trades.Select(t => t.SetupId).Distinct().ToList();
         var setupNames = await _db.TradingSetups
             .Where(s => setupIds.Contains(s.Id) && s.UserId == UserId)
@@ -965,8 +998,12 @@ public class TradingController : ControllerBase
             CurrentRuleStreak = await GetRuleStreak(),
             LongestRuleStreak = 0,
             AverageGrade = await GetAverageGrade(cutoff),
-            TradesToday = trades.Count(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date == today),
-            PnlToday = closedTrades.Where(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date == today).Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+            TradesToday = tradesWithLocalDate.Count(t => t.LocalDate == today),
+            PnlToday = closedWithLocalDate.Where(t => t.LocalDate == today).Sum(t => t.Trade.NetPnl ?? t.Trade.Pnl ?? 0),
+            TradesThisWeek = tradesWithLocalDate.Count(t => t.LocalDate >= weekStart && t.LocalDate <= today),
+            PnlThisWeek = closedWithLocalDate.Where(t => t.LocalDate >= weekStart && t.LocalDate <= today).Sum(t => t.Trade.NetPnl ?? t.Trade.Pnl ?? 0),
+            TradesThisMonth = tradesWithLocalDate.Count(t => t.LocalDate >= monthStart && t.LocalDate <= today),
+            PnlThisMonth = closedWithLocalDate.Where(t => t.LocalDate >= monthStart && t.LocalDate <= today).Sum(t => t.Trade.NetPnl ?? t.Trade.Pnl ?? 0),
             ChecklistComplianceRate = trades.Count == 0 ? 0m : Math.Round((decimal)trades.Count(t => t.ChecklistCompleted) / trades.Count * 100, 1),
             SetupBreakdown = trades
                 .GroupBy(t => t.SetupId)

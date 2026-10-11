@@ -22,6 +22,9 @@ export interface PersonalLoan {
   nextPaymentDate?: string | null;
   status: LoanStatus;
   paidOffDate?: string | null;
+  payoffProgress: number;
+  daysUntilDue: number | null;
+  isDeferred: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -31,4 +34,11 @@ export interface PaymentAggregates {
   totalPaid: number;
   totalPrincipalPaid: number;
   totalInterestPaid: number;
+}
+
+export interface LoanSummary {
+  totalBalance: number;
+  totalMonthlyPayment: number;
+  avgApr: number;
+  activeCount: number;
 }

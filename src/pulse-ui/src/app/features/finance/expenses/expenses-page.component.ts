@@ -112,8 +112,8 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                         <tbody>
                           <tr class="day-group-row">
                             <td [attr.colspan]="7" class="day-group-label">{{ group.label }}</td>
-                            <td class="day-group-total" [class.positive]="getDayNet(group.items) > 0" [class.negative]="getDayNet(group.items) < 0">
-                              {{ getDayNet(group.items) >= 0 ? '+' : '' }}{{ getDayNet(group.items) | currency }}
+                            <td class="day-group-total" [class.positive]="group.net > 0" [class.negative]="group.net < 0">
+                              {{ group.net >= 0 ? '+' : '' }}{{ group.net | currency }}
                             </td>
                           </tr>
                           @for (e of group.items; track e.id) {
@@ -239,8 +239,8 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
                   <div class="date-group">
                     <div class="date-header">
                       <span>{{ group.label }}</span>
-                      <span class="date-total" [class.positive]="getDayNet(group.items) > 0" [class.negative]="getDayNet(group.items) < 0">
-                        {{ getDayNet(group.items) >= 0 ? '+' : '' }}{{ getDayNet(group.items) | currency }}
+                      <span class="date-total" [class.positive]="group.net > 0" [class.negative]="group.net < 0">
+                        {{ group.net >= 0 ? '+' : '' }}{{ group.net | currency }}
                       </span>
                     </div>
                     @for (e of group.items; track e.id) {
@@ -832,7 +832,7 @@ export class ExpensesPageComponent implements OnInit {
     }
     return ids;
   });
-  groupedExpenses = signal<{ label: string; items: DailyExpense[] }[]>([]);
+  groupedExpenses = signal<{ label: string; items: DailyExpense[]; net: number }[]>([]);
   loading = signal(true);
   totalBudgeted = signal(0);
   totalSpent = signal(0);
@@ -842,46 +842,7 @@ export class ExpensesPageComponent implements OnInit {
     this.summary().filter(s => s.remaining < 0).sort((a, b) => a.remaining - b.remaining)
   );
 
-  insight = computed(() => {
-    const budgeted = this.totalBudgeted();
-    const spent = this.totalSpent();
-    if (budgeted <= 0) return null;
-
-    const now = new Date();
-    const viewingCurrent = this.currentYear === now.getFullYear() && this.currentMonth === (now.getMonth() + 1);
-    const daysInMonth = new Date(this.currentYear, this.currentMonth, 0).getDate();
-    const dayOfMonth = viewingCurrent ? now.getDate() : daysInMonth;
-    const monthProgress = dayOfMonth / daysInMonth;
-    const spentPercent = spent / budgeted;
-    const paceRatio = spentPercent / monthProgress;
-    const remaining = budgeted - spent;
-    const daysLeft = daysInMonth - dayOfMonth;
-    const dailyBudgetLeft = daysLeft > 0 ? remaining / daysLeft : 0;
-
-    if (spent === 0) {
-      return { level: 'success', icon: 'rocket_launch', title: 'Fresh start!', message: `You have ${this.fmtCurrency(budgeted)} budgeted this month. Make every dollar count.` };
-    }
-    if (spentPercent >= 1) {
-      return { level: 'danger', icon: 'account_balance_wallet', title: 'Budget exceeded', message: `You've spent ${this.fmtCurrency(spent - budgeted)} over budget. Focus on essentials for the rest of the month.` };
-    }
-    if (spentPercent >= 0.9) {
-      return { level: 'warn', icon: 'speed', title: 'Almost at limit', message: `Only ${this.fmtCurrency(remaining)} left with ${daysLeft} days to go. That's ${this.fmtCurrency(dailyBudgetLeft)}/day — you've got this.` };
-    }
-    if (paceRatio > 1.15) {
-      return { level: 'warn', icon: 'trending_up', title: 'Spending ahead of pace', message: `You're ${Math.round((paceRatio - 1) * 100)}% ahead of pace. Slow down a bit — ${this.fmtCurrency(dailyBudgetLeft)}/day keeps you on track.` };
-    }
-    if (paceRatio < 0.7 && monthProgress > 0.25) {
-      return { level: 'success', icon: 'emoji_events', title: 'Great discipline!', message: `You're well under pace — ${this.fmtCurrency(remaining)} remaining with ${daysLeft} days left. Keep it up!` };
-    }
-    if (paceRatio <= 1.15) {
-      return { level: 'info', icon: 'check_circle', title: 'On track', message: `You're right on pace. ${this.fmtCurrency(dailyBudgetLeft)}/day available for the next ${daysLeft} days.` };
-    }
-    return null;
-  });
-
-  private fmtCurrency(val: number): string {
-    return val.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
-  }
+  insight = signal<{ level: string; icon: string; title: string; message: string } | null>(null);
 
   viewMode = signal<'month' | 'range'>('month');
   rangeStartDate: Date | null = null;
@@ -929,15 +890,19 @@ export class ExpensesPageComponent implements OnInit {
 
     if (this.viewMode() === 'month') {
       this.expenseService.getSummary(this.currentYear, this.currentMonth).subscribe({
-        next: (data) => {
-          this.summary.set(data);
-          this.totalBudgeted.set(data.reduce((sum, d) => sum + d.budgeted, 0));
-          this.totalSpent.set(data.reduce((sum, d) => sum + d.spent, 0));
-          this.totalRemaining.set(this.totalBudgeted() - this.totalSpent());
+        next: (resp) => {
+          this.summary.set(resp.categories);
+          this.totalBudgeted.set(resp.totalBudgeted);
+          this.totalSpent.set(resp.totalSpent);
+          this.totalRemaining.set(resp.totalRemaining);
           this.loading.set(false);
           this.cdr.detectChanges();
         },
         error: () => { this.loading.set(false); this.cdr.detectChanges(); }
+      });
+      this.expenseService.getInsight(this.currentYear, this.currentMonth).subscribe({
+        next: (insight) => { this.insight.set(insight); this.cdr.detectChanges(); },
+        error: () => {}
       });
     } else {
       this.loading.set(false);
@@ -982,13 +947,6 @@ export class ExpensesPageComponent implements OnInit {
     return 'account_balance';
   }
 
-  getDayNet(items: DailyExpense[]): number {
-    return items.reduce((sum, e) => {
-      if (e.transactionType === 'Income' || e.transactionType === 'Refund') return sum + e.amount;
-      if (e.transactionType === 'Transfer') return sum;
-      return sum - e.amount;
-    }, 0);
-  }
 
   getCategoryIcon(e: DailyExpense): string {
     const inferred = inferCategoryIcon(e.categoryName, e.categoryIcon);
@@ -1039,7 +997,14 @@ export class ExpensesPageComponent implements OnInit {
       groups.get(label)!.push(e);
     }
 
-    this.groupedExpenses.set(Array.from(groups.entries()).map(([label, items]) => ({ label, items })));
+    this.groupedExpenses.set(Array.from(groups.entries()).map(([label, items]) => ({
+      label, items,
+      net: items.reduce((sum, e) => {
+        if (e.transactionType === 'Income' || e.transactionType === 'Refund') return sum + e.amount;
+        if (e.transactionType === 'Transfer') return sum;
+        return sum - e.amount;
+      }, 0)
+    })));
   }
 
   prevMonth(): void {

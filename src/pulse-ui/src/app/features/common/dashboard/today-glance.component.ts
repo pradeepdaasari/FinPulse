@@ -3,14 +3,8 @@ import { CommonModule, CurrencyPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { forkJoin, of, catchError } from 'rxjs';
 import { DashboardService } from '../../../core/services/dashboard.service';
-import { DailyExpenseService } from '../../../core/services/daily-expense.service';
-import { RecurringService } from '../../../core/services/recurring.service';
-import { UpcomingPayment } from '../../../core/models/dashboard.model';
-import { DailyExpense } from '../../../core/models/daily-expense.model';
-import { RecurringTransaction } from '../../../core/models/recurring.model';
-import { toLocalDateString } from '../../../core/utils/date-utils';
+import { MonthlyPaymentRow, MonthlyPaymentsData } from '../../../core/models/dashboard.model';
 
 @Component({
   selector: 'app-today-glance',
@@ -25,8 +19,8 @@ import { toLocalDateString } from '../../../core/utils/date-utils';
           <mat-icon class="glance-icon icon-blue">payment</mat-icon>
           <div class="glance-info">
             <span class="glance-value">
-              @if (paymentsDueToday().length > 0) {
-                {{ paymentsTotalDue() | currency:'USD':'symbol':'1.0-0' }} due
+              @if (dueToday().length > 0) {
+                {{ dueTodayTotal() | currency:'USD':'symbol':'1.0-0' }} due
               } @else {
                 No payments
               }
@@ -49,16 +43,38 @@ import { toLocalDateString } from '../../../core/utils/date-utils';
           </div>
         </div>
       </div>
-      @if (recurringDue().length > 0) {
-        <div class="due-banner" (click)="goToRecurring()">
-          <mat-icon class="due-icon">notifications_active</mat-icon>
-          <span class="due-text">
-            {{ recurringDue().length }} recurring bill{{ recurringDue().length > 1 ? 's' : '' }} due today &mdash;
-            {{ recurringDueTotal() | currency:'USD':'symbol':'1.0-0' }} total
-          </span>
-          <mat-icon class="due-arrow">chevron_right</mat-icon>
+      <div class="upcoming-section">
+        <div class="upcoming-header">
+          <span class="upcoming-title">Coming Up</span>
+          <a class="upcoming-view-all" (click)="goToMonthlyPulse()">View All <mat-icon>chevron_right</mat-icon></a>
         </div>
-      }
+        @if (upcoming().length > 0) {
+          <div class="upcoming-list">
+            @for (p of upcoming(); track p.id + p.kind) {
+              <div class="upcoming-row">
+                <mat-icon class="upcoming-kind-icon" [class.icon-amber]="p.daysUntilDue <= 2" [class.icon-muted]="p.daysUntilDue > 2">
+                  {{ p.icon }}
+                </mat-icon>
+                <div class="upcoming-info">
+                  <span class="upcoming-name">{{ p.name }}</span>
+                  <span class="upcoming-due" [class.due-urgent]="p.daysUntilDue <= 2">
+                    {{ p.daysUntilDue === 1 ? 'Tomorrow' : 'In ' + p.daysUntilDue + ' days' }}
+                  </span>
+                </div>
+                @if (p.isAutopay) {
+                  <span class="autopay-badge">Autopay</span>
+                }
+                <span class="upcoming-amount">{{ p.amount | currency:'USD':'symbol':'1.0-0' }}</span>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="upcoming-empty">
+            <mat-icon class="upcoming-empty-icon">check_circle</mat-icon>
+            <span>No payments upcoming in the next 5 days</span>
+          </div>
+        }
+      </div>
     }
   `,
   styles: [`
@@ -94,7 +110,6 @@ import { toLocalDateString } from '../../../core/utils/date-utils';
     }
     .glance-icon.icon-blue { color: var(--color-primary); }
     .glance-icon.icon-amber { color: var(--color-warning); }
-    .glance-icon.icon-green { color: var(--color-success); }
     .glance-info {
       display: flex;
       flex-direction: column;
@@ -114,22 +129,78 @@ import { toLocalDateString } from '../../../core/utils/date-utils';
       font-weight: 500;
     }
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
-    .due-banner {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 16px;
+    /* Upcoming payments */
+    .upcoming-section {
+      background: var(--color-surface-solid);
       border-radius: var(--radius-md);
-      background: var(--color-stat-amber-bg);
-      border: 1px solid rgba(255, 149, 0, 0.25);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-xs);
       margin-bottom: var(--spacing-md);
-      cursor: pointer;
-      transition: filter var(--transition-fast);
+      overflow: hidden;
     }
-    .due-banner:hover { filter: brightness(0.96); }
-    .due-icon { color: var(--color-warning); font-size: 20px; width: 20px; height: 20px; flex-shrink: 0; }
-    .due-text { flex: 1; font-size: var(--text-sm); font-weight: 600; color: var(--color-warning); }
-    .due-arrow { color: var(--color-warning); font-size: 20px; width: 20px; height: 20px; }
+    .upcoming-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .upcoming-title {
+      font-size: var(--text-xs); font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--color-text-secondary);
+    }
+    .upcoming-view-all {
+      display: flex; align-items: center; gap: 2px;
+      font-size: var(--text-xs); font-weight: 600; color: var(--color-primary);
+      text-decoration: none; cursor: pointer;
+      transition: opacity var(--transition-fast);
+    }
+    .upcoming-view-all mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .upcoming-view-all:hover { opacity: 0.75; }
+    .upcoming-list { display: flex; flex-direction: column; }
+    .upcoming-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .upcoming-row:last-child { border-bottom: none; }
+    .upcoming-kind-icon {
+      font-size: 20px; width: 20px; height: 20px; flex-shrink: 0;
+    }
+    .upcoming-kind-icon.icon-amber { color: var(--color-warning); }
+    .upcoming-kind-icon.icon-muted { color: var(--color-text-muted); opacity: 0.6; }
+    .upcoming-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .upcoming-name {
+      font-size: var(--text-sm); font-weight: 600; color: var(--color-text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .upcoming-due {
+      font-size: var(--text-xs); color: var(--color-text-muted); font-weight: 500;
+    }
+    .upcoming-due.due-urgent { color: var(--color-warning); font-weight: 600; }
+    .autopay-badge {
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+      padding: 2px 6px; border-radius: var(--radius-full);
+      background: var(--color-success-bg); color: var(--color-success-text);
+      flex-shrink: 0;
+    }
+    .upcoming-amount {
+      font-size: var(--text-sm); font-weight: 700; color: var(--color-text);
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .upcoming-chevron {
+      font-size: 16px; width: 16px; height: 16px;
+      color: var(--color-text-muted); flex-shrink: 0;
+    }
+    .upcoming-empty {
+      display: flex; align-items: center; gap: 10px;
+      padding: 16px; color: var(--color-text-muted);
+      font-size: var(--text-sm); font-weight: 500;
+    }
+    .upcoming-empty-icon {
+      font-size: 20px; width: 20px; height: 20px;
+      color: var(--color-success); flex-shrink: 0;
+    }
+
     @media (max-width: 599px) {
       .glance-card {
         flex-direction: column;
@@ -144,67 +215,38 @@ import { toLocalDateString } from '../../../core/utils/date-utils';
       .glance-section {
         gap: 10px;
       }
+      .upcoming-row { padding: 10px 14px; gap: 10px; }
     }
   `]
 })
 export class TodayGlanceComponent implements OnInit {
   private dashboardService = inject(DashboardService);
-  private expenseService = inject(DailyExpenseService);
-  private recurringService = inject(RecurringService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
   loaded = signal(false);
-  paymentsDueToday = signal<UpcomingPayment[]>([]);
-  paymentsTotalDue = signal<number>(0);
-  todaySpending = signal<number>(0);
-  recurringDue = signal<RecurringTransaction[]>([]);
-  recurringDueTotal = signal<number>(0);
 
-  goToRecurring(): void { this.router.navigate(['/recurring']); }
+  dueToday = signal<MonthlyPaymentRow[]>([]);
+  dueTodayTotal = signal(0);
+  todaySpending = signal(0);
+  upcoming = signal<MonthlyPaymentRow[]>([]);
+
+  goToMonthlyPulse(): void { this.router.navigate(['/monthly-pulse']); }
 
   ngOnInit(): void {
-    const today = toLocalDateString(new Date());
-
-    forkJoin({
-      summary: this.dashboardService.getSummary().pipe(catchError(() => of(null))),
-      expenses: this.expenseService.getExpenses({ dateFrom: today, dateTo: today }).pipe(catchError(() => of(null))),
-      recurring: this.recurringService.getAll().pipe(catchError(() => of([])))
-    }).subscribe(({ summary, expenses, recurring }) => {
-      // Payments due today
-      if (summary && summary.upcomingPayments) {
-        const todayPayments = summary.upcomingPayments.filter(p => {
-          const dueDate = new Date(p.dueDate);
-          const now = new Date();
-          return dueDate.getFullYear() === now.getFullYear() &&
-                 dueDate.getMonth() === now.getMonth() &&
-                 dueDate.getDate() === now.getDate();
-        });
-        this.paymentsDueToday.set(todayPayments);
-        this.paymentsTotalDue.set(todayPayments.reduce((sum, p) => sum + p.amount, 0));
-      }
-
-      // Today's spending
-      if (expenses && expenses.length > 0) {
-        const spent = expenses
-          .filter(e => e.transactionType === 'Expense')
-          .reduce((sum, e) => sum + e.amount, 0);
-        this.todaySpending.set(spent);
-      }
-
-      // Recurring bills due today
-      if (recurring && recurring.length > 0) {
-        const tz = localStorage.getItem('pulse_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
-        const due = (recurring as RecurringTransaction[]).filter(r => r.isActive && r.recurringType !== 'Budget' && r.nextRunDate.slice(0, 10) <= todayStr);
-        this.recurringDue.set(due);
-        this.recurringDueTotal.set(due.reduce((sum, r) => sum + r.amount, 0));
-      }
-
-      this.loaded.set(true);
-      this.loading.set(false);
-      this.cdr.detectChanges();
+    this.dashboardService.getMonthlyPayments().subscribe({
+      next: (data) => {
+        const unpaid = data.rows.filter(r => r.status !== 'paid');
+        this.dueToday.set(unpaid.filter(r => r.status === 'due-today' || r.status === 'overdue'));
+        this.dueTodayTotal.set(data.dueTodayTotal);
+        this.upcoming.set(unpaid.filter(r => r.daysUntilDue >= 1 && r.daysUntilDue <= 5));
+        this.todaySpending.set(data.todaySpending);
+        this.loaded.set(true);
+        this.loading.set(false);
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
   }
 }

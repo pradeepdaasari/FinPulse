@@ -50,6 +50,26 @@ export interface SpendingSummary {
   percentUsed: number;
 }
 
+export interface SpendingSummaryResponse {
+  categories: SpendingSummary[];
+  totalBudgeted: number;
+  totalSpent: number;
+  totalRemaining: number;
+}
+
+export interface ExpenseInsight {
+  level: string;
+  icon: string;
+  title: string;
+  message: string;
+  totalBudgeted: number;
+  totalSpent: number;
+  remaining: number;
+  spentPercent: number;
+  paceRatio: number;
+  dailyBudgetLeft: number;
+}
+
 export interface ExpenseFilter {
   year?: number;
   month?: number;
@@ -87,6 +107,11 @@ export interface TagSummary {
   lastDate: string;
 }
 
+export interface TagSummaryResponse {
+  tags: TagSummary[];
+  grandTotal: number;
+}
+
 export interface MonthComparison {
   currentYear: number;
   currentMonth: number;
@@ -115,4 +140,6 @@ export interface MultiMonthCategory {
 export interface MultiMonthComparison {
   months: MultiMonthTotal[];
   categories: MultiMonthCategory[];
+  grandTotal: number;
+  avgMonthly: number;
 }

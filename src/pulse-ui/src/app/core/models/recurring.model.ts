@@ -43,3 +43,9 @@ export interface RecurringTransactionCreate {
   endDate?: string;
   isActive: boolean;
 }
+
+export interface RecurringSummary {
+  billMonthlyTotal: number;
+  activeCount: number;
+  pausedCount: number;
+}

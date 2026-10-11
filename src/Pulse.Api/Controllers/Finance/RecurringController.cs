@@ -403,6 +403,31 @@ public class RecurringController : ControllerBase
         return Ok(skips);
     }
 
+    [HttpGet("summary")]
+    public async Task<ActionResult> GetSummary()
+    {
+        var items = await _db.RecurringTransactions
+            .Where(r => r.UserId == UserId)
+            .ToListAsync();
+
+        var activeItems = items.Where(i => i.IsActive).ToList();
+        var billMonthlyTotal = activeItems.Sum(i => i.Amount * i.Frequency switch
+        {
+            RecurrenceFrequency.Daily => 30m,
+            RecurrenceFrequency.Weekly => 4.33m,
+            RecurrenceFrequency.Biweekly => 2.17m,
+            RecurrenceFrequency.Monthly => 1m,
+            _ => 1m
+        });
+
+        return Ok(new
+        {
+            BillMonthlyTotal = Math.Round(billMonthlyTotal, 2),
+            ActiveCount = activeItems.Count,
+            PausedCount = items.Count(i => !i.IsActive)
+        });
+    }
+
     public class SkipRequest
     {
         public string? Reason { get; set; }

@@ -1346,7 +1346,11 @@ export class TradingCalendarComponent implements OnInit {
       next: (data: any) => {
         const trades = data.trades as (TradeEntry & { localDate: string })[];
         this.trades.set(trades);
-        this.buildCalendar(trades, year, month);
+        const pnlMap = new Map<string, { pnl: number; netPnl: number; count: number }>();
+        for (const d of data.dailyPnl) {
+          pnlMap.set(d.date, { pnl: d.pnl, netPnl: d.netPnl, count: d.tradeCount });
+        }
+        this.buildCalendar(trades, year, month, pnlMap);
         this.applyBackendStats(data.monthStats);
         this.loading.set(false);
         this.cdr.detectChanges();
@@ -1405,7 +1409,7 @@ export class TradingCalendarComponent implements OnInit {
     }
   }
 
-  private buildCalendar(trades: (TradeEntry & { localDate?: string })[], year: number, month: number): void {
+  private buildCalendar(trades: (TradeEntry & { localDate?: string })[], year: number, month: number, pnlMap?: Map<string, { pnl: number; netPnl: number; count: number }>): void {
     const firstDayOfMonth = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const daysInPrevMonth = new Date(year, month, 0).getDate();
@@ -1426,8 +1430,8 @@ export class TradingCalendarComponent implements OnInit {
       `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const buildDay = (d: number, dateStr: string, isCurrent: boolean): CalendarDay => {
       const dayTrades = tradesByDate.get(dateStr) || [];
-      const closed = dayTrades.filter(t => t.status !== 'Open');
-      const totalPnl = closed.reduce((sum, t) => sum + (t.netPnl ?? t.pnl ?? 0), 0);
+      const pnlEntry = pnlMap?.get(dateStr);
+      const totalPnl = pnlEntry ? pnlEntry.netPnl : 0;
       return { date: d, isCurrentMonth: isCurrent, isToday: isCurrent && isCurrentMonth && today.getDate() === d,
         trades: dayTrades, totalPnl: Math.round(totalPnl * 100) / 100, tradeCount: dayTrades.length, dateStr };
     };
@@ -1468,26 +1472,4 @@ export class TradingCalendarComponent implements OnInit {
     this.tradingDays.set(stats.tradingDays);
   }
 
-  private computeStats(trades: TradeEntry[]): void {
-    const byDate = new Map<string, number>();
-    trades.forEach(t => {
-      const key = toLocalDateKey(t.date);
-      byDate.set(key, (byDate.get(key) ?? 0) + (t.pnl ?? 0));
-    });
-
-    const dayPnls = [...byDate.values()];
-    const closed = trades.filter(t => t.pnl != null);
-    this.tradingDays.set(byDate.size);
-    this.monthPnl.set(Math.round(dayPnls.reduce((a, b) => a + b, 0) * 100) / 100);
-    this.winRate.set(dayPnls.length > 0 ? Math.round((dayPnls.filter(p => p > 0).length / dayPnls.length) * 100) : 0);
-    this.bestDay.set(dayPnls.length > 0 ? Math.max(...dayPnls) : 0);
-    this.worstDay.set(dayPnls.length > 0 ? Math.min(...dayPnls) : 0);
-    this.totalTrades.set(trades.length);
-    this.winningTrades.set(closed.filter(t => (t.pnl ?? 0) > 0).length);
-    this.losingTrades.set(closed.filter(t => (t.pnl ?? 0) <= 0).length);
-    this.totalFees.set(Math.round(trades.reduce((s, t) => s + (t.totalFees ?? 0), 0) * 100) / 100);
-    this.netPnl.set(Math.round(trades.reduce((s, t) => s + (t.netPnl ?? t.pnl ?? 0), 0) * 100) / 100);
-    this.avgPnl.set(closed.length > 0 ? Math.round(closed.reduce((s, t) => s + (t.netPnl ?? t.pnl ?? 0), 0) / closed.length * 100) / 100 : 0);
-    this.checklistRate.set(trades.length > 0 ? Math.round(trades.filter(t => t.checklistCompleted).length / trades.length * 100) : 0);
-  }
 }

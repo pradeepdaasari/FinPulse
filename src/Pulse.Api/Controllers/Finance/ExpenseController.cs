@@ -307,7 +307,97 @@ public class ExpenseController : ControllerBase
             });
         }
 
-        return Ok(summaries.OrderByDescending(s => s.PercentUsed).ToList());
+        var sorted = summaries.OrderByDescending(s => s.PercentUsed).ToList();
+        var totalBudgeted = sorted.Sum(s => s.Budgeted);
+        var totalSpent = sorted.Sum(s => s.Spent);
+        return Ok(new
+        {
+            Categories = sorted,
+            TotalBudgeted = totalBudgeted,
+            TotalSpent = totalSpent,
+            TotalRemaining = totalBudgeted - totalSpent
+        });
+    }
+
+    [HttpGet("insight")]
+    public async Task<ActionResult> GetInsight([FromQuery] int? year, [FromQuery] int? month)
+    {
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var targetYear = year ?? now.Year;
+        var targetMonth = month ?? now.Month;
+        var (startDate, endDate) = TimeZoneHelper.MonthRangeUtc(targetYear, targetMonth, tz);
+
+        var dailyExpenses = await _db.DailyExpenses
+            .Where(e => e.UserId == UserId && e.Date >= startDate && e.Date < endDate && e.TransactionType == TransactionType.Expense)
+            .SumAsync(e => e.Amount);
+
+        var totalBudgeted = await _db.BudgetExpenses
+            .Where(e => e.UserId == UserId)
+            .SumAsync(e => e.Amount);
+
+        var totalSpent = dailyExpenses;
+        var remaining = totalBudgeted - totalSpent;
+        var daysInMonth = DateTime.DaysInMonth(targetYear, targetMonth);
+        var dayOfMonth = (targetYear == now.Year && targetMonth == now.Month) ? now.Day : daysInMonth;
+        var daysLeft = daysInMonth - dayOfMonth;
+        var monthProgress = (double)dayOfMonth / daysInMonth;
+        var spentPercent = totalBudgeted > 0 ? (double)totalSpent / (double)totalBudgeted : 0;
+        var paceRatio = monthProgress > 0 ? spentPercent / monthProgress : 0;
+        var dailyBudgetLeft = daysLeft > 0 ? Math.Round(remaining / daysLeft, 2) : 0;
+
+        string level, icon, title, message;
+
+        if (totalSpent == 0)
+        {
+            level = "success"; icon = "rocket_launch"; title = "Fresh start!";
+            message = "No spending recorded yet this month.";
+        }
+        else if (spentPercent >= 1)
+        {
+            var over = totalSpent - totalBudgeted;
+            level = "danger"; icon = "warning"; title = "Budget exceeded";
+            message = $"You've spent {over:C0} over your {totalBudgeted:C0} budget.";
+        }
+        else if (spentPercent >= 0.9)
+        {
+            level = "warning"; icon = "warning"; title = "Almost at limit";
+            message = $"Only {remaining:C0} left of your {totalBudgeted:C0} budget.";
+        }
+        else if (paceRatio > 1.15)
+        {
+            level = "warning"; icon = "trending_up"; title = "Spending ahead of pace";
+            message = daysLeft > 0
+                ? $"To stay on budget, aim for {dailyBudgetLeft:C0}/day over the next {daysLeft} days."
+                : $"You've spent {totalSpent:C0} of {totalBudgeted:C0} this month.";
+        }
+        else if (paceRatio < 0.7 && monthProgress > 0.25)
+        {
+            var savings = remaining - (totalBudgeted * (decimal)(1 - monthProgress));
+            level = "success"; icon = "savings"; title = "Great discipline!";
+            message = $"You're {savings:C0} under pace — keep it up!";
+        }
+        else
+        {
+            level = "info"; icon = "check_circle"; title = "On track";
+            message = daysLeft > 0
+                ? $"About {dailyBudgetLeft:C0}/day left for the next {daysLeft} days."
+                : $"You've spent {totalSpent:C0} of {totalBudgeted:C0} this month.";
+        }
+
+        return Ok(new
+        {
+            Level = level,
+            Icon = icon,
+            Title = title,
+            Message = message,
+            TotalBudgeted = totalBudgeted,
+            TotalSpent = totalSpent,
+            Remaining = remaining,
+            SpentPercent = Math.Round(spentPercent * 100, 1),
+            PaceRatio = Math.Round(paceRatio, 2),
+            DailyBudgetLeft = dailyBudgetLeft
+        });
     }
 
     [HttpGet("export")]
@@ -464,7 +554,8 @@ public class ExpenseController : ControllerBase
             .OrderByDescending(s => s.LastDate)
             .ToList();
 
-        return Ok(summary);
+        var grandTotal = summary.Sum(s => s.TotalAmount);
+        return Ok(new { Tags = summary, GrandTotal = grandTotal });
     }
 
     [HttpGet("multi-comparison")]
@@ -531,7 +622,10 @@ public class ExpenseController : ControllerBase
             };
         }).OrderByDescending(c => c.Total).ToList();
 
-        return Ok(new { Months = monthlyTotals, Categories = categories });
+        var grandTotal = expenses.Sum(e => e.Amount);
+        var avgMonthly = months > 0 ? Math.Round((double)grandTotal / months, 2) : 0;
+
+        return Ok(new { Months = monthlyTotals, Categories = categories, GrandTotal = grandTotal, AvgMonthly = avgMonthly });
     }
 
     [HttpGet("comparison")]

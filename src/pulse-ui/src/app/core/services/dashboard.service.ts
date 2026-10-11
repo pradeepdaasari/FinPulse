@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { DashboardSummary, TrendData, PaymentStreak, DebtFreeCountdown, FinancialSummary, NetWorthSnapshot } from '../models/dashboard.model';
+import { DashboardSummary, TrendData, PaymentStreak, DebtFreeCountdown, FinancialSummary, NetWorthSnapshot, TodayGlance, DashboardInsight, MonthlyPaymentsData } from '../models/dashboard.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -27,6 +27,18 @@ export class DashboardService {
 
   getNetWorthHistory(weeks = 12): Observable<NetWorthSnapshot[]> {
     return this.http.get<NetWorthSnapshot[]>(`${this.baseUrl}/net-worth-history?weeks=${weeks}`);
+  }
+
+  getTodayGlance(): Observable<TodayGlance> {
+    return this.http.get<TodayGlance>(`${this.baseUrl}/today-glance`);
+  }
+
+  getInsights(): Observable<DashboardInsight[]> {
+    return this.http.get<DashboardInsight[]>(`${this.baseUrl}/insights`);
+  }
+
+  getMonthlyPayments(): Observable<MonthlyPaymentsData> {
+    return this.http.get<MonthlyPaymentsData>(`${this.baseUrl}/monthly-payments`);
   }
 
   getFinancialSummary(year?: number, month?: number): Observable<FinancialSummary> {

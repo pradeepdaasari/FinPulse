@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { CreditCard } from '../models/credit-card.model';
+import { CreditCard, CardSummary, CardActivitySummary } from '../models/credit-card.model';
 import { PaymentHistory } from '../models/payment-history.model';
 import { StatementHistory } from '../models/statement-history.model';
 import { environment } from '../../../environments/environment';
@@ -36,8 +36,8 @@ export class CreditCardService {
     return this.http.post<PaymentHistory>(`${this.baseUrl}/${id}/payments`, payment);
   }
 
-  getPayments(id: string): Observable<PaymentHistory[]> {
-    return this.http.get<PaymentHistory[]>(`${this.baseUrl}/${id}/payments`);
+  getPayments(id: string): Observable<{ payments: PaymentHistory[]; totalPaid: number }> {
+    return this.http.get<{ payments: PaymentHistory[]; totalPaid: number }>(`${this.baseUrl}/${id}/payments`);
   }
 
   getStatements(id: string): Observable<StatementHistory[]> {
@@ -54,5 +54,17 @@ export class CreditCardService {
 
   deleteStatement(cardId: string, stmtId: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${cardId}/statements/${stmtId}`);
+  }
+
+  getSummary(): Observable<CardSummary> {
+    return this.http.get<CardSummary>(`${this.baseUrl}/summary`);
+  }
+
+  getActivitySummary(id: string, year?: number, month?: number): Observable<CardActivitySummary> {
+    const params: string[] = [];
+    if (year) params.push(`year=${year}`);
+    if (month) params.push(`month=${month}`);
+    const query = params.length ? `?${params.join('&')}` : '';
+    return this.http.get<CardActivitySummary>(`${this.baseUrl}/${id}/activity-summary${query}`);
   }
 }

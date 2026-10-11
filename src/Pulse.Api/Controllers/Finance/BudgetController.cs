@@ -124,9 +124,51 @@ public class BudgetController : ControllerBase
                 : (paid > 0 ? 100 : 0);
         }
 
-        var budgetable = plan.MonthlyOverview.ByCategory.Where(c => !c.IsDebt).ToList();
-        plan.MonthlyOverview.TotalSpent = budgetable.Sum(c => c.Spent);
-        plan.MonthlyOverview.TotalRemaining = budgetable.Sum(c => c.Remaining);
+        var allItems = plan.MonthlyOverview.ByCategory;
+        plan.MonthlyOverview.TotalSpent = allItems.Sum(c => c.Spent);
+        plan.MonthlyOverview.TotalRemaining = allItems.Sum(c => c.Remaining);
+        plan.MonthlyOverview.AbsRemaining = Math.Abs(plan.MonthlyOverview.TotalRemaining);
+        plan.MonthlyOverview.IsOverBudget = plan.MonthlyOverview.TotalRemaining < 0;
+
+        plan.MonthlyOverview.RecurringTotal = allItems.Where(c => c.IsRecurring).Sum(c => c.Amount);
+        plan.MonthlyOverview.LoanTotal = allItems.Where(c => c.IsLoan).Sum(c => c.Amount);
+        plan.MonthlyOverview.DebtTotal = allItems.Where(c => c.IsDebt && !c.IsLoan).Sum(c => c.Amount);
+        plan.MonthlyOverview.BillsTotal = allItems.Where(c => !c.IsDebt && !c.IsRecurring).Sum(c => c.Amount);
+        plan.MonthlyOverview.OverallPercent = plan.MonthlyOverview.TotalExpenses > 0
+            ? Math.Round(plan.MonthlyOverview.TotalSpent / plan.MonthlyOverview.TotalExpenses * 100m)
+            : 0;
+
+        // Paycheck info
+        if (profile.NextPayDate != null)
+        {
+            var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+            var anchor = profile.NextPayDate.Value.Date;
+            var frequency = profile.PayFrequency;
+            DateTime nextPay;
+
+            if (frequency == PaymentFrequency.Biweekly || frequency == PaymentFrequency.Weekly)
+            {
+                var intervalDays = frequency == PaymentFrequency.Biweekly ? 14 : 7;
+                nextPay = anchor;
+                if (nextPay > today)
+                {
+                    while (nextPay.AddDays(-intervalDays) > today) nextPay = nextPay.AddDays(-intervalDays);
+                }
+                else
+                {
+                    while (nextPay <= today) nextPay = nextPay.AddDays(intervalDays);
+                }
+            }
+            else
+            {
+                var day = anchor.Day;
+                nextPay = today.Day < day
+                    ? new DateTime(today.Year, today.Month, day)
+                    : new DateTime(today.Year, today.Month, 1).AddMonths(1).AddDays(day - 1);
+            }
+
+            plan.DaysUntilPaycheck = (int)Math.Ceiling((nextPay - today).TotalDays);
+        }
 
         return Ok(plan);
     }
@@ -256,8 +298,7 @@ public class BudgetController : ControllerBase
     private async Task<List<DebtSnapshotDto>> GetDebtSnapshots()
     {
         var loans = await _db.PersonalLoans
-            .Where(l => l.UserId == UserId)
-            .Where(l => l.NextPaymentDate == null || l.NextPaymentDate <= DateTime.UtcNow)
+            .Where(l => l.UserId == UserId && l.CurrentBalance > 0)
             .ToListAsync();
         var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
         var snapshots = new List<DebtSnapshotDto>();
@@ -277,7 +318,8 @@ public class BudgetController : ControllerBase
                 DueDay = loan.DueDay,
                 PaymentFrequency = loan.PaymentFrequency.ToString(),
                 StartDate = loan.StartDate,
-                PerPaymentAmount = loan.MonthlyPayment
+                PerPaymentAmount = loan.MonthlyPayment,
+                NextPaymentDate = loan.NextPaymentDate
             });
         }
 

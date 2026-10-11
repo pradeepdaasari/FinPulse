@@ -17,11 +17,13 @@ public class LoansController : ControllerBase
 {
     private readonly PulseDbContext _db;
     private readonly IFinancialCalculationService _calcService;
+    private readonly IDebtAggregationService _aggregationService;
 
-    public LoansController(PulseDbContext db, IFinancialCalculationService calcService)
+    public LoansController(PulseDbContext db, IFinancialCalculationService calcService, IDebtAggregationService aggregationService)
     {
         _db = db;
         _calcService = calcService;
+        _aggregationService = aggregationService;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -35,6 +37,7 @@ public class LoansController : ControllerBase
             ? await _db.BankAccounts.Where(a => bankAccountIds.Contains(a.Id) && a.UserId == UserId).ToDictionaryAsync(a => a.Id, a => a.AccountName)
             : new Dictionary<int, string>();
 
+        var today = DateTime.UtcNow.Date;
         var result = loans.Select(l => new
         {
             l.Id, l.LenderName, l.OriginalAmount, l.CurrentBalance, l.AprPercent,
@@ -43,6 +46,11 @@ public class LoansController : ControllerBase
             l.MonthlyEquivalentPayment, l.Status, l.PaidOffDate,
             FundedBankAccountName = l.FundedBankAccountId.HasValue && bankNames.ContainsKey(l.FundedBankAccountId.Value)
                 ? bankNames[l.FundedBankAccountId.Value] : null,
+            PayoffProgress = l.OriginalAmount > 0
+                ? Math.Max(0, Math.Min(100, Math.Round((1 - (double)l.CurrentBalance / (double)l.OriginalAmount) * 100, 1)))
+                : 0,
+            DaysUntilDue = ComputeDaysUntilDue(l, today),
+            IsDeferred = ComputeIsDeferred(l, today),
             l.CreatedAt, l.UpdatedAt
         });
         return Ok(result);
@@ -61,6 +69,7 @@ public class LoansController : ControllerBase
             bankName = account?.AccountName;
         }
 
+        var today = DateTime.UtcNow.Date;
         return Ok(new
         {
             loan.Id, loan.LenderName, loan.OriginalAmount, loan.CurrentBalance, loan.AprPercent,
@@ -68,6 +77,11 @@ public class LoansController : ControllerBase
             loan.IsAutopay, loan.PaymentFrequency, loan.RateType, loan.FundedBankAccountId, loan.NextPaymentDate,
             loan.MonthlyEquivalentPayment, loan.Status, loan.PaidOffDate,
             FundedBankAccountName = bankName,
+            PayoffProgress = loan.OriginalAmount > 0
+                ? Math.Max(0, Math.Min(100, Math.Round((1 - (double)loan.CurrentBalance / (double)loan.OriginalAmount) * 100, 1)))
+                : 0,
+            DaysUntilDue = ComputeDaysUntilDue(loan, today),
+            IsDeferred = ComputeIsDeferred(loan, today),
             loan.CreatedAt, loan.UpdatedAt
         });
     }
@@ -468,7 +482,24 @@ public class LoansController : ControllerBase
         var totalPrincipalPaid = payments.Sum(p => p.PrincipalAmount ?? p.AmountPaid);
         var totalInterestPaid = payments.Sum(p => p.InterestAmount ?? 0m);
 
-        return Ok(new { payments, totalPaid, totalPrincipalPaid, totalInterestPaid });
+        var sorted = payments.OrderBy(p => p.PaymentDate).ToList();
+        var balanceMap = new Dictionary<int, decimal>();
+        var runningBalance = loan.OriginalAmount;
+        foreach (var p in sorted)
+        {
+            balanceMap[p.Id] = runningBalance;
+            runningBalance -= p.PrincipalAmount ?? p.AmountPaid;
+            if (runningBalance < 0) runningBalance = 0;
+        }
+
+        var enrichedPayments = payments.Select(p => new
+        {
+            p.Id, p.PaymentDate, p.AmountPaid, p.PrincipalAmount, p.InterestAmount,
+            p.FromAccountId, p.Notes,
+            BalanceAtPayment = balanceMap.GetValueOrDefault(p.Id, loan.OriginalAmount)
+        });
+
+        return Ok(new { Payments = enrichedPayments, totalPaid, totalPrincipalPaid, totalInterestPaid });
     }
 
     [HttpPost("backfill-payment-splits")]
@@ -567,5 +598,51 @@ public class LoansController : ControllerBase
         }
 
         if (matched) await _db.SaveChangesAsync();
+    }
+
+    [HttpGet("summary")]
+    public async Task<ActionResult<LoanSummaryDto>> GetSummary()
+    {
+        return Ok(await _aggregationService.GetLoanSummaryAsync(UserId));
+    }
+
+    private static bool ComputeIsDeferred(PersonalLoan loan, DateTime today)
+    {
+        if (!loan.NextPaymentDate.HasValue || loan.CurrentBalance <= 0) return false;
+        var daysAway = (loan.NextPaymentDate.Value.Date - today).TotalDays;
+        var cycleDays = loan.PaymentFrequency == PaymentFrequency.Weekly ? 7
+            : loan.PaymentFrequency == PaymentFrequency.Biweekly ? 14 : 31;
+        return daysAway > cycleDays + 7;
+    }
+
+    private static int? ComputeDaysUntilDue(PersonalLoan loan, DateTime today)
+    {
+        if (loan.CurrentBalance <= 0) return null;
+
+        // Prefer NextPaymentDate — walk it forward if in the past
+        if (loan.NextPaymentDate.HasValue)
+        {
+            var next = loan.NextPaymentDate.Value.Date;
+            if (next >= today) return (int)(next - today).TotalDays;
+
+            var freq = loan.PaymentFrequency;
+            if (freq == PaymentFrequency.Weekly)
+                while (next < today) next = next.AddDays(7);
+            else if (freq == PaymentFrequency.Biweekly)
+                while (next < today) next = next.AddDays(14);
+            else
+                while (next < today) next = next.AddMonths(1);
+            return (int)(next - today).TotalDays;
+        }
+
+        // Fallback: dueDay for monthly
+        if (loan.PaymentFrequency == PaymentFrequency.Monthly && loan.DueDay > 0)
+        {
+            var dueDate = new DateTime(today.Year, today.Month, Math.Min(loan.DueDay, DateTime.DaysInMonth(today.Year, today.Month)));
+            if (dueDate < today) dueDate = dueDate.AddMonths(1);
+            return (int)(dueDate - today).TotalDays;
+        }
+
+        return null;
     }
 }

@@ -51,7 +51,8 @@ public class BudgetPlanService : IBudgetPlanService
 
         // Assign debt minimum payments to last paycheck before their due day
         var monthEnd = new DateTime(year, month, DateTime.DaysInMonth(year, month));
-        foreach (var debt in debts)
+        var activeDebts = debts.Where(d => !IsDeferred(d)).ToList();
+        foreach (var debt in activeDebts)
         {
             var dueDates = GetDebtDueDatesInMonth(debt, year, month, monthEnd);
             var perPayment = dueDates.Count > 1 && debt.PerPaymentAmount > 0
@@ -127,10 +128,20 @@ public class BudgetPlanService : IBudgetPlanService
             breakdown.Leftover = breakdown.GrossPay - breakdown.TotalExpenses;
         }
 
-        // Monthly overview
+        // Monthly overview — compute actual payment totals per debt using due dates
+        var debtActualTotals = new Dictionary<int, decimal>();
+        foreach (var debt in activeDebts)
+        {
+            var dueDates = GetDebtDueDatesInMonth(debt, year, month, monthEnd);
+            var perPayment = dueDates.Count > 1 && debt.PerPaymentAmount > 0
+                ? debt.PerPaymentAmount
+                : debt.MinimumPayment;
+            debtActualTotals[debt.Id] = perPayment * dueDates.Count;
+        }
+
         var totalFixed = fixedExpenses.Sum(e => e.Amount);
         var totalVariable = variableExpenses.Sum(e => e.Amount);
-        var totalDebt = debts.Sum(d => d.MinimumPayment);
+        var totalDebt = debtActualTotals.Values.Sum();
         var totalRecurring = recurringInMonth.Sum(r => r.Amount);
         var totalIncome = payPerCheck * payDates.Count;
         var totalExpenses = totalFixed + totalVariable + totalDebt + totalRecurring;
@@ -149,17 +160,19 @@ public class BudgetPlanService : IBudgetPlanService
             .ThenByDescending(c => c.Amount)
             .ToList();
 
-        // Add each debt payment to the category breakdown
-        foreach (var debt in debts)
+        // Add each active debt payment to the category breakdown
+        foreach (var debt in activeDebts)
         {
+            var isLoan = debt.DebtType == Models.Enums.DebtType.PersonalLoan;
             byCategory.Add(new CategorySummaryDto
             {
                 CategoryId = 0,
                 CategoryName = debt.Name,
-                Amount = debt.MinimumPayment,
+                Amount = debtActualTotals.GetValueOrDefault(debt.Id, debt.MinimumPayment),
                 IsFixed = true,
-                Icon = "credit_score",
+                Icon = isLoan ? "account_balance" : "credit_score",
                 IsDebt = true,
+                IsLoan = isLoan,
                 DebtId = debt.Id,
                 DebtType = debt.DebtType
             });
@@ -190,6 +203,8 @@ public class BudgetPlanService : IBudgetPlanService
                 TotalRecurring = totalRecurring,
                 TotalExpenses = totalExpenses,
                 Surplus = totalIncome - totalExpenses,
+                AbsSurplus = Math.Abs(totalIncome - totalExpenses),
+                IsDeficit = totalIncome < totalExpenses,
                 PaychecksThisMonth = payDates.Count,
                 ByCategory = byCategory
             },
@@ -303,5 +318,16 @@ public class BudgetPlanService : IBudgetPlanService
         }
 
         return results.Distinct().OrderBy(d => d).ToList();
+    }
+
+    private static bool IsDeferred(DebtSnapshotDto debt)
+    {
+        if (debt.DebtType != Models.Enums.DebtType.PersonalLoan) return false;
+        if (!debt.NextPaymentDate.HasValue || debt.Balance <= 0) return false;
+        var today = DateTime.UtcNow.Date;
+        var daysAway = (debt.NextPaymentDate.Value.Date - today).TotalDays;
+        var freq = debt.PaymentFrequency ?? "Monthly";
+        var cycleDays = freq == "Weekly" ? 7 : freq == "Biweekly" ? 14 : 31;
+        return daysAway > cycleDays + 7;
     }
 }

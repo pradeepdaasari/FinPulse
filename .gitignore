@@ -36,3 +36,4 @@ publish/
 ## wwwroot is populated by Angular build at deploy time
 src/Pulse.Api/wwwroot/*
 !src/Pulse.Api/wwwroot/.gitkeep
+pulsedb.bacpac

@@ -619,10 +619,9 @@ export class AccountDetailComponent implements OnInit {
     });
   });
 
-  private txnOnly = computed(() => this.activity().filter(a => a.kind === 'transaction').map(a => a.txn!));
-  totalIncome = computed(() => this.txnOnly().filter(t => t.transactionType === 'Income' || t.transactionType === 'Refund').reduce((s, t) => s + t.amount, 0));
-  totalExpense = computed(() => this.txnOnly().filter(t => t.transactionType === 'Expense' || !t.transactionType).reduce((s, t) => s + t.amount, 0));
-  totalTransfer = computed(() => this.txnOnly().filter(t => t.transactionType === 'Transfer').reduce((s, t) => s + t.amount, 0));
+  totalIncome = signal(0);
+  totalExpense = signal(0);
+  totalTransfer = signal(0);
 
   ngOnInit(): void {
     this.loadAccount();
@@ -635,6 +634,7 @@ export class AccountDetailComponent implements OnInit {
         this.account.set(account);
         this.loadTransactions(id);
         this.loadMovements(id);
+        this.loadTransactionSummary();
         this.cdr.detectChanges();
       },
       error: () => {
@@ -663,6 +663,7 @@ export class AccountDetailComponent implements OnInit {
 
   onPeriodChange(value: string): void {
     this.period.set(value);
+    this.loadTransactionSummary();
   }
 
   onCustomRange(): void {
@@ -672,7 +673,45 @@ export class AccountDetailComponent implements OnInit {
         to: new Date(this.customTo.getFullYear(), this.customTo.getMonth(), this.customTo.getDate(), 23, 59, 59)
       });
       this.period.set('custom');
+      this.loadTransactionSummary();
     }
+  }
+
+  private loadTransactionSummary(): void {
+    const id = this.account()?.id;
+    if (!id) return;
+    const p = this.period();
+    let from: string | undefined;
+    let to: string | undefined;
+    if (p !== 'all') {
+      const now = new Date();
+      const toDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+      let fromDate: Date;
+      if (p === 'custom') {
+        const cr = this.customRange();
+        if (!cr) return;
+        fromDate = cr.from;
+      } else {
+        switch (p) {
+          case '1m': fromDate = new Date(now.getFullYear(), now.getMonth(), 1); break;
+          case '3m': fromDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()); break;
+          case '6m': fromDate = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()); break;
+          case 'ytd': fromDate = new Date(now.getFullYear(), 0, 1); break;
+          case '1y': fromDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()); break;
+          default: fromDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()); break;
+        }
+      }
+      from = fromDate!.toISOString().slice(0, 10);
+      to = toDate.toISOString().slice(0, 10);
+    }
+    this.accountService.getTransactionSummary(id, from, to).subscribe({
+      next: (s) => {
+        this.totalIncome.set(s.totalIncome);
+        this.totalExpense.set(s.totalExpense);
+        this.totalTransfer.set(s.totalTransfer);
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   goBack(): void {

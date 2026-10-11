@@ -6,7 +6,8 @@ import {
   TradingSetup, TradingSetupSummary, PreMarketNote, PreMarketTemplate, TradeEntry,
   TradingRule, DailyReview, DailyLimits, TradingStats, TradingWisdom,
   WisdomCategory, WeeklyFocus, WeeklySummary, TradingDashboard,
-  TradingGoal, GoalProgress, GoalHistory, TradeNote, TradingDayView
+  TradingGoal, GoalProgress, GoalHistory, TradeNote, TradingDayView,
+  TradesWithStats
 } from '../models/trading.model';
 
 @Injectable({ providedIn: 'root' })
@@ -74,6 +75,13 @@ export class TradingService {
     if (fromDate) params = params.set('fromDate', fromDate);
     if (toDate) params = params.set('toDate', toDate);
     return this.http.get<TradeEntry[]>(`${this.baseUrl}/trades`, { params });
+  }
+
+  getTradesWithStats(fromDate?: string, toDate?: string): Observable<TradesWithStats> {
+    let params = new HttpParams().set('includeStats', 'true');
+    if (fromDate) params = params.set('fromDate', fromDate);
+    if (toDate) params = params.set('toDate', toDate);
+    return this.http.get<TradesWithStats>(`${this.baseUrl}/trades`, { params });
   }
 
   createTrade(trade: Partial<TradeEntry>): Observable<TradeEntry> {

@@ -110,4 +110,72 @@ export interface FinancialSummary {
   totalCreditCardDebt: number;
   totalLoanDebt: number;
   netWorth: number;
+  debtPaidPercent: number;
+  paceStatus: 'ahead' | 'on-track' | 'over';
+  paceMessage: string;
+}
+
+export interface TodayGlance {
+  paymentsDueToday: { debtName: string; amount: number; debtType: string }[];
+  paymentsTotalDue: number;
+  todaySpending: number;
+  recurringDue: { name: string; amount: number; nextRunDate: string }[];
+  recurringDueCount: number;
+  recurringDueTotal: number;
+  upcomingPayments: UpcomingGlancePayment[];
+  upcomingTotal: number;
+}
+
+export interface UpcomingGlancePayment {
+  name: string;
+  monthlyPayment: number;
+  dueDate: string;
+  daysUntilDue: number;
+  kind: string;
+  isAutopay: boolean;
+}
+
+export interface MonthlyPaymentRow {
+  id: number;
+  name: string;
+  kind: 'loan' | 'card' | 'recurring';
+  icon: string;
+  iconColor: string;
+  dueDay: number;
+  dueDate: string;
+  dueLabel: string;
+  amount: number;
+  minimumPayment: number | null;
+  paidAmount: number;
+  balance: number | null;
+  apr: number | null;
+  isAutopay: boolean;
+  status: 'paid' | 'overdue' | 'due-today' | 'due-soon' | 'upcoming';
+  statusLabel: string;
+  debtType?: 'PersonalLoan' | 'CreditCard';
+  subType?: string;
+  daysUntilDue: number;
+  minimumPaid: boolean;
+  recurringId?: number;
+}
+
+export interface MonthlyPaymentsData {
+  rows: MonthlyPaymentRow[];
+  totalDue: number;
+  totalMinimum: number;
+  totalPaid: number;
+  totalPending: number;
+  paidCount: number;
+  overdueCount: number;
+  paidPercent: number;
+  nextPaycheckDate: string | null;
+  daysUntilPaycheck: number | null;
+  todaySpending: number;
+  dueTodayTotal: number;
+}
+
+export interface DashboardInsight {
+  icon: string;
+  text: string;
+  color: 'green' | 'amber' | 'red';
 }

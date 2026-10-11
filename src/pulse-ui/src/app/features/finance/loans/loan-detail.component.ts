@@ -102,19 +102,15 @@ import { ConfettiService } from '../../../shared/confetti.service';
               <span class="value">{{ loan()!.monthlyPayment | currency }}</span>
             </div>
             <div class="detail-item">
-              <span class="label">Due Day</span>
-              <span class="value">{{ dueDayDisplay() }}</span>
-            </div>
-            <div class="detail-item">
               <span class="label">Frequency</span>
               <span class="value">{{ loan()!.paymentFrequency }}</span>
             </div>
-            @if (loan()!.nextPaymentDate) {
-              <div class="detail-item">
-                <span class="label">Next Payment Date</span>
-                <span class="value" [class.deferred-value]="isDeferred()">{{ loan()!.nextPaymentDate | localDate:'mediumDate' }}</span>
-              </div>
-            }
+            <div class="detail-item">
+              <span class="label">Next Payment</span>
+              <span class="value" [class.deferred-value]="isDeferred()">
+                {{ loan()!.nextPaymentDate ? (loan()!.nextPaymentDate | localDate:'mediumDate') : 'Not set' }}
+              </span>
+            </div>
             @if (loan()!.paidOffDate) {
               <div class="detail-item">
                 <span class="label">Paid Off On</span>
@@ -378,30 +374,8 @@ export class LoanDetailComponent implements OnInit {
   totalInterestPaid = signal(0);
   loading = signal(true);
   paymentColumns = ['paymentDate', 'amountPaid', 'principal', 'interest', 'fromAccount', 'notes', 'actions'];
-  payoffProgress = computed(() => {
-    const l = this.loan();
-    if (!l || l.originalAmount <= 0) return 0;
-    return Math.max(0, Math.min(100, (1 - l.currentBalance / l.originalAmount) * 100));
-  });
-  dueSoonDays = computed(() => {
-    const l = this.loan();
-    if (!l) return null;
-    if (l.currentBalance <= 0) return null;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const freq = l.paymentFrequency;
-    if (freq === 'Weekly' || freq === 'Biweekly') {
-      const interval = freq === 'Biweekly' ? 14 : 7;
-      const anchor = new Date(l.startDate);
-      anchor.setHours(0, 0, 0, 0);
-      while (anchor < today) anchor.setDate(anchor.getDate() + interval);
-      return Math.floor((anchor.getTime() - today.getTime()) / 86400000);
-    }
-    if (!l.dueDay) return null;
-    let dueDate = new Date(today.getFullYear(), today.getMonth(), l.dueDay);
-    if (dueDate < today) dueDate = new Date(today.getFullYear(), today.getMonth() + 1, l.dueDay);
-    return Math.floor((dueDate.getTime() - today.getTime()) / 86400000);
-  });
+  payoffProgress = computed(() => this.loan()?.payoffProgress ?? 0);
+  dueSoonDays = computed(() => this.loan()?.daysUntilDue ?? null);
   projectedPayoffDate = computed(() => {
     const sched = this.amortizationSchedule();
     if (!sched?.entries?.length) return null;
@@ -409,27 +383,14 @@ export class LoanDetailComponent implements OnInit {
     return last.paymentDate;
   });
   private accountNameMap = new Map<number, string>();
-  private weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
   paymentLabel = computed(() => {
     const f = this.loan()?.paymentFrequency;
     if (f === 'Weekly') return 'Weekly Payment';
     if (f === 'Biweekly') return 'Biweekly Payment';
     return 'Monthly Payment';
   });
-  isDeferred = computed(() => {
-    const d = this.loan()?.nextPaymentDate;
-    return !!d && new Date(d) > new Date();
-  });
-  dueDayDisplay = computed(() => {
-    const l = this.loan();
-    if (!l) return '';
-    const f = l.paymentFrequency;
-    if ((f === 'Weekly' || f === 'Biweekly') && l.dueDay >= 0 && l.dueDay <= 6) {
-      return this.weekDays[l.dueDay];
-    }
-    return String(l.dueDay);
-  });
-
+  isDeferred = computed(() => this.loan()?.isDeferred ?? false);
   ngOnInit(): void {
     this.loadLoan();
     this.fundingSourceService.getAll().subscribe(sources => {
@@ -564,20 +525,6 @@ export class LoanDetailComponent implements OnInit {
         if (result) this.loadLoan();
       });
     });
-  }
-
-  private computeBalanceAtPayment(target: PaymentHistory): number {
-    const loan = this.loan();
-    if (!loan) return 0;
-    const sorted = [...this.paymentHistory()].sort(
-      (a, b) => new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime()
-    );
-    let balance = loan.originalAmount;
-    for (const p of sorted) {
-      if (p.id === target.id) return balance;
-      balance -= p.principalAmount ?? p.amountPaid;
-    }
-    return Math.max(0, balance);
   }
 
   getAccountName(accountId?: number): string {

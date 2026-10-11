@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { PersonalLoan, PaymentAggregates } from '../models/personal-loan.model';
+import { PersonalLoan, PaymentAggregates, LoanSummary } from '../models/personal-loan.model';
 import { AmortizationSchedule } from '../models/dashboard.model';
 import { PaymentHistory } from '../models/payment-history.model';
 import { environment } from '../../../environments/environment';
@@ -45,5 +45,9 @@ export class LoanService {
 
   backfillPaymentSplits(): Observable<{ updated: number }> {
     return this.http.post<{ updated: number }>(`${this.baseUrl}/backfill-payment-splits`, {});
+  }
+
+  getSummary(): Observable<LoanSummary> {
+    return this.http.get<LoanSummary>(`${this.baseUrl}/summary`);
   }
 }

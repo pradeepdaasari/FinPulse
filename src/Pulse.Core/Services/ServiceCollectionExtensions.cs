@@ -13,6 +13,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IBudgetPlanService, BudgetPlanService>();
         services.AddScoped<ISnapshotService, SnapshotService>();
         services.AddScoped<IStreakService, StreakService>();
+        services.AddScoped<IDebtAggregationService, DebtAggregationService>();
 
         return services;
     }

@@ -1,6 +1,7 @@
-import { Component, ChangeDetectorRef, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
+import { forkJoin } from 'rxjs';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,7 +10,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { CreditCardService } from '../../../core/services/credit-card.service';
-import { CreditCard } from '../../../core/models/credit-card.model';
+import { CreditCard, CardSummary } from '../../../core/models/credit-card.model';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AddCardDialogComponent } from './add-card-dialog.component';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
@@ -47,28 +48,28 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
         <div class="stat-card stat-red">
           <mat-icon>credit_card</mat-icon>
           <div class="stat-content">
-            <span class="stat-value">{{ totalBalance() | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="stat-value">{{ summary().totalBalance | currency:'USD':'symbol':'1.0-0' }}</span>
             <span class="stat-label">Total Balance</span>
           </div>
         </div>
         <div class="stat-card stat-green">
           <mat-icon>account_balance_wallet</mat-icon>
           <div class="stat-content">
-            <span class="stat-value">{{ totalLimit() | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="stat-value">{{ summary().totalLimit | currency:'USD':'symbol':'1.0-0' }}</span>
             <span class="stat-label">Total Credit</span>
           </div>
         </div>
         <div class="stat-card stat-blue">
           <mat-icon>donut_small</mat-icon>
           <div class="stat-content">
-            <span class="stat-value" [class.util-text-healthy]="avgUtilization() <= 30" [class.util-text-warning]="avgUtilization() > 30 && avgUtilization() <= 70" [class.util-text-danger]="avgUtilization() > 70">{{ avgUtilization() | number:'1.0-0' }}%</span>
+            <span class="stat-value" [class.util-text-healthy]="summary().avgUtilization <= 30" [class.util-text-warning]="summary().avgUtilization > 30 && summary().avgUtilization <= 70" [class.util-text-danger]="summary().avgUtilization > 70">{{ summary().avgUtilization | number:'1.0-0' }}%</span>
             <span class="stat-label">Avg Utilization</span>
           </div>
         </div>
         <div class="stat-card stat-amber">
           <mat-icon>event</mat-icon>
           <div class="stat-content">
-            <span class="stat-value">{{ totalMinPayment() | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="stat-value">{{ summary().totalMinPayment | currency:'USD':'symbol':'1.0-0' }}</span>
             <span class="stat-label">Min Payments</span>
           </div>
         </div>
@@ -467,25 +468,20 @@ export class CardListComponent implements OnInit {
 
   cards = signal<CreditCard[]>([]);
   loading = signal(true);
-
-  totalBalance = computed(() => this.cards().reduce((sum, c) => sum + c.currentBalance, 0));
-  totalLimit = computed(() => this.cards().reduce((sum, c) => sum + (c.creditLimit || 0), 0));
-  totalMinPayment = computed(() => this.cards().reduce((sum, c) => sum + c.minimumPayment, 0));
-  avgUtilization = computed(() => {
-    const cards = this.cards();
-    if (!cards.length) return 0;
-    const totalUtil = cards.reduce((sum, c) => sum + this.getUtilization(c), 0);
-    return Math.round(totalUtil / cards.length);
-  });
+  summary = signal<CardSummary>({ totalBalance: 0, totalLimit: 0, totalMinPayment: 0, avgUtilization: 0 });
 
   ngOnInit(): void {
     this.loadCards();
   }
 
   loadCards(): void {
-    this.cardService.getAll().subscribe({
-      next: (cards) => {
+    forkJoin({
+      cards: this.cardService.getAll(),
+      summary: this.cardService.getSummary()
+    }).subscribe({
+      next: ({ cards, summary }) => {
         this.cards.set(cards);
+        this.summary.set(summary);
         this.loading.set(false);
         this.cdr.detectChanges();
       },
@@ -494,12 +490,11 @@ export class CardListComponent implements OnInit {
   }
 
   getUtilization(card: CreditCard): number {
-    if (!card.creditLimit || card.creditLimit === 0) return 0;
-    return Math.min(100, (card.currentBalance / card.creditLimit) * 100);
+    return card.utilization ?? 0;
   }
 
   getUtilColor(card: CreditCard): string {
-    const util = this.getUtilization(card);
+    const util = card.utilization ?? 0;
     if (util > 70) return 'util-red';
     if (util > 30) return 'util-orange';
     return 'util-green';

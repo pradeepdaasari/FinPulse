@@ -374,12 +374,8 @@ export class ReviewComponent implements OnInit {
   dateLabel = computed(() => this.currentDate().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }));
 
   todayTrades = signal<TradeEntry[]>([]);
-  todayPnl = computed(() => this.todayTrades().filter(t => t.status !== 'Open').reduce((s, t) => s + (t.pnl ?? 0), 0));
-  todayCompliance = computed(() => {
-    const t = this.todayTrades();
-    if (!t.length) return 0;
-    return Math.round((t.filter(x => x.checklistCompleted).length / t.length) * 100);
-  });
+  todayPnl = signal(0);
+  todayCompliance = signal(0);
 
   stripHtml(html: string): string {
     const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -421,8 +417,14 @@ export class ReviewComponent implements OnInit {
 
   loadData(): void {
     const dateStr = this.formatDate(this.currentDate());
-    this.tradingService.getTrades(dateStr, dateStr).subscribe({
-      next: t => { this.todayTrades.set(t); this.loading.set(false); this.cdr.detectChanges(); },
+    this.tradingService.getTradesWithStats(dateStr, dateStr).subscribe({
+      next: data => {
+        this.todayTrades.set(data.trades);
+        this.todayPnl.set(data.stats.totalPnl);
+        this.todayCompliance.set(data.stats.complianceRate);
+        this.loading.set(false);
+        this.cdr.detectChanges();
+      },
       error: () => { this.todayTrades.set([]); this.loading.set(false); this.cdr.detectChanges(); }
     });
     this.tradingService.getRules().subscribe({

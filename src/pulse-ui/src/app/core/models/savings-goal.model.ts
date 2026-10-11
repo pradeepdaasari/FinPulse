@@ -8,6 +8,7 @@ export interface SavingsGoal {
   linkedAccountName: string | null;
   icon: string | null;
   createdAt: string;
+  progress: number;
 }
 
 export interface SavingsGoalCreate {
@@ -17,4 +18,12 @@ export interface SavingsGoalCreate {
   targetDate?: string;
   linkedAccountId?: number;
   icon?: string;
+}
+
+export interface GoalsSummary {
+  totalSaved: number;
+  totalTarget: number;
+  avgProgress: number;
+  completedGoals: number;
+  totalGoals: number;
 }

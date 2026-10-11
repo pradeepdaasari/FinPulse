@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { DailyExpense, DailyExpenseCreate, ExpenseFilter, MonthComparison, MultiMonthComparison, SpendingSummary, TagSummary } from '../models/daily-expense.model';
+import { DailyExpense, DailyExpenseCreate, ExpenseFilter, ExpenseInsight, MonthComparison, MultiMonthComparison, SpendingSummary, SpendingSummaryResponse, TagSummary, TagSummaryResponse } from '../models/daily-expense.model';
 import { SourceUsage } from '../models/funding-source.model';
 import { environment } from '../../../environments/environment';
 
@@ -19,11 +19,15 @@ export class DailyExpenseService {
     return this.http.get<DailyExpense[]>(this.baseUrl, { params });
   }
 
-  getSummary(year?: number, month?: number): Observable<SpendingSummary[]> {
+  getSummary(year?: number, month?: number): Observable<SpendingSummaryResponse> {
     const params: Record<string, string> = {};
     if (year) params['year'] = year.toString();
     if (month) params['month'] = month.toString();
-    return this.http.get<SpendingSummary[]>(`${this.baseUrl}/summary`, { params });
+    return this.http.get<SpendingSummaryResponse>(`${this.baseUrl}/summary`, { params });
+  }
+
+  getInsight(year: number, month: number): Observable<ExpenseInsight> {
+    return this.http.get<ExpenseInsight>(`${this.baseUrl}/insight`, { params: { year: year.toString(), month: month.toString() } });
   }
 
   create(expense: DailyExpenseCreate): Observable<DailyExpense> {
@@ -62,12 +66,12 @@ export class DailyExpenseService {
     return this.http.get<string[]>(`${this.baseUrl}/tag-types`);
   }
 
-  getTagSummary(tagType?: string, dateFrom?: string, dateTo?: string): Observable<TagSummary[]> {
+  getTagSummary(tagType?: string, dateFrom?: string, dateTo?: string): Observable<TagSummaryResponse> {
     const params: Record<string, string> = {};
     if (tagType) params['tagType'] = tagType;
     if (dateFrom) params['dateFrom'] = dateFrom;
     if (dateTo) params['dateTo'] = dateTo;
-    return this.http.get<TagSummary[]>(`${this.baseUrl}/tag-summary`, { params });
+    return this.http.get<TagSummaryResponse>(`${this.baseUrl}/tag-summary`, { params });
   }
 
   getComparison(year?: number, month?: number): Observable<MonthComparison> {

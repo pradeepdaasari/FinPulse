@@ -98,6 +98,20 @@ export interface TradeEntry {
 
 export type TradeStatus = 'Open' | 'Closed';
 
+export interface TradeStats {
+  winRate: number;
+  avgPnl: number;
+  totalFees: number;
+  totalNetPnl: number;
+  totalPnl: number;
+  complianceRate: number;
+}
+
+export interface TradesWithStats {
+  trades: TradeEntry[];
+  stats: TradeStats;
+}
+
 export interface TradeNote {
   id: number;
   tradeEntryId: number;
@@ -171,6 +185,10 @@ export interface TradingStats {
   averageGrade: number;
   tradesToday: number;
   pnlToday: number;
+  tradesThisWeek: number;
+  pnlThisWeek: number;
+  tradesThisMonth: number;
+  pnlThisMonth: number;
   checklistComplianceRate: number;
   setupBreakdown: SetupPerformance[];
 }

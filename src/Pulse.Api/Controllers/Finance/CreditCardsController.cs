@@ -17,11 +17,13 @@ public class CreditCardsController : ControllerBase
 {
     private readonly PulseDbContext _db;
     private readonly IFinancialCalculationService _calcService;
+    private readonly IDebtAggregationService _aggregationService;
 
-    public CreditCardsController(PulseDbContext db, IFinancialCalculationService calcService)
+    public CreditCardsController(PulseDbContext db, IFinancialCalculationService calcService, IDebtAggregationService aggregationService)
     {
         _db = db;
         _calcService = calcService;
+        _aggregationService = aggregationService;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -41,7 +43,17 @@ public class CreditCardsController : ControllerBase
             }
         }
 
-        return Ok(cards);
+        var result = cards.Select(c => new
+        {
+            c.Id, c.CardName, c.CurrentBalance, c.CreditLimit, c.AprPercent,
+            c.MinimumPayment, c.DueDay, c.BillingCycleDays, c.IsAutopay,
+            c.PromoAprPercent, c.PromoEndDate, c.LastStatementDate,
+            c.CreatedAt, c.UpdatedAt,
+            Utilization = c.CreditLimit > 0
+                ? Math.Min(100, Math.Round((double)c.CurrentBalance / (double)c.CreditLimit * 100, 1))
+                : 0
+        });
+        return Ok(result);
     }
 
     [HttpGet("{id:int}")]
@@ -320,7 +332,8 @@ public class CreditCardsController : ControllerBase
             .OrderByDescending(p => p.PaymentDate)
             .ToListAsync();
 
-        return Ok(payments);
+        var totalPaid = payments.Sum(p => p.AmountPaid);
+        return Ok(new { Payments = payments, TotalPaid = totalPaid });
     }
 
     private record CardSummary(
@@ -412,5 +425,67 @@ public class CreditCardsController : ControllerBase
         }
 
         if (matched) await _db.SaveChangesAsync();
+    }
+
+    [HttpGet("summary")]
+    public async Task<ActionResult<CardSummaryDto>> GetSummary()
+    {
+        return Ok(await _aggregationService.GetCardSummaryAsync(UserId));
+    }
+
+    [HttpGet("{id}/activity-summary")]
+    public async Task<ActionResult> GetActivitySummary(int id, [FromQuery] int? year, [FromQuery] int? month)
+    {
+        var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
+        if (card is null) return NotFound();
+
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var y = year ?? now.Year;
+        var m = month ?? now.Month;
+
+        IQueryable<DailyExpense> expenseQuery = _db.DailyExpenses
+            .Where(e => e.UserId == UserId && e.FundingSourceType == FundingSourceType.CreditCard && e.FundingSourceId == id);
+
+        IQueryable<PaymentHistory> paymentQuery = _db.PaymentHistories
+            .Where(p => p.UserId == UserId && p.DebtType == DebtType.CreditCard && p.DebtId == id);
+
+        if (year.HasValue || month.HasValue)
+        {
+            var (utcStart, utcEnd) = TimeZoneHelper.MonthRangeUtc(y, m, tz);
+            expenseQuery = expenseQuery.Where(e => e.Date >= utcStart && e.Date < utcEnd);
+            paymentQuery = paymentQuery.Where(p => p.PaymentDate >= utcStart && p.PaymentDate < utcEnd);
+        }
+
+        var totalCharges = await expenseQuery
+            .Where(e => e.TransactionType == TransactionType.Expense || e.TransactionType == null)
+            .SumAsync(e => e.Amount);
+        var totalRefunds = await expenseQuery
+            .Where(e => e.TransactionType == TransactionType.Refund)
+            .SumAsync(e => e.Amount);
+        var totalPayments = await paymentQuery.SumAsync(p => p.AmountPaid);
+
+        var utilization = card.CreditLimit > 0
+            ? Math.Min(100, Math.Round((double)card.CurrentBalance / (double)card.CreditLimit * 100, 1))
+            : 0;
+
+        var today = now.Date;
+        DateTime? nextDueDate = null;
+        if (card.DueDay > 0)
+        {
+            var daysInMonth = DateTime.DaysInMonth(today.Year, today.Month);
+            var dueDay = Math.Min(card.DueDay, daysInMonth);
+            var thisMonth = new DateTime(today.Year, today.Month, dueDay);
+            nextDueDate = thisMonth > today ? thisMonth : thisMonth.AddMonths(1);
+        }
+
+        return Ok(new
+        {
+            TotalCharges = Math.Round(totalCharges, 2),
+            TotalRefunds = Math.Round(totalRefunds, 2),
+            TotalPayments = Math.Round(totalPayments, 2),
+            Utilization = utilization,
+            NextDueDate = nextDueDate?.ToString("yyyy-MM-dd")
+        });
     }
 }

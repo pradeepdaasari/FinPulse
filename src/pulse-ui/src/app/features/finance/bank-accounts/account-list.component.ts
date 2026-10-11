@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 
 import { MatButtonModule } from '@angular/material/button';
@@ -344,13 +344,13 @@ export class AccountListComponent implements OnInit {
   loading = signal(true);
   displayedColumns = ['accountName', 'accountType', 'currentBalance', 'actions'];
 
-  totalBalance = computed(() => this.accounts().filter(a => !a.isExcluded).reduce((sum, a) => sum + a.currentBalance, 0));
-  checkingCount = computed(() => this.accounts().filter(a => a.accountType === 'Checking').length);
-  savingsCount = computed(() => this.accounts().filter(a => a.accountType === 'Savings').length);
-  brokerageCount = computed(() => this.accounts().filter(a => a.accountType === 'Brokerage').length);
-  cashCount = computed(() => this.accounts().filter(a => a.accountType === 'Cash').length);
-  excludedCount = computed(() => this.accounts().filter(a => a.isExcluded).length);
-  excludedBalance = computed(() => this.accounts().filter(a => a.isExcluded).reduce((sum, a) => sum + a.currentBalance, 0));
+  totalBalance = signal(0);
+  checkingCount = signal(0);
+  savingsCount = signal(0);
+  brokerageCount = signal(0);
+  cashCount = signal(0);
+  excludedCount = signal(0);
+  excludedBalance = signal(0);
 
   ngOnInit(): void {
     this.loadAccounts();
@@ -364,6 +364,18 @@ export class AccountListComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => { this.loading.set(false); this.cdr.detectChanges(); }
+    });
+    this.accountService.getSummary().subscribe({
+      next: (s) => {
+        this.totalBalance.set(s.totalBalance);
+        this.excludedBalance.set(s.excludedBalance);
+        this.checkingCount.set(s.checkingCount);
+        this.savingsCount.set(s.savingsCount);
+        this.brokerageCount.set(s.brokerageCount);
+        this.cashCount.set(s.cashCount);
+        this.excludedCount.set(s.excludedCount);
+        this.cdr.detectChanges();
+      }
     });
   }
 

@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common';
 import { LocalDatePipe } from '../../../shared/local-date.pipe';
+import { forkJoin } from 'rxjs';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,7 +10,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
 import { LoanService } from '../../../core/services/loan.service';
-import { PersonalLoan } from '../../../core/models/personal-loan.model';
+import { PersonalLoan, LoanSummary } from '../../../core/models/personal-loan.model';
 import { NotificationService } from '../../../core/services/notification.service';
 import { ConfettiService } from '../../../shared/confetti.service';
 import { AddLoanDialogComponent } from './add-loan-dialog.component';
@@ -49,28 +50,28 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
         <div class="stat-card stat-blue">
           <mat-icon>account_balance</mat-icon>
           <div class="stat-content">
-            <span class="stat-value">{{ totalBalance() | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="stat-value">{{ summary().totalBalance | currency:'USD':'symbol':'1.0-0' }}</span>
             <span class="stat-label">Total Balance</span>
           </div>
         </div>
         <div class="stat-card stat-green">
           <mat-icon>calendar_month</mat-icon>
           <div class="stat-content">
-            <span class="stat-value">{{ totalMonthly() | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="stat-value">{{ summary().totalMonthlyPayment | currency:'USD':'symbol':'1.0-0' }}</span>
             <span class="stat-label">Monthly Payments</span>
           </div>
         </div>
         <div class="stat-card stat-purple">
           <mat-icon>percent</mat-icon>
           <div class="stat-content">
-            <span class="stat-value">{{ avgApr() }}%</span>
+            <span class="stat-value">{{ summary().avgApr | number:'1.1-1' }}%</span>
             <span class="stat-label">Avg APR</span>
           </div>
         </div>
         <div class="stat-card stat-amber">
           <mat-icon>receipt_long</mat-icon>
           <div class="stat-content">
-            <span class="stat-value">{{ activeCount() }}</span>
+            <span class="stat-value">{{ summary().activeCount }}</span>
             <span class="stat-label">Active Loans</span>
           </div>
         </div>
@@ -556,25 +557,18 @@ export class LoanListComponent implements OnInit {
     return all.filter(l => l.status === filter);
   });
 
-  totalBalance = computed(() => this.loans().reduce((sum, l) => sum + l.currentBalance, 0));
-  totalMonthly = computed(() => this.loans().reduce((sum, l) => sum + (l.monthlyEquivalentPayment || l.monthlyPayment), 0));
-  activeCount = computed(() => this.loans().filter(l => l.currentBalance > 0).length);
-  avgApr = computed(() => {
-    const loans = this.loans().filter(l => l.currentBalance > 0);
-    if (!loans.length) return '0.0';
-    const totalBalance = loans.reduce((sum, l) => sum + l.currentBalance, 0);
-    if (totalBalance <= 0) return '0.0';
-    const weighted = loans.reduce((sum, l) => sum + l.aprPercent * l.currentBalance, 0);
-    return (weighted / totalBalance).toFixed(1);
-  });
+  summary = signal<LoanSummary>({ totalBalance: 0, totalMonthlyPayment: 0, avgApr: 0, activeCount: 0 });
 
   ngOnInit(): void {
     this.loadLoans();
   }
 
   loadLoans(): void {
-    this.loanService.getAll().subscribe({
-      next: (loans) => {
+    forkJoin({
+      loans: this.loanService.getAll(),
+      summary: this.loanService.getSummary()
+    }).subscribe({
+      next: ({ loans, summary }) => {
         loans.forEach(l => {
           if (!l.status) l.status = l.currentBalance <= 0 ? 'PaidOff' : 'Active';
         });
@@ -583,6 +577,7 @@ export class LoanListComponent implements OnInit {
           return a.status === 'Active' ? -1 : 1;
         });
         this.loans.set(loans);
+        this.summary.set(summary);
         this.loading.set(false);
       },
       error: () => { this.loading.set(false); this.notify.error('Failed to load loans'); }
@@ -685,12 +680,11 @@ export class LoanListComponent implements OnInit {
   }
 
   isDeferred(loan: PersonalLoan): boolean {
-    return !!loan.nextPaymentDate && new Date(loan.nextPaymentDate) > new Date();
+    return loan.isDeferred;
   }
 
   getProgress(loan: PersonalLoan): number {
-    if (!loan.originalAmount || loan.originalAmount <= 0) return 0;
-    return Math.max(0, Math.min(100, (1 - loan.currentBalance / loan.originalAmount) * 100));
+    return loan.payoffProgress ?? 0;
   }
 
   getLoanTypeBg(type: string): string {

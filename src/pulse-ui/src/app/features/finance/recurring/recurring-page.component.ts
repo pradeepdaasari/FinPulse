@@ -464,8 +464,9 @@ export class RecurringPageComponent implements OnInit {
   loading = signal(true);
   displayedColumns = ['description', 'amount', 'frequency', 'nextRunDate', 'status', 'actions'];
 
-  activeCount = computed(() => this.items().filter(i => i.isActive).length);
-  pausedCount = computed(() => this.items().filter(i => !i.isActive).length);
+  activeCount = signal(0);
+  pausedCount = signal(0);
+  billMonthlyTotal = signal(0);
   private todayStr = computed(() => {
     const tz = localStorage.getItem('pulse_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
     return new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
@@ -476,18 +477,6 @@ export class RecurringPageComponent implements OnInit {
   dueTodayItems = computed(() => this.billItems().filter(i => i.isActive && i.nextRunDate.slice(0, 10) === this.todayStr()));
   dueItems = computed(() => this.billItems().filter(i => i.isActive && i.nextRunDate.slice(0, 10) <= this.todayStr()));
 
-  private monthlyCalc(items: RecurringTransaction[]): number {
-    return items.filter(i => i.isActive).reduce((sum, i) => {
-      switch (i.frequency) {
-        case 'Daily': return sum + i.amount * 30;
-        case 'Weekly': return sum + i.amount * 4.33;
-        case 'Biweekly': return sum + i.amount * 2.17;
-        case 'Monthly': return sum + i.amount;
-        default: return sum + i.amount;
-      }
-    }, 0);
-  }
-  billMonthlyTotal = computed(() => this.monthlyCalc(this.billItems()));
   ngOnInit(): void {
     this.loadData();
   }
@@ -500,6 +489,14 @@ export class RecurringPageComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => { this.loading.set(false); this.notify.error('Failed to load recurring items'); this.cdr.detectChanges(); }
+    });
+    this.service.getSummary().subscribe({
+      next: (s) => {
+        this.billMonthlyTotal.set(s.billMonthlyTotal);
+        this.activeCount.set(s.activeCount);
+        this.pausedCount.set(s.pausedCount);
+        this.cdr.detectChanges();
+      }
     });
   }
 

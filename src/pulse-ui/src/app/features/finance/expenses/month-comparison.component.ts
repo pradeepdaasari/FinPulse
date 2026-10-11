@@ -191,9 +191,8 @@ export class MonthComparisonComponent implements OnChanges {
     this.expenseService.getMultiComparison(this.year(), this.month(), count).subscribe({
       next: (result) => {
         this.data.set(result);
-        const total = result.months.reduce((s, m) => s + m.total, 0);
-        this.grandTotal.set(total);
-        this.avgMonthly.set(result.months.length > 0 ? total / result.months.length : 0);
+        this.grandTotal.set(result.grandTotal);
+        this.avgMonthly.set(result.avgMonthly);
         this.loading.set(false);
         this.cdr.detectChanges();
       },

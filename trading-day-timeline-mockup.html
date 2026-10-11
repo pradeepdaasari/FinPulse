@@ -1,0 +1,562 @@
+<title>Trading Day Timeline</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --surface-alt: #f0f1f4;
+    --surface-hover: #eaecf0;
+    --border: #dfe2e8;
+    --border-light: #eceef2;
+    --text: #171a20;
+    --text-secondary: #555b68;
+    --text-muted: #8b91a0;
+    --accent: #1565c0;
+    --accent-light: rgba(21,101,192,0.07);
+    --green: #2e7d32;
+    --green-bg: rgba(46,125,50,0.07);
+    --green-line: #66bb6a;
+    --amber: #e65100;
+    --amber-bg: rgba(230,81,0,0.07);
+    --amber-line: #ffa726;
+    --red: #c62828;
+    --red-bg: rgba(198,40,40,0.07);
+    --purple: #5e35b1;
+    --purple-bg: rgba(94,53,177,0.06);
+    --blue-soft: #e3f2fd;
+    --timeline-line: #d4d8e0;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow: 0 1px 4px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1117;
+      --surface: #191c24;
+      --surface-alt: #21242e;
+      --surface-hover: #282c38;
+      --border: #2c3040;
+      --border-light: #252938;
+      --text: #e6e8ed;
+      --text-secondary: #969db0;
+      --text-muted: #646b7e;
+      --accent: #5c9ce6;
+      --accent-light: rgba(92,156,230,0.1);
+      --green: #66bb6a;
+      --green-bg: rgba(102,187,106,0.1);
+      --green-line: #66bb6a;
+      --amber: #ffa726;
+      --amber-bg: rgba(255,167,38,0.1);
+      --amber-line: #ffa726;
+      --red: #ef5350;
+      --red-bg: rgba(239,83,80,0.1);
+      --purple: #b39ddb;
+      --purple-bg: rgba(179,157,219,0.1);
+      --blue-soft: rgba(92,156,230,0.08);
+      --timeline-line: #2c3040;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+      --shadow: 0 1px 4px rgba(0,0,0,0.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1117;
+    --surface: #191c24;
+    --surface-alt: #21242e;
+    --surface-hover: #282c38;
+    --border: #2c3040;
+    --border-light: #252938;
+    --text: #e6e8ed;
+    --text-secondary: #969db0;
+    --text-muted: #646b7e;
+    --accent: #5c9ce6;
+    --accent-light: rgba(92,156,230,0.1);
+    --green: #66bb6a;
+    --green-bg: rgba(102,187,106,0.1);
+    --green-line: #66bb6a;
+    --amber: #ffa726;
+    --amber-bg: rgba(255,167,38,0.1);
+    --amber-line: #ffa726;
+    --red: #ef5350;
+    --red-bg: rgba(239,83,80,0.1);
+    --purple: #b39ddb;
+    --purple-bg: rgba(179,157,219,0.1);
+    --blue-soft: rgba(92,156,230,0.08);
+    --timeline-line: #2c3040;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+    --shadow: 0 1px 4px rgba(0,0,0,0.25);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    padding-inline: 16px;
+    padding-block: 0;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  /* ── Day Header ── */
+  .day-header {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 10;
+    background: var(--bg);
+    padding: 20px 0 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .day-header-left { display: flex; align-items: center; gap: 12px; }
+  .day-nav {
+    width: 32px; height: 32px; border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--text-muted);
+    cursor: pointer;
+  }
+  .day-nav:hover { background: var(--surface-hover); }
+  .day-title h1 {
+    font-size: 1.15rem; font-weight: 800; margin: 0;
+    letter-spacing: -0.02em;
+  }
+  .day-title .day-sub {
+    font-size: 0.7rem; color: var(--text-muted); font-weight: 500;
+    margin-top: 1px;
+  }
+  .day-grade {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .grade-badge {
+    width: 38px; height: 38px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; font-weight: 800;
+    background: var(--green-bg); color: var(--green);
+    border: 1.5px solid rgba(46,125,50,0.2);
+  }
+  .grade-meta {
+    display: flex; flex-direction: column; gap: 1px;
+  }
+  .grade-label { font-size: 0.6rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .grade-detail { font-size: 0.72rem; font-weight: 600; color: var(--green); }
+
+  /* ── Emotion arc bar ── */
+  .emotion-arc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+  .arc-label {
+    font-size: 0.62rem; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 10px;
+  }
+  .arc-track {
+    display: flex; align-items: center; gap: 0;
+    height: 28px; border-radius: 14px; overflow: hidden;
+    position: relative;
+  }
+  .arc-segment {
+    height: 100%; display: flex; align-items: center; justify-content: center;
+    font-size: 0.58rem; font-weight: 700; color: #fff;
+    letter-spacing: 0.02em; white-space: nowrap;
+    transition: flex 0.3s;
+  }
+  .seg-confident { background: #43a047; flex: 2; }
+  .seg-anxious { background: #ef6c00; flex: 3; }
+  .seg-calm { background: #1976d2; flex: 2; }
+  .seg-relieved { background: #66bb6a; flex: 1; }
+
+  .arc-legend {
+    display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 0.65rem; color: var(--text-secondary); font-weight: 500;
+  }
+  .legend-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+
+  /* ── Timeline ── */
+  .timeline { position: relative; padding-left: 28px; }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 9px; top: 6px; bottom: 6px;
+    width: 2px;
+    background: var(--timeline-line);
+    border-radius: 1px;
+  }
+
+  .tl-event {
+    position: relative;
+    margin-bottom: 4px;
+  }
+
+  .tl-dot {
+    position: absolute;
+    left: -28px; top: 16px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px;
+    border: 2px solid var(--bg);
+    z-index: 1;
+  }
+
+  .tl-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .tl-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem; font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tl-type-badge {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.55rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 2px 7px; border-radius: 4px;
+  }
+
+  .tl-content { font-size: 0.82rem; line-height: 1.6; color: var(--text-secondary); }
+  .tl-content strong { color: var(--text); font-weight: 600; }
+
+  /* Event-specific styling */
+  .event-premarket .tl-dot { background: var(--purple); color: #fff; }
+  .event-premarket .tl-type-badge { background: var(--purple-bg); color: var(--purple); }
+  .event-premarket .tl-card { border-left: 3px solid var(--purple); }
+
+  .event-open .tl-dot { background: var(--accent); color: #fff; }
+  .event-open .tl-type-badge { background: var(--accent-light); color: var(--accent); }
+  .event-open .tl-card { border-left: 3px solid var(--accent); }
+
+  .event-note .tl-dot { background: var(--surface); border: 2px solid var(--border); color: var(--text-muted); }
+  .event-note .tl-card { border-left: 3px solid var(--border); }
+
+  .event-close .tl-dot { background: var(--green); color: #fff; }
+  .event-close .tl-type-badge { background: var(--green-bg); color: var(--green); }
+  .event-close .tl-card { border-left: 3px solid var(--green-line); }
+
+  .event-review .tl-dot { background: var(--amber); color: #fff; }
+  .event-review .tl-type-badge { background: var(--amber-bg); color: var(--amber); }
+  .event-review .tl-card { border-left: 3px solid var(--amber-line); }
+
+  /* Emotion inline tag */
+  .emotion-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.68rem; font-weight: 600;
+    padding: 2px 8px; border-radius: 10px;
+  }
+  .emo-confident { background: var(--green-bg); color: var(--green); }
+  .emo-anxious { background: var(--amber-bg); color: var(--amber); }
+  .emo-calm { background: var(--accent-light); color: var(--accent); }
+  .emo-relieved { background: var(--green-bg); color: var(--green); }
+  .emo-frustrated { background: var(--red-bg); color: var(--red); }
+
+  /* Trade summary row inside event */
+  .trade-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+    background: var(--surface-alt);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+  }
+  .ts-item { display: flex; flex-direction: column; gap: 1px; }
+  .ts-label { font-size: 0.55rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .ts-value { font-size: 0.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .ts-positive { color: var(--green); }
+  .ts-negative { color: var(--red); }
+
+  /* Plan items checklist */
+  .plan-items { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+  .plan-item {
+    display: flex; align-items: flex-start; gap: 6px;
+    font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5;
+  }
+  .plan-bullet {
+    flex-shrink: 0; margin-top: 4px;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--purple);
+    opacity: 0.5;
+  }
+
+  /* Review checklist */
+  .review-checks { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .review-check {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.78rem;
+  }
+  .check-icon {
+    width: 20px; height: 20px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .check-yes { background: var(--green-bg); color: var(--green); }
+  .check-label { color: var(--text-secondary); }
+  .check-answer { font-weight: 600; color: var(--text); }
+
+  /* Insight callout */
+  .insight-card {
+    background: var(--blue-soft);
+    border: 1px solid rgba(21,101,192,0.12);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-top: 24px;
+    margin-bottom: 8px;
+  }
+  .insight-header {
+    font-size: 0.68rem; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .insight-text {
+    font-size: 0.78rem; line-height: 1.6; color: var(--text-secondary);
+  }
+
+  /* Add note floating btn */
+  .add-note-float {
+    position: fixed;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    right: 20px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 28px;
+    padding: 12px 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    font-family: inherit;
+    box-shadow: 0 4px 14px rgba(21,101,192,0.35);
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer;
+    z-index: 20;
+  }
+  .add-note-float:hover { filter: brightness(1.1); }
+
+  .spacer { height: 80px; }
+
+  @media (max-width: 500px) {
+    .day-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .arc-track { height: 22px; }
+    .arc-segment { font-size: 0; }
+    .trade-summary { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+
+<!-- Day Header -->
+<div class="day-header">
+  <div class="day-header-left">
+    <button class="day-nav">‹</button>
+    <div class="day-title">
+      <h1>Tuesday, Sep 23</h1>
+      <div class="day-sub">1 trade · 7 notes · Plan followed</div>
+    </div>
+    <button class="day-nav">›</button>
+  </div>
+  <div class="day-grade">
+    <div class="grade-meta">
+      <span class="grade-label">Day Grade</span>
+      <span class="grade-detail">Discipline: A</span>
+    </div>
+    <div class="grade-badge">A</div>
+  </div>
+</div>
+
+<!-- Emotion Arc -->
+<div class="emotion-arc">
+  <div class="arc-label">Emotion Arc</div>
+  <div class="arc-track">
+    <div class="arc-segment seg-confident">Confident</div>
+    <div class="arc-segment seg-anxious">Anxious</div>
+    <div class="arc-segment seg-calm">Calm</div>
+    <div class="arc-segment seg-relieved">Relief</div>
+  </div>
+  <div class="arc-legend">
+    <span class="legend-item"><span class="legend-dot" style="background:#43a047"></span> 9:35 AM — Confident</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#ef6c00"></span> 10:48 AM — Anxious</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#1976d2"></span> 1:15 PM — Calm</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#66bb6a"></span> 1:20 PM — Relieved</span>
+  </div>
+</div>
+
+<!-- Timeline -->
+<div class="timeline">
+
+  <!-- Pre-Market Plan -->
+  <div class="tl-event event-premarket">
+    <div class="tl-dot">☀</div>
+    <div class="tl-card">
+      <div class="tl-time">
+        8:45 AM
+        <span class="tl-type-badge">Pre-Market Plan</span>
+      </div>
+      <div class="tl-content">
+        <strong>Bullish bias today.</strong> Overnight held above 5470 support. Expecting range-bound to slightly up action unless CPI revision surprises.
+      </div>
+      <div class="plan-items">
+        <div class="plan-item"><span class="plan-bullet"></span> Looking for 0DTE put credit spreads if SPX holds 5470</div>
+        <div class="plan-item"><span class="plan-bullet"></span> Max risk: $500 per trade, 1 trade max today</div>
+        <div class="plan-item"><span class="plan-bullet"></span> Take profit at 60% of max. No adjustments — close or hold</div>
+        <div class="plan-item"><span class="plan-bullet"></span> No revenge trades if stopped out</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trade Opened -->
+  <div class="tl-event event-open">
+    <div class="tl-dot">▶</div>
+    <div class="tl-card">
+      <div class="tl-time">
+        9:35 AM
+        <span class="tl-type-badge">Trade Opened</span>
+        <span class="emotion-tag emo-confident">😎 Confident</span>
+      </div>
+      <div class="tl-content">
+        <strong>SPX 0DTE Put Vertical</strong> — Sold 5440/5430 put spread for <strong>$1.45</strong> credit.
+        Market structure is bullish, following my premarket bias exactly. SPX at 5485, giving me 45 points of cushion.
+      </div>
+      <div class="trade-summary">
+        <div class="ts-item"><span class="ts-label">Direction</span><span class="ts-value">Short</span></div>
+        <div class="ts-item"><span class="ts-label">Spread</span><span class="ts-value">Put Vertical</span></div>
+        <div class="ts-item"><span class="ts-label">Premium</span><span class="ts-value">$1.45</span></div>
+        <div class="ts-item"><span class="ts-label">Qty</span><span class="ts-value">5 contracts</span></div>
+        <div class="ts-item"><span class="ts-label">Max Risk</span><span class="ts-value ts-negative">$500</span></div>
+        <div class="ts-item"><span class="ts-label">Account</span><span class="ts-value">Schwab</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trade Note 1 -->
+  <div class="tl-event event-note">
+    <div class="tl-dot">✎</div>
+    <div class="tl-card">
+      <div class="tl-time">
+        10:48 AM
+        <span class="emotion-tag emo-anxious">😰 Anxious</span>
+      </div>
+      <div class="tl-content">
+        SPX dropped to 5462 on that CPI revision headline. Spread went from $1.45 to $2.10 — underwater. Getting nervous but it's still <strong>22 points above my short strike</strong>. Tempted to close for a loss but that's exactly the panic exit my playbook warns about. Sticking to the plan.
+      </div>
+    </div>
+  </div>
+
+  <!-- Trade Note 2 -->
+  <div class="tl-event event-note">
+    <div class="tl-dot">✎</div>
+    <div class="tl-card">
+      <div class="tl-time">
+        11:30 AM
+        <span class="emotion-tag emo-anxious">😬 Still Anxious</span>
+      </div>
+      <div class="tl-content">
+        Hovering around 5465. Spread at $1.80. Walked away from the screen for 20 min — that helped. Checked playbook rule #3: <strong>"If your stop isn't hit, your thesis is alive."</strong> Stop is at $3.50, nowhere close.
+      </div>
+    </div>
+  </div>
+
+  <!-- Trade Note 3 -->
+  <div class="tl-event event-note">
+    <div class="tl-dot">✎</div>
+    <div class="tl-card">
+      <div class="tl-time">
+        1:15 PM
+        <span class="emotion-tag emo-calm">😌 Calm</span>
+      </div>
+      <div class="tl-content">
+        Bounced back to 5478. Spread decayed to <strong>$0.58</strong> — past my 60% target. Glad I held through the drawdown instead of panic closing at $2.10. Setting limit order to close at $0.58 now.
+      </div>
+    </div>
+  </div>
+
+  <!-- Trade Closed -->
+  <div class="tl-event event-close">
+    <div class="tl-dot">✓</div>
+    <div class="tl-card">
+      <div class="tl-time">
+        1:20 PM
+        <span class="tl-type-badge">Trade Closed</span>
+        <span class="emotion-tag emo-relieved">😊 Relieved</span>
+      </div>
+      <div class="tl-content">
+        Closed at $0.58. Profit target hit. <strong>Discipline over impulse today.</strong>
+      </div>
+      <div class="trade-summary">
+        <div class="ts-item"><span class="ts-label">Entry</span><span class="ts-value">$1.45</span></div>
+        <div class="ts-item"><span class="ts-label">Exit</span><span class="ts-value">$0.58</span></div>
+        <div class="ts-item"><span class="ts-label">Gross P&L</span><span class="ts-value ts-positive">+$435</span></div>
+        <div class="ts-item"><span class="ts-label">Fees</span><span class="ts-value">$12.40</span></div>
+        <div class="ts-item"><span class="ts-label">Net P&L</span><span class="ts-value ts-positive">+$422.60</span></div>
+        <div class="ts-item"><span class="ts-label">R-Multiple</span><span class="ts-value ts-positive">+0.85R</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Daily Review -->
+  <div class="tl-event event-review">
+    <div class="tl-dot">★</div>
+    <div class="tl-card">
+      <div class="tl-time">
+        4:30 PM
+        <span class="tl-type-badge">Daily Review</span>
+      </div>
+      <div class="tl-content">
+        <strong>Good discipline day.</strong> The anxiety at 10:48 was the real test — past me would have panic-closed for a $325 loss instead of sitting with the discomfort. Walking away from the screen was the key move. The plan was right, I just needed to trust it.
+      </div>
+      <div class="review-checks">
+        <div class="review-check">
+          <span class="check-icon check-yes">✓</span>
+          <span class="check-label">Followed pre-market plan?</span>
+          <span class="check-answer">Yes</span>
+        </div>
+        <div class="review-check">
+          <span class="check-icon check-yes">✓</span>
+          <span class="check-label">Respected risk limits?</span>
+          <span class="check-answer">Yes — 1 trade, $500 max</span>
+        </div>
+        <div class="review-check">
+          <span class="check-icon check-yes">✓</span>
+          <span class="check-label">Took profit per rules?</span>
+          <span class="check-answer">Yes — closed at 60%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Insight -->
+<div class="insight-card">
+  <div class="insight-header">
+    <span>💡</span> Pattern Insight
+  </div>
+  <div class="insight-text">
+    This is your <strong>3rd trade this month</strong> where you felt anxious mid-trade but held to plan and closed profitable. Your win rate when you journal through anxiety is <strong>78%</strong> vs. 45% when you don't log notes. Keep writing.
+  </div>
+</div>
+
+<!-- FAB -->
+<button class="add-note-float">
+  ✏️ Add Note
+</button>
+
+<div class="spacer"></div>
