@@ -142,12 +142,14 @@ type Period = '3' | '6' | 'ytd';
                     <tr>
                       <td class="detail-name">{{ row.name }}</td>
                       @for (val of row.monthly; track $index) {
-                        <td class="detail-val" [class.pnl-positive]="val > 0" [class.pnl-negative]="val < 0">
-                          {{ val >= 0 ? '+' : '' }}{{ val | currency:'USD':'symbol':'1.0-0' }}
+                        <td class="detail-val bar-cell" [class.pnl-positive]="val > 0" [class.pnl-negative]="val < 0">
+                          <div class="bar-bg" [class.bar-pnl-pos]="val > 0" [class.bar-pnl-neg]="val < 0" [class.bar-neutral]="val === 0" [style.width.%]="barWidth(abs(val), maxAbsInColumn(d.trading.details, $index))"></div>
+                          <span class="bar-value">{{ val >= 0 ? '+' : '' }}{{ val | currency:'USD':'symbol':'1.0-0' }}</span>
                         </td>
                       }
-                      <td class="detail-total" [class.pnl-positive]="row.total > 0" [class.pnl-negative]="row.total < 0">
-                        {{ row.total >= 0 ? '+' : '' }}{{ row.total | currency:'USD':'symbol':'1.0-0' }}
+                      <td class="detail-total bar-cell" [class.pnl-positive]="row.total > 0" [class.pnl-negative]="row.total < 0">
+                        <div class="bar-bg" [class.bar-pnl-pos]="row.total > 0" [class.bar-pnl-neg]="row.total < 0" [style.width.%]="barWidth(abs(row.total), maxAbsTotal(d.trading.details))"></div>
+                        <span class="bar-value">{{ row.total >= 0 ? '+' : '' }}{{ row.total | currency:'USD':'symbol':'1.0-0' }}</span>
                       </td>
                     </tr>
                   }
@@ -209,18 +211,34 @@ type Period = '3' | '6' | 'ytd';
                         {{ row.name }}
                       </td>
                       @for (val of row.monthly; track $index) {
-                        <td class="detail-val">{{ val | currency:'USD':'symbol':'1.0-0' }}</td>
+                        <td class="detail-val bar-cell">
+                          @if (val > 0) {
+                            <div class="bar-bg" [class.bar-up]="$index > 0 && val > row.monthly[$index - 1]" [class.bar-down]="$index > 0 && val < row.monthly[$index - 1]" [class.bar-neutral]="$index === 0 || val === row.monthly[$index - 1]" [style.width.%]="barWidth(val, maxInColumn(d.expenses.details, $index))"></div>
+                          }
+                          <span class="bar-value">{{ val | currency:'USD':'symbol':'1.0-0' }}</span>
+                        </td>
                       }
-                      <td class="detail-total">{{ row.total | currency:'USD':'symbol':'1.0-0' }}</td>
+                      <td class="detail-total bar-cell">
+                        <div class="bar-bg" [style.width.%]="barWidth(row.total, maxCatTotal(d.expenses.details))"></div>
+                        <span class="bar-value">{{ row.total | currency:'USD':'symbol':'1.0-0' }}</span>
+                      </td>
                     </tr>
                     @if (isCatExpanded(row.name) && row.children?.length) {
                       @for (child of row.children; track child.name) {
                         <tr class="merchant-detail-row">
                           <td class="detail-name merchant-detail-name">{{ child.name }}</td>
                           @for (val of child.monthly; track $index) {
-                            <td class="detail-val merchant-detail-val">{{ val | currency:'USD':'symbol':'1.0-0' }}</td>
+                            <td class="detail-val merchant-detail-val bar-cell">
+                              @if (val > 0) {
+                                <div class="bar-bg bar-bg-merchant" [class.bar-up]="$index > 0 && val > child.monthly[$index - 1]" [class.bar-down]="$index > 0 && val < child.monthly[$index - 1]" [class.bar-neutral]="$index === 0 || val === child.monthly[$index - 1]" [style.width.%]="barWidth(val, maxMerchantInColumn(row, $index))"></div>
+                              }
+                              <span class="bar-value">{{ val | currency:'USD':'symbol':'1.0-0' }}</span>
+                            </td>
                           }
-                          <td class="detail-total merchant-detail-val">{{ child.total | currency:'USD':'symbol':'1.0-0' }}</td>
+                          <td class="detail-total merchant-detail-val bar-cell">
+                            <div class="bar-bg bar-bg-merchant" [style.width.%]="barWidth(child.total, maxMerchantTotal(row))"></div>
+                            <span class="bar-value">{{ child.total | currency:'USD':'symbol':'1.0-0' }}</span>
+                          </td>
                         </tr>
                       }
                     }
@@ -278,9 +296,17 @@ type Period = '3' | '6' | 'ytd';
                     <tr>
                       <td class="detail-name">{{ row.name }}</td>
                       @for (val of row.monthly; track $index) {
-                        <td class="detail-val">{{ val | currency:'USD':'symbol':'1.0-0' }}</td>
+                        <td class="detail-val bar-cell">
+                          @if (val > 0) {
+                            <div class="bar-bg" [class.bar-pay-up]="$index > 0 && val > row.monthly[$index - 1]" [class.bar-pay-down]="$index > 0 && val < row.monthly[$index - 1]" [class.bar-neutral]="$index === 0 || val === row.monthly[$index - 1]" [style.width.%]="barWidth(val, maxInColumn(d.loanPayments.details, $index))"></div>
+                          }
+                          <span class="bar-value">{{ val | currency:'USD':'symbol':'1.0-0' }}</span>
+                        </td>
                       }
-                      <td class="detail-total">{{ (row.balance ?? row.total) | currency:'USD':'symbol':'1.0-0' }}</td>
+                      <td class="detail-total bar-cell">
+                        <div class="bar-bg" [style.width.%]="barWidth(row.balance ?? row.total, maxCatTotal(d.loanPayments.details, true))"></div>
+                        <span class="bar-value">{{ (row.balance ?? row.total) | currency:'USD':'symbol':'1.0-0' }}</span>
+                      </td>
                     </tr>
                   }
                 </tbody>
@@ -333,9 +359,17 @@ type Period = '3' | '6' | 'ytd';
                     <tr>
                       <td class="detail-name">{{ row.name }}</td>
                       @for (val of row.monthly; track $index) {
-                        <td class="detail-val">{{ val | currency:'USD':'symbol':'1.0-0' }}</td>
+                        <td class="detail-val bar-cell">
+                          @if (val > 0) {
+                            <div class="bar-bg" [class.bar-pay-up]="$index > 0 && val > row.monthly[$index - 1]" [class.bar-pay-down]="$index > 0 && val < row.monthly[$index - 1]" [class.bar-neutral]="$index === 0 || val === row.monthly[$index - 1]" [style.width.%]="barWidth(val, maxInColumn(d.cardPayments.details, $index))"></div>
+                          }
+                          <span class="bar-value">{{ val | currency:'USD':'symbol':'1.0-0' }}</span>
+                        </td>
                       }
-                      <td class="detail-total">{{ (row.balance ?? row.total) | currency:'USD':'symbol':'1.0-0' }}</td>
+                      <td class="detail-total bar-cell">
+                        <div class="bar-bg" [style.width.%]="barWidth(row.balance ?? row.total, maxCatTotal(d.cardPayments.details, true))"></div>
+                        <span class="bar-value">{{ (row.balance ?? row.total) | currency:'USD':'symbol':'1.0-0' }}</span>
+                      </td>
                     </tr>
                   }
                 </tbody>
@@ -507,6 +541,21 @@ type Period = '3' | '6' | 'ytd';
       font-size: 0.78rem !important; color: rgba(0,0,0,0.6);
     }
     .merchant-detail-val { font-size: 0.78rem !important; color: rgba(0,0,0,0.6); font-weight: 400 !important; }
+    .bar-cell { position: relative; overflow: hidden; }
+    .bar-bg {
+      position: absolute; top: 2px; bottom: 2px; left: 0;
+      background: rgba(59, 130, 246, 0.1); border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    .bar-bg-merchant { background: rgba(59, 130, 246, 0.06); }
+    .bar-up { background: rgba(255, 59, 48, 0.1); }
+    .bar-down { background: rgba(52, 199, 89, 0.12); }
+    .bar-neutral { background: rgba(0, 0, 0, 0.04); }
+    .bar-pay-up { background: rgba(52, 199, 89, 0.12); }
+    .bar-pay-down { background: rgba(255, 59, 48, 0.1); }
+    .bar-pnl-pos { background: rgba(52, 199, 89, 0.12); }
+    .bar-pnl-neg { background: rgba(255, 59, 48, 0.1); }
+    .bar-value { position: relative; z-index: 1; }
   `]
 })
 export class MonthlyPulseComponent implements OnInit {
@@ -562,6 +611,40 @@ export class MonthlyPulseComponent implements OnInit {
       },
       error: () => { this.loading.set(false); this.cdr.detectChanges(); }
     });
+  }
+
+  barWidth(value: number, max: number): number {
+    return max > 0 ? Math.round(value / max * 100) : 0;
+  }
+
+  maxCatTotal(details: DetailRow[], useBalance = false): number {
+    if (details.length === 0) return 1;
+    return Math.max(...details.map(d => useBalance ? (d.balance ?? d.total) : d.total), 1);
+  }
+
+  maxMerchantTotal(row: DetailRow): number {
+    return row.children?.length ? Math.max(...row.children.map(c => c.total)) : 1;
+  }
+
+  maxInColumn(details: DetailRow[], colIndex: number): number {
+    const vals = details.map(d => d.monthly[colIndex] ?? 0);
+    return Math.max(...vals, 1);
+  }
+
+  maxMerchantInColumn(row: DetailRow, colIndex: number): number {
+    if (!row.children?.length) return 1;
+    const vals = row.children.map(c => c.monthly[colIndex] ?? 0);
+    return Math.max(...vals, 1);
+  }
+
+  maxAbsInColumn(details: DetailRow[], colIndex: number): number {
+    const vals = details.map(d => Math.abs(d.monthly[colIndex] ?? 0));
+    return Math.max(...vals, 1);
+  }
+
+  maxAbsTotal(details: DetailRow[]): number {
+    if (details.length === 0) return 1;
+    return Math.max(...details.map(d => Math.abs(d.total)), 1);
   }
 
   abs(val: number): number { return Math.abs(val); }

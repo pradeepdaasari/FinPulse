@@ -1047,6 +1047,7 @@ export class NavShellComponent implements OnInit, OnDestroy {
     '/accounts': 'Bank Accounts',
     '/strategies': 'Payoff Strategies',
     '/simulator': 'What-If Simulator',
+    '/paychecks': 'Paychecks',
     '/budget': 'Budget',
     '/expenses': 'Transactions',
     '/categories': 'Categories',

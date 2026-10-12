@@ -1312,18 +1312,19 @@ public class DashboardController : ControllerBase
         static decimal CalcTrend(decimal first, decimal last) =>
             first == 0 ? 0 : Math.Round((last - first) / Math.Abs(first) * 100, 1);
 
-        var expMonthlyTotals = expenses.GroupBy(e => e.Date.Month).Select(g => g.Sum(e => e.Amount)).ToList();
-        var expFirst = expMonthlyTotals.FirstOrDefault();
-        var expLast = expMonthlyTotals.LastOrDefault();
+        var expFirst = expenses.Where(e => e.Date >= startDate && e.Date < startDate.AddMonths(1)).Sum(e => e.Amount);
+        var expLast = expenses.Where(e => e.Date >= startDate.AddMonths(months - 1) && e.Date < startDate.AddMonths(months)).Sum(e => e.Amount);
 
-        var loanFirst = loanPayments.Any() ? loanPayments.Where(p => p.PaymentDate < startDate.AddMonths(1)).Sum(p => p.AmountPaid) : 0;
-        var loanLast = loanPayments.Any() ? loanPayments.Where(p => p.PaymentDate >= startDate.AddMonths(months - 1)).Sum(p => p.AmountPaid) : 0;
+        var loanFirst = loanPayments.Where(p => p.PaymentDate >= startDate && p.PaymentDate < startDate.AddMonths(1)).Sum(p => p.AmountPaid);
+        var loanLast = loanPayments.Where(p => p.PaymentDate >= startDate.AddMonths(months - 1) && p.PaymentDate < startDate.AddMonths(months)).Sum(p => p.AmountPaid);
 
-        var ccFirst = ccPayments.Any() ? ccPayments.Where(p => p.PaymentDate < startDate.AddMonths(1)).Sum(p => p.AmountPaid) : 0;
-        var ccLast = ccPayments.Any() ? ccPayments.Where(p => p.PaymentDate >= startDate.AddMonths(months - 1)).Sum(p => p.AmountPaid) : 0;
+        var ccFirst = ccPayments.Where(p => p.PaymentDate >= startDate && p.PaymentDate < startDate.AddMonths(1)).Sum(p => p.AmountPaid);
+        var ccLast = ccPayments.Where(p => p.PaymentDate >= startDate.AddMonths(months - 1) && p.PaymentDate < startDate.AddMonths(months)).Sum(p => p.AmountPaid);
 
-        var tradFirst = localTrades.Any() ? localTrades.Where(t => t.LocalDate < startMonth.AddMonths(1)).Sum(t => t.NetPnl ?? t.Pnl ?? 0) : 0;
-        var tradLast = localTrades.Any() ? localTrades.Where(t => t.LocalDate >= startMonth.AddMonths(months - 1)).Sum(t => t.NetPnl ?? t.Pnl ?? 0) : 0;
+        var tradFirstMonth = startMonth;
+        var tradLastMonth = startMonth.AddMonths(months - 1);
+        var tradFirst = localTrades.Where(t => t.LocalDate.Year == tradFirstMonth.Year && t.LocalDate.Month == tradFirstMonth.Month).Sum(t => t.NetPnl ?? t.Pnl ?? 0);
+        var tradLast = localTrades.Where(t => t.LocalDate.Year == tradLastMonth.Year && t.LocalDate.Month == tradLastMonth.Month).Sum(t => t.NetPnl ?? t.Pnl ?? 0);
 
         return Ok(new
         {
