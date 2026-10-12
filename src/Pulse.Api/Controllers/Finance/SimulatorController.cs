@@ -28,6 +28,8 @@ public class SimulatorController : ControllerBase
     [HttpPost("what-if")]
     public async Task<ActionResult<WhatIfResultDto>> WhatIf(WhatIfRequestDto request)
     {
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var userNow = TimeZoneHelper.UserNow(tz);
         var loans = await _db.PersonalLoans
             .Where(l => l.UserId == UserId)
             .Where(l => l.CurrentBalance > 0)
@@ -61,7 +63,7 @@ public class SimulatorController : ControllerBase
                 Balance = card.CurrentBalance,
                 AprPercent = card.AprPercent,
                 MinimumPayment = card.MinimumPayment,
-                EffectiveApr = card.PromoEndDate.HasValue && card.PromoEndDate > DateTime.UtcNow
+                EffectiveApr = card.PromoEndDate.HasValue && card.PromoEndDate > userNow
                     ? card.PromoAprPercent ?? card.AprPercent
                     : card.AprPercent,
                 PromoEndDate = card.PromoEndDate

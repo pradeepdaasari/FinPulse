@@ -25,4 +25,22 @@ public static class TimeZoneHelper
         var localEnd = localStart.AddMonths(1);
         return (TimeZoneInfo.ConvertTimeToUtc(localStart, tz), TimeZoneInfo.ConvertTimeToUtc(localEnd, tz));
     }
+
+    public static DateTime UserNow(TimeZoneInfo tz)
+        => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+
+    public static DateTime UserToday(TimeZoneInfo tz)
+        => UserNow(tz).Date;
+
+    public static DateTime ToLocal(DateTime utcDate, TimeZoneInfo tz)
+        => TimeZoneInfo.ConvertTimeFromUtc(utcDate, tz);
+
+    public static DateTime ToLocalDate(DateTime utcDate, TimeZoneInfo tz)
+        => ToLocal(utcDate, tz).Date;
+
+    public static (int Year, int Month) UserYearMonth(TimeZoneInfo tz)
+    {
+        var now = UserNow(tz);
+        return (now.Year, now.Month);
+    }
 }

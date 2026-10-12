@@ -1,15 +1,12 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common';
-import { LocalDatePipe } from '../../../shared/local-date.pipe';
-import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import { BudgetService } from '../../../core/services/budget.service';
-import { BudgetPlan, PaycheckBreakdown } from '../../../core/models/budget.model';
+import { BudgetPlan } from '../../../core/models/budget.model';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
 import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directive';
 import { inferCategoryIcon } from '../../../core/utils/category-icon';
@@ -18,8 +15,8 @@ import { inferCategoryIcon } from '../../../core/utils/category-icon';
   selector: 'app-budget-page',
   standalone: true,
   imports: [
-    CommonModule, MatTabsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatProgressBarModule, MatTooltipModule, CurrencyPipe, LocalDatePipe, DecimalPipe,
+    CommonModule, MatCardModule, MatButtonModule, MatIconModule,
+    MatProgressBarModule, CurrencyPipe, DecimalPipe,
     SkeletonLoaderComponent, PullToRefreshDirective, RouterLink
   ],
   template: `
@@ -50,264 +47,198 @@ import { inferCategoryIcon } from '../../../core/utils/category-icon';
         </button>
       </div>
     } @else if (plan()) {
-      <mat-tab-group animationDuration="200ms">
-        <!-- Monthly Overview Tab -->
-        <mat-tab label="Monthly Overview">
-          <div class="tab-content">
-            <!-- Stat Cards -->
-            <div class="stats-row five-col">
-              <div class="stat-card stat-blue">
-                <mat-icon>account_balance_wallet</mat-icon>
-                <div class="stat-content">
-                  <span class="stat-value">{{ plan()!.monthlyOverview.totalIncome | currency:'USD':'symbol':'1.0-0' }}</span>
-                  <span class="stat-label">Income <span class="stat-sub">({{ plan()!.monthlyOverview.paychecksThisMonth }})</span></span>
-                </div>
-              </div>
-              <div class="stat-card stat-amber">
-                <mat-icon>assignment</mat-icon>
-                <div class="stat-content">
-                  <span class="stat-value">{{ plan()!.monthlyOverview.totalExpenses | currency:'USD':'symbol':'1.0-0' }}</span>
-                  <span class="stat-label">Budgeted</span>
-                </div>
-              </div>
-              <div class="stat-card stat-purple">
-                <mat-icon>shopping_cart</mat-icon>
-                <div class="stat-content">
-                  <span class="stat-value">{{ plan()!.monthlyOverview.totalSpent | currency:'USD':'symbol':'1.0-0' }}</span>
-                  <span class="stat-label">Spent</span>
-                </div>
-              </div>
-              <div class="stat-card" [class.stat-green]="!isOverBudget()" [class.stat-red]="isOverBudget()">
-                <mat-icon>{{ isOverBudget() ? 'money_off' : 'savings' }}</mat-icon>
-                <div class="stat-content">
-                  <span class="stat-value" [class.color-green]="!isOverBudget()" [class.color-red]="isOverBudget()">{{ isOverBudget() ? '-' : '' }}{{ absRemaining() | currency:'USD':'symbol':'1.0-0' }}</span>
-                  <span class="stat-label">{{ isOverBudget() ? 'Over Budget' : 'Remaining to Pay' }}</span>
-                </div>
-              </div>
-              <div class="stat-card" [class.stat-green]="!isDeficit()" [class.stat-red]="isDeficit()">
-                <mat-icon>{{ isDeficit() ? 'trending_down' : 'trending_up' }}</mat-icon>
-                <div class="stat-content">
-                  <span class="stat-value" [class.color-green]="!isDeficit()" [class.color-red]="isDeficit()">{{ isDeficit() ? '-' : '+' }}{{ absSurplus() | currency:'USD':'symbol':'1.0-0' }}</span>
-                  <span class="stat-label">{{ isDeficit() ? 'Deficit' : 'Surplus' }}</span>
-                </div>
-              </div>
-            </div>
+      <!-- Stat Cards -->
+      <div class="stats-row five-col">
+        <div class="stat-card stat-blue">
+          <mat-icon>account_balance_wallet</mat-icon>
+          <div class="stat-content">
+            <span class="stat-value">{{ plan()!.monthlyOverview.totalIncome | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="stat-label">Income <span class="stat-sub">({{ plan()!.monthlyOverview.paychecksThisMonth }})</span></span>
+          </div>
+        </div>
+        <div class="stat-card stat-amber">
+          <mat-icon>assignment</mat-icon>
+          <div class="stat-content">
+            <span class="stat-value">{{ plan()!.monthlyOverview.totalExpenses | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="stat-label">Budgeted</span>
+          </div>
+        </div>
+        <div class="stat-card stat-purple">
+          <mat-icon>shopping_cart</mat-icon>
+          <div class="stat-content">
+            <span class="stat-value">{{ plan()!.monthlyOverview.totalSpent | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="stat-label">Spent</span>
+          </div>
+        </div>
+        <div class="stat-card" [class.stat-green]="!isOverBudget()" [class.stat-red]="isOverBudget()">
+          <mat-icon>{{ isOverBudget() ? 'money_off' : 'savings' }}</mat-icon>
+          <div class="stat-content">
+            <span class="stat-value" [class.color-green]="!isOverBudget()" [class.color-red]="isOverBudget()">{{ isOverBudget() ? '-' : '' }}{{ absRemaining() | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="stat-label">{{ isOverBudget() ? 'Over Budget' : 'Remaining to Pay' }}</span>
+          </div>
+        </div>
+        <div class="stat-card" [class.stat-green]="!isDeficit()" [class.stat-red]="isDeficit()">
+          <mat-icon>{{ isDeficit() ? 'trending_down' : 'trending_up' }}</mat-icon>
+          <div class="stat-content">
+            <span class="stat-value" [class.color-green]="!isDeficit()" [class.color-red]="isDeficit()">{{ isDeficit() ? '-' : '+' }}{{ absSurplus() | currency:'USD':'symbol':'1.0-0' }}</span>
+            <span class="stat-label">{{ isDeficit() ? 'Deficit' : 'Surplus' }}</span>
+          </div>
+        </div>
+      </div>
 
-            <!-- Overall Progress -->
-            <div class="progress-card" [class.over]="overallPercent() > 100">
-              <div class="progress-card-header">
-                <div class="progress-title-row">
-                  <mat-icon class="progress-icon">donut_large</mat-icon>
-                  <div>
-                    <span class="progress-title">Monthly Spending</span>
-                    <span class="progress-message" [class.msg-success]="overallPercent() <= 75" [class.msg-warn]="overallPercent() > 75 && overallPercent() <= 100" [class.msg-danger]="overallPercent() > 100">{{ progressMessage() }}</span>
-                  </div>
-                </div>
-                <div class="progress-meta">
-                  <span class="progress-amounts">{{ plan()!.monthlyOverview.totalSpent | currency:'USD':'symbol':'1.0-0' }} <span class="of-text">of</span> {{ plan()!.monthlyOverview.totalExpenses | currency:'USD':'symbol':'1.0-0' }}</span>
-                  @if (isCurrentMonth()) {
-                    <span class="days-left">{{ daysRemaining() }} day{{ daysRemaining() !== 1 ? 's' : '' }} left</span>
-                  }
+      <!-- Overall Progress -->
+      <div class="progress-card" [class.over]="overallPercent() > 100">
+        <div class="progress-card-header">
+          <div class="progress-title-row">
+            <mat-icon class="progress-icon">donut_large</mat-icon>
+            <div>
+              <span class="progress-title">Monthly Spending</span>
+              <span class="progress-message" [class.msg-success]="overallPercent() <= 75" [class.msg-warn]="overallPercent() > 75 && overallPercent() <= 100" [class.msg-danger]="overallPercent() > 100">{{ progressMessage() }}</span>
+            </div>
+          </div>
+          <div class="progress-meta">
+            <span class="progress-amounts">{{ plan()!.monthlyOverview.totalSpent | currency:'USD':'symbol':'1.0-0' }} <span class="of-text">of</span> {{ plan()!.monthlyOverview.totalExpenses | currency:'USD':'symbol':'1.0-0' }}</span>
+            @if (isCurrentMonth()) {
+              <span class="days-left">{{ daysRemaining() }} day{{ daysRemaining() !== 1 ? 's' : '' }} left</span>
+            }
+          </div>
+        </div>
+        <div class="progress-bar-wrap">
+          <mat-progress-bar mode="determinate"
+            [value]="Math.min(overallPercent(), 100)"
+            [color]="overallPercent() > 100 ? 'warn' : overallPercent() > 80 ? 'accent' : 'primary'">
+          </mat-progress-bar>
+        </div>
+        <div class="progress-card-footer">
+          <span class="remaining-pill" [class.pill-success]="plan()!.monthlyOverview.totalRemaining >= 0" [class.pill-danger]="plan()!.monthlyOverview.totalRemaining < 0">
+            <mat-icon class="pill-icon">{{ plan()!.monthlyOverview.totalRemaining >= 0 ? 'check_circle' : 'error' }}</mat-icon>
+            {{ plan()!.monthlyOverview.totalRemaining >= 0
+              ? (plan()!.monthlyOverview.totalRemaining | currency:'USD':'symbol':'1.0-0') + ' remaining'
+              : ((-plan()!.monthlyOverview.totalRemaining) | currency:'USD':'symbol':'1.0-0') + ' over budget' }}
+          </span>
+          <span class="pct-pill" [class.pct-danger]="overallPercent() > 100" [class.pct-warn]="overallPercent() > 80 && overallPercent() <= 100">{{ overallPercent() | number:'1.0-0' }}%</span>
+        </div>
+      </div>
+
+      <!-- Recurring Categories -->
+      @if (recurringCategories().length > 0) {
+        <div class="section-block">
+          <div class="section-header">
+            <div class="section-title"><span class="section-icon-wrap recurring-wrap"><mat-icon>autorenew</mat-icon></span> Recurring</div>
+            <span class="section-total recurring">{{ recurringTotal() | currency:'USD':'symbol':'1.0-0' }}</span>
+          </div>
+          @for (row of recurringCategories(); track row.categoryId) {
+            <div class="cat-row" [class.cat-over]="row.remaining < 0">
+              <div class="cat-row-top">
+                <span class="cat-name-cell"><mat-icon class="cat-icon">{{ getIcon(row.categoryName, row.icon) }}</mat-icon> {{ row.categoryName }}</span>
+                <div class="cat-amounts">
+                  <span class="cat-spent">{{ row.spent | currency:'USD':'symbol':'1.0-0' }} / {{ row.amount | currency:'USD':'symbol':'1.0-0' }}</span>
+                  <span class="cat-remaining" [class.over-budget]="row.remaining < 0" [class.under-budget]="row.remaining >= 0">
+                    {{ row.remaining >= 0 ? (row.remaining | currency:'USD':'symbol':'1.0-0') + ' left' : ((-row.remaining) | currency:'USD':'symbol':'1.0-0') + ' over' }}
+                  </span>
                 </div>
               </div>
-              <div class="progress-bar-wrap">
+              <div class="cat-progress-row">
                 <mat-progress-bar mode="determinate"
-                  [value]="Math.min(overallPercent(), 100)"
-                  [color]="overallPercent() > 100 ? 'warn' : overallPercent() > 80 ? 'accent' : 'primary'">
+                  [value]="Math.min(row.percentUsed, 100)"
+                  [color]="row.percentUsed > 100 ? 'warn' : row.percentUsed > 80 ? 'accent' : 'primary'">
                 </mat-progress-bar>
-              </div>
-              <div class="progress-card-footer">
-                <span class="remaining-pill" [class.pill-success]="plan()!.monthlyOverview.totalRemaining >= 0" [class.pill-danger]="plan()!.monthlyOverview.totalRemaining < 0">
-                  <mat-icon class="pill-icon">{{ plan()!.monthlyOverview.totalRemaining >= 0 ? 'check_circle' : 'error' }}</mat-icon>
-                  {{ plan()!.monthlyOverview.totalRemaining >= 0
-                    ? (plan()!.monthlyOverview.totalRemaining | currency:'USD':'symbol':'1.0-0') + ' remaining'
-                    : ((-plan()!.monthlyOverview.totalRemaining) | currency:'USD':'symbol':'1.0-0') + ' over budget' }}
-                </span>
-                <span class="pct-pill" [class.pct-danger]="overallPercent() > 100" [class.pct-warn]="overallPercent() > 80 && overallPercent() <= 100">{{ overallPercent() | number:'1.0-0' }}%</span>
+                <span class="cat-pct">{{ row.percentUsed | number:'1.0-0' }}%</span>
               </div>
             </div>
+          }
+        </div>
+      }
 
-            <!-- Recurring Categories -->
-            @if (recurringCategories().length > 0) {
-              <div class="section-block">
-                <div class="section-header">
-                  <div class="section-title"><span class="section-icon-wrap recurring-wrap"><mat-icon>autorenew</mat-icon></span> Recurring</div>
-                  <span class="section-total recurring">{{ recurringTotal() | currency:'USD':'symbol':'1.0-0' }}</span>
-                </div>
-                @for (row of recurringCategories(); track row.categoryId) {
-                  <div class="cat-row" [class.cat-over]="row.remaining < 0">
-                    <div class="cat-row-top">
-                      <span class="cat-name-cell"><mat-icon class="cat-icon">{{ getIcon(row.categoryName, row.icon) }}</mat-icon> {{ row.categoryName }}</span>
-                      <div class="cat-amounts">
-                        <span class="cat-spent">{{ row.spent | currency:'USD':'symbol':'1.0-0' }} / {{ row.amount | currency:'USD':'symbol':'1.0-0' }}</span>
-                        <span class="cat-remaining" [class.over-budget]="row.remaining < 0" [class.under-budget]="row.remaining >= 0">
-                          {{ row.remaining >= 0 ? (row.remaining | currency:'USD':'symbol':'1.0-0') + ' left' : ((-row.remaining) | currency:'USD':'symbol':'1.0-0') + ' over' }}
-                        </span>
-                      </div>
-                    </div>
-                    <div class="cat-progress-row">
-                      <mat-progress-bar mode="determinate"
-                        [value]="Math.min(row.percentUsed, 100)"
-                        [color]="row.percentUsed > 100 ? 'warn' : row.percentUsed > 80 ? 'accent' : 'primary'">
-                      </mat-progress-bar>
-                      <span class="cat-pct">{{ row.percentUsed | number:'1.0-0' }}%</span>
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-
-            <!-- Bills & Spending Categories -->
-            @if (billCategories().length > 0) {
-              <div class="section-block">
-                <div class="section-header">
-                  <div class="section-title"><span class="section-icon-wrap bills-wrap"><mat-icon>receipt_long</mat-icon></span> Bills & Spending</div>
-                  <span class="section-total bills">{{ billsTotal() | currency:'USD':'symbol':'1.0-0' }}</span>
-                </div>
-                @for (row of billCategories(); track row.categoryId) {
-                  <div class="cat-row" [class.cat-over]="row.remaining < 0">
-                    <div class="cat-row-top">
-                      <span class="cat-name-cell"><mat-icon class="cat-icon">{{ getIcon(row.categoryName, row.icon) }}</mat-icon> {{ row.categoryName }}</span>
-                      <div class="cat-amounts">
-                        <span class="cat-spent">{{ row.spent | currency:'USD':'symbol':'1.0-0' }} / {{ row.amount | currency:'USD':'symbol':'1.0-0' }}</span>
-                        <span class="cat-remaining" [class.over-budget]="row.remaining < 0" [class.under-budget]="row.remaining >= 0">
-                          {{ row.remaining >= 0 ? (row.remaining | currency:'USD':'symbol':'1.0-0') + ' left' : ((-row.remaining) | currency:'USD':'symbol':'1.0-0') + ' over' }}
-                        </span>
-                      </div>
-                    </div>
-                    <div class="cat-progress-row">
-                      <mat-progress-bar mode="determinate"
-                        [value]="Math.min(row.percentUsed, 100)"
-                        [color]="row.percentUsed > 100 ? 'warn' : row.percentUsed > 80 ? 'accent' : 'primary'">
-                      </mat-progress-bar>
-                      <span class="cat-pct">{{ row.percentUsed | number:'1.0-0' }}%</span>
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-
-            <!-- Loan Payments -->
-            @if (loanCategories().length > 0) {
-              <div class="section-block">
-                <div class="section-header">
-                  <div class="section-title"><span class="section-icon-wrap loan-wrap"><mat-icon>account_balance</mat-icon></span> Loan Payments</div>
-                  <span class="section-total loan">{{ loanTotal() | currency:'USD':'symbol':'1.0-0' }}</span>
-                </div>
-                @for (row of loanCategories(); track row.categoryName) {
-                  <div class="cat-row" [class.cat-paid]="row.spent >= row.amount">
-                    <div class="cat-row-top">
-                      <span class="cat-name-cell"><mat-icon class="cat-icon loan-icon">account_balance</mat-icon> {{ row.categoryName }}</span>
-                      <div class="cat-amounts">
-                        <span class="cat-spent">{{ row.spent | currency:'USD':'symbol':'1.0-0' }} / {{ row.amount | currency:'USD':'symbol':'1.0-0' }}</span>
-                        <span class="cat-remaining" [class.debt-paid]="row.spent >= row.amount" [class.debt-pending]="row.spent < row.amount">
-                          {{ row.spent >= row.amount ? 'Paid' : (row.amount - row.spent | currency:'USD':'symbol':'1.0-0') + ' pending' }}
-                        </span>
-                      </div>
-                    </div>
-                    <div class="cat-progress-row">
-                      <mat-progress-bar mode="determinate"
-                        [value]="Math.min(row.percentUsed, 100)"
-                        [color]="row.percentUsed >= 100 ? 'primary' : row.percentUsed > 0 ? 'accent' : 'warn'">
-                      </mat-progress-bar>
-                      <span class="cat-pct">{{ row.percentUsed | number:'1.0-0' }}%</span>
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-
-            <!-- Credit Card Payments -->
-            @if (debtCategories().length > 0) {
-              <div class="section-block">
-                <div class="section-header">
-                  <div class="section-title"><span class="section-icon-wrap debt-wrap"><mat-icon>credit_score</mat-icon></span> Credit Card Payments</div>
-                  <span class="section-total debt">{{ debtTotal() | currency:'USD':'symbol':'1.0-0' }}</span>
-                </div>
-                @for (row of debtCategories(); track row.categoryName) {
-                  <div class="cat-row" [class.cat-paid]="row.spent >= row.amount">
-                    <div class="cat-row-top">
-                      <span class="cat-name-cell"><mat-icon class="cat-icon debt-icon">credit_score</mat-icon> {{ row.categoryName }}</span>
-                      <div class="cat-amounts">
-                        <span class="cat-spent">{{ row.spent | currency:'USD':'symbol':'1.0-0' }} / {{ row.amount | currency:'USD':'symbol':'1.0-0' }}</span>
-                        <span class="cat-remaining" [class.debt-paid]="row.spent >= row.amount" [class.debt-pending]="row.spent < row.amount">
-                          {{ row.spent >= row.amount ? 'Paid' : (row.amount - row.spent | currency:'USD':'symbol':'1.0-0') + ' pending' }}
-                        </span>
-                      </div>
-                    </div>
-                    <div class="cat-progress-row">
-                      <mat-progress-bar mode="determinate"
-                        [value]="Math.min(row.percentUsed, 100)"
-                        [color]="row.percentUsed >= 100 ? 'primary' : row.percentUsed > 0 ? 'accent' : 'warn'">
-                      </mat-progress-bar>
-                      <span class="cat-pct">{{ row.percentUsed | number:'1.0-0' }}%</span>
-                    </div>
-                  </div>
-                }
-              </div>
-            }
+      <!-- Bills & Spending Categories -->
+      @if (billCategories().length > 0) {
+        <div class="section-block">
+          <div class="section-header">
+            <div class="section-title"><span class="section-icon-wrap bills-wrap"><mat-icon>receipt_long</mat-icon></span> Bills & Spending</div>
+            <span class="section-total bills">{{ billsTotal() | currency:'USD':'symbol':'1.0-0' }}</span>
           </div>
-        </mat-tab>
-
-        <!-- Paycheck Breakdown Tab -->
-        <mat-tab label="Paycheck Breakdown">
-          <div class="tab-content">
-            @for (pc of plan()!.paycheckBreakdowns; track pc.payDate) {
-              <div class="paycheck-card">
-                <div class="paycheck-header">
-                  <div class="paycheck-title">
-                    <mat-icon class="paycheck-cal-icon">event</mat-icon>
-                    <span>{{ pc.payDate | localDate:'EEEE, MMM d' }}</span>
-                  </div>
-                  <span class="paycheck-take-home">{{ pc.grossPay | currency:'USD':'symbol':'1.0-0' }}</span>
+          @for (row of billCategories(); track row.categoryId) {
+            <div class="cat-row" [class.cat-over]="row.remaining < 0">
+              <div class="cat-row-top">
+                <span class="cat-name-cell"><mat-icon class="cat-icon">{{ getIcon(row.categoryName, row.icon) }}</mat-icon> {{ row.categoryName }}</span>
+                <div class="cat-amounts">
+                  <span class="cat-spent">{{ row.spent | currency:'USD':'symbol':'1.0-0' }} / {{ row.amount | currency:'USD':'symbol':'1.0-0' }}</span>
+                  <span class="cat-remaining" [class.over-budget]="row.remaining < 0" [class.under-budget]="row.remaining >= 0">
+                    {{ row.remaining >= 0 ? (row.remaining | currency:'USD':'symbol':'1.0-0') + ' left' : ((-row.remaining) | currency:'USD':'symbol':'1.0-0') + ' over' }}
+                  </span>
                 </div>
-                <div class="paycheck-progress-row">
-                  <mat-progress-bar mode="determinate" [value]="getSpendPercent(pc)"
-                    [color]="pc.leftover < 0 ? 'warn' : 'primary'">
-                  </mat-progress-bar>
-                  <div class="paycheck-labels">
-                    <span class="paycheck-allocated">{{ pc.totalExpenses | currency:'USD':'symbol':'1.0-0' }} allocated</span>
-                    <span class="paycheck-leftover" [class.negative]="pc.leftover < 0">{{ pc.leftover | currency:'USD':'symbol':'1.0-0' }} left</span>
-                  </div>
-                </div>
-                @if (pc.expenses.length > 0) {
-                  <div class="paycheck-expenses">
-                    @for (e of pc.expenses; track e.expenseId; let odd = $odd) {
-                      <div class="expense-row" [class.alt-row]="odd">
-                        <div class="expense-name">
-                          {{ e.name }}
-                          @if (e.isDebtPayment) { <mat-icon class="inline-badge debt-badge" matTooltip="Debt Payment">credit_score</mat-icon> }
-                          @if (e.isAutopay) { <mat-icon class="inline-badge auto-badge" matTooltip="Autopay">autorenew</mat-icon> }
-                        </div>
-                        <span class="expense-due">{{ e.dueDay ? 'Day ' + e.dueDay : '' }}</span>
-                        <span class="expense-amount">{{ e.amount | currency }}</span>
-                      </div>
-                    }
-                  </div>
-                } @else {
-                  <div class="paycheck-empty">
-                    <mat-icon>check_circle</mat-icon>
-                    <span>No expenses assigned to this paycheck</span>
-                  </div>
-                }
               </div>
-            }
-
-            @if (plan()!.paycheckBreakdowns.length === 0) {
-              <div class="empty-state">
-                <div class="empty-icon-wrap blue">
-                  <mat-icon>calendar_today</mat-icon>
-                </div>
-                <h3>No paychecks found</h3>
-                <p>Set your pay frequency and next pay date in Setup to see your paycheck breakdown.</p>
-                <a mat-raised-button color="primary" routerLink="/setup">
-                  <mat-icon>settings</mat-icon> Go to Setup
-                </a>
+              <div class="cat-progress-row">
+                <mat-progress-bar mode="determinate"
+                  [value]="Math.min(row.percentUsed, 100)"
+                  [color]="row.percentUsed > 100 ? 'warn' : row.percentUsed > 80 ? 'accent' : 'primary'">
+                </mat-progress-bar>
+                <span class="cat-pct">{{ row.percentUsed | number:'1.0-0' }}%</span>
               </div>
-            }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Loan Payments -->
+      @if (loanCategories().length > 0) {
+        <div class="section-block">
+          <div class="section-header">
+            <div class="section-title"><span class="section-icon-wrap loan-wrap"><mat-icon>account_balance</mat-icon></span> Loan Payments</div>
+            <span class="section-total loan">{{ loanTotal() | currency:'USD':'symbol':'1.0-0' }}</span>
           </div>
-        </mat-tab>
-      </mat-tab-group>
+          @for (row of loanCategories(); track row.categoryName) {
+            <div class="cat-row" [class.cat-paid]="row.spent >= row.amount">
+              <div class="cat-row-top">
+                <span class="cat-name-cell"><mat-icon class="cat-icon loan-icon">account_balance</mat-icon> {{ row.categoryName }}</span>
+                <div class="cat-amounts">
+                  <span class="cat-spent">{{ row.spent | currency:'USD':'symbol':'1.0-0' }} / {{ row.amount | currency:'USD':'symbol':'1.0-0' }}</span>
+                  <span class="cat-remaining" [class.debt-paid]="row.spent >= row.amount" [class.debt-pending]="row.spent < row.amount">
+                    {{ row.spent >= row.amount ? 'Paid' : (row.amount - row.spent | currency:'USD':'symbol':'1.0-0') + ' pending' }}
+                  </span>
+                </div>
+              </div>
+              <div class="cat-progress-row">
+                <mat-progress-bar mode="determinate"
+                  [value]="Math.min(row.percentUsed, 100)"
+                  [color]="row.percentUsed >= 100 ? 'primary' : row.percentUsed > 0 ? 'accent' : 'warn'">
+                </mat-progress-bar>
+                <span class="cat-pct">{{ row.percentUsed | number:'1.0-0' }}%</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Credit Card Payments -->
+      @if (debtCategories().length > 0) {
+        <div class="section-block">
+          <div class="section-header">
+            <div class="section-title"><span class="section-icon-wrap debt-wrap"><mat-icon>credit_score</mat-icon></span> Credit Card Payments</div>
+            <span class="section-total debt">{{ debtTotal() | currency:'USD':'symbol':'1.0-0' }}</span>
+          </div>
+          @for (row of debtCategories(); track row.categoryName) {
+            <div class="cat-row" [class.cat-paid]="row.spent >= row.amount">
+              <div class="cat-row-top">
+                <span class="cat-name-cell"><mat-icon class="cat-icon debt-icon">credit_score</mat-icon> {{ row.categoryName }}</span>
+                <div class="cat-amounts">
+                  <span class="cat-spent">{{ row.spent | currency:'USD':'symbol':'1.0-0' }} / {{ row.amount | currency:'USD':'symbol':'1.0-0' }}</span>
+                  <span class="cat-remaining" [class.debt-paid]="row.spent >= row.amount" [class.debt-pending]="row.spent < row.amount">
+                    {{ row.spent >= row.amount ? 'Paid' : (row.amount - row.spent | currency:'USD':'symbol':'1.0-0') + ' pending' }}
+                  </span>
+                </div>
+              </div>
+              <div class="cat-progress-row">
+                <mat-progress-bar mode="determinate"
+                  [value]="Math.min(row.percentUsed, 100)"
+                  [color]="row.percentUsed >= 100 ? 'primary' : row.percentUsed > 0 ? 'accent' : 'warn'">
+                </mat-progress-bar>
+                <span class="cat-pct">{{ row.percentUsed | number:'1.0-0' }}%</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
     } @else {
       <div class="empty-state">
         <div class="empty-icon-wrap amber">
@@ -315,7 +246,7 @@ import { inferCategoryIcon } from '../../../core/utils/category-icon';
         </div>
         <h3>Set up your budget</h3>
         <p>Add your pay information and budget items to start tracking your spending.</p>
-        <a mat-raised-button color="primary" routerLink="/setup">
+        <a mat-raised-button color="primary" routerLink="/settings">
           <mat-icon>settings</mat-icon> Go to Setup
         </a>
       </div>
@@ -339,7 +270,6 @@ import { inferCategoryIcon } from '../../../core/utils/category-icon';
       border-radius: var(--radius-full) !important;
     }
     .today-btn mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; }
-    .tab-content { padding: var(--spacing-sm) 0; }
 
     /* Stats Row */
     .stats-row {
@@ -455,7 +385,7 @@ import { inferCategoryIcon } from '../../../core/utils/category-icon';
     .section-total.loan { color: #00695c; }
     .section-total.debt { color: var(--color-danger-text); }
 
-    /* Category Rows (unified responsive) */
+    /* Category Rows */
     .cat-row {
       padding: 12px 16px; border-bottom: 1px solid var(--color-border);
       transition: background var(--transition-fast);
@@ -491,51 +421,6 @@ import { inferCategoryIcon } from '../../../core/utils/category-icon';
     .cat-progress-row mat-progress-bar { flex: 1; }
     .cat-pct { font-size: var(--text-xs); font-weight: var(--weight-bold); opacity: 0.7; min-width: 32px; text-align: right; }
 
-    /* Paycheck Breakdown */
-    .paycheck-card {
-      background: var(--color-surface-solid); border-radius: var(--radius-md);
-      border: 1px solid var(--color-border); box-shadow: var(--shadow-xs);
-      margin-bottom: var(--spacing-md); overflow: hidden;
-    }
-    .paycheck-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 16px; border-bottom: 1px solid var(--color-border);
-    }
-    .paycheck-title {
-      display: flex; align-items: center; gap: 8px;
-      font-weight: var(--weight-bold); font-size: var(--text-base);
-    }
-    .paycheck-cal-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-primary); }
-    .paycheck-take-home { font-weight: var(--weight-bold); font-size: var(--text-base); color: var(--color-primary); }
-    .paycheck-progress-row { padding: 14px 16px; }
-    .paycheck-labels {
-      display: flex; justify-content: space-between; margin-top: 6px; font-size: var(--text-xs);
-    }
-    .paycheck-allocated { color: var(--color-text-muted); font-weight: var(--weight-medium); }
-    .paycheck-leftover { font-weight: var(--weight-semibold); color: var(--color-success-text); }
-    .paycheck-leftover.negative { color: var(--color-danger-text); }
-    .paycheck-expenses { border-top: 1px solid var(--color-border); }
-    .expense-row {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 16px; font-size: var(--text-sm); gap: 8px;
-    }
-    .alt-row { background: var(--color-surface-secondary); }
-    .expense-name {
-      flex: 1; min-width: 0; font-weight: var(--weight-medium);
-      display: flex; align-items: center; gap: 4px;
-    }
-    .inline-badge { font-size: 15px; width: 15px; height: 15px; opacity: 0.5; }
-    .debt-badge { color: var(--color-accent); }
-    .auto-badge { color: var(--color-text-muted); }
-    .expense-due { font-size: var(--text-xs); color: var(--color-text-muted); min-width: 48px; text-align: center; }
-    .expense-amount { font-weight: var(--weight-semibold); white-space: nowrap; }
-    .paycheck-empty {
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      padding: 24px 16px; color: var(--color-text-muted); font-size: var(--text-sm);
-      border-top: 1px solid var(--color-border);
-    }
-    .paycheck-empty mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--color-success); }
-
     /* Empty & Error States */
     .empty-state { text-align: center; padding: 48px 24px; }
     .empty-icon-wrap {
@@ -544,8 +429,6 @@ import { inferCategoryIcon } from '../../../core/utils/category-icon';
     }
     .empty-icon-wrap.amber { background: var(--color-stat-amber-bg); }
     .empty-icon-wrap.amber mat-icon { color: var(--color-stat-amber); font-size: 32px; width: 32px; height: 32px; }
-    .empty-icon-wrap.blue { background: var(--color-stat-blue-bg); }
-    .empty-icon-wrap.blue mat-icon { color: var(--color-stat-blue); font-size: 32px; width: 32px; height: 32px; }
     .empty-state h3 { font-weight: var(--weight-bold); margin-bottom: 8px; }
     .empty-state p { color: var(--color-text-muted); font-size: var(--text-sm); max-width: 320px; margin: 0 auto 20px; line-height: var(--leading-relaxed); }
     .error-state { text-align: center; padding: 48px 24px; }
@@ -561,7 +444,6 @@ import { inferCategoryIcon } from '../../../core/utils/category-icon';
       .stats-row, .stats-row.five-col { grid-template-columns: repeat(2, 1fr); }
       .progress-card-header { flex-direction: column; }
       .progress-meta { text-align: left; }
-      .paycheck-header { flex-direction: column; align-items: flex-start; gap: 4px; }
     }
     @media (max-width: 599px) {
       .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -570,7 +452,6 @@ import { inferCategoryIcon } from '../../../core/utils/category-icon';
       .stat-value { font-size: 1rem; }
       .cat-row-top { flex-direction: column; align-items: flex-start; gap: 4px; }
       .cat-amounts { text-align: left; }
-      .expense-due { display: none; }
     }
   `]
 })
@@ -583,7 +464,6 @@ export class BudgetPageComponent implements OnInit {
   loading = signal(true);
   hasError = signal(false);
 
-  surplus = computed(() => this.plan()?.monthlyOverview.surplus ?? 0);
   absSurplus = computed(() => this.plan()?.monthlyOverview.absSurplus ?? 0);
   isDeficit = computed(() => this.plan()?.monthlyOverview.isDeficit ?? false);
   absRemaining = computed(() => this.plan()?.monthlyOverview.absRemaining ?? 0);
@@ -670,10 +550,5 @@ export class BudgetPageComponent implements OnInit {
   private updateMonthLabel(): void {
     const date = new Date(this.currentYear, this.currentMonth - 1, 1);
     this.monthLabel.set(date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }));
-  }
-
-  getSpendPercent(pc: PaycheckBreakdown): number {
-    if (pc.grossPay === 0) return 0;
-    return Math.min(100, (pc.totalExpenses / pc.grossPay) * 100);
   }
 }

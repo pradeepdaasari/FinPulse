@@ -82,11 +82,17 @@ import { routeFadeAnimation } from './route-animations';
                   <span class="ios-nav-label">Dashboard</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
-                <a class="ios-nav-item" routerLink="/upcoming-payments" routerLinkActive="active-link" (click)="onNavClick()">
-                  <span class="ios-icon-pill ic-red"><mat-icon>calendar_month</mat-icon></span>
-                  <span class="ios-nav-label">Upcoming Payments</span>
+                <a class="ios-nav-item" routerLink="/paychecks" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-green"><mat-icon>payments</mat-icon></span>
+                  <span class="ios-nav-label">Paychecks</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
+                <a class="ios-nav-item" routerLink="/budget" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-purple"><mat-icon>pie_chart</mat-icon></span>
+                  <span class="ios-nav-label">Budget</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <div class="ios-sub-header">Accounts</div>
                 <a class="ios-nav-item" routerLink="/accounts" routerLinkActive="active-link" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-green"><mat-icon>savings</mat-icon></span>
                   <span class="ios-nav-label">Bank Accounts</span>
@@ -102,6 +108,7 @@ import { routeFadeAnimation } from './route-animations';
                   <span class="ios-nav-label">Loans</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
+                <div class="ios-sub-header">Tracking</div>
                 <a class="ios-nav-item" routerLink="/expenses" routerLinkActive="active-link" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-teal"><mat-icon>swap_horiz</mat-icon></span>
                   <span class="ios-nav-label">Transactions</span>
@@ -112,34 +119,36 @@ import { routeFadeAnimation } from './route-animations';
                   <span class="ios-nav-label">Recurring</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
-                <a class="ios-nav-item" routerLink="/budget" routerLinkActive="active-link" (click)="onNavClick()">
-                  <span class="ios-icon-pill ic-purple"><mat-icon>pie_chart</mat-icon></span>
-                  <span class="ios-nav-label">Budget</span>
-                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
-                </a>
                 <a class="ios-nav-item" routerLink="/categories" routerLinkActive="active-link" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-pink"><mat-icon>category</mat-icon></span>
                   <span class="ios-nav-label">Categories</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
-                <a class="ios-nav-item" routerLink="/money-movements" routerLinkActive="active-link" (click)="onNavClick()">
-                  <span class="ios-icon-pill ic-cyan"><mat-icon>sync_alt</mat-icon></span>
-                  <span class="ios-nav-label">Money Flow</span>
-                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
-                </a>
+                <div class="ios-sub-header">Planning</div>
                 <a class="ios-nav-item" routerLink="/goals" routerLinkActive="active-link" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-red"><mat-icon>flag</mat-icon></span>
                   <span class="ios-nav-label">Goals</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
+                <a class="ios-nav-item" routerLink="/upcoming-payments" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-red"><mat-icon>calendar_month</mat-icon></span>
+                  <span class="ios-nav-label">Upcoming</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <div class="ios-sub-header">Tools</div>
                 <a class="ios-nav-item" routerLink="/strategies" routerLinkActive="active-link" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-green"><mat-icon>trending_down</mat-icon></span>
                   <span class="ios-nav-label">Payoff Strategies</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
-                <a class="ios-nav-item last" routerLink="/simulator" routerLinkActive="active-link" (click)="onNavClick()">
+                <a class="ios-nav-item" routerLink="/simulator" routerLinkActive="active-link" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-cyan"><mat-icon>science</mat-icon></span>
                   <span class="ios-nav-label">What-If Simulator</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item last" routerLink="/money-movements" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-cyan"><mat-icon>sync_alt</mat-icon></span>
+                  <span class="ios-nav-label">Money Flow</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
               </div>
@@ -164,6 +173,7 @@ import { routeFadeAnimation } from './route-animations';
                   <span class="ios-nav-label">Day View</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
+                <div class="ios-sub-header">Pre-Trade</div>
                 <a class="ios-nav-item" routerLink="/trading/premarket" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-amber"><mat-icon>wb_twilight</mat-icon></span>
                   <span class="ios-nav-label">Pre-Market</span>
@@ -179,6 +189,7 @@ import { routeFadeAnimation } from './route-animations';
                   <span class="ios-nav-label">Trade Checklist</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
+                <div class="ios-sub-header">Journal</div>
                 <a class="ios-nav-item" routerLink="/trading/journal" routerLinkActive="active-link" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-blue"><mat-icon>auto_stories</mat-icon></span>
                   <span class="ios-nav-label">Trade Journal</span>
@@ -189,6 +200,7 @@ import { routeFadeAnimation } from './route-animations';
                   <span class="ios-nav-label">Daily Review</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
+                <div class="ios-sub-header">Review</div>
                 <a class="ios-nav-item" routerLink="/trading/calendar" routerLinkActive="active-link" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-red"><mat-icon>calendar_month</mat-icon></span>
                   <span class="ios-nav-label">Calendar</span>
@@ -204,6 +216,7 @@ import { routeFadeAnimation } from './route-animations';
                   <span class="ios-nav-label">Weekly Summary</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
+                <div class="ios-sub-header">Reference</div>
                 <a class="ios-nav-item" routerLink="/trading/goals" routerLinkActive="active-link" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-green"><mat-icon>flag</mat-icon></span>
                   <span class="ios-nav-label">Goals</span>
@@ -496,6 +509,17 @@ import { routeFadeAnimation } from './route-animations';
     @keyframes iosSlideDown {
       from { opacity: 0; transform: translateY(-6px); }
       to { opacity: 1; transform: translateY(0); }
+    }
+
+    .ios-sub-header {
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-text-muted);
+      padding: 6px 20px 1px;
+      margin: 0;
+      opacity: 0.35;
     }
 
     .ios-nav-item {

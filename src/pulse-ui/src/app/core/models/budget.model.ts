@@ -19,7 +19,18 @@ export type PayFrequency = 'Monthly' | 'Biweekly' | 'Weekly';
 export interface BudgetPlan {
   monthlyOverview: MonthlyOverview;
   paycheckBreakdowns: PaycheckBreakdown[];
+  paycheckSummary: PaycheckSummary;
   daysUntilPaycheck: number | null;
+}
+
+export interface PaycheckSummary {
+  totalIncome: number;
+  totalAllocated: number;
+  netLeftover: number;
+  absNetLeftover: number;
+  isNetOver: boolean;
+  paycheckCount: number;
+  overCount: number;
 }
 
 export interface MonthlyOverview {
@@ -47,10 +58,18 @@ export interface MonthlyOverview {
 
 export interface PaycheckBreakdown {
   payDate: string;
+  windowStart: string;
+  windowEnd: string;
+  isPriorMonth: boolean;
   grossPay: number;
   expenses: PaycheckExpense[];
   totalExpenses: number;
   leftover: number;
+  absLeftover: number;
+  isOver: boolean;
+  spendPercent: number;
+  paidCount: number;
+  totalBillCount: number;
 }
 
 export interface CategorySummary {
@@ -76,6 +95,10 @@ export interface PaycheckExpense {
   categoryName: string;
   amount: number;
   dueDay: number | null;
+  dueDate: string | null;
   isAutopay: boolean;
   isDebtPayment: boolean;
+  isPaid: boolean;
+  status: string;
+  statusLabel: string;
 }

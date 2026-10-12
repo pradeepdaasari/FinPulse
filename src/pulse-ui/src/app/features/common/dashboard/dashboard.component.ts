@@ -21,6 +21,9 @@ import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.compone
 import { NetWorthComponent } from './net-worth.component';
 import { TodayGlanceComponent } from './today-glance.component';
 import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directive';
+import { DebtCountdownComponent } from './debt-countdown.component';
+import { InsightsComponent } from './insights.component';
+import { DebtTrendChartComponent } from './debt-trend-chart.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -30,7 +33,8 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     MatCardModule, MatIconModule,
     PaymentStreakComponent,
     SkeletonLoaderComponent, PullToRefreshDirective,
-    NetWorthComponent, TodayGlanceComponent
+    NetWorthComponent, TodayGlanceComponent,
+    DebtCountdownComponent, InsightsComponent, DebtTrendChartComponent
   ],
   template: `
     <div appPullToRefresh (refresh)="onRefresh()">
@@ -83,6 +87,9 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       }
 
       <app-payment-streak></app-payment-streak>
+      <app-debt-countdown></app-debt-countdown>
+      <app-insights></app-insights>
+      <app-debt-trend-chart></app-debt-trend-chart>
 
     }
 

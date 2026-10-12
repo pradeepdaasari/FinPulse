@@ -54,6 +54,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'paychecks',
+    loadComponent: () => import('./features/finance/paychecks/paychecks-page.component').then(m => m.PaychecksPageComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'budget',
     loadComponent: () => import('./features/finance/budget/budget-page.component').then(m => m.BudgetPageComponent),
     canActivate: [authGuard]

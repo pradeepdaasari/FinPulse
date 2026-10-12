@@ -25,6 +25,12 @@ export interface NetWorthMonth {
   delta: number;
 }
 
+export interface DetailChild {
+  name: string;
+  monthly: number[];
+  total: number;
+}
+
 export interface DetailRow {
   name: string;
   icon?: string | null;
@@ -32,6 +38,7 @@ export interface DetailRow {
   monthly: number[];
   total: number;
   trades?: number;
+  children?: DetailChild[];
 }
 
 export interface ExpenseLane {

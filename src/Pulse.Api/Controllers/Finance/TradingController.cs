@@ -32,7 +32,7 @@ public class TradingController : ControllerBase
     private async Task<DateTime> GetUserLocalDateAsync()
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+        return TimeZoneHelper.UserToday(tz);
     }
 
     private static DateTime GetMondayOfWeek(DateTime date)
@@ -166,7 +166,7 @@ public class TradingController : ControllerBase
     public async Task<ActionResult> GetTodayNote()
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+        var today = TimeZoneHelper.UserToday(tz);
         var dayStart = TimeZoneHelper.ToUtc(today, tz);
         var dayEnd = TimeZoneHelper.ToUtc(today.AddDays(1), tz);
         var note = await _db.PreMarketNotes.FirstOrDefaultAsync(n => n.UserId == UserId && n.Date >= dayStart && n.Date < dayEnd);
@@ -365,7 +365,7 @@ public class TradingController : ControllerBase
 
         // Daily P&L: attribute realized P&L to the CLOSE date
         var closedTrades = allTrades.Where(t => t.Pnl.HasValue && t.ClosedDate.HasValue).ToList();
-        var dailyPnl = closedTrades.GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(t.ClosedDate!.Value, tz).Date)
+        var dailyPnl = closedTrades.GroupBy(t => TimeZoneHelper.ToLocalDate(t.ClosedDate!.Value, tz))
             .Select(g => new
             {
                 Date = g.Key.ToString("yyyy-MM-dd"),
@@ -379,18 +379,18 @@ public class TradingController : ControllerBase
         // Monthly stats: trades closed within the target month
         var monthClosed = closedTrades.Where(t =>
         {
-            var localDate = TimeZoneInfo.ConvertTimeFromUtc(t.ClosedDate!.Value, tz);
+            var localDate = TimeZoneHelper.ToLocal(t.ClosedDate!.Value, tz);
             return localDate.Year == year && localDate.Month == month;
         }).ToList();
 
         // All trades entered in the month (for total count, checklist rate)
         var monthEntered = entryTrades.Where(t =>
         {
-            var localDate = TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz);
+            var localDate = TimeZoneHelper.ToLocal(t.Date, tz);
             return localDate.Year == year && localDate.Month == month;
         }).ToList();
 
-        var dayPnls = monthClosed.GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(t.ClosedDate!.Value, tz).Date)
+        var dayPnls = monthClosed.GroupBy(t => TimeZoneHelper.ToLocalDate(t.ClosedDate!.Value, tz))
             .Select(g => g.Sum(t => t.Pnl ?? 0)).ToList();
 
         return Ok(new
@@ -415,8 +415,8 @@ public class TradingController : ControllerBase
             {
                 t.Id,
                 t.Date,
-                LocalDate = TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).ToString("yyyy-MM-dd"),
-                LocalClosedDate = t.ClosedDate.HasValue ? TimeZoneInfo.ConvertTimeFromUtc(t.ClosedDate.Value, tz).ToString("yyyy-MM-dd") : (string?)null,
+                LocalDate = TimeZoneHelper.ToLocal(t.Date, tz).ToString("yyyy-MM-dd"),
+                LocalClosedDate = t.ClosedDate.HasValue ? TimeZoneHelper.ToLocal(t.ClosedDate.Value, tz).ToString("yyyy-MM-dd") : (string?)null,
                 t.SetupId,
                 SetupName = t.Setup != null ? t.Setup.Name : null,
                 t.Instrument, t.Direction, t.EntryPrice, t.ExitPrice, t.Quantity,
@@ -797,7 +797,7 @@ public class TradingController : ControllerBase
     public async Task<ActionResult> GetTodayReview()
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+        var today = TimeZoneHelper.UserToday(tz);
         var dayStart = TimeZoneHelper.ToUtc(today, tz);
         var dayEnd = TimeZoneHelper.ToUtc(today.AddDays(1), tz);
         var review = await _db.DailyReviews.FirstOrDefaultAsync(r => r.UserId == UserId && r.Date >= dayStart && r.Date < dayEnd);
@@ -886,7 +886,7 @@ public class TradingController : ControllerBase
         if (date != null && DateTime.TryParse(date, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
             targetDate = parsed.Date;
         else
-            targetDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+            targetDate = TimeZoneHelper.UserToday(tz);
 
         var dayStart = TimeZoneHelper.ToUtc(targetDate, tz);
         var dayEnd = TimeZoneHelper.ToUtc(targetDate.AddDays(1), tz);
@@ -959,7 +959,8 @@ public class TradingController : ControllerBase
     public async Task<ActionResult> GetStats([FromQuery] int? days)
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        var cutoff = days.HasValue ? DateTime.UtcNow.AddDays(-days.Value) : DateTime.MinValue;
+        var userNow = TimeZoneHelper.UserNow(tz);
+        var cutoff = days.HasValue ? TimeZoneHelper.ToUtc(userNow.AddDays(-days.Value), tz) : DateTime.MinValue;
         var trades = await _db.TradeEntries
             .Where(t => t.UserId == UserId && t.Date >= cutoff)
             .ToListAsync();
@@ -975,13 +976,13 @@ public class TradingController : ControllerBase
         var closedWithLocalDate = closedTrades.Select(t => new
         {
             Trade = t,
-            LocalDate = TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date
+            LocalDate = TimeZoneHelper.ToLocalDate(t.Date, tz)
         }).ToList();
 
         var tradesWithLocalDate = trades.Select(t => new
         {
             Trade = t,
-            LocalDate = TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date
+            LocalDate = TimeZoneHelper.ToLocalDate(t.Date, tz)
         }).ToList();
 
         var setupIds = trades.Select(t => t.SetupId).Distinct().ToList();
@@ -1032,18 +1033,18 @@ public class TradingController : ControllerBase
         if (!string.IsNullOrEmpty(from) && DateTime.TryParse(from, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fromDt))
             cutoff = TimeZoneHelper.ToUtc(fromDt, tz);
         else
-            cutoff = TimeZoneHelper.ToUtc(new DateTime(DateTime.UtcNow.Year, 1, 1), tz);
+            cutoff = TimeZoneHelper.ToUtc(new DateTime(TimeZoneHelper.UserNow(tz).Year, 1, 1), tz);
         if (!string.IsNullOrEmpty(to) && DateTime.TryParse(to, CultureInfo.InvariantCulture, DateTimeStyles.None, out var toDt))
             endDate = TimeZoneHelper.ToUtc(toDt.Date.AddDays(1), tz);
         else
-            endDate = DateTime.UtcNow;
+            endDate = TimeZoneHelper.ToUtc(TimeZoneHelper.UserNow(tz), tz);
         var trades = await _db.TradeEntries
             .Include(t => t.Setup)
             .Where(t => t.UserId == UserId && t.Date >= cutoff && t.Date < endDate)
             .ToListAsync();
 
         var closed = trades.Where(t => t.Pnl.HasValue).ToList();
-        var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+        var today = TimeZoneHelper.UserToday(tz);
         var wins = closed.Where(t => t.Pnl > 0).ToList();
         var losses = closed.Where(t => t.Pnl <= 0).ToList();
         var avgWin = wins.Count > 0 ? wins.Average(t => t.NetPnl ?? t.Pnl!.Value) : 0m;
@@ -1059,12 +1060,12 @@ public class TradingController : ControllerBase
 
         // Daily P&L by close date (timezone-aware)
         var closedWithDate = closed.Where(t => t.ClosedDate.HasValue).ToList();
-        var dailyPnl = closedWithDate.GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(t.ClosedDate!.Value, tz).Date)
+        var dailyPnl = closedWithDate.GroupBy(t => TimeZoneHelper.ToLocalDate(t.ClosedDate!.Value, tz))
             .Select(g => new { Date = g.Key, Pnl = g.Sum(t => t.NetPnl ?? t.Pnl ?? 0) }).ToList();
 
         // Monthly P&L by close date (timezone-aware)
         var monthlyPnl = closedWithDate.GroupBy(t => {
-                var local = TimeZoneInfo.ConvertTimeFromUtc(t.ClosedDate!.Value, tz);
+                var local = TimeZoneHelper.ToLocal(t.ClosedDate!.Value, tz);
                 return new { local.Year, local.Month };
             })
             .Select(g => new
@@ -1079,7 +1080,7 @@ public class TradingController : ControllerBase
             .OrderBy(m => m.Year).ThenBy(m => m.Month).ToList();
 
         // Day of week (convert UTC trade date to user's local day)
-        var dayOfWeek = closed.GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).DayOfWeek)
+        var dayOfWeek = closed.GroupBy(t => TimeZoneHelper.ToLocal(t.Date, tz).DayOfWeek)
             .Where(g => g.Key != DayOfWeek.Saturday && g.Key != DayOfWeek.Sunday)
             .Select(g => new
             {
@@ -1158,7 +1159,7 @@ public class TradingController : ControllerBase
         // Time of day buckets (user's local time)
         var timeOfDay = closed.GroupBy(t =>
             {
-                var localHour = TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Hour;
+                var localHour = TimeZoneHelper.ToLocal(t.Date, tz).Hour;
                 return localHour switch
                 {
                     < 9 => "Pre-Market",
@@ -1184,7 +1185,7 @@ public class TradingController : ControllerBase
         var expectancy = Math.Round((winRateDec * avgWin) - (lossRateDec * avgLoss), 2);
 
         // --- Feature 2: Equity Curve + Drawdown ---
-        var dailyPnlSorted = closed.GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date)
+        var dailyPnlSorted = closed.GroupBy(t => TimeZoneHelper.ToLocalDate(t.Date, tz))
             .Select(g => new { Date = g.Key, Pnl = g.Sum(t => t.NetPnl ?? t.Pnl ?? 0) })
             .OrderBy(d => d.Date).ToList();
         var equityCurve = new List<object>();
@@ -1209,7 +1210,7 @@ public class TradingController : ControllerBase
             if (i > 0)
             {
                 var prev = sortedTrades[i - 1];
-                if (prev.Pnl < 0 && TimeZoneInfo.ConvertTimeFromUtc(prev.Date, tz).Date == TimeZoneInfo.ConvertTimeFromUtc(trade.Date, tz).Date)
+                if (prev.Pnl < 0 && TimeZoneHelper.ToLocalDate(prev.Date, tz) == TimeZoneHelper.ToLocalDate(trade.Date, tz))
                 {
                     if (TimeSpan.TryParse(trade.EntryTime, out var entryTs) && TimeSpan.TryParse(prev.ExitTime ?? prev.EntryTime, out var prevExitTs))
                     {
@@ -1235,7 +1236,7 @@ public class TradingController : ControllerBase
 
         // --- Feature 4: Win Rate by Trade # in Session ---
         var winRateByTradeNumber = closed
-            .GroupBy(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date)
+            .GroupBy(t => TimeZoneHelper.ToLocalDate(t.Date, tz))
             .SelectMany(dayGroup =>
             {
                 var dayTrades = dayGroup.OrderBy(t => t.Date).ThenBy(t => t.EntryTime).ToList();
@@ -1319,8 +1320,8 @@ public class TradingController : ControllerBase
             WorstDay = dailyPnl.Count == 0 ? 0m : dailyPnl.Min(d => d.Pnl),
             MaxConsecutiveWins = maxConsWins,
             MaxConsecutiveLosses = maxConsLosses,
-            TradesToday = trades.Count(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date == today),
-            PnlToday = closed.Where(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date == today).Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+            TradesToday = trades.Count(t => TimeZoneHelper.ToLocalDate(t.Date, tz) == today),
+            PnlToday = closed.Where(t => TimeZoneHelper.ToLocalDate(t.Date, tz) == today).Sum(t => t.NetPnl ?? t.Pnl ?? 0),
             ChecklistCompliance = trades.Count == 0 ? 0m : Math.Round((decimal)trades.Count(t => t.ChecklistCompleted) / trades.Count * 100, 1),
             // Equity Curve + Drawdown
             EquityCurve = equityCurve,
@@ -1703,7 +1704,7 @@ public class TradingController : ControllerBase
     public async Task<ActionResult> GetWeeklySummary([FromQuery] string? weekStart)
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        var localDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+        var localDate = TimeZoneHelper.UserToday(tz);
         var start = DateTime.TryParse(weekStart, CultureInfo.InvariantCulture, DateTimeStyles.None, out var ws) ? ws.Date : GetMondayOfWeek(localDate);
         var end = start.AddDays(7);
 
@@ -1734,7 +1735,7 @@ public class TradingController : ControllerBase
             LargestLoss = closed.Count == 0 ? 0m : closed.Min(t => t.Pnl ?? 0),
             ChecklistCompliance = trades.Count == 0 ? 0m : Math.Round((decimal)trades.Count(t => t.ChecklistCompleted) / trades.Count * 100, 1),
             AverageGrade = await GetAverageGrade(startUtc, endUtc),
-            TradingDays = trades.Select(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date).Distinct().Count(),
+            TradingDays = trades.Select(t => TimeZoneHelper.ToLocalDate(t.Date, tz)).Distinct().Count(),
             RuleStreak = await GetRuleStreak(),
             SetupPerformance = trades.GroupBy(t => t.SetupId).Select(g =>
             {
@@ -1758,7 +1759,7 @@ public class TradingController : ControllerBase
     {
         var weeks = count ?? 4;
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        var localDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+        var localDate = TimeZoneHelper.UserToday(tz);
         var currentWeekStart = GetMondayOfWeek(localDate);
         var earliestStart = currentWeekStart.AddDays(-7 * (weeks - 1));
 
@@ -1788,7 +1789,7 @@ public class TradingController : ControllerBase
                 WinRate = closed.Count == 0 ? 0m : Math.Round((decimal)closed.Count(t => t.Pnl > 0) / closed.Count * 100, 1),
                 TotalPnl = closed.Sum(t => t.Pnl ?? 0),
                 AveragePnl = closed.Count == 0 ? 0m : Math.Round(closed.Average(t => t.Pnl!.Value), 2),
-                TradingDays = trades.Select(t => TimeZoneInfo.ConvertTimeFromUtc(t.Date, tz).Date).Distinct().Count()
+                TradingDays = trades.Select(t => TimeZoneHelper.ToLocalDate(t.Date, tz)).Distinct().Count()
             });
         }
         return Ok(summaries);
@@ -1802,7 +1803,7 @@ public class TradingController : ControllerBase
     {
         var count = await _db.TradingWisdoms.CountAsync();
         if (count == 0) return Ok(new { id = 0, text = "Discipline is the bridge between goals and accomplishment.", category = "discipline", author = "Jim Rohn" });
-        var dayOfYear = DateTime.UtcNow.DayOfYear;
+        var dayOfYear = DateTime.UtcNow.DayOfYear; // UTC is intentional — deterministic daily rotation
         var wisdom = await _db.TradingWisdoms.Skip(dayOfYear % count).Take(1).FirstOrDefaultAsync();
         return Ok(wisdom);
     }
@@ -1876,7 +1877,7 @@ public class TradingController : ControllerBase
             using var transaction = await _db.Database.BeginTransactionAsync();
 
             var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-            var localDate = TimeZoneInfo.ConvertTimeFromUtc(
+            var localDate = TimeZoneHelper.ToLocal(
                 DateTime.SpecifyKind(trade.Date, DateTimeKind.Utc), tz);
             if (!string.IsNullOrEmpty(trade.EntryTime) && trade.EntryTime.Contains(':'))
             {

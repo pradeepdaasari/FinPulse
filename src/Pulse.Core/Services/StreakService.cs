@@ -13,7 +13,7 @@ public class StreakService : IStreakService
         _db = db;
     }
 
-    public async Task<PaymentStreakDto> GetStreakAsync(string userId)
+    public async Task<PaymentStreakDto> GetStreakAsync(string userId, DateTime userNow)
     {
         var loans = await _db.PersonalLoans.Where(l => l.UserId == userId).ToListAsync();
         var cards = await _db.CreditCards.Where(c => c.UserId == userId).ToListAsync();
@@ -23,7 +23,7 @@ public class StreakService : IStreakService
         if (totalDebts == 0)
             return new PaymentStreakDto { CurrentStreak = 0, LongestStreak = 0, CurrentMonthAllPaid = false };
 
-        var now = DateTime.UtcNow;
+        var now = userNow;
         var currentStreak = 0;
         var longestStreak = 0;
         var tempStreak = 0;

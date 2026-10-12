@@ -7,10 +7,10 @@ public class WhatIfSimulatorService : IWhatIfSimulatorService
 {
     private const int MaxMonths = 1200;
 
-    public WhatIfResultDto Simulate(List<DebtSnapshotDto> debts, WhatIfRequestDto request)
+    public WhatIfResultDto Simulate(List<DebtSnapshotDto> debts, WhatIfRequestDto request, DateTime? today = null)
     {
         var projections = new List<DebtProjectionDto>();
-        var today = DateTime.Today;
+        var effectiveToday = today ?? DateTime.UtcNow.Date;
 
         foreach (var debt in debts)
         {
@@ -63,8 +63,8 @@ public class WhatIfSimulatorService : IWhatIfSimulatorService
         {
             Projections = projections,
             TotalInterestSaved = projections.Sum(p => p.InterestSaved),
-            OriginalDebtFreeDate = today.AddMonths(originalMaxMonths),
-            NewDebtFreeDate = today.AddMonths(newMaxMonths)
+            OriginalDebtFreeDate = effectiveToday.AddMonths(originalMaxMonths),
+            NewDebtFreeDate = effectiveToday.AddMonths(newMaxMonths)
         };
     }
 
@@ -77,11 +77,11 @@ public class WhatIfSimulatorService : IWhatIfSimulatorService
     {
         var currentBalance = balance;
         decimal totalInterest = 0;
-        var today = DateTime.Today;
+        var simToday = DateTime.UtcNow.Date;
 
         for (int month = 1; month <= MaxMonths && currentBalance > 0; month++)
         {
-            var currentDate = today.AddMonths(month);
+            var currentDate = simToday.AddMonths(month);
 
             // Determine the APR for this month
             decimal currentApr = (promoEndDate.HasValue && currentDate <= promoEndDate.Value)

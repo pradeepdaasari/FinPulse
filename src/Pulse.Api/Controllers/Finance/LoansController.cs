@@ -37,7 +37,8 @@ public class LoansController : ControllerBase
             ? await _db.BankAccounts.Where(a => bankAccountIds.Contains(a.Id) && a.UserId == UserId).ToDictionaryAsync(a => a.Id, a => a.AccountName)
             : new Dictionary<int, string>();
 
-        var today = DateTime.UtcNow.Date;
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var today = TimeZoneHelper.UserToday(tz);
         var result = loans.Select(l => new
         {
             l.Id, l.LenderName, l.OriginalAmount, l.CurrentBalance, l.AprPercent,
@@ -69,7 +70,8 @@ public class LoansController : ControllerBase
             bankName = account?.AccountName;
         }
 
-        var today = DateTime.UtcNow.Date;
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var today = TimeZoneHelper.UserToday(tz);
         return Ok(new
         {
             loan.Id, loan.LenderName, loan.OriginalAmount, loan.CurrentBalance, loan.AprPercent,
@@ -569,7 +571,8 @@ public class LoansController : ControllerBase
 
     private async Task AutoAdvanceMatchingRecurring(string debtName)
     {
-        var today = DateTime.UtcNow.Date;
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var today = TimeZoneHelper.UserToday(tz);
         var name = debtName.ToLower();
         var dueRecurring = await _db.RecurringTransactions
             .Where(r => r.UserId == UserId && r.IsActive && r.NextRunDate <= today)

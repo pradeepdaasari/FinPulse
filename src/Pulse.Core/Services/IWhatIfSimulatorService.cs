@@ -4,5 +4,5 @@ namespace Pulse.Core.Services;
 
 public interface IWhatIfSimulatorService
 {
-    WhatIfResultDto Simulate(List<DebtSnapshotDto> debts, WhatIfRequestDto request);
+    WhatIfResultDto Simulate(List<DebtSnapshotDto> debts, WhatIfRequestDto request, DateTime? today = null);
 }

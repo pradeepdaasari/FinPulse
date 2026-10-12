@@ -14,22 +14,23 @@ public class FinancialCalculationService : IFinancialCalculationService
         int remainingMonths,
         decimal paymentAmount,
         PaymentFrequency frequency,
-        int dueDay = 0)
+        int dueDay = 0,
+        DateTime? today = null)
     {
         var schedule = new List<AmortizationEntryDto>();
         var balance = currentBalance;
-        var today = DateTime.Today;
+        var effectiveToday = today ?? DateTime.UtcNow.Date;
 
         DateTime startDate;
         if (dueDay >= 1 && dueDay <= 28 && frequency == PaymentFrequency.Monthly)
         {
-            startDate = new DateTime(today.Year, today.Month, dueDay);
-            if (startDate <= today)
+            startDate = new DateTime(effectiveToday.Year, effectiveToday.Month, dueDay);
+            if (startDate <= effectiveToday)
                 startDate = startDate.AddMonths(1);
         }
         else
         {
-            startDate = today;
+            startDate = effectiveToday;
         }
 
         int periodsPerYear = frequency switch
@@ -87,11 +88,12 @@ public class FinancialCalculationService : IFinancialCalculationService
         decimal paymentAmount,
         PaymentFrequency frequency,
         DateTime loanStartDate,
-        int dueDay)
+        int dueDay,
+        DateTime? today = null)
     {
         var schedule = new List<AmortizationEntryDto>();
         var balance = originalAmount;
-        var today = DateTime.Today;
+        var effectiveToday = today ?? DateTime.UtcNow.Date;
 
         DateTime firstPaymentDate;
         if (frequency == PaymentFrequency.Weekly)
@@ -154,7 +156,7 @@ public class FinancialCalculationService : IFinancialCalculationService
                 PrincipalPortion = principal,
                 InterestPortion = interest,
                 RemainingBalance = balance,
-                IsPaid = paymentDate <= today
+                IsPaid = paymentDate <= effectiveToday
             });
         }
 
@@ -226,11 +228,12 @@ public class FinancialCalculationService : IFinancialCalculationService
         decimal aprPercent,
         decimal monthlyPayment,
         decimal? promoAprPercent,
-        DateTime? promoEndDate)
+        DateTime? promoEndDate,
+        DateTime? today = null)
     {
         var schedule = new List<PayoffEntryDto>();
         var currentBalance = balance;
-        var currentDate = DateTime.Today;
+        var currentDate = today ?? DateTime.UtcNow.Date;
 
         for (int month = 1; month <= MaxIterations && currentBalance > 0; month++)
         {

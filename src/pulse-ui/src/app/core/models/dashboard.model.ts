@@ -66,11 +66,13 @@ export interface DebtPayoffProjection {
   projectedPayoffDate: string;
   remainingMonths: number;
   progressPercent: number;
+  isNeverPayoff: boolean;
 }
 
 export interface DebtFreeCountdown {
   overallDebtFreeDate: string;
   overallRemainingMonths: number;
+  hasNeverPayoffDebts: boolean;
   projections: DebtPayoffProjection[];
 }
 

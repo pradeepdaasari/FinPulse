@@ -128,7 +128,7 @@ public class WorkoutPlansController : ControllerBase
         if (plan == null) return NotFound();
 
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        var userNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var userNow = TimeZoneHelper.UserNow(tz);
         var userToday = userNow.Date;
 
         WorkoutPlanDay? todayPlan;

@@ -396,7 +396,8 @@ public class CreditCardsController : ControllerBase
 
     private async Task AutoAdvanceMatchingRecurring(string debtName)
     {
-        var today = DateTime.UtcNow.Date;
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var today = TimeZoneHelper.UserToday(tz);
         var name = debtName.ToLower();
         var dueRecurring = await _db.RecurringTransactions
             .Where(r => r.UserId == UserId && r.IsActive && r.NextRunDate <= today)
@@ -440,7 +441,7 @@ public class CreditCardsController : ControllerBase
         if (card is null) return NotFound();
 
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var now = TimeZoneHelper.UserNow(tz);
         var y = year ?? now.Year;
         var m = month ?? now.Month;
 

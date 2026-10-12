@@ -48,7 +48,7 @@ public class BudgetController : ControllerBase
             return BadRequest("User profile is required.");
 
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var now = TimeZoneHelper.UserNow(tz);
         var targetYear = year ?? now.Year;
         var targetMonth = month ?? now.Month;
 
@@ -58,7 +58,21 @@ public class BudgetController : ControllerBase
             .Include(r => r.Category)
             .Where(r => r.UserId == UserId && r.IsActive)
             .ToListAsync();
-        var plan = _budgetPlanService.GeneratePlan(profile, expenses, debts, recurring, targetYear, targetMonth);
+        // Convert anchor to user's timezone date so biweekly hops land on the correct day
+        if (profile.NextPayDate.HasValue)
+            profile.NextPayDate = TimeZoneHelper.ToLocalDate(profile.NextPayDate.Value, tz);
+        var today = TimeZoneHelper.UserToday(tz);
+        var plan = _budgetPlanService.GeneratePlan(profile, expenses, debts, recurring, targetYear, targetMonth, today);
+
+        // Convert local dates to UTC so UtcDateTimeConverter round-trips them correctly
+        foreach (var bd in plan.PaycheckBreakdowns)
+        {
+            bd.PayDate = TimeZoneHelper.ToUtc(bd.PayDate, tz);
+            bd.WindowStart = TimeZoneHelper.ToUtc(bd.WindowStart, tz);
+            bd.WindowEnd = TimeZoneHelper.ToUtc(bd.WindowEnd, tz);
+            foreach (var exp in bd.Expenses.Where(e => e.DueDate.HasValue))
+                exp.DueDate = TimeZoneHelper.ToUtc(exp.DueDate!.Value, tz);
+        }
 
         // Enrich with actual spending
         var (startDate, endDate) = TimeZoneHelper.MonthRangeUtc(targetYear, targetMonth, tz);
@@ -138,10 +152,80 @@ public class BudgetController : ControllerBase
             ? Math.Round(plan.MonthlyOverview.TotalSpent / plan.MonthlyOverview.TotalExpenses * 100m)
             : 0;
 
+        // Enrich paycheck expenses with paid/unpaid status
+        var windowMin = plan.PaycheckBreakdowns.Min(b => b.WindowStart);
+        var windowMax = plan.PaycheckBreakdowns.Max(b => b.WindowEnd);
+        var windowPayments = await _db.PaymentHistories
+            .Where(p => p.UserId == UserId && p.PaymentDate >= windowMin && p.PaymentDate <= windowMax)
+            .Select(p => new { p.DebtId, p.DebtType, p.AmountPaid, p.PaymentDate })
+            .ToListAsync();
+
+        var windowExpenses = await _db.DailyExpenses
+            .Where(e => e.UserId == UserId && e.Date >= windowMin && e.Date <= windowMax
+                   && e.TransactionType == TransactionType.Expense && e.CategoryId != null)
+            .Select(e => new { e.CategoryId, e.Amount, e.Date })
+            .ToListAsync();
+
+        foreach (var bd in plan.PaycheckBreakdowns)
+        {
+            foreach (var exp in bd.Expenses)
+            {
+                if (exp.DueDate == null) continue;
+
+                if (exp.IsDebtPayment)
+                {
+                    var paid = windowPayments
+                        .Where(p => p.DebtId == exp.ExpenseId && p.PaymentDate >= bd.WindowStart && p.PaymentDate <= bd.WindowEnd)
+                        .Sum(p => p.AmountPaid);
+                    exp.IsPaid = paid >= exp.Amount;
+                }
+                else
+                {
+                    var matchIds = parentLookup.ContainsKey(exp.CategoryId)
+                        ? new HashSet<int> { exp.CategoryId, parentLookup[exp.CategoryId] }
+                        : new HashSet<int> { exp.CategoryId };
+                    var catIds = childrenOf.GetValueOrDefault(exp.CategoryId) ?? matchIds;
+                    var spent = windowExpenses
+                        .Where(e => catIds.Contains(e.CategoryId!.Value) && e.Date >= bd.WindowStart && e.Date <= bd.WindowEnd)
+                        .Sum(e => e.Amount);
+                    exp.IsPaid = spent >= exp.Amount;
+                }
+
+                if (exp.IsPaid)
+                {
+                    exp.Status = "paid";
+                    exp.StatusLabel = "Paid";
+                }
+                else if (exp.DueDate.Value.Date < today)
+                {
+                    exp.Status = "overdue";
+                    exp.StatusLabel = "Overdue";
+                }
+                else if (exp.DueDate.Value.Date == today)
+                {
+                    exp.Status = "due-today";
+                    exp.StatusLabel = "Due today";
+                }
+                else if ((exp.DueDate.Value.Date - today).TotalDays <= 3)
+                {
+                    exp.Status = "due-soon";
+                    exp.StatusLabel = "Due " + exp.DueDate.Value.ToString("MMM d");
+                }
+                else
+                {
+                    exp.Status = "upcoming";
+                    exp.StatusLabel = exp.DueDate.Value.ToString("MMM d");
+                }
+            }
+
+            var billExpenses = bd.Expenses.Where(e => e.DueDate != null).ToList();
+            bd.TotalBillCount = billExpenses.Count;
+            bd.PaidCount = billExpenses.Count(e => e.IsPaid);
+        }
+
         // Paycheck info
         if (profile.NextPayDate != null)
         {
-            var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
             var anchor = profile.NextPayDate.Value.Date;
             var frequency = profile.PayFrequency;
             DateTime nextPay;
@@ -297,6 +381,8 @@ public class BudgetController : ControllerBase
 
     private async Task<List<DebtSnapshotDto>> GetDebtSnapshots()
     {
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var userNow = TimeZoneHelper.UserNow(tz);
         var loans = await _db.PersonalLoans
             .Where(l => l.UserId == UserId && l.CurrentBalance > 0)
             .ToListAsync();
@@ -333,7 +419,7 @@ public class BudgetController : ControllerBase
                 Balance = card.CurrentBalance,
                 AprPercent = card.AprPercent,
                 MinimumPayment = card.MinimumPayment,
-                EffectiveApr = card.PromoEndDate.HasValue && card.PromoEndDate > DateTime.UtcNow
+                EffectiveApr = card.PromoEndDate.HasValue && card.PromoEndDate > userNow
                     ? card.PromoAprPercent ?? card.AprPercent
                     : card.AprPercent,
                 PromoEndDate = card.PromoEndDate,

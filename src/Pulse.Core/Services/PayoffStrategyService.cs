@@ -46,7 +46,7 @@ public class PayoffStrategyService : IPayoffStrategyService
         var payoffOrder = new List<DebtPayoffOrderDto>();
         decimal totalInterest = 0;
         int monthsToPayoff = 0;
-        var startDate = DateTime.Today;
+        var startDate = DateTime.UtcNow.Date;
         var monthlyPlan = new List<MonthlyActionStepDto>();
 
         for (int month = 1; month <= MaxMonths; month++)

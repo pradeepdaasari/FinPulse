@@ -4,5 +4,5 @@ namespace Pulse.Core.Services;
 
 public interface IStreakService
 {
-    Task<PaymentStreakDto> GetStreakAsync(string userId);
+    Task<PaymentStreakDto> GetStreakAsync(string userId, DateTime userNow);
 }

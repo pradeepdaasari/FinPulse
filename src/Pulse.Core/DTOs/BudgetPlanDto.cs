@@ -6,6 +6,7 @@ public class BudgetPlanDto
 {
     public MonthlyOverviewDto MonthlyOverview { get; set; } = new();
     public List<PaycheckBreakdownDto> PaycheckBreakdowns { get; set; } = new();
+    public PaycheckSummaryDto PaycheckSummary { get; set; } = new();
     public int? DaysUntilPaycheck { get; set; }
 }
 
@@ -53,10 +54,29 @@ public class CategorySummaryDto
 public class PaycheckBreakdownDto
 {
     public DateTime PayDate { get; set; }
+    public DateTime WindowStart { get; set; }
+    public DateTime WindowEnd { get; set; }
+    public bool IsPriorMonth { get; set; }
     public decimal GrossPay { get; set; }
     public List<PaycheckExpenseDto> Expenses { get; set; } = new();
     public decimal TotalExpenses { get; set; }
     public decimal Leftover { get; set; }
+    public decimal AbsLeftover { get; set; }
+    public bool IsOver { get; set; }
+    public decimal SpendPercent { get; set; }
+    public int PaidCount { get; set; }
+    public int TotalBillCount { get; set; }
+}
+
+public class PaycheckSummaryDto
+{
+    public decimal TotalIncome { get; set; }
+    public decimal TotalAllocated { get; set; }
+    public decimal NetLeftover { get; set; }
+    public decimal AbsNetLeftover { get; set; }
+    public bool IsNetOver { get; set; }
+    public int PaycheckCount { get; set; }
+    public int OverCount { get; set; }
 }
 
 public class PaycheckExpenseDto
@@ -67,6 +87,10 @@ public class PaycheckExpenseDto
     public string CategoryName { get; set; } = string.Empty;
     public decimal Amount { get; set; }
     public int? DueDay { get; set; }
+    public DateTime? DueDate { get; set; }
     public bool IsAutopay { get; set; }
     public bool IsDebtPayment { get; set; }
+    public bool IsPaid { get; set; }
+    public string Status { get; set; } = "upcoming";
+    public string StatusLabel { get; set; } = string.Empty;
 }

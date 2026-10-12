@@ -4,6 +4,6 @@ namespace Pulse.Core.Services;
 
 public interface ISnapshotService
 {
-    Task<TrendDataDto> GetTrendsAsync(string userId, int months = 12);
-    Task EnsureCurrentMonthSnapshotAsync(string userId);
+    Task<TrendDataDto> GetTrendsAsync(string userId, DateTime userNow, int months = 12);
+    Task EnsureCurrentMonthSnapshotAsync(string userId, DateTime userNow);
 }

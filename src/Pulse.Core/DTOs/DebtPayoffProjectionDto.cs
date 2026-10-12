@@ -9,11 +9,13 @@ public class DebtPayoffProjectionDto
     public DateTime ProjectedPayoffDate { get; set; }
     public int RemainingMonths { get; set; }
     public decimal ProgressPercent { get; set; }
+    public bool IsNeverPayoff { get; set; }
 }
 
 public class DebtFreeCountdownDto
 {
     public DateTime OverallDebtFreeDate { get; set; }
     public int OverallRemainingMonths { get; set; }
+    public bool HasNeverPayoffDebts { get; set; }
     public List<DebtPayoffProjectionDto> Projections { get; set; } = new();
 }

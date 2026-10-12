@@ -28,6 +28,8 @@ public class StrategiesController : ControllerBase
     [HttpGet("comparison")]
     public async Task<ActionResult<StrategyComparisonDto>> GetComparison([FromQuery] decimal extraPayment = 0)
     {
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var userNow = TimeZoneHelper.UserNow(tz);
         var loans = await _db.PersonalLoans
             .Where(l => l.UserId == UserId)
             .Where(l => l.CurrentBalance > 0)
@@ -66,7 +68,7 @@ public class StrategiesController : ControllerBase
                 Balance = card.CurrentBalance,
                 AprPercent = card.AprPercent,
                 MinimumPayment = card.MinimumPayment,
-                EffectiveApr = card.PromoEndDate.HasValue && card.PromoEndDate > DateTime.UtcNow
+                EffectiveApr = card.PromoEndDate.HasValue && card.PromoEndDate > userNow
                     ? card.PromoAprPercent ?? card.AprPercent
                     : card.AprPercent,
                 PromoEndDate = card.PromoEndDate,
@@ -83,11 +85,12 @@ public class StrategiesController : ControllerBase
             .Where(r => r.UserId == UserId && r.IsActive)
             .SumAsync(r => r.Amount);
 
+        var today = TimeZoneHelper.UserToday(tz);
+
         var monthlyIncome = profile?.MonthlyIncome ?? 0;
         if (profile?.NextPayDate != null && profile.NetPayPerCheck > 0)
         {
-            var now = DateTime.Today;
-            var payDates = GetPayDatesInMonth(profile.NextPayDate.Value, profile.PayFrequency, now.Year, now.Month);
+            var payDates = GetPayDatesInMonth(profile.NextPayDate.Value, profile.PayFrequency, today.Year, today.Month);
             monthlyIncome = payDates.Count * profile.NetPayPerCheck;
         }
 
@@ -103,28 +106,27 @@ public class StrategiesController : ControllerBase
 
         if (profile?.NextPayDate != null)
         {
-            var now = DateTime.Today;
-            var paychecks = GetPayDatesInMonth(profile.NextPayDate.Value, profile.PayFrequency, now.Year, now.Month);
+            var paychecks = GetPayDatesInMonth(profile.NextPayDate.Value, profile.PayFrequency, today.Year, today.Month);
             comparison.Paychecks = paychecks.Select(d => new PaycheckInfoDto
             {
                 Date = d.ToString("yyyy-MM-dd"),
                 Amount = profile.NetPayPerCheck
             }).ToList();
 
-            AssignPaycheckDates(comparison.Avalanche.MonthlyPlan, paychecks);
-            AssignPaycheckDates(comparison.Snowball.MonthlyPlan, paychecks);
+            AssignPaycheckDates(comparison.Avalanche.MonthlyPlan, paychecks, today);
+            AssignPaycheckDates(comparison.Snowball.MonthlyPlan, paychecks, today);
         }
 
         return Ok(comparison);
     }
 
-    private void AssignPaycheckDates(List<MonthlyActionStepDto> steps, List<DateTime> paychecks)
+    private static void AssignPaycheckDates(List<MonthlyActionStepDto> steps, List<DateTime> paychecks, DateTime today)
     {
         if (paychecks.Count == 0) return;
         foreach (var step in steps)
         {
-            var dueDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month,
-                Math.Min(step.DueDay > 0 ? step.DueDay : 1, DateTime.DaysInMonth(DateTime.Today.Year, DateTime.Today.Month)));
+            var dueDate = new DateTime(today.Year, today.Month,
+                Math.Min(step.DueDay > 0 ? step.DueDay : 1, DateTime.DaysInMonth(today.Year, today.Month)));
             var bestPaycheck = paychecks.OrderBy(p => Math.Abs((p - dueDate).TotalDays)).First();
             step.PaycheckDate = bestPaycheck.ToString("yyyy-MM-dd");
         }

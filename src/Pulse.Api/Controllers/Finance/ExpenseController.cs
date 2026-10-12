@@ -50,9 +50,9 @@ public class ExpenseController : ControllerBase
         }
         else if (!allTime)
         {
-            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
-            var targetYear = year ?? now.Year;
-            var targetMonth = month ?? now.Month;
+            var userNow = TimeZoneHelper.UserNow(tz);
+            var targetYear = year ?? userNow.Year;
+            var targetMonth = month ?? userNow.Month;
             var (startUtc, endUtc) = TimeZoneHelper.MonthRangeUtc(targetYear, targetMonth, tz);
             query = query.Where(e => e.Date >= startUtc && e.Date < endUtc);
         }
@@ -111,9 +111,9 @@ public class ExpenseController : ControllerBase
         }
         else if (!allTime)
         {
-            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
-            var targetYear = year ?? now.Year;
-            var targetMonth = month ?? now.Month;
+            var userNow = TimeZoneHelper.UserNow(tz);
+            var targetYear = year ?? userNow.Year;
+            var targetMonth = month ?? userNow.Month;
             var (startUtc, endUtc) = TimeZoneHelper.MonthRangeUtc(targetYear, targetMonth, tz);
             paymentQuery = paymentQuery.Where(p => p.PaymentDate >= startUtc && p.PaymentDate < endUtc);
         }
@@ -239,9 +239,9 @@ public class ExpenseController : ControllerBase
     public async Task<ActionResult<List<SpendingSummaryDto>>> GetSummary([FromQuery] int? year, [FromQuery] int? month)
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
-        var targetYear = year ?? now.Year;
-        var targetMonth = month ?? now.Month;
+        var userNow = TimeZoneHelper.UserNow(tz);
+        var targetYear = year ?? userNow.Year;
+        var targetMonth = month ?? userNow.Month;
         var (startDate, endDate) = TimeZoneHelper.MonthRangeUtc(targetYear, targetMonth, tz);
 
         var dailyExpenses = await _db.DailyExpenses
@@ -323,9 +323,9 @@ public class ExpenseController : ControllerBase
     public async Task<ActionResult> GetInsight([FromQuery] int? year, [FromQuery] int? month)
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
-        var targetYear = year ?? now.Year;
-        var targetMonth = month ?? now.Month;
+        var userNow = TimeZoneHelper.UserNow(tz);
+        var targetYear = year ?? userNow.Year;
+        var targetMonth = month ?? userNow.Month;
         var (startDate, endDate) = TimeZoneHelper.MonthRangeUtc(targetYear, targetMonth, tz);
 
         var dailyExpenses = await _db.DailyExpenses
@@ -339,7 +339,7 @@ public class ExpenseController : ControllerBase
         var totalSpent = dailyExpenses;
         var remaining = totalBudgeted - totalSpent;
         var daysInMonth = DateTime.DaysInMonth(targetYear, targetMonth);
-        var dayOfMonth = (targetYear == now.Year && targetMonth == now.Month) ? now.Day : daysInMonth;
+        var dayOfMonth = (targetYear == userNow.Year && targetMonth == userNow.Month) ? userNow.Day : daysInMonth;
         var daysLeft = daysInMonth - dayOfMonth;
         var monthProgress = (double)dayOfMonth / daysInMonth;
         var spentPercent = totalBudgeted > 0 ? (double)totalSpent / (double)totalBudgeted : 0;
@@ -404,9 +404,9 @@ public class ExpenseController : ControllerBase
     public async Task<IActionResult> Export([FromQuery] int? year, [FromQuery] int? month)
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
-        var targetYear = year ?? now.Year;
-        var targetMonth = month ?? now.Month;
+        var userNow = TimeZoneHelper.UserNow(tz);
+        var targetYear = year ?? userNow.Year;
+        var targetMonth = month ?? userNow.Month;
         var (startDate, endDate) = TimeZoneHelper.MonthRangeUtc(targetYear, targetMonth, tz);
 
         var expenses = await _db.DailyExpenses
@@ -432,7 +432,7 @@ public class ExpenseController : ControllerBase
                 source = bankNames.GetValueOrDefault(e.FundingSourceId.Value) ?? "";
             else if (e.FundingSourceType == FundingSourceType.CreditCard && e.FundingSourceId.HasValue)
                 source = cardNames.GetValueOrDefault(e.FundingSourceId.Value) ?? "";
-            var localDate = TimeZoneInfo.ConvertTimeFromUtc(e.Date, tz);
+            var localDate = TimeZoneHelper.ToLocalDate(e.Date, tz);
             sb.AppendLine($"{localDate:yyyy-MM-dd},{type},{desc},{merchant},{category},{e.Amount},{EscapeCsv(source)},{EscapeCsv(e.Tag ?? "")},{EscapeCsv(e.TagType ?? "")}");
         }
 
@@ -562,10 +562,10 @@ public class ExpenseController : ControllerBase
     public async Task<ActionResult> GetMultiComparison([FromQuery] int? year, [FromQuery] int? month, [FromQuery] int months = 1)
     {
         months = Math.Clamp(months, 1, 12);
-        var endYear = year ?? DateTime.UtcNow.Year;
-        var endMonth = month ?? DateTime.UtcNow.Month;
-
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var (userYear, userMonth) = TimeZoneHelper.UserYearMonth(tz);
+        var endYear = year ?? userYear;
+        var endMonth = month ?? userMonth;
         var (_, endDate) = TimeZoneHelper.MonthRangeUtc(endYear, endMonth, tz);
         var startMonth = new DateTime(endYear, endMonth, 1).AddMonths(-(months - 1));
         var (startDate, _) = TimeZoneHelper.MonthRangeUtc(startMonth.Year, startMonth.Month, tz);
@@ -604,21 +604,46 @@ public class ExpenseController : ControllerBase
         var categories = allCategoryIds.Select(catId =>
         {
             var cat = categoryInfo.GetValueOrDefault(catId);
+            var catExpenses = expenses.Where(e => e.CategoryId == catId).ToList();
             var monthlyAmounts = new List<object>();
             for (int i = 0; i < months; i++)
             {
                 var mStart = startDate.AddMonths(i);
                 var mEnd = mStart.AddMonths(1);
-                var amount = expenses.Where(e => e.CategoryId == catId && e.Date >= mStart && e.Date < mEnd).Sum(e => e.Amount);
+                var amount = catExpenses.Where(e => e.Date >= mStart && e.Date < mEnd).Sum(e => e.Amount);
                 monthlyAmounts.Add(new { Year = mStart.Year, Month = mStart.Month, Amount = amount });
             }
+
+            var merchants = catExpenses
+                .GroupBy(e => string.IsNullOrWhiteSpace(e.Merchant) ? e.Description : e.Merchant)
+                .Select(mg =>
+                {
+                    var mAmounts = new List<object>();
+                    for (int i = 0; i < months; i++)
+                    {
+                        var mStart = startDate.AddMonths(i);
+                        var mEnd = mStart.AddMonths(1);
+                        var amt = mg.Where(e => e.Date >= mStart && e.Date < mEnd).Sum(e => e.Amount);
+                        mAmounts.Add(new { Year = mStart.Year, Month = mStart.Month, Amount = amt });
+                    }
+                    return new
+                    {
+                        Name = mg.Key,
+                        MonthlyAmounts = mAmounts,
+                        Total = mg.Sum(e => e.Amount)
+                    };
+                })
+                .OrderByDescending(m => m.Total)
+                .ToList();
+
             return new
             {
                 CategoryId = catId,
                 CategoryName = cat?.Name ?? "Unknown",
                 CategoryIcon = cat?.Icon,
                 MonthlyAmounts = monthlyAmounts,
-                Total = expenses.Where(e => e.CategoryId == catId).Sum(e => e.Amount)
+                Total = catExpenses.Sum(e => e.Amount),
+                Merchants = merchants
             };
         }).OrderByDescending(c => c.Total).ToList();
 
@@ -631,10 +656,10 @@ public class ExpenseController : ControllerBase
     [HttpGet("comparison")]
     public async Task<ActionResult> GetComparison([FromQuery] int? year, [FromQuery] int? month)
     {
-        var targetYear = year ?? DateTime.UtcNow.Year;
-        var targetMonth = month ?? DateTime.UtcNow.Month;
-
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var (userYear, userMonth) = TimeZoneHelper.UserYearMonth(tz);
+        var targetYear = year ?? userYear;
+        var targetMonth = month ?? userMonth;
         var (currentStart, currentEnd) = TimeZoneHelper.MonthRangeUtc(targetYear, targetMonth, tz);
 
         var prevDate = new DateTime(targetYear, targetMonth, 1).AddMonths(-1);

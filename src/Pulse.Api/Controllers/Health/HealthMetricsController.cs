@@ -57,7 +57,8 @@ public class HealthMetricsController : ControllerBase
         if (string.IsNullOrWhiteSpace(type))
             return BadRequest(new { error = "type is required." });
 
-        var since = DateTime.UtcNow.AddDays(-days);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var since = TimeZoneHelper.UserNow(tz).AddDays(-days);
         var data = await _db.HealthMetrics
             .Where(m => m.UserId == UserId && m.MetricType == type && m.MeasuredAt >= since)
             .OrderBy(m => m.MeasuredAt)

@@ -67,7 +67,7 @@ public class WorkoutLogsController : ControllerBase
     public async Task<ActionResult> GetToday()
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        var userNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var userNow = TimeZoneHelper.UserNow(tz);
         var todayStart = TimeZoneHelper.ToUtc(userNow.Date, tz);
         var todayEnd = TimeZoneHelper.ToUtc(userNow.Date.AddDays(1), tz);
 
@@ -94,7 +94,7 @@ public class WorkoutLogsController : ControllerBase
         if (log.Date == default)
             log.Date = DateTime.UtcNow;
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        var userNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var userNow = TimeZoneHelper.UserNow(tz);
         var todayDow = (int)userNow.DayOfWeek;
 
         var strategy = _db.Database.CreateExecutionStrategy();
@@ -225,7 +225,8 @@ public class WorkoutLogsController : ControllerBase
         if (string.IsNullOrWhiteSpace(exercise))
             return BadRequest(new { error = "exercise is required." });
 
-        var since = DateTime.UtcNow.AddDays(-days);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var since = TimeZoneHelper.UserNow(tz).AddDays(-days);
         var data = await _db.ExerciseSets
             .Where(s => s.WorkoutLog!.UserId == UserId
                 && s.ExerciseName == exercise
@@ -259,7 +260,7 @@ public class WorkoutLogsController : ControllerBase
     public async Task<ActionResult> GetStats()
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        var userNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var userNow = TimeZoneHelper.UserNow(tz);
         var userToday = userNow.Date;
 
         var startOfWeek = userToday.AddDays(-(int)userToday.DayOfWeek);
@@ -282,7 +283,7 @@ public class WorkoutLogsController : ControllerBase
             .ToListAsync();
 
         var workoutLocalDates = workoutDatesUtc
-            .Select(d => TimeZoneInfo.ConvertTimeFromUtc(d, tz).Date)
+            .Select(d => TimeZoneHelper.ToLocalDate(d, tz))
             .Distinct()
             .ToHashSet();
 

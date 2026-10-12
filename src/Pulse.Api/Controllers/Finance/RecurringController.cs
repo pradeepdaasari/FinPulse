@@ -309,7 +309,8 @@ public class RecurringController : ControllerBase
     [HttpPost("generate")]
     public async Task<ActionResult> Generate()
     {
-        var today = DateTime.UtcNow.Date;
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var today = TimeZoneHelper.UserToday(tz);
 
         var strategy = _db.Database.CreateExecutionStrategy();
         var generated = 0;

@@ -10,7 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directive';
 import { inferCategoryIcon } from '../../../core/utils/category-icon';
 import { DailyExpenseService } from '../../../core/services/daily-expense.service';
-import { MultiMonthComparison, MultiMonthTotal, MultiMonthCategory } from '../../../core/models/daily-expense.model';
+import { MultiMonthComparison, MultiMonthTotal, MultiMonthCategory, MultiMonthMerchant } from '../../../core/models/daily-expense.model';
 
 @Component({
   selector: 'app-month-comparison',
@@ -79,10 +79,12 @@ import { MultiMonthComparison, MultiMonthTotal, MultiMonthCategory } from '../..
                   </thead>
                   <tbody>
                     @for (cat of data()!.categories; track cat.categoryId) {
-                      <tr>
+                      <tr class="cat-row" [class.expanded]="isExpanded(cat.categoryId)"
+                          (click)="toggleCategory(cat.categoryId)">
                         <td class="cat-col">
+                          <mat-icon class="expand-icon" [class.rotated]="isExpanded(cat.categoryId)">chevron_right</mat-icon>
                           <mat-icon class="cat-icon">{{ getIcon(cat.categoryName, cat.categoryIcon) }}</mat-icon>
-                          {{ cat.categoryName }}
+                          <span class="cat-name">{{ cat.categoryName }}</span>
                         </td>
                         @for (amt of cat.monthlyAmounts; track amt.month) {
                           <td class="amt-col" [class.zero]="amt.amount === 0">
@@ -91,6 +93,21 @@ import { MultiMonthComparison, MultiMonthTotal, MultiMonthCategory } from '../..
                         }
                         <td class="amt-col total-col">{{ cat.total | currency }}</td>
                       </tr>
+                      @if (isExpanded(cat.categoryId)) {
+                        @for (merchant of cat.merchants; track merchant.name) {
+                          <tr class="merchant-row">
+                            <td class="cat-col merchant-name-col">
+                              <span class="merchant-name">{{ merchant.name }}</span>
+                            </td>
+                            @for (amt of merchant.monthlyAmounts; track amt.month) {
+                              <td class="amt-col merchant-amt" [class.zero]="amt.amount === 0">
+                                {{ amt.amount === 0 ? '—' : (amt.amount | currency) }}
+                              </td>
+                            }
+                            <td class="amt-col total-col merchant-amt">{{ merchant.total | currency }}</td>
+                          </tr>
+                        }
+                      }
                     }
                   </tbody>
                   <tfoot>
@@ -141,13 +158,56 @@ import { MultiMonthComparison, MultiMonthTotal, MultiMonthCategory } from '../..
     .compare-table th, .compare-table td { padding: 8px 12px; text-align: right; white-space: nowrap; }
     .compare-table th { font-size: 0.8rem; opacity: 0.7; border-bottom: 2px solid rgba(0,0,0,0.1); }
     .compare-table td { border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 0.9rem; }
-    .cat-col { text-align: left !important; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+    .cat-col { text-align: left !important; font-weight: 500; display: flex; align-items: center; gap: 4px; }
     th.cat-col { display: table-cell; }
-    .cat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .cat-icon { font-size: 16px; width: 16px; height: 16px; flex-shrink: 0; }
+    .cat-name {
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
     .amt-col { min-width: 90px; }
     .total-col { font-weight: 600; background: rgba(0,0,0,0.02); }
     .zero { opacity: 0.3; }
     .totals-footer td { border-top: 2px solid rgba(0,0,0,0.1); }
+
+    /* Expandable category rows */
+    .cat-row {
+      cursor: pointer;
+      transition: background var(--transition-fast, 0.15s ease);
+    }
+    .cat-row:hover { background: rgba(0,0,0,0.03); }
+    .cat-row.expanded { background: rgba(0,0,0,0.02); }
+
+    .expand-icon {
+      font-size: 18px; width: 18px; height: 18px;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+      color: rgba(0,0,0,0.4);
+    }
+    .expand-icon.rotated { transform: rotate(90deg); }
+
+    /* Merchant sub-rows */
+    .merchant-row {
+      background: rgba(0,0,0,0.015);
+    }
+    .merchant-row td { border-bottom: 1px solid rgba(0,0,0,0.03); }
+    .merchant-name-col {
+      padding-left: 48px !important;
+      font-weight: 400 !important;
+    }
+    .merchant-name {
+      font-size: 0.82rem;
+      color: rgba(0,0,0,0.65);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .merchant-amt {
+      font-size: 0.82rem !important;
+      color: rgba(0,0,0,0.65);
+      font-weight: 400 !important;
+    }
+    .merchant-row .total-col {
+      font-weight: 500 !important;
+      color: rgba(0,0,0,0.65);
+    }
 
     @media (max-width: 599px) {
       .controls { flex-wrap: wrap; }
@@ -159,7 +219,13 @@ import { MultiMonthComparison, MultiMonthTotal, MultiMonthCategory } from '../..
       .compare-table { min-width: 0; }
       .compare-table th, .compare-table td { padding: 6px 8px; font-size: 0.78rem; }
       .amt-col { min-width: 65px; }
-      .cat-col { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
+      .cat-col { max-width: 110px; }
+      .cat-name { max-width: 60px; }
+      .cat-row { min-height: 44px; }
+      .merchant-name-col { padding-left: 36px !important; }
+      .merchant-name { font-size: 0.74rem; max-width: 70px; }
+      .merchant-amt { font-size: 0.74rem !important; }
+      .expand-icon { font-size: 16px; width: 16px; height: 16px; }
     }
   `]
 })
@@ -175,9 +241,24 @@ export class MonthComparisonComponent implements OnChanges {
   loading = signal(false);
   avgMonthly = signal(0);
   grandTotal = signal(0);
+  expandedCategories = signal<Set<number>>(new Set());
 
   getIcon(name: string | null, icon: string | null): string {
     return inferCategoryIcon(name, icon);
+  }
+
+  isExpanded(categoryId: number): boolean {
+    return this.expandedCategories().has(categoryId);
+  }
+
+  toggleCategory(categoryId: number): void {
+    const current = new Set(this.expandedCategories());
+    if (current.has(categoryId)) {
+      current.delete(categoryId);
+    } else {
+      current.add(categoryId);
+    }
+    this.expandedCategories.set(current);
   }
 
   ngOnChanges(): void {
@@ -188,6 +269,7 @@ export class MonthComparisonComponent implements OnChanges {
     const count = Math.max(1, Math.min(12, this.monthCount || 3));
     this.monthCount = count;
     this.loading.set(true);
+    this.expandedCategories.set(new Set());
     this.expenseService.getMultiComparison(this.year(), this.month(), count).subscribe({
       next: (result) => {
         this.data.set(result);

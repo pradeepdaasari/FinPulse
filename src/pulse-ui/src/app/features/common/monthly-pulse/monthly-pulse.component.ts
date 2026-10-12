@@ -7,7 +7,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MonthlyPulseService } from '../../../core/services/monthly-pulse.service';
-import { MonthlyPulseData, LaneMonth, LoanPaymentMonth, TradingMonth, NetWorthMonth, DetailRow } from '../../../core/models/monthly-pulse.model';
+import { MonthlyPulseData, LaneMonth, LoanPaymentMonth, TradingMonth, NetWorthMonth, DetailRow, DetailChild } from '../../../core/models/monthly-pulse.model';
 
 type Period = '3' | '6' | 'ytd';
 
@@ -200,13 +200,30 @@ type Period = '3' | '6' | 'ytd';
                 </thead>
                 <tbody>
                   @for (row of d.expenses.details; track row.name) {
-                    <tr>
-                      <td class="detail-name">{{ row.name }}</td>
+                    <tr class="cat-detail-row" [class.cat-expanded]="isCatExpanded(row.name)"
+                        (click)="toggleCat(row.name)">
+                      <td class="detail-name">
+                        @if (row.children?.length) {
+                          <mat-icon class="cat-chevron" [class.cat-chevron-open]="isCatExpanded(row.name)">chevron_right</mat-icon>
+                        }
+                        {{ row.name }}
+                      </td>
                       @for (val of row.monthly; track $index) {
                         <td class="detail-val">{{ val | currency:'USD':'symbol':'1.0-0' }}</td>
                       }
                       <td class="detail-total">{{ row.total | currency:'USD':'symbol':'1.0-0' }}</td>
                     </tr>
+                    @if (isCatExpanded(row.name) && row.children?.length) {
+                      @for (child of row.children; track child.name) {
+                        <tr class="merchant-detail-row">
+                          <td class="detail-name merchant-detail-name">{{ child.name }}</td>
+                          @for (val of child.monthly; track $index) {
+                            <td class="detail-val merchant-detail-val">{{ val | currency:'USD':'symbol':'1.0-0' }}</td>
+                          }
+                          <td class="detail-total merchant-detail-val">{{ child.total | currency:'USD':'symbol':'1.0-0' }}</td>
+                        </tr>
+                      }
+                    }
                   }
                 </tbody>
               </table>
@@ -471,7 +488,25 @@ type Period = '3' | '6' | 'ytd';
       .detail-table td { padding: 7px 6px; }
       .detail-name { font-size: 0.72rem; max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
       .detail-val, .detail-total { font-size: 0.72rem; }
+      .merchant-detail-name { padding-left: 28px !important; }
     }
+    /* Collapsible expense category rows */
+    .cat-detail-row { cursor: pointer; transition: background 0.15s; }
+    .cat-detail-row:hover { background: rgba(0,0,0,0.03) !important; }
+    .cat-detail-row.cat-expanded { background: rgba(0,0,0,0.02); }
+    .cat-chevron {
+      font-size: 16px; width: 16px; height: 16px; flex-shrink: 0;
+      color: rgba(0,0,0,0.35); transition: transform 0.2s ease;
+      margin-right: 4px;
+    }
+    .cat-chevron-open { transform: rotate(90deg); }
+    .merchant-detail-row { background: rgba(0,0,0,0.015); }
+    .merchant-detail-row td { border-bottom: 1px solid rgba(0,0,0,0.03) !important; }
+    .merchant-detail-name {
+      padding-left: 38px !important; font-weight: 400 !important;
+      font-size: 0.78rem !important; color: rgba(0,0,0,0.6);
+    }
+    .merchant-detail-val { font-size: 0.78rem !important; color: rgba(0,0,0,0.6); font-weight: 400 !important; }
   `]
 })
 export class MonthlyPulseComponent implements OnInit {
@@ -482,6 +517,7 @@ export class MonthlyPulseComponent implements OnInit {
   loading = signal(true);
   selectedPeriod = signal<Period>('3');
   expandedLanes = signal<Set<string>>(new Set());
+  expandedCats = signal<Set<string>>(new Set());
 
   ngOnInit(): void {
     this.loadData();
@@ -500,6 +536,16 @@ export class MonthlyPulseComponent implements OnInit {
 
   isExpanded(lane: string): boolean {
     return this.expandedLanes().has(lane);
+  }
+
+  toggleCat(name: string): void {
+    const current = new Set(this.expandedCats());
+    current.has(name) ? current.delete(name) : current.add(name);
+    this.expandedCats.set(current);
+  }
+
+  isCatExpanded(name: string): boolean {
+    return this.expandedCats().has(name);
   }
 
   loadData(): void {

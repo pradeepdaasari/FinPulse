@@ -129,12 +129,19 @@ export interface MultiMonthTotal {
   total: number;
 }
 
+export interface MultiMonthMerchant {
+  name: string;
+  monthlyAmounts: { year: number; month: number; amount: number }[];
+  total: number;
+}
+
 export interface MultiMonthCategory {
   categoryId: number;
   categoryName: string;
   categoryIcon: string | null;
   monthlyAmounts: { year: number; month: number; amount: number }[];
   total: number;
+  merchants: MultiMonthMerchant[];
 }
 
 export interface MultiMonthComparison {

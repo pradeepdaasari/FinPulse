@@ -6,107 +6,110 @@ namespace Pulse.Core.Services;
 
 public class BudgetPlanService : IBudgetPlanService
 {
-    public BudgetPlanDto GeneratePlan(UserProfile profile, List<BudgetExpense> expenses, List<DebtSnapshotDto> debts, List<RecurringTransaction> recurring, int year, int month)
+    public BudgetPlanDto GeneratePlan(UserProfile profile, List<BudgetExpense> expenses, List<DebtSnapshotDto> debts, List<RecurringTransaction> recurring, int year, int month, DateTime today)
     {
-        var payDates = GetPayDatesInMonth(profile.NextPayDate ?? new DateTime(year, month, 1), profile.PayFrequency, year, month);
-        var payPerCheck = profile.NetPayPerCheck;
+        var monthStart = new DateTime(year, month, 1);
+        var monthEnd = new DateTime(year, month, DateTime.DaysInMonth(year, month));
+
+        var breakdowns = GetPaycheckWindowsForMonth(
+            profile.NextPayDate ?? monthStart,
+            profile.PayFrequency,
+            profile.NetPayPerCheck,
+            year, month);
 
         var fixedExpenses = expenses.Where(e => e.IsFixed).ToList();
         var variableExpenses = expenses.Where(e => !e.IsFixed).ToList();
+        var recurringInMonth = recurring.Where(r => r.IsActive).ToList();
 
-        // All active recurring transactions are part of the budget regardless of next run date
-        var recurringInMonth = recurring
-            .Where(r => r.IsActive)
-            .ToList();
+        var windowStart = breakdowns.Min(b => b.WindowStart.Date);
+        var windowEnd = breakdowns.Max(b => b.WindowEnd.Date);
+        var coveredMonths = GetCoveredMonths(windowStart, windowEnd);
 
-        var breakdowns = payDates.Select(d => new PaycheckBreakdownDto
-        {
-            PayDate = d,
-            GrossPay = payPerCheck,
-            Expenses = new List<PaycheckExpenseDto>()
-        }).ToList();
-
-        // Assign fixed expenses to the last paycheck before their due day
         foreach (var expense in fixedExpenses)
         {
             var dueDay = expense.DueDay ?? 1;
-            var dueDate = new DateTime(year, month, Math.Min(dueDay, DateTime.DaysInMonth(year, month)));
-
-            var assigned = breakdowns
-                .Where(b => b.PayDate <= dueDate)
-                .OrderByDescending(b => b.PayDate)
-                .FirstOrDefault() ?? breakdowns.First();
-
-            assigned.Expenses.Add(new PaycheckExpenseDto
+            foreach (var (y, m) in coveredMonths)
             {
-                ExpenseId = expense.Id,
-                Name = expense.Name,
-                CategoryId = expense.CategoryId,
-                CategoryName = expense.Category?.Name ?? "Unknown",
-                Amount = expense.Amount,
-                DueDay = expense.DueDay,
-                IsAutopay = expense.IsAutopay
-            });
-        }
+                var dueDate = new DateTime(y, m, Math.Min(dueDay, DateTime.DaysInMonth(y, m)));
+                if (dueDate < windowStart || dueDate > windowEnd) continue;
 
-        // Assign debt minimum payments to last paycheck before their due day
-        var monthEnd = new DateTime(year, month, DateTime.DaysInMonth(year, month));
-        var activeDebts = debts.Where(d => !IsDeferred(d)).ToList();
-        foreach (var debt in activeDebts)
-        {
-            var dueDates = GetDebtDueDatesInMonth(debt, year, month, monthEnd);
-            var perPayment = dueDates.Count > 1 && debt.PerPaymentAmount > 0
-                ? debt.PerPaymentAmount
-                : debt.MinimumPayment;
-
-            foreach (var dueDate in dueDates)
-            {
-                var assigned = breakdowns
-                    .OrderBy(b => Math.Abs((b.PayDate - dueDate).TotalDays))
-                    .First();
-
+                var assigned = FindOwningPaycheck(breakdowns, dueDate);
                 assigned.Expenses.Add(new PaycheckExpenseDto
                 {
-                    ExpenseId = debt.Id,
-                    Name = debt.Name,
-                    CategoryId = 0,
-                    CategoryName = "Debt Payment",
-                    Amount = perPayment,
-                    DueDay = dueDate.Day,
-                    IsAutopay = false,
-                    IsDebtPayment = true
+                    ExpenseId = expense.Id,
+                    Name = expense.Name,
+                    CategoryId = expense.CategoryId,
+                    CategoryName = expense.Category?.Name ?? "Unknown",
+                    Amount = expense.Amount,
+                    DueDay = expense.DueDay,
+                    DueDate = dueDate,
+                    IsAutopay = expense.IsAutopay
                 });
             }
         }
 
-        // Assign recurring transactions to paychecks
+        var activeDebts = debts.Where(d => !IsDeferred(d, today)).ToList();
+        foreach (var debt in activeDebts)
+        {
+            foreach (var (y, m) in coveredMonths)
+            {
+                var mEnd = new DateTime(y, m, DateTime.DaysInMonth(y, m));
+                var dueDates = GetDebtDueDatesInMonth(debt, y, m, mEnd);
+                var perPayment = dueDates.Count > 1 && debt.PerPaymentAmount > 0
+                    ? debt.PerPaymentAmount
+                    : debt.MinimumPayment;
+
+                foreach (var dueDate in dueDates)
+                {
+                    if (dueDate < windowStart || dueDate > windowEnd) continue;
+
+                    var assigned = FindOwningPaycheck(breakdowns, dueDate);
+                    assigned.Expenses.Add(new PaycheckExpenseDto
+                    {
+                        ExpenseId = debt.Id,
+                        Name = debt.Name,
+                        CategoryId = 0,
+                        CategoryName = "Debt Payment",
+                        Amount = perPayment,
+                        DueDay = dueDate.Day,
+                        DueDate = dueDate,
+                        IsAutopay = false,
+                        IsDebtPayment = true
+                    });
+                }
+            }
+        }
+
         foreach (var rec in recurringInMonth)
         {
             var dueDay = rec.NextRunDate.Day;
-            var dueDate = new DateTime(year, month, Math.Min(dueDay, DateTime.DaysInMonth(year, month)));
-
-            var assigned = breakdowns
-                .Where(b => b.PayDate <= dueDate)
-                .OrderByDescending(b => b.PayDate)
-                .FirstOrDefault() ?? breakdowns.First();
-
-            assigned.Expenses.Add(new PaycheckExpenseDto
+            foreach (var (y, m) in coveredMonths)
             {
-                ExpenseId = rec.Id,
-                Name = rec.Description + " (Recurring)",
-                CategoryId = rec.CategoryId,
-                CategoryName = rec.Category?.Name ?? "Unknown",
-                Amount = rec.Amount,
-                DueDay = dueDay,
-                IsAutopay = true
-            });
+                var dueDate = new DateTime(y, m, Math.Min(dueDay, DateTime.DaysInMonth(y, m)));
+                if (dueDate < windowStart || dueDate > windowEnd) continue;
+
+                var assigned = FindOwningPaycheck(breakdowns, dueDate);
+                assigned.Expenses.Add(new PaycheckExpenseDto
+                {
+                    ExpenseId = rec.Id,
+                    Name = rec.Description + " (Recurring)",
+                    CategoryId = rec.CategoryId,
+                    CategoryName = rec.Category?.Name ?? "Unknown",
+                    Amount = rec.Amount,
+                    DueDay = dueDay,
+                    DueDate = dueDate,
+                    IsAutopay = true
+                });
+            }
         }
 
-        // Split variable budgets evenly across paychecks
+        var inMonthBreakdowns = breakdowns.Where(b => !b.IsPriorMonth).ToList();
         foreach (var expense in variableExpenses)
         {
-            var perCheck = Math.Round(expense.Amount / payDates.Count, 2);
-            foreach (var breakdown in breakdowns)
+            var perCheck = inMonthBreakdowns.Count > 0
+                ? Math.Round(expense.Amount / inMonthBreakdowns.Count, 2)
+                : expense.Amount;
+            foreach (var breakdown in inMonthBreakdowns)
             {
                 breakdown.Expenses.Add(new PaycheckExpenseDto
                 {
@@ -116,19 +119,27 @@ public class BudgetPlanService : IBudgetPlanService
                     CategoryName = expense.Category?.Name ?? "Unknown",
                     Amount = perCheck,
                     DueDay = null,
+                    DueDate = null,
                     IsAutopay = false
                 });
             }
         }
 
-        // Calculate totals per paycheck
         foreach (var breakdown in breakdowns)
         {
+            breakdown.Expenses = breakdown.Expenses.OrderBy(e => e.DueDate ?? DateTime.MaxValue).ToList();
             breakdown.TotalExpenses = breakdown.Expenses.Sum(e => e.Amount);
             breakdown.Leftover = breakdown.GrossPay - breakdown.TotalExpenses;
+            breakdown.AbsLeftover = Math.Abs(breakdown.Leftover);
+            breakdown.IsOver = breakdown.Leftover < 0;
+            breakdown.SpendPercent = breakdown.GrossPay > 0
+                ? Math.Round(Math.Min(breakdown.TotalExpenses / breakdown.GrossPay * 100, 100), 1)
+                : 0;
         }
 
-        // Monthly overview — compute actual payment totals per debt using due dates
+        var inMonthCount = inMonthBreakdowns.Count;
+        var payPerCheck = profile.NetPayPerCheck;
+
         var debtActualTotals = new Dictionary<int, decimal>();
         foreach (var debt in activeDebts)
         {
@@ -143,7 +154,7 @@ public class BudgetPlanService : IBudgetPlanService
         var totalVariable = variableExpenses.Sum(e => e.Amount);
         var totalDebt = debtActualTotals.Values.Sum();
         var totalRecurring = recurringInMonth.Sum(r => r.Amount);
-        var totalIncome = payPerCheck * payDates.Count;
+        var totalIncome = payPerCheck * inMonthCount;
         var totalExpenses = totalFixed + totalVariable + totalDebt + totalRecurring;
 
         var byCategory = expenses
@@ -160,10 +171,9 @@ public class BudgetPlanService : IBudgetPlanService
             .ThenByDescending(c => c.Amount)
             .ToList();
 
-        // Add each active debt payment to the category breakdown
         foreach (var debt in activeDebts)
         {
-            var isLoan = debt.DebtType == Models.Enums.DebtType.PersonalLoan;
+            var isLoan = debt.DebtType == DebtType.PersonalLoan;
             byCategory.Add(new CategorySummaryDto
             {
                 CategoryId = 0,
@@ -178,7 +188,6 @@ public class BudgetPlanService : IBudgetPlanService
             });
         }
 
-        // Add recurring to category breakdown, grouped by category
         var recurringByCategory = recurringInMonth
             .GroupBy(r => r.CategoryId)
             .Select(g => new CategorySummaryDto
@@ -191,6 +200,10 @@ public class BudgetPlanService : IBudgetPlanService
                 IsRecurring = true
             });
         byCategory.AddRange(recurringByCategory);
+
+        var summaryIncome = breakdowns.Sum(b => b.GrossPay);
+        var summaryAllocated = breakdowns.Sum(b => b.TotalExpenses);
+        var summaryNet = summaryIncome - summaryAllocated;
 
         return new BudgetPlanDto
         {
@@ -205,11 +218,144 @@ public class BudgetPlanService : IBudgetPlanService
                 Surplus = totalIncome - totalExpenses,
                 AbsSurplus = Math.Abs(totalIncome - totalExpenses),
                 IsDeficit = totalIncome < totalExpenses,
-                PaychecksThisMonth = payDates.Count,
+                PaychecksThisMonth = inMonthCount,
                 ByCategory = byCategory
             },
-            PaycheckBreakdowns = breakdowns
+            PaycheckBreakdowns = breakdowns,
+            PaycheckSummary = new PaycheckSummaryDto
+            {
+                TotalIncome = summaryIncome,
+                TotalAllocated = summaryAllocated,
+                NetLeftover = summaryNet,
+                AbsNetLeftover = Math.Abs(summaryNet),
+                IsNetOver = summaryNet < 0,
+                PaycheckCount = breakdowns.Count,
+                OverCount = breakdowns.Count(b => b.IsOver)
+            }
         };
+    }
+
+    private static List<(int Year, int Month)> GetCoveredMonths(DateTime windowStart, DateTime windowEnd)
+    {
+        var months = new List<(int, int)>();
+        var current = new DateTime(windowStart.Year, windowStart.Month, 1);
+        var end = new DateTime(windowEnd.Year, windowEnd.Month, 1);
+        while (current <= end)
+        {
+            months.Add((current.Year, current.Month));
+            current = current.AddMonths(1);
+        }
+        return months;
+    }
+
+    private static PaycheckBreakdownDto FindOwningPaycheck(List<PaycheckBreakdownDto> breakdowns, DateTime dueDate)
+    {
+        var due = dueDate.Date;
+        return breakdowns.FirstOrDefault(b => due >= b.WindowStart.Date && due <= b.WindowEnd.Date)
+            ?? breakdowns.Where(b => b.WindowStart.Date > due).OrderBy(b => b.WindowStart).FirstOrDefault()
+            ?? breakdowns.Last();
+    }
+
+    private static List<PaycheckBreakdownDto> GetPaycheckWindowsForMonth(DateTime anchor, PaymentFrequency freq, decimal payPerCheck, int year, int month)
+    {
+        var monthStart = new DateTime(year, month, 1);
+        var monthEnd = new DateTime(year, month, DateTime.DaysInMonth(year, month));
+
+        if (freq == PaymentFrequency.Monthly)
+        {
+            var day = Math.Min(anchor.Day, DateTime.DaysInMonth(year, month));
+            var payDate = new DateTime(year, month, day);
+            return new List<PaycheckBreakdownDto>
+            {
+                new()
+                {
+                    PayDate = payDate,
+                    WindowStart = payDate,
+                    WindowEnd = monthEnd,
+                    IsPriorMonth = false,
+                    GrossPay = payPerCheck,
+                    Expenses = new List<PaycheckExpenseDto>()
+                }
+            };
+        }
+
+        var interval = freq == PaymentFrequency.Biweekly ? 14 : 7;
+
+        var allPayDates = new List<DateTime>();
+        var rangeStart = monthStart.AddDays(-interval);
+        var rangeEnd = monthEnd.AddDays(interval);
+
+        var current = anchor.Date;
+        while (current <= rangeEnd)
+        {
+            if (current >= rangeStart)
+                allPayDates.Add(current);
+            current = current.AddDays(interval);
+        }
+        current = anchor.Date.AddDays(-interval);
+        while (current >= rangeStart)
+        {
+            allPayDates.Add(current);
+            current = current.AddDays(-interval);
+        }
+
+        allPayDates = allPayDates.Distinct().OrderBy(d => d).ToList();
+
+        if (allPayDates.Count == 0)
+        {
+            return new List<PaycheckBreakdownDto>
+            {
+                new()
+                {
+                    PayDate = monthStart,
+                    WindowStart = monthStart,
+                    WindowEnd = monthEnd,
+                    IsPriorMonth = false,
+                    GrossPay = payPerCheck,
+                    Expenses = new List<PaycheckExpenseDto>()
+                }
+            };
+        }
+
+        var windows = new List<PaycheckBreakdownDto>();
+        for (int i = 0; i < allPayDates.Count; i++)
+        {
+            var windowEnd = i < allPayDates.Count - 1
+                ? allPayDates[i + 1].AddDays(-1)
+                : allPayDates[i].AddDays(interval - 1);
+
+            windows.Add(new PaycheckBreakdownDto
+            {
+                PayDate = allPayDates[i],
+                WindowStart = allPayDates[i],
+                WindowEnd = windowEnd,
+                IsPriorMonth = allPayDates[i] < monthStart,
+                GrossPay = payPerCheck,
+                Expenses = new List<PaycheckExpenseDto>()
+            });
+        }
+
+        var result = windows
+            .Where(w => w.WindowEnd >= monthStart && w.WindowStart <= monthEnd)
+            .ToList();
+
+        if (result.Count == 0)
+        {
+            return new List<PaycheckBreakdownDto>
+            {
+                new()
+                {
+                    PayDate = monthStart,
+                    WindowStart = monthStart,
+                    WindowEnd = monthEnd,
+                    IsPriorMonth = false,
+                    GrossPay = payPerCheck,
+                    Expenses = new List<PaycheckExpenseDto>()
+                }
+            };
+        }
+
+        return result;
     }
 
     private static List<DateTime> GetDebtDueDatesInMonth(DebtSnapshotDto debt, int year, int month, DateTime monthEnd)
@@ -246,85 +392,10 @@ public class BudgetPlanService : IBudgetPlanService
         return dates;
     }
 
-    private static bool WillRunInMonth(RecurringTransaction r, int year, int month)
+    private static bool IsDeferred(DebtSnapshotDto debt, DateTime today)
     {
-        var monthStart = new DateTime(year, month, 1);
-        var monthEnd = monthStart.AddMonths(1).AddDays(-1);
-
-        if (r.EndDate.HasValue && r.EndDate.Value < monthStart)
-            return false;
-
-        // For monthly: check if its run date day falls in this month
-        if (r.Frequency == RecurrenceFrequency.Monthly)
-            return r.NextRunDate <= monthEnd;
-
-        // For daily/weekly/biweekly: check if any occurrence falls in this month
-        var current = r.NextRunDate;
-        // Walk backward to find the first occurrence on or before monthEnd
-        while (current > monthEnd)
-        {
-            current = r.Frequency switch
-            {
-                RecurrenceFrequency.Daily => current.AddDays(-1),
-                RecurrenceFrequency.Weekly => current.AddDays(-7),
-                RecurrenceFrequency.Biweekly => current.AddDays(-14),
-                _ => current.AddMonths(-1)
-            };
-        }
-        // Walk forward to see if any lands in the month
-        while (current <= monthEnd)
-        {
-            if (current >= monthStart)
-                return true;
-            current = r.Frequency switch
-            {
-                RecurrenceFrequency.Daily => current.AddDays(1),
-                RecurrenceFrequency.Weekly => current.AddDays(7),
-                RecurrenceFrequency.Biweekly => current.AddDays(14),
-                _ => current.AddMonths(1)
-            };
-        }
-        return false;
-    }
-
-    private List<DateTime> GetPayDatesInMonth(DateTime anchor, PaymentFrequency freq, int year, int month)
-    {
-        if (freq == PaymentFrequency.Monthly)
-        {
-            var day = Math.Min(anchor.Day, DateTime.DaysInMonth(year, month));
-            return new List<DateTime> { new DateTime(year, month, day) };
-        }
-
-        var interval = freq == PaymentFrequency.Biweekly ? 14 : 7;
-        var monthStart = new DateTime(year, month, 1);
-        var monthEnd = new DateTime(year, month, DateTime.DaysInMonth(year, month));
-        var results = new List<DateTime>();
-
-        // Walk forward from anchor
-        var current = anchor.Date;
-        while (current <= monthEnd)
-        {
-            if (current >= monthStart)
-                results.Add(current);
-            current = current.AddDays(interval);
-        }
-
-        // Walk backward from anchor
-        current = anchor.Date.AddDays(-interval);
-        while (current >= monthStart)
-        {
-            results.Add(current);
-            current = current.AddDays(-interval);
-        }
-
-        return results.Distinct().OrderBy(d => d).ToList();
-    }
-
-    private static bool IsDeferred(DebtSnapshotDto debt)
-    {
-        if (debt.DebtType != Models.Enums.DebtType.PersonalLoan) return false;
+        if (debt.DebtType != DebtType.PersonalLoan) return false;
         if (!debt.NextPaymentDate.HasValue || debt.Balance <= 0) return false;
-        var today = DateTime.UtcNow.Date;
         var daysAway = (debt.NextPaymentDate.Value.Date - today).TotalDays;
         var freq = debt.PaymentFrequency ?? "Monthly";
         var cycleDays = freq == "Weekly" ? 7 : freq == "Biweekly" ? 14 : 31;

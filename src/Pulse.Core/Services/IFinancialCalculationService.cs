@@ -12,7 +12,8 @@ public interface IFinancialCalculationService
         int remainingMonths,
         decimal paymentAmount,
         PaymentFrequency frequency,
-        int dueDay = 0);
+        int dueDay = 0,
+        DateTime? today = null);
 
     AmortizationScheduleDto GenerateFullAmortizationSchedule(
         decimal originalAmount,
@@ -21,7 +22,8 @@ public interface IFinancialCalculationService
         decimal paymentAmount,
         PaymentFrequency frequency,
         DateTime loanStartDate,
-        int dueDay);
+        int dueDay,
+        DateTime? today = null);
 
     decimal CalculateMonthlyPayment(decimal principal, decimal annualRate, int months);
 
@@ -34,7 +36,8 @@ public interface IFinancialCalculationService
         decimal aprPercent,
         decimal monthlyPayment,
         decimal? promoAprPercent,
-        DateTime? promoEndDate);
+        DateTime? promoEndDate,
+        DateTime? today = null);
 
     decimal CalculateTotalInterest(
         decimal balance,

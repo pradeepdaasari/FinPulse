@@ -18,23 +18,47 @@ import { DebtFreeCountdown } from '../../../core/models/dashboard.model';
       <div class="countdown-card">
         <div class="card-title-row">
           <span class="title-with-icon"><mat-icon class="card-title-icon">timer</mat-icon> Debt-Free Countdown</span>
-          <span class="overall-date">
-            <mat-icon>flag</mat-icon>
-            {{ countdown()!.overallDebtFreeDate | localDate:'MMM yyyy' }}
-            ({{ countdown()!.overallRemainingMonths }} months)
-          </span>
+          @if (countdown()!.hasNeverPayoffDebts) {
+            <span class="overall-date warning">
+              <mat-icon>warning</mat-icon>
+              Some debts need higher payments
+            </span>
+          } @else {
+            <span class="overall-date">
+              <mat-icon>flag</mat-icon>
+              {{ countdown()!.overallDebtFreeDate | localDate:'MMM yyyy' }}
+              ({{ countdown()!.overallRemainingMonths }} months)
+            </span>
+          }
         </div>
         <div class="projections">
           @for (p of countdown()!.projections; track p.debtName) {
-            <div class="projection-row">
+            <div class="projection-row" [class.never-row]="p.isNeverPayoff">
               <div class="projection-info">
                 <span class="debt-name">{{ p.debtName }}</span>
-                <span class="debt-meta">{{ p.debtType }} &middot; {{ p.currentBalance | currency }} &middot; {{ p.remainingMonths }} mo</span>
+                <span class="debt-meta">{{ p.debtType }} &middot; {{ p.currentBalance | currency }}
+                  @if (!p.isNeverPayoff) {
+                    &middot; {{ p.remainingMonths }} mo
+                  }
+                </span>
               </div>
               <div class="projection-bar">
-                <mat-progress-bar mode="determinate" [value]="p.progressPercent" [color]="getBarColor(p.remainingMonths)"></mat-progress-bar>
+                @if (p.isNeverPayoff) {
+                  <div class="never-label">
+                    <mat-icon>warning_amber</mat-icon>
+                    Min. payment won't pay off
+                  </div>
+                } @else {
+                  <mat-progress-bar mode="determinate" [value]="p.progressPercent" [color]="getBarColor(p.remainingMonths)"></mat-progress-bar>
+                }
               </div>
-              <span class="payoff-date">{{ p.projectedPayoffDate | localDate:'MMM yyyy' }}</span>
+              <span class="payoff-date">
+                @if (p.isNeverPayoff) {
+                  <span class="never-date">Increase payment</span>
+                } @else {
+                  {{ p.projectedPayoffDate | localDate:'MMM yyyy' }}
+                }
+              </span>
             </div>
           }
         </div>
@@ -56,6 +80,7 @@ import { DebtFreeCountdown } from '../../../core/models/dashboard.model';
       justify-content: space-between;
       align-items: center;
       width: 100%;
+      margin-bottom: 16px;
     }
     .overall-date {
       display: inline-flex;
@@ -68,6 +93,11 @@ import { DebtFreeCountdown } from '../../../core/models/dashboard.model';
       padding: 4px 10px;
       border-radius: 16px;
     }
+    .overall-date.warning {
+      color: #E65100;
+      background: #FFF3E0;
+    }
+    .overall-date.warning mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .title-with-icon { display: flex; align-items: center; }
     .card-title-icon { font-size: 20px; width: 20px; height: 20px; margin-right: 8px; color: #FF3B30; }
     .overall-date mat-icon { font-size: 14px; width: 14px; height: 14px; }
@@ -78,11 +108,22 @@ import { DebtFreeCountdown } from '../../../core/models/dashboard.model';
       align-items: center;
       gap: 16px;
     }
+    .projection-row.never-row { opacity: 0.85; }
     .projection-info { display: flex; flex-direction: column; }
     .debt-name { font-weight: 600; font-size: 0.9375rem; }
     .debt-meta { font-size: 0.8125rem; color: var(--color-text-muted); }
     .projection-bar { min-width: 120px; }
     .payoff-date { font-size: 0.875rem; font-weight: 500; color: var(--color-text-secondary); white-space: nowrap; }
+    .never-label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: #E65100;
+    }
+    .never-label mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .never-date { font-size: 0.8125rem; color: #E65100; font-weight: 500; }
     @media (max-width: 599px) {
       .card-title-row { flex-direction: column; align-items: flex-start; gap: 6px; }
       .overall-date { font-size: 0.75rem; }

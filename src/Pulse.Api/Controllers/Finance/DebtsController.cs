@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Pulse.Core.Data;
@@ -16,12 +15,10 @@ namespace Pulse.Api.Controllers;
 public class DebtsController : ControllerBase
 {
     private readonly PulseDbContext _db;
-    private readonly UserManager<ApplicationUser> _userManager;
 
-    public DebtsController(PulseDbContext db, UserManager<ApplicationUser> userManager)
+    public DebtsController(PulseDbContext db)
     {
         _db = db;
-        _userManager = userManager;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -29,8 +26,8 @@ public class DebtsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<DebtItemDto>>> GetAll()
     {
-        var user = await _userManager.GetUserAsync(User);
-        var userToday = GetUserToday(user?.PreferredTimezone);
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var userToday = TimeZoneHelper.UserToday(tz);
 
         var loans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
         var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
@@ -83,19 +80,6 @@ public class DebtsController : ControllerBase
         return Ok(debts.OrderBy(d => d.Name).ToList());
     }
 
-    private static DateTime GetUserToday(string? timezone)
-    {
-        if (!string.IsNullOrEmpty(timezone))
-        {
-            try
-            {
-                var tz = TimeZoneInfo.FindSystemTimeZoneById(timezone);
-                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
-            }
-            catch { }
-        }
-        return DateTime.Today;
-    }
 
     private static DateTime? AdvanceNextDueDate(DateTime? anchor, PaymentFrequency frequency, int dueDay, DateTime today)
     {

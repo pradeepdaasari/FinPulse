@@ -15,9 +15,9 @@ public class SnapshotService : ISnapshotService
         _db = db;
     }
 
-    public async Task EnsureCurrentMonthSnapshotAsync(string userId)
+    public async Task EnsureCurrentMonthSnapshotAsync(string userId, DateTime userNow)
     {
-        var now = DateTime.UtcNow;
+        var now = userNow;
         var exists = await _db.MonthlySnapshots
             .AnyAsync(s => s.Year == now.Year && s.Month == now.Month && s.UserId == userId);
 
@@ -46,9 +46,9 @@ public class SnapshotService : ISnapshotService
         await _db.SaveChangesAsync();
     }
 
-    public async Task<TrendDataDto> GetTrendsAsync(string userId, int months = 12)
+    public async Task<TrendDataDto> GetTrendsAsync(string userId, DateTime userNow, int months = 12)
     {
-        await EnsureCurrentMonthSnapshotAsync(userId);
+        await EnsureCurrentMonthSnapshotAsync(userId, userNow);
 
         var snapshots = await _db.MonthlySnapshots
             .Where(s => s.UserId == userId)
