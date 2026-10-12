@@ -97,6 +97,7 @@ export interface PaycheckExpense {
   dueDay: number | null;
   dueDate: string | null;
   isAutopay: boolean;
+  isFixed: boolean;
   isDebtPayment: boolean;
   isPaid: boolean;
   status: string;

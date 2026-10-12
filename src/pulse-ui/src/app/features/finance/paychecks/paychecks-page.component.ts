@@ -120,13 +120,11 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
           </div>
           @if (pc.expenses.length > 0) {
             <div class="paycheck-expenses">
-              @for (e of pc.expenses; track e.expenseId; let odd = $odd) {
+              @for (e of getFixedExpenses(pc); track e.expenseId; let odd = $odd) {
                 <div class="expense-row" [class.alt-row]="odd" [class.row-paid]="e.isPaid" [class.row-overdue]="e.status === 'overdue'">
-                  @if (e.dueDate) {
-                    <mat-icon class="status-icon" [class.si-paid]="e.status === 'paid'" [class.si-overdue]="e.status === 'overdue'" [class.si-due-today]="e.status === 'due-today'" [class.si-upcoming]="e.status === 'upcoming' || e.status === 'due-soon'">
-                      {{ e.status === 'paid' ? 'check_circle' : e.status === 'overdue' ? 'error' : e.status === 'due-today' ? 'schedule' : 'radio_button_unchecked' }}
-                    </mat-icon>
-                  }
+                  <mat-icon class="status-icon" [class.si-paid]="e.status === 'paid'" [class.si-overdue]="e.status === 'overdue'" [class.si-due-today]="e.status === 'due-today'" [class.si-upcoming]="e.status === 'upcoming' || e.status === 'due-soon'">
+                    {{ e.status === 'paid' ? 'check_circle' : e.status === 'overdue' ? 'error' : e.status === 'due-today' ? 'schedule' : 'radio_button_unchecked' }}
+                  </mat-icon>
                   <div class="expense-name">
                     {{ e.name }}
                     @if (e.isDebtPayment) { <mat-icon class="inline-badge debt-badge" matTooltip="Debt Payment">credit_score</mat-icon> }
@@ -135,6 +133,17 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                   <span class="expense-status-label" [class.sl-paid]="e.status === 'paid'" [class.sl-overdue]="e.status === 'overdue'" [class.sl-due-today]="e.status === 'due-today'">{{ e.statusLabel }}</span>
                   <span class="expense-amount" [class.amount-paid]="e.isPaid">{{ e.amount | currency }}</span>
                 </div>
+              }
+              @if (getVariableExpenses(pc).length > 0) {
+                <div class="variable-divider">
+                  <span>Flexible Budgets</span>
+                </div>
+                @for (e of getVariableExpenses(pc); track e.expenseId; let odd = $odd) {
+                  <div class="expense-row variable-row" [class.alt-row]="odd">
+                    <div class="expense-name">{{ e.name }}</div>
+                    <span class="expense-amount variable-amount">{{ e.amount | currency }}</span>
+                  </div>
+                }
               }
             </div>
           } @else {
@@ -317,6 +326,20 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .sl-paid { color: var(--color-success-text); font-weight: var(--weight-semibold); }
     .sl-overdue { color: var(--color-danger-text); font-weight: var(--weight-semibold); }
     .sl-due-today { color: var(--color-stat-amber); font-weight: var(--weight-semibold); }
+    .variable-divider {
+      display: flex; align-items: center; padding: 6px 16px 2px;
+      border-top: 1px dashed var(--color-border);
+      margin-top: 2px;
+    }
+    .variable-divider span {
+      font-size: 10px; font-weight: 500; text-transform: uppercase;
+      letter-spacing: 0.04em; color: var(--color-text-muted); opacity: 0.5;
+    }
+    .variable-row {
+      opacity: 0.65;
+    }
+    .variable-row .expense-name { padding-left: 24px; }
+    .variable-amount { color: var(--color-text-muted); }
     .paycheck-empty {
       display: flex; align-items: center; justify-content: center; gap: 8px;
       padding: 24px 16px; color: var(--color-text-muted); font-size: var(--text-sm);
@@ -428,5 +451,13 @@ export class PaychecksPageComponent implements OnInit {
     start.setHours(0, 0, 0, 0);
     end.setHours(23, 59, 59, 999);
     return now >= start && now <= end;
+  }
+
+  getFixedExpenses(pc: PaycheckBreakdown) {
+    return pc.expenses.filter(e => e.isFixed);
+  }
+
+  getVariableExpenses(pc: PaycheckBreakdown) {
+    return pc.expenses.filter(e => !e.isFixed);
   }
 }

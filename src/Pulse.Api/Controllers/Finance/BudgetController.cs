@@ -170,7 +170,7 @@ public class BudgetController : ControllerBase
         {
             foreach (var exp in bd.Expenses)
             {
-                if (exp.DueDate == null) continue;
+                if (exp.DueDate == null || !exp.IsFixed) continue;
 
                 if (exp.IsDebtPayment)
                 {
@@ -218,7 +218,7 @@ public class BudgetController : ControllerBase
                 }
             }
 
-            var billExpenses = bd.Expenses.Where(e => e.DueDate != null).ToList();
+            var billExpenses = bd.Expenses.Where(e => e.DueDate != null && e.IsFixed).ToList();
             bd.TotalBillCount = billExpenses.Count;
             bd.PaidCount = billExpenses.Count(e => e.IsPaid);
         }

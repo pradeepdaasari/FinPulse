@@ -89,6 +89,7 @@ public class PaycheckExpenseDto
     public int? DueDay { get; set; }
     public DateTime? DueDate { get; set; }
     public bool IsAutopay { get; set; }
+    public bool IsFixed { get; set; }
     public bool IsDebtPayment { get; set; }
     public bool IsPaid { get; set; }
     public string Status { get; set; } = "upcoming";

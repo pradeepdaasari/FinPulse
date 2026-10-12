@@ -17,8 +17,8 @@ public class BudgetPlanService : IBudgetPlanService
             profile.NetPayPerCheck,
             year, month);
 
-        var fixedExpenses = expenses.Where(e => e.IsFixed).ToList();
-        var variableExpenses = expenses.Where(e => !e.IsFixed).ToList();
+        var fixedExpenses = expenses.Where(e => e.Category?.IsFixed ?? e.IsFixed).ToList();
+        var variableExpenses = expenses.Where(e => !(e.Category?.IsFixed ?? e.IsFixed)).ToList();
         var recurringInMonth = recurring.Where(r => r.IsActive).ToList();
 
         var windowStart = breakdowns.Min(b => b.WindowStart.Date);
@@ -43,7 +43,8 @@ public class BudgetPlanService : IBudgetPlanService
                     Amount = expense.Amount,
                     DueDay = expense.DueDay,
                     DueDate = dueDate,
-                    IsAutopay = expense.IsAutopay
+                    IsAutopay = expense.IsAutopay,
+                    IsFixed = expense.Category?.IsFixed ?? expense.IsFixed
                 });
             }
         }
@@ -74,7 +75,8 @@ public class BudgetPlanService : IBudgetPlanService
                         DueDay = dueDate.Day,
                         DueDate = dueDate,
                         IsAutopay = false,
-                        IsDebtPayment = true
+                        IsDebtPayment = true,
+                        IsFixed = true
                     });
                 }
             }
@@ -98,7 +100,8 @@ public class BudgetPlanService : IBudgetPlanService
                     Amount = rec.Amount,
                     DueDay = dueDay,
                     DueDate = dueDate,
-                    IsAutopay = true
+                    IsAutopay = true,
+                    IsFixed = true
                 });
             }
         }
