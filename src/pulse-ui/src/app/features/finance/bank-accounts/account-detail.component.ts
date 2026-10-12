@@ -646,8 +646,8 @@ export class AccountDetailComponent implements OnInit {
 
   private loadTransactions(accountId: number): void {
     forkJoin({
-      fromAccount: this.expenseService.getExpenses({ fundingSourceId: accountId, allTime: true }),
-      toAccount: this.expenseService.getExpenses({ toFundingSourceId: accountId, allTime: true })
+      fromAccount: this.expenseService.getExpenses({ fundingSourceId: accountId, fundingSourceType: 'BankAccount', allTime: true }),
+      toAccount: this.expenseService.getExpenses({ toFundingSourceId: accountId, toFundingSourceType: 'BankAccount', allTime: true })
     }).subscribe({
       next: ({ fromAccount, toAccount }) => {
         const seenIds = new Set(fromAccount.map(t => t.id));

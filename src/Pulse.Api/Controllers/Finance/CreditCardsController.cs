@@ -33,9 +33,11 @@ public class CreditCardsController : ControllerBase
     {
         var cards = await _db.CreditCards.Where(c => c.UserId == UserId).OrderBy(c => c.CardName).ToListAsync();
 
+        var summaries = new Dictionary<int, CardSummary>();
         foreach (var card in cards)
         {
             var summary = await ComputeCardSummary(card);
+            summaries[card.Id] = summary;
             if (summary.BalanceChanged)
             {
                 try { await _db.SaveChangesAsync(); }
@@ -51,7 +53,9 @@ public class CreditCardsController : ControllerBase
             c.CreatedAt, c.UpdatedAt,
             Utilization = c.CreditLimit > 0
                 ? Math.Min(100, Math.Round((double)c.CurrentBalance / (double)c.CreditLimit * 100, 1))
-                : 0
+                : 0,
+            summaries[c.Id].RemainingMinimumPayment,
+            summaries[c.Id].PostStatementPayments
         });
         return Ok(result);
     }

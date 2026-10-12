@@ -123,7 +123,11 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
                   </span>
                 </td>
                 <td>
-                  <span class="value-monthly">{{ card.minimumPayment | currency }}</span>
+                  @if ((card.remainingMinimumPayment ?? card.minimumPayment) <= 0 && (card.postStatementPayments ?? 0) > 0) {
+                    <span class="paid-label">Paid</span>
+                  } @else {
+                    <span class="value-monthly">{{ card.remainingMinimumPayment ?? card.minimumPayment | currency }}</span>
+                  }
                 </td>
                 <td>
                   <span class="due-badge">{{ card.dueDay }}</span>
@@ -192,7 +196,11 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
               </span>
               <span class="cc-detail-item">
                 <span class="detail-label">Min Payment</span>
-                <span class="detail-value">{{ card.minimumPayment | currency }}</span>
+                @if ((card.remainingMinimumPayment ?? card.minimumPayment) <= 0 && (card.postStatementPayments ?? 0) > 0) {
+                  <span class="paid-label">Paid</span>
+                } @else {
+                  <span class="detail-value">{{ card.remainingMinimumPayment ?? card.minimumPayment | currency }}</span>
+                }
               </span>
             </div>
             <div class="cc-actions" (click)="$event.stopPropagation()">
@@ -291,6 +299,7 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
     }
     .value-balance { font-weight: var(--weight-bold); color: var(--color-text); }
     .value-monthly { font-weight: var(--weight-semibold); color: var(--color-primary); }
+    .paid-label { font-weight: var(--weight-semibold); color: var(--color-success-text); font-size: var(--text-sm); }
     .no-promo { color: var(--color-text-muted); }
     .promo-date { color: var(--color-success); font-weight: var(--weight-medium); font-size: var(--text-sm); }
     .due-badge {

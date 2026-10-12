@@ -80,6 +80,7 @@ export interface ExpenseFilter {
   fundingSourceId?: number;
   fundingSourceType?: string;
   toFundingSourceId?: number;
+  toFundingSourceType?: string;
   allTime?: boolean;
   dateFrom?: string;
   dateTo?: string;

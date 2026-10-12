@@ -30,7 +30,7 @@ public class ExpenseController : ControllerBase
         [FromQuery] int? year, [FromQuery] int? month,
         [FromQuery] string? search, [FromQuery] int? categoryId,
         [FromQuery] int? transactionType, [FromQuery] int? fundingSourceId,
-        [FromQuery] string? fundingSourceType, [FromQuery] int? toFundingSourceId,
+        [FromQuery] string? fundingSourceType, [FromQuery] int? toFundingSourceId, [FromQuery] string? toFundingSourceType,
         [FromQuery] DateTime? dateFrom, [FromQuery] DateTime? dateTo,
         [FromQuery] decimal? minAmount, [FromQuery] decimal? maxAmount,
         [FromQuery] string? tag, [FromQuery] string? categoryIds,
@@ -122,8 +122,10 @@ public class ExpenseController : ControllerBase
         else if (fundingSourceType == "CreditCard")
             paymentQuery = paymentQuery.Where(p => false);
 
-        if (toFundingSourceId.HasValue)
+        if (toFundingSourceId.HasValue && toFundingSourceType != "BankAccount")
             paymentQuery = paymentQuery.Where(p => p.DebtId == toFundingSourceId.Value);
+        else if (toFundingSourceId.HasValue && toFundingSourceType == "BankAccount")
+            paymentQuery = paymentQuery.Where(p => false);
 
         var payments = skipPayments
             ? new List<Pulse.Core.Models.PaymentHistory>()
