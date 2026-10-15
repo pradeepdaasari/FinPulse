@@ -66,6 +66,7 @@ import { MonthlyPaymentRow, MonthlyPaymentsData } from '../../../core/models/das
             <div class="overdue-banner">
               <mat-icon>warning</mat-icon>
               <span>{{ data()!.overdueCount }} payment{{ data()!.overdueCount > 1 ? 's' : '' }} overdue</span>
+              <span class="overdue-amount">{{ overdueTotal() | currency:'USD':'symbol':'1.0-0' }}</span>
             </div>
           }
         </div>
@@ -89,80 +90,108 @@ import { MonthlyPaymentRow, MonthlyPaymentsData } from '../../../core/models/das
           </button>
         </div>
 
-        <!-- Payment rows -->
-        <div class="rows-container">
-          @for (row of filteredRows(); track row.id + row.kind + row.dueDate) {
-            <div class="pay-row" [class]="'status-' + row.status" (click)="recordPayment(row)">
-              <div class="pay-icon" [style.background]="row.iconColor">
-                <mat-icon>{{ row.icon }}</mat-icon>
-              </div>
-              <div class="pay-main">
-                <div class="pay-top-line">
-                  <span class="pay-name">
-                    {{ row.name }}
-                    @if (row.isAutopay) {
-                      <mat-icon class="autopay-badge" matTooltip="Autopay enabled">autorenew</mat-icon>
-                    }
-                  </span>
-                  <span class="pay-amount" [class.paid-through]="row.status === 'paid'">{{ row.amount | currency }}</span>
-                </div>
-                <div class="pay-meta-line">
-                  <span class="pay-due">
-                    @if (row.status === 'overdue') {
-                      <mat-icon class="meta-icon overdue">error</mat-icon>
-                    } @else if (row.status === 'paid') {
-                      <mat-icon class="meta-icon paid">check_circle</mat-icon>
-                    }
-                    {{ row.dueLabel }}
-                  </span>
-                  <div class="pay-pills">
-                    @if (row.kind === 'loan') {
-                      <span class="pill pill-loan">Loan</span>
-                    } @else if (row.kind === 'card') {
-                      <span class="pill pill-card">Card</span>
-                    } @else {
-                      <span class="pill pill-bill">Bill</span>
-                    }
-                    @if (row.minimumPayment !== null && row.minimumPayment > 0) {
-                      <span class="pill pill-min">Min {{ row.minimumPayment | currency:'USD':'symbol':'1.0-0' }}</span>
-                    }
-                    @if (row.apr !== null && row.apr! > 0) {
-                      <span class="pill pill-apr">{{ row.apr | number:'1.1-1' }}%</span>
-                    }
-                    @if (row.subType) {
-                      <span class="pill pill-type">{{ row.subType }}</span>
-                    }
-                  </div>
-                </div>
-                @if (row.balance !== null && row.balance !== undefined) {
-                  <div class="pay-balance-line">
-                    <span class="bal-label">Balance</span>
-                    <span class="bal-value">{{ row.balance | currency }}</span>
-                    @if (row.paidAmount > 0 && row.status !== 'paid') {
-                      <span class="bal-paid">{{ row.paidAmount | currency }} paid</span>
-                    }
-                  </div>
-                }
-              </div>
-              <div class="pay-status-col">
-                @if (row.status === 'paid') {
-                  <span class="status-badge s-paid"><mat-icon>check</mat-icon></span>
-                } @else {
-                  <button class="record-btn" (click)="recordPayment(row); $event.stopPropagation()" matTooltip="Record payment">
-                    <mat-icon>payments</mat-icon>
-                  </button>
-                }
-              </div>
-            </div>
-          }
+        <!-- Due section -->
+        @if (dueRows().length > 0) {
+          <div class="section-header due-header">
+            <mat-icon>schedule</mat-icon>
+            <span>Due</span>
+            <span class="section-count">{{ dueRows().length }}</span>
+            <span class="section-total">{{ dueTotal() | currency:'USD':'symbol':'1.0-0' }}</span>
+          </div>
+          <div class="rows-container">
+            @for (row of dueRows(); track row.id + row.kind + row.dueDate) {
+              <ng-container *ngTemplateOutlet="payRow; context: { $implicit: row }"></ng-container>
+            }
+          </div>
+        }
 
-          @if (filteredRows().length === 0) {
+        <!-- Paid section -->
+        @if (paidRows().length > 0) {
+          <div class="section-header paid-header">
+            <mat-icon>check_circle</mat-icon>
+            <span>Paid</span>
+            <span class="section-count">{{ paidRows().length }}</span>
+          </div>
+          <div class="rows-container">
+            @for (row of paidRows(); track row.id + row.kind + row.dueDate) {
+              <ng-container *ngTemplateOutlet="payRow; context: { $implicit: row }"></ng-container>
+            }
+          </div>
+        }
+
+        @if (filteredRows().length === 0) {
+          <div class="rows-container">
             <div class="empty-row">
               <mat-icon>celebration</mat-icon>
               <span>{{ filter() === 'all' ? 'No payments due this month' : 'No matching payments' }}</span>
             </div>
-          }
-        </div>
+          </div>
+        }
+
+        <ng-template #payRow let-row>
+          <div class="pay-row" [class]="'status-' + row.status" (click)="recordPayment(row)">
+            <div class="pay-icon" [style.background]="row.iconColor">
+              <mat-icon>{{ row.icon }}</mat-icon>
+            </div>
+            <div class="pay-main">
+              <div class="pay-top-line">
+                <span class="pay-name">
+                  {{ row.name }}
+                  @if (row.isAutopay) {
+                    <mat-icon class="autopay-badge" matTooltip="Autopay enabled">autorenew</mat-icon>
+                  }
+                </span>
+                <span class="pay-amount" [class.paid-through]="row.status === 'paid'">{{ row.amount | currency }}</span>
+              </div>
+              <div class="pay-meta-line">
+                <span class="pay-due">
+                  @if (row.status === 'overdue') {
+                    <mat-icon class="meta-icon overdue">error</mat-icon>
+                  } @else if (row.status === 'paid') {
+                    <mat-icon class="meta-icon paid">check_circle</mat-icon>
+                  }
+                  {{ row.dueLabel }}
+                </span>
+                <div class="pay-pills">
+                  @if (row.kind === 'loan') {
+                    <span class="pill pill-loan">Loan</span>
+                  } @else if (row.kind === 'card') {
+                    <span class="pill pill-card">Card</span>
+                  } @else {
+                    <span class="pill pill-bill">Bill</span>
+                  }
+                  @if (row.minimumPayment !== null && row.minimumPayment > 0) {
+                    <span class="pill pill-min">Min {{ row.minimumPayment | currency:'USD':'symbol':'1.0-0' }}</span>
+                  }
+                  @if (row.apr !== null && row.apr! > 0) {
+                    <span class="pill pill-apr">{{ row.apr | number:'1.1-1' }}%</span>
+                  }
+                  @if (row.subType) {
+                    <span class="pill pill-type">{{ row.subType }}</span>
+                  }
+                </div>
+              </div>
+              @if (row.balance !== null && row.balance !== undefined) {
+                <div class="pay-balance-line">
+                  <span class="bal-label">Balance</span>
+                  <span class="bal-value">{{ row.balance | currency }}</span>
+                  @if (row.paidAmount > 0 && row.status !== 'paid') {
+                    <span class="bal-paid">{{ row.paidAmount | currency }} paid</span>
+                  }
+                </div>
+              }
+            </div>
+            <div class="pay-status-col">
+              @if (row.status === 'paid') {
+                <span class="status-badge s-paid"><mat-icon>check</mat-icon></span>
+              } @else {
+                <button class="record-btn" (click)="recordPayment(row); $event.stopPropagation()" matTooltip="Record payment">
+                  <mat-icon>payments</mat-icon>
+                </button>
+              }
+            </div>
+          </div>
+        </ng-template>
       }
     </div>
   `,
@@ -228,6 +257,7 @@ import { MonthlyPaymentRow, MonthlyPaymentsData } from '../../../core/models/das
       font-size: 0.75rem; font-weight: 600; color: var(--color-danger);
     }
     .overdue-banner mat-icon { font-size: 15px; width: 15px; height: 15px; }
+    .overdue-amount { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; }
 
     /* Filter chips */
     .filter-row {
@@ -251,6 +281,27 @@ import { MonthlyPaymentRow, MonthlyPaymentsData } from '../../../core/models/das
       background: rgba(0,0,0,0.08); padding: 1px 6px; border-radius: 10px;
     }
     .filter-chip.active .chip-count { background: rgba(255,255,255,0.25); }
+
+    /* Section headers */
+    .section-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 0 6px; font-size: 0.82rem; font-weight: 700;
+      color: var(--color-text);
+    }
+    .section-header mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .section-count {
+      font-size: 0.68rem; font-weight: 700;
+      background: rgba(0,0,0,0.06); padding: 1px 7px; border-radius: 10px;
+      color: var(--color-text-muted);
+    }
+    .section-total {
+      margin-left: auto; font-size: 0.82rem; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .due-header mat-icon { color: var(--color-warning); }
+    .due-header .section-total { color: var(--color-danger); }
+    .paid-header mat-icon { color: var(--color-success); }
+    .paid-header { color: var(--color-text-muted); }
 
     /* Payment rows */
     .rows-container {
@@ -395,6 +446,11 @@ export class MonthlyPaymentsComponent implements OnInit {
       default: return rows;
     }
   });
+
+  dueRows = computed(() => this.filteredRows().filter(r => r.status !== 'paid'));
+  dueTotal = computed(() => this.dueRows().reduce((sum, r) => sum + r.amount, 0));
+  overdueTotal = computed(() => this.allRows().filter(r => r.status === 'overdue').reduce((sum, r) => sum + r.amount, 0));
+  paidRows = computed(() => this.filteredRows().filter(r => r.status === 'paid'));
 
   ngOnInit(): void {
     this.loadData();
