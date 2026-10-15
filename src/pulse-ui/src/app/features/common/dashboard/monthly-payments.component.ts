@@ -73,19 +73,22 @@ import { MonthlyPaymentRow, MonthlyPaymentsData } from '../../../core/models/das
 
         <!-- Filter chips -->
         <div class="filter-row">
-          <button class="filter-chip" [class.active]="filter() === 'all'" (click)="filter.set('all')">
+          <button class="filter-chip" [class.active]="filters().size === 0" (click)="clearFilters()">
             All <span class="chip-count">{{ allRows().length }}</span>
           </button>
-          <button class="filter-chip" [class.active]="filter() === 'unpaid'" (click)="filter.set('unpaid')">
+          <button class="filter-chip" [class.active]="filters().has('unpaid')" (click)="toggleFilter('unpaid')">
             Unpaid <span class="chip-count">{{ unpaidCount() }}</span>
           </button>
-          <button class="filter-chip" [class.active]="filter() === 'loan'" (click)="filter.set('loan')">
+          <button class="filter-chip" [class.active]="filters().has('overdue')" (click)="toggleFilter('overdue')">
+            Overdue <span class="chip-count">{{ overdueCount() }}</span>
+          </button>
+          <button class="filter-chip" [class.active]="filters().has('loan')" (click)="toggleFilter('loan')">
             Loans <span class="chip-count">{{ loanCount() }}</span>
           </button>
-          <button class="filter-chip" [class.active]="filter() === 'card'" (click)="filter.set('card')">
+          <button class="filter-chip" [class.active]="filters().has('card')" (click)="toggleFilter('card')">
             Cards <span class="chip-count">{{ cardCount() }}</span>
           </button>
-          <button class="filter-chip" [class.active]="filter() === 'recurring'" (click)="filter.set('recurring')">
+          <button class="filter-chip" [class.active]="filters().has('recurring')" (click)="toggleFilter('recurring')">
             Bills <span class="chip-count">{{ recurringCount() }}</span>
           </button>
         </div>
@@ -123,7 +126,7 @@ import { MonthlyPaymentRow, MonthlyPaymentsData } from '../../../core/models/das
           <div class="rows-container">
             <div class="empty-row">
               <mat-icon>celebration</mat-icon>
-              <span>{{ filter() === 'all' ? 'No payments due this month' : 'No matching payments' }}</span>
+              <span>{{ filters().size === 0 ? 'No payments due this month' : 'No matching payments' }}</span>
             </div>
           </div>
         }
@@ -423,7 +426,7 @@ export class MonthlyPaymentsComponent implements OnInit {
 
   loading = signal(true);
   data = signal<MonthlyPaymentsData | null>(null);
-  filter = signal<'all' | 'unpaid' | 'loan' | 'card' | 'recurring'>('all');
+  filters = signal<Set<string>>(new Set());
 
   daysLeftInMonth = computed(() => {
     const now = new Date();
@@ -432,20 +435,34 @@ export class MonthlyPaymentsComponent implements OnInit {
   });
   allRows = computed(() => this.data()?.rows ?? []);
   unpaidCount = computed(() => this.allRows().filter(r => r.status !== 'paid').length);
+  overdueCount = computed(() => this.allRows().filter(r => r.status === 'overdue').length);
   loanCount = computed(() => this.allRows().filter(r => r.kind === 'loan').length);
   cardCount = computed(() => this.allRows().filter(r => r.kind === 'card').length);
   recurringCount = computed(() => this.allRows().filter(r => r.kind === 'recurring').length);
 
   filteredRows = computed(() => {
     const rows = this.allRows();
-    switch (this.filter()) {
-      case 'unpaid': return rows.filter(r => r.status !== 'paid');
-      case 'loan': return rows.filter(r => r.kind === 'loan');
-      case 'card': return rows.filter(r => r.kind === 'card');
-      case 'recurring': return rows.filter(r => r.kind === 'recurring');
-      default: return rows;
-    }
+    const active = this.filters();
+    if (active.size === 0) return rows;
+    return rows.filter(r => {
+      if (active.has('unpaid') && r.status !== 'paid') return true;
+      if (active.has('overdue') && r.status === 'overdue') return true;
+      if (active.has('loan') && r.kind === 'loan') return true;
+      if (active.has('card') && r.kind === 'card') return true;
+      if (active.has('recurring') && r.kind === 'recurring') return true;
+      return false;
+    });
   });
+
+  toggleFilter(key: string): void {
+    const next = new Set(this.filters());
+    if (next.has(key)) next.delete(key); else next.add(key);
+    this.filters.set(next);
+  }
+
+  clearFilters(): void {
+    this.filters.set(new Set());
+  }
 
   dueRows = computed(() => this.filteredRows().filter(r => r.status !== 'paid'));
   dueTotal = computed(() => this.dueRows().reduce((sum, r) => sum + r.amount, 0));
