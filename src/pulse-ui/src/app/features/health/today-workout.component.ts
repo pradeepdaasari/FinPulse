@@ -233,7 +233,7 @@ interface PlanDay {
     .day-dot {
       width: 40px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--color-border);
       background: var(--color-surface); font-size: 0.7rem; font-weight: 600;
-      color: var(--color-text-muted); cursor: pointer; transition: all 0.15s;
+      color: var(--color-text-muted); cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
     .day-dot:hover { border-color: var(--color-primary); color: var(--color-primary); }
     .day-dot.active {

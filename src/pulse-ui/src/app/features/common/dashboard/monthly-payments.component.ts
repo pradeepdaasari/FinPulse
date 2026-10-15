@@ -240,7 +240,7 @@ import { MonthlyPaymentRow, MonthlyPaymentsData } from '../../../core/models/das
       padding: 6px 14px; border-radius: 20px; border: 1px solid var(--color-border);
       background: var(--color-surface); font-size: 0.78rem; font-weight: 600;
       color: var(--color-text-muted); cursor: pointer; white-space: nowrap;
-      transition: all 0.15s;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
     .filter-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
     .filter-chip.active {
@@ -331,7 +331,7 @@ import { MonthlyPaymentRow, MonthlyPaymentsData } from '../../../core/models/das
       border-radius: 10px; background: var(--color-surface); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       -webkit-tap-highlight-color: transparent;
-      transition: all 0.15s;
+      transition: background 0.15s, border-color 0.15s;
     }
     .record-btn:hover { border-color: var(--color-success); background: color-mix(in srgb, var(--color-success) 8%, var(--color-surface)); }
     .record-btn mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--color-success); }
@@ -345,7 +345,7 @@ import { MonthlyPaymentRow, MonthlyPaymentsData } from '../../../core/models/das
     @media (max-width: 599px) {
       .page-wrap { padding: 0 0 24px; }
       .summary-bar {
-        display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch;
+        display: flex; overflow-x: auto;
         scrollbar-width: none; border-radius: var(--radius-sm);
       }
       .summary-bar::-webkit-scrollbar { display: none; }

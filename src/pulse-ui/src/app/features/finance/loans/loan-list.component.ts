@@ -396,10 +396,10 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
       padding: 16px;
       box-shadow: var(--shadow-xs);
       cursor: pointer;
-      transition: box-shadow var(--transition-fast), transform 0.1s ease;
+      transition: box-shadow var(--transition-fast), opacity 0.1s ease;
       -webkit-tap-highlight-color: transparent;
     }
-    .loan-card:active { box-shadow: var(--shadow-sm); transform: scale(0.98); }
+    .loan-card:active { box-shadow: var(--shadow-sm); opacity: 0.7; }
     .loan-top {
       display: flex;
       align-items: center;
@@ -525,9 +525,9 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
       align-items: center; justify-content: center;
       box-shadow: 0 4px 20px rgba(0, 122, 255, 0.30); z-index: 100;
       cursor: pointer;
-      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+      transition: opacity var(--transition-fast), box-shadow var(--transition-fast);
     }
-    .mobile-add-fab:active { transform: scale(0.92); }
+    .mobile-add-fab:active { opacity: 0.7; }
     .mobile-add-fab mat-icon { font-size: 26px; width: 26px; height: 26px; }
     @media (max-width: 599px) {
       .mobile-add-fab {

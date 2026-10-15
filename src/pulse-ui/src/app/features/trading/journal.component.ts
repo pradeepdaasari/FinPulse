@@ -424,7 +424,7 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
     }
     .month-label { font-size: var(--text-sm); font-weight: var(--weight-semibold); min-width: 120px; text-align: center; }
     .filter-chips { display: flex; gap: 6px; flex: 1; }
-    .filter-chips button { font-size: var(--text-xs); border-radius: var(--radius-full) !important; transition: all var(--transition-fast); }
+    .filter-chips button { font-size: var(--text-xs); border-radius: var(--radius-full) !important; transition: background var(--transition-fast), color var(--transition-fast); }
     .filter-chips button mat-icon { font-size: 14px; width: 14px; height: 14px; margin-right: 2px; }
     .active-chip { background: var(--color-primary) !important; color: #fff !important; border-color: var(--color-primary) !important; }
 
@@ -579,7 +579,7 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
     }
     @media (max-width: 599px) {
       .stats-row {
-        display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch;
+        display: flex; overflow-x: auto;
         scrollbar-width: none; gap: var(--spacing-sm); padding-bottom: 4px;
       }
       .stats-row::-webkit-scrollbar { display: none; }

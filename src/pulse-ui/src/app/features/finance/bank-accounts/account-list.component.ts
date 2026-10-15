@@ -252,10 +252,10 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
       display: flex; align-items: center; gap: 14px; padding: 16px;
       background: var(--color-surface-solid); border-radius: var(--radius-md);
       margin-bottom: 12px; border: 1px solid var(--color-border); box-shadow: var(--shadow-xs);
-      cursor: pointer; transition: box-shadow var(--transition-fast), transform 0.1s ease;
+      cursor: pointer; transition: box-shadow var(--transition-fast), opacity 0.1s ease;
       -webkit-tap-highlight-color: transparent;
     }
-    .account-card:active { box-shadow: var(--shadow-md); transform: scale(0.98); }
+    .account-card:active { box-shadow: var(--shadow-md); opacity: 0.7; }
     .ac-icon {
       width: 44px; height: 44px; border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
@@ -318,9 +318,9 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
       align-items: center; justify-content: center;
       box-shadow: 0 4px 16px rgba(0, 122, 255, 0.35); z-index: 100;
       cursor: pointer;
-      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+      transition: opacity var(--transition-fast), box-shadow var(--transition-fast);
     }
-    .mobile-add-fab:active { transform: scale(0.92); }
+    .mobile-add-fab:active { opacity: 0.7; }
     .mobile-add-fab mat-icon { font-size: 26px; width: 26px; height: 26px; }
     @media (max-width: 599px) {
       .mobile-add-fab {

@@ -235,7 +235,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       .goal-card {
         padding: var(--spacing-sm) !important;
         -webkit-tap-highlight-color: transparent;
-        &:active { transform: scale(0.98); }
+        &:active { opacity: 0.7; }
       }
       .goal-header { gap: 8px; margin-bottom: 8px; }
       .goal-icon { font-size: 1.75rem; }

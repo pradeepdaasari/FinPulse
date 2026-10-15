@@ -266,9 +266,9 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     .grade-btn {
       display: flex; flex-direction: column; align-items: center; gap: 4px;
       padding: 16px 8px; border-radius: var(--radius-md); border: 2px solid var(--color-border);
-      cursor: pointer; background: var(--color-surface-solid); transition: all 0.2s;
+      cursor: pointer; background: var(--color-surface-solid); transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, color 0.2s;
     }
-    .grade-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .grade-btn:hover { box-shadow: var(--shadow-md); }
     .grade-letter { font-size: 1.5rem; font-weight: 800; }
     .grade-desc { font-size: 0.6rem; text-transform: uppercase; font-weight: var(--weight-semibold); color: var(--color-text-muted); letter-spacing: var(--tracking-wide); }
     .grade-a .grade-letter { color: var(--color-success); }
@@ -312,9 +312,9 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
       font-size: var(--text-base); font-weight: var(--weight-bold);
       display: flex; align-items: center; justify-content: center; gap: 8px;
       cursor: pointer; box-shadow: 0 4px 16px rgba(0, 122, 255, 0.3);
-      transition: all 0.2s;
+      transition: box-shadow 0.2s, opacity 0.2s;
     }
-    .save-btn:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(0, 122, 255, 0.4); transform: translateY(-1px); }
+    .save-btn:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(0, 122, 255, 0.4); }
     .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .save-btn mat-icon { margin-right: 4px; }
 
@@ -343,10 +343,10 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     .condition-btn {
       display: flex; flex-direction: column; align-items: center; gap: 6px;
       padding: 16px 8px; border-radius: var(--radius-md); border: 2px solid var(--color-border);
-      cursor: pointer; background: var(--color-surface-solid); transition: all 0.2s;
+      cursor: pointer; background: var(--color-surface-solid); transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, color 0.2s;
       font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--color-text-muted);
     }
-    .condition-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .condition-btn:hover { box-shadow: var(--shadow-md); }
     .condition-btn.selected { border-color: var(--color-primary); background: var(--color-stat-blue-bg); color: var(--color-primary); }
     .condition-btn mat-icon { font-size: 24px; width: 24px; height: 24px; }
 

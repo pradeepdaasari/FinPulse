@@ -180,7 +180,7 @@ import { MultiMonthComparison, MultiMonthTotal, MultiMonthCategory, MultiMonthMe
     .expand-icon {
       font-size: 18px; width: 18px; height: 18px;
       flex-shrink: 0;
-      transition: transform 0.2s ease;
+      transition: none;
       color: rgba(0,0,0,0.4);
     }
     .expand-icon.rotated { transform: rotate(90deg); }

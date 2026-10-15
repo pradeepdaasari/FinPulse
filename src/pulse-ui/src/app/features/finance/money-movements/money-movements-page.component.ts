@@ -259,7 +259,6 @@ import { toLocalDateString } from '../../../core/utils/date-utils';
     .filter-row {
       margin-bottom: 12px;
       overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
     }
     .filter-row::-webkit-scrollbar { display: none; }
     mat-chip { cursor: pointer; }
@@ -275,7 +274,6 @@ import { toLocalDateString } from '../../../core/utils/date-utils';
       display: flex;
       gap: 6px;
       overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
       flex-shrink: 0;
     }
     .date-presets::-webkit-scrollbar { display: none; }
@@ -289,11 +287,11 @@ import { toLocalDateString } from '../../../core/utils/date-utils';
       font-weight: var(--weight-medium);
       white-space: nowrap;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
       -webkit-tap-highlight-color: transparent;
     }
     .preset-chip:active {
-      transform: scale(0.96);
+      opacity: 0.7;
     }
     .preset-chip.active {
       background: var(--color-primary);
@@ -345,12 +343,12 @@ import { toLocalDateString } from '../../../core/utils/date-utils';
       background: var(--color-surface-secondary);
       color: var(--color-text-muted);
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: background 0.15s ease, color 0.15s ease;
       -webkit-tap-highlight-color: transparent;
       flex-shrink: 0;
     }
     .clear-dates-btn:active {
-      transform: scale(0.9);
+      opacity: 0.7;
     }
     .clear-dates-btn mat-icon {
       font-size: 18px;
@@ -470,10 +468,10 @@ import { toLocalDateString } from '../../../core/utils/date-utils';
       padding: 14px 16px;
       box-shadow: var(--shadow-xs);
       border: 1px solid var(--color-border);
-      transition: transform 0.15s ease;
+      transition: opacity 0.15s ease;
     }
     .movement-card:active {
-      transform: scale(0.985);
+      opacity: 0.7;
     }
     .movement-card-top { display: flex; align-items: center; gap: 12px; }
     .movement-card-icon {

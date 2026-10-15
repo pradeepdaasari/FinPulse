@@ -395,7 +395,7 @@ type Period = '3' | '6' | 'ytd';
     .period-chip {
       padding: 8px 20px; border-radius: var(--radius-full); border: 1.5px solid rgba(0,0,0,0.12);
       background: var(--color-surface); font-size: 0.85rem; font-weight: 600; cursor: pointer;
-      transition: all 0.2s;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
     }
     .period-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
     .period-chip.active {
@@ -436,7 +436,7 @@ type Period = '3' | '6' | 'ytd';
 
     .expand-icon {
       font-size: 22px; width: 22px; height: 22px;
-      color: var(--color-text-muted); transition: transform 0.25s ease, color 0.2s;
+      color: var(--color-text-muted); transition: color 0.2s;
     }
     .expand-icon.expanded { transform: rotate(180deg); }
 
@@ -507,7 +507,7 @@ type Period = '3' | '6' | 'ytd';
       .expand-icon { font-size: 20px; width: 20px; height: 20px; }
       .month-columns {
         gap: 6px; margin: 0 -14px; padding: 0 14px 8px;
-        -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory;
+        scroll-snap-type: x mandatory;
       }
       .month-col {
         min-width: 90px; padding: 10px 6px; scroll-snap-align: start;
@@ -530,7 +530,7 @@ type Period = '3' | '6' | 'ytd';
     .cat-detail-row.cat-expanded { background: rgba(0,0,0,0.02); }
     .cat-chevron {
       font-size: 16px; width: 16px; height: 16px; flex-shrink: 0;
-      color: rgba(0,0,0,0.35); transition: transform 0.2s ease;
+      color: rgba(0,0,0,0.35);
       margin-right: 4px;
     }
     .cat-chevron-open { transform: rotate(90deg); }

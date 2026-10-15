@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal, ViewChild, OnInit, OnDestroy, effect } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError, ChildrenOutletContexts } from '@angular/router';
-import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav';
+import { MatSidenavModule, MatSidenav, MatSidenavContent } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -456,7 +456,6 @@ import { routeFadeAnimation } from './route-animations';
       padding: 0 14px 20px;
       overflow-y: auto;
       overflow-x: hidden;
-      -webkit-overflow-scrolling: touch;
       height: calc(100dvh - 68px);
     }
 
@@ -489,7 +488,6 @@ import { routeFadeAnimation } from './route-animations';
       font-size: 16px;
       width: 16px;
       height: 16px;
-      transition: transform 0.25s var(--ease-out);
       transform: rotate(-90deg);
       color: var(--color-text-muted);
     }
@@ -507,8 +505,8 @@ import { routeFadeAnimation } from './route-animations';
     }
 
     @keyframes iosSlideDown {
-      from { opacity: 0; transform: translateY(-6px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     .ios-sub-header {
@@ -634,9 +632,9 @@ import { routeFadeAnimation } from './route-animations';
       animation: routeProgress 1.5s ease-in-out infinite;
     }
     @keyframes routeProgress {
-      0% { transform: translateX(-100%); width: 30%; }
-      50% { transform: translateX(100%); width: 60%; }
-      100% { transform: translateX(300%); width: 30%; }
+      0% { opacity: 0.4; width: 30%; }
+      50% { opacity: 1; width: 60%; }
+      100% { opacity: 0.4; width: 30%; }
     }
 
     /* ─── Toolbar ─── */
@@ -649,8 +647,6 @@ import { routeFadeAnimation } from './route-animations';
       position: sticky;
       top: 0;
       z-index: 10;
-      -webkit-transform: translateZ(0);
-      transform: translateZ(0);
     }
 
     .toolbar-title {
@@ -818,7 +814,7 @@ import { routeFadeAnimation } from './route-animations';
       background: var(--gradient-primary) !important;
       color: #fff !important;
       box-shadow: 0 4px 20px rgba(0, 122, 255, 0.30) !important;
-      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+      transition: opacity var(--transition-fast), box-shadow var(--transition-fast);
     }
     .global-fab mat-icon {
       font-size: 26px !important;
@@ -827,12 +823,11 @@ import { routeFadeAnimation } from './route-animations';
     }
     @media (hover: hover) {
       .global-fab:hover {
-        transform: scale(1.06);
         box-shadow: 0 6px 28px rgba(0, 122, 255, 0.40) !important;
       }
     }
     .global-fab:active {
-      transform: scale(0.92);
+      opacity: 0.7;
       box-shadow: 0 2px 8px rgba(0, 122, 255, 0.20) !important;
     }
     .global-fab.fab-hidden { display: none !important; }
@@ -879,10 +874,9 @@ import { routeFadeAnimation } from './route-animations';
     .menu-icon.metric { color: #d32f2f; }
 
     .kb-hidden {
-      transform: translateY(100%);
       pointer-events: none;
       opacity: 0;
-      transition: transform 0.2s ease, opacity 0.15s ease;
+      transition: opacity 0.15s ease;
     }
 
     /* ─── Bottom Tabs ─── */
@@ -919,11 +913,11 @@ import { routeFadeAnimation } from './route-animations';
       background: none;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
-      transition: color var(--transition-fast), transform 0.08s ease;
+      transition: color var(--transition-fast), opacity 0.08s ease;
       position: relative;
 
       &:active {
-        transform: scale(0.88);
+        opacity: 0.7;
       }
     }
 
@@ -1006,6 +1000,7 @@ import { routeFadeAnimation } from './route-animations';
 })
 export class NavShellComponent implements OnInit, OnDestroy {
   @ViewChild('sidenav') sidenav!: MatSidenav;
+  @ViewChild(MatSidenavContent) sidenavContent!: MatSidenavContent;
   @ViewChild(CommandPaletteComponent) commandPalette!: CommandPaletteComponent;
 
   private breakpointObserver = inject(BreakpointObserver);
@@ -1105,6 +1100,7 @@ export class NavShellComponent implements OnInit, OnDestroy {
       const path = '/' + url.split('/')[1];
       this.pageTitle.set(this.pageTitles[url] ?? this.pageTitles[path] ?? 'Pulse');
       this.expandSectionForRoute(url);
+      this.sidenavContent?.getElementRef().nativeElement.scrollTo(0, 0);
       if (this.isMobile() && this.sidenav) {
         this.sidenav.close();
       }

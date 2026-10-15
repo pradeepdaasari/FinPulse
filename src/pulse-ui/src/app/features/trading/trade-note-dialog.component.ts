@@ -137,7 +137,7 @@ const EMOTIONS: { value: TradeNoteEmotion; label: string; icon: string }[] = [
       padding: 7px 14px; border-radius: var(--radius-full);
       border: 1.5px solid var(--color-border);
       background: var(--color-surface-solid);
-      cursor: pointer; transition: all var(--transition-fast);
+      cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
       font-size: 0.82rem; font-weight: var(--weight-medium);
       color: var(--color-text-secondary); font-family: inherit;
     }
@@ -186,11 +186,10 @@ const EMOTIONS: { value: TradeNoteEmotion; label: string; icon: string }[] = [
       font-size: 0.85rem; font-weight: var(--weight-bold);
       font-family: inherit; cursor: pointer;
       box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
-      transition: all var(--transition-fast);
+      transition: box-shadow var(--transition-fast), opacity var(--transition-fast);
     }
     .save-action-btn:hover:not(:disabled) {
       box-shadow: 0 4px 14px rgba(0, 122, 255, 0.35);
-      transform: translateY(-1px);
     }
     .save-action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
     .save-action-btn mat-icon { font-size: 17px; width: 17px; height: 17px; }

@@ -161,11 +161,10 @@ import { BudgetAllocation } from '../../../core/models/budget.model';
       border-radius: var(--radius-md);
       padding: 16px;
       box-shadow: var(--shadow-sm);
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      transition: box-shadow 0.15s ease;
     }
 
     .stat-card:hover {
-      transform: translateY(-2px);
       box-shadow: var(--shadow-md);
     }
 
@@ -230,7 +229,6 @@ import { BudgetAllocation } from '../../../core/models/budget.model';
     /* Table Styling */
     .table-wrapper {
       overflow-x: auto; scrollbar-width: none;
-      -webkit-overflow-scrolling: touch;
     }
     .table-wrapper::-webkit-scrollbar { display: none; }
     .activity-table { width: 100%; border-collapse: collapse; min-width: 500px; }
@@ -407,8 +405,8 @@ import { BudgetAllocation } from '../../../core/models/budget.model';
 
       .mobile-only { display: block; }
       .desktop-only { display: none; }
-      .allocation-mobile-card { -webkit-tap-highlight-color: transparent; transition: transform 0.1s ease; }
-      .allocation-mobile-card:active { transform: scale(0.98); }
+      .allocation-mobile-card { -webkit-tap-highlight-color: transparent; transition: opacity 0.1s ease; }
+      .allocation-mobile-card:active { opacity: 0.7; }
     }
 
     @media (max-width: 768px) and (min-width: 600px) {

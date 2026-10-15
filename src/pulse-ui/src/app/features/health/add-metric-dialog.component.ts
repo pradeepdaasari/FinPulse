@@ -209,9 +209,9 @@ interface MetricConfig {
       font-size: 0.95rem; font-weight: 700;
       display: flex; align-items: center; justify-content: center; gap: 8px;
       cursor: pointer; box-shadow: 0 4px 16px rgba(0,122,255,0.3);
-      transition: all 0.2s;
+      transition: box-shadow 0.2s, opacity 0.2s;
     }
-    .save-btn-gradient:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(0,122,255,0.4); transform: translateY(-1px); }
+    .save-btn-gradient:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(0,122,255,0.4); }
     .save-btn-gradient:disabled { opacity: 0.5; cursor: not-allowed; }
     .save-btn-gradient mat-icon { font-size: 20px; width: 20px; height: 20px; }
 

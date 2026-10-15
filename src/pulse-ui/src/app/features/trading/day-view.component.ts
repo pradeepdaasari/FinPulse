@@ -428,7 +428,7 @@ interface TradeGroup {
     /* Stats Strip */
     .stats-strip {
       display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);
-      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      overflow-x: auto;
       scrollbar-width: none; padding-bottom: 2px;
     }
     .stats-strip::-webkit-scrollbar { display: none; }
@@ -450,7 +450,7 @@ interface TradeGroup {
       display: flex; align-items: center; gap: 14px;
       padding: 18px 20px; border-radius: var(--radius-md);
       background: var(--color-surface-solid); border: 1px solid var(--color-border);
-      cursor: pointer; transition: all var(--transition-fast);
+      cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
       margin-bottom: var(--spacing-md);
     }
     .cta-card:hover, .ready-card:hover { border-color: var(--color-primary); box-shadow: var(--shadow-sm); }
@@ -482,7 +482,7 @@ interface TradeGroup {
     .section-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-stat-amber); }
     .section-title { font-size: var(--text-sm); font-weight: var(--weight-bold); flex: 1; }
     .time-label { font-size: var(--text-xs); color: var(--color-text-muted); }
-    .collapse-arrow { color: var(--color-text-muted); transition: transform 0.2s; }
+    .collapse-arrow { color: var(--color-text-muted); }
     .header-chips { display: flex; gap: 6px; }
     .bias-chip {
       padding: 2px 8px; border-radius: var(--radius-full);
@@ -671,9 +671,9 @@ interface TradeGroup {
       border: none; cursor: pointer; z-index: 100;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
       display: flex; align-items: center; justify-content: center;
-      transition: transform 0.2s, box-shadow 0.2s;
+      transition: box-shadow 0.2s, opacity 0.2s;
     }
-    .fab:hover { transform: scale(1.08); box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
+    .fab:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
     .fab mat-icon { font-size: 24px; width: 24px; height: 24px; }
 
     /* Responsive */

@@ -271,10 +271,10 @@ import { NotificationService } from '../../core/services/notification.service';
       padding: 16px; background: var(--color-surface);
       border-radius: var(--radius-lg); margin-bottom: 10px;
       box-shadow: var(--shadow-sm); cursor: pointer;
-      transition: box-shadow var(--transition-fast), transform 0.1s ease;
+      transition: box-shadow var(--transition-fast), opacity 0.1s ease;
       -webkit-tap-highlight-color: transparent;
     }
-    .metric-card:active { box-shadow: var(--shadow-md); transform: scale(0.98); }
+    .metric-card:active { box-shadow: var(--shadow-md); opacity: 0.7; }
     .mc-icon {
       width: 40px; height: 40px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;

@@ -197,7 +197,6 @@ import { FinancialSummary, NetWorthSnapshot } from '../../../core/models/dashboa
     .nw-main { display: flex; flex-direction: column; gap: 4px; }
     .expand-icon {
       color: var(--color-text-muted);
-      transition: transform 0.2s ease;
     }
     .expand-icon.rotated { transform: rotate(180deg); }
     .nw-label {
@@ -238,7 +237,6 @@ import { FinancialSummary, NetWorthSnapshot } from '../../../core/models/dashboa
     .daily-detail-toggle:hover { opacity: 1; }
     .detail-chevron {
       font-size: 16px; width: 16px; height: 16px;
-      transition: transform 0.2s ease;
     }
     .detail-chevron.rotated { transform: rotate(180deg); }
     .daily-breakdown {
@@ -264,8 +262,8 @@ import { FinancialSummary, NetWorthSnapshot } from '../../../core/models/dashboa
       animation: slideDown 0.2s ease;
     }
     @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-8px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     .breakdown-section {

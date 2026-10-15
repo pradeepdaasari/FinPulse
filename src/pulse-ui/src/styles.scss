@@ -256,7 +256,6 @@ body {
   line-height: var(--leading-normal);
   letter-spacing: var(--tracking-normal);
   overscroll-behavior-y: contain;
-  -webkit-overflow-scrolling: touch;
 }
 
 // ─── Skip to content (accessibility) ────────────────────────────────────────
@@ -420,11 +419,10 @@ textarea:focus-visible {
   @media (hover: hover) {
     &:hover {
       box-shadow: var(--shadow-md) !important;
-      transform: translateY(-2px);
     }
   }
   &:active {
-    transform: scale(0.99);
+    opacity: 0.7;
     box-shadow: var(--shadow-xs) !important;
   }
 }
@@ -517,7 +515,7 @@ textarea:focus-visible {
   font-size: var(--text-sm) !important;
   padding: 8px 20px !important;
   min-height: 38px;
-  transition: all var(--transition-fast) !important;
+  transition: background var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast) !important;
   box-shadow: none !important;
 
   @media (hover: hover) {
@@ -527,7 +525,7 @@ textarea:focus-visible {
   }
 
   &:active {
-    transform: scale(0.97);
+    opacity: 0.7;
   }
 
   &:disabled,
@@ -543,7 +541,7 @@ textarea:focus-visible {
   text-transform: none !important;
   font-size: var(--text-sm) !important;
   border-color: var(--color-border-strong) !important;
-  transition: all var(--transition-fast) !important;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast) !important;
 
   @media (hover: hover) {
     &:hover {
@@ -554,7 +552,7 @@ textarea:focus-visible {
 }
 
 .mat-mdc-icon-button {
-  transition: background var(--transition-fast), transform var(--transition-fast) !important;
+  transition: background var(--transition-fast), opacity var(--transition-fast) !important;
   border-radius: var(--radius-sm) !important;
 
   @media (hover: hover) {
@@ -564,7 +562,7 @@ textarea:focus-visible {
   }
 
   &:active {
-    transform: scale(0.92);
+    opacity: 0.7;
   }
 
   &:focus-visible {
@@ -729,7 +727,6 @@ textarea:focus-visible {
     max-width: 100% !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    -webkit-overflow-scrolling: touch;
     padding: 0 !important;
     box-sizing: border-box !important;
 
@@ -1147,11 +1144,10 @@ textarea:focus-visible {
   .loan-card, .cc-card, .account-card, .budget-card,
   .recurring-card, .txn-card, .goal-card, .setup-card,
   .trade-card, .metric-card, .workout-card {
-    transition: transform 0.1s ease, opacity 0.1s ease;
+    transition: opacity 0.1s ease;
     -webkit-tap-highlight-color: transparent;
     &:active {
-      transform: scale(0.98);
-      opacity: 0.85;
+      opacity: 0.7;
     }
   }
 
@@ -1160,10 +1156,9 @@ textarea:focus-visible {
   .mobile-cards > div[class*="-card"],
   [style*="cursor: pointer"].mat-mdc-card {
     -webkit-tap-highlight-color: transparent;
-    transition: transform 0.1s ease, opacity 0.1s ease !important;
+    transition: opacity 0.1s ease !important;
     &:active {
-      transform: scale(0.98);
-      opacity: 0.85;
+      opacity: 0.7;
     }
   }
 
@@ -1191,8 +1186,8 @@ textarea:focus-visible {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 @keyframes fadeInPage {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes fadeIn {
@@ -1201,13 +1196,13 @@ textarea:focus-visible {
 }
 
 @keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes skeleton-shimmer {
@@ -1233,7 +1228,6 @@ textarea:focus-visible {
 
 .table-responsive {
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .section-icon {
@@ -1266,7 +1260,7 @@ textarea:focus-visible {
     border: none !important;
     border-radius: var(--radius-full) !important;
     background: transparent !important;
-    transition: all 0.2s var(--ease-out);
+    transition: background 0.2s var(--ease-out), color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
   }
 
   .mat-button-toggle-label-content {
@@ -1407,7 +1401,6 @@ textarea:focus-visible {
     display: flex !important;
     overflow-x: auto !important;
     scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
     gap: 10px !important;
     padding-bottom: 4px;
     margin-left: -14px;

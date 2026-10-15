@@ -445,9 +445,9 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       display: flex; flex-direction: column; align-items: center; gap: 4px;
       padding: 12px 8px; border-radius: var(--radius-md);
       background: var(--color-surface); box-shadow: var(--shadow-sm); text-align: center;
-      opacity: 0.7; transition: opacity 0.2s, transform 0.2s;
+      opacity: 0.7; transition: opacity 0.2s;
     }
-    .trend-card.current { opacity: 1; transform: scale(1.05); box-shadow: var(--shadow-md); border: 2px solid var(--color-primary); }
+    .trend-card.current { opacity: 1; box-shadow: var(--shadow-md); border: 2px solid var(--color-primary); }
     .trend-date { font-size: 0.7rem; font-weight: 600; color: var(--color-text-secondary); }
     .trend-pnl { font-size: 0.9rem; font-weight: 700; }
     .trend-win { font-size: 0.75rem; color: var(--color-text-secondary); }

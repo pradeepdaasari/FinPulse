@@ -514,7 +514,7 @@ interface MetricDef {
       flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
       padding: 0; height: 40px; border: none; border-radius: var(--radius-full);
       background: transparent; cursor: pointer; font-size: 0.82rem; font-weight: 600;
-      color: var(--color-text-muted); transition: all 0.2s;
+      color: var(--color-text-muted); transition: background 0.2s, color 0.2s;
       font-family: inherit;
     }
     .toggle-seg mat-icon { font-size: 18px; width: 18px; height: 18px; }
@@ -729,9 +729,9 @@ interface MetricDef {
       display: flex; flex-direction: column; align-items: center; gap: 6px;
       padding: 14px 8px; background: var(--color-surface); border-radius: var(--radius-md);
       box-shadow: var(--shadow-sm); border: 1px solid var(--color-border);
-      transition: transform 0.2s, box-shadow 0.2s;
+      transition: box-shadow 0.2s;
     }
-    .sc-stat:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .sc-stat:hover { box-shadow: var(--shadow-md); }
     .sc-icon-wrap {
       width: 38px; height: 38px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
@@ -791,9 +791,9 @@ interface MetricDef {
     .cal-week-wrapper {
       border-radius: var(--radius-sm); padding: 2px;
       border-left: 4px solid transparent; cursor: pointer;
-      transition: all 0.2s;
+      transition: background 0.2s, box-shadow 0.2s, border-color 0.2s;
     }
-    .cal-week-wrapper:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+    .cal-week-wrapper:hover { box-shadow: var(--shadow-sm); }
     .cal-week-wrapper.week-achieved { background: rgba(52, 199, 89, 0.08); border-left-color: var(--color-success); }
     .cal-week-wrapper.week-achieved:hover { background: rgba(52, 199, 89, 0.14); }
     .cal-week-wrapper.week-missed { background: rgba(255, 149, 0, 0.06); border-left-color: var(--color-warning); }
@@ -842,7 +842,7 @@ interface MetricDef {
       border-left: 4px solid var(--color-border);
       animation: slideDown 0.15s ease;
     }
-    @keyframes slideDown { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideDown { from { opacity: 0; } to { opacity: 1; } }
     .week-detail.wd-achieved { border-left-color: var(--color-success); }
     .week-detail.wd-missed-panel { border-left-color: var(--color-warning); }
     .wd-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }

@@ -322,7 +322,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     .mental-btn {
       display: flex; flex-direction: column; align-items: center; gap: 4px;
       padding: 16px 8px; border-radius: var(--radius-md); border: 2px solid var(--color-border);
-      background: var(--color-surface); cursor: pointer; transition: all 0.2s ease;
+      background: var(--color-surface); cursor: pointer; transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
       font-family: inherit;
     }
     .mental-btn mat-icon { font-size: 28px; width: 28px; height: 28px; }
@@ -355,7 +355,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     .bias-btn {
       display: flex; align-items: center; justify-content: center; gap: 4px;
       padding: 10px 8px; border-radius: var(--radius-sm); border: 2px solid var(--color-border);
-      background: var(--color-surface); cursor: pointer; transition: all 0.2s ease;
+      background: var(--color-surface); cursor: pointer; transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
       font-size: 0.8rem; font-weight: 600; font-family: inherit;
     }
     .bias-btn mat-icon { font-size: 16px; width: 16px; height: 16px; }
@@ -391,9 +391,9 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       background: var(--gradient-primary); color: #fff;
       font-size: 0.95rem; font-weight: 700; font-family: inherit;
       cursor: pointer; box-shadow: 0 4px 16px rgba(0, 122, 255, 0.3);
-      transition: all 0.2s ease;
+      transition: box-shadow 0.2s ease, opacity 0.2s ease;
     }
-    .save-btn:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(0, 122, 255, 0.4); transform: translateY(-1px); }
+    .save-btn:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(0, 122, 255, 0.4); }
     .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .save-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .btn-spinner {

@@ -694,11 +694,11 @@ export interface ExpenseDialogData {
       gap: 8px;
       cursor: pointer;
       box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary) 30%, transparent);
-      transition: opacity 0.15s, transform 0.1s;
+      transition: opacity 0.15s;
       font-family: inherit;
     }
     .gradient-save-btn:disabled { opacity: 0.4; cursor: default; }
-    .gradient-save-btn:not(:disabled):active { transform: scale(0.98); }
+    .gradient-save-btn:not(:disabled):active { opacity: 0.7; }
     .gradient-save-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
 
     .expense-form {
@@ -717,12 +717,12 @@ export interface ExpenseDialogData {
       cursor: pointer; flex: 1; min-width: 0;
       -webkit-tap-highlight-color: transparent;
     }
-    .txn-icon-item:active .txn-circle { transform: scale(0.92); }
+    .txn-icon-item:active .txn-circle { opacity: 0.7; }
     .txn-circle {
       width: 52px; height: 52px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       background: var(--color-surface-secondary);
-      transition: all 0.2s ease;
+      transition: background 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
     }
     .txn-circle mat-icon { font-size: 24px; width: 24px; height: 24px; }
     .txn-label {
@@ -744,7 +744,7 @@ export interface ExpenseDialogData {
     .txn-circle.loan mat-icon { color: color-mix(in srgb, var(--color-primary) 60%, var(--color-text-muted)); }
     .txn-label { color: var(--color-text-secondary); }
 
-    .txn-icon-item.active .txn-circle { transform: scale(1.1); }
+    .txn-icon-item.active .txn-circle { }
     .txn-icon-item.active .txn-circle.expense {
       background: var(--color-stat-red-bg);
       box-shadow: 0 0 0 2.5px var(--color-danger), 0 3px 10px rgba(255, 59, 48, 0.2);
@@ -792,7 +792,7 @@ export interface ExpenseDialogData {
       flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
       padding: 10px 8px; border-radius: var(--radius-sm);
       border: 2px solid var(--color-border); background: var(--color-surface);
-      cursor: pointer; transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+      cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s; -webkit-tap-highlight-color: transparent;
     }
     .pay-mode-chip:hover { border-color: var(--color-primary); }
     .pay-mode-chip.active {
@@ -904,14 +904,13 @@ export interface ExpenseDialogData {
       .txn-circle { width: 42px; height: 42px; }
       .txn-circle mat-icon { font-size: 20px; width: 20px; height: 20px; }
       .txn-label { font-size: 0.65rem; }
-      .txn-icon-item.active .txn-circle { transform: scale(1.05); }
+      .txn-icon-item.active .txn-circle { }
     }
     @media (max-width: 599px) {
       .dialog-banner { padding: 14px 16px 12px; }
       .txn-icons {
         overflow-x: auto; justify-content: flex-start;
         gap: 6px; padding: 6px 4px 10px;
-        -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
       }
       .txn-icons::-webkit-scrollbar { display: none; }

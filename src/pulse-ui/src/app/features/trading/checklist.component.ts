@@ -436,7 +436,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
       display: flex; flex-direction: column; align-items: center; gap: 6px;
       padding: 14px 8px; border-radius: var(--radius-md);
       border: 2px solid var(--color-border); background: var(--color-surface-solid);
-      cursor: pointer; transition: all 0.2s ease; font-size: var(--text-xs);
+      cursor: pointer; transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease; font-size: var(--text-xs);
       font-weight: var(--weight-medium); text-align: center; color: var(--color-text);
     }
     .mental-btn:hover { border-color: var(--color-primary); }
@@ -503,7 +503,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
       display: flex; align-items: center; gap: 12px;
       padding: 14px 16px; border-radius: var(--radius-md);
       background: var(--color-surface-secondary); cursor: pointer;
-      transition: all 0.2s ease; min-height: 48px;
+      transition: background 0.2s ease, border-color 0.2s ease; min-height: 48px;
       border: 2px solid transparent;
     }
     .checklist-item:hover { border-color: var(--color-primary); }
@@ -512,7 +512,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
       width: 28px; height: 28px; border-radius: 8px;
       border: 2px solid var(--color-border); display: flex;
       align-items: center; justify-content: center; flex-shrink: 0;
-      transition: all 0.2s ease;
+      transition: background 0.2s ease, border-color 0.2s ease;
     }
     .check-box.checked { background: var(--color-success); border-color: var(--color-success); }
     .check-box.checked mat-icon { color: #fff; font-size: 18px; width: 18px; height: 18px; }
@@ -533,7 +533,7 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
       flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px;
       padding: 10px; border-radius: var(--radius-sm); font-weight: var(--weight-semibold); font-size: var(--text-sm);
       border: 2px solid var(--color-border); background: var(--color-surface-solid);
-      cursor: pointer; transition: all 0.2s; color: var(--color-text);
+      cursor: pointer; transition: background 0.2s, color 0.2s, border-color 0.2s; color: var(--color-text);
     }
     .dir-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .dir-btn.long.active { border-color: var(--color-success); background: var(--color-stat-green-bg); color: var(--color-success); }

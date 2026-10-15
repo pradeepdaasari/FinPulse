@@ -86,16 +86,12 @@ import { DashboardSummary } from '../../../core/models/dashboard.model';
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: transform var(--transition-fast);
       flex-shrink: 0;
     }
     .stat-icon mat-icon {
       font-size: 24px;
       width: 24px;
       height: 24px;
-    }
-    .stat-card:hover .stat-icon {
-      transform: scale(1.08);
     }
     .icon-blue { background: var(--gradient-icon-blue); color: var(--color-primary); }
     .icon-green { background: var(--gradient-icon-green); color: var(--color-success); }
@@ -127,7 +123,6 @@ import { DashboardSummary } from '../../../core/models/dashboard.model';
         overflow-x: auto;
         gap: 10px;
         padding-bottom: 4px;
-        -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
       }
       .summary-grid::-webkit-scrollbar { display: none; }

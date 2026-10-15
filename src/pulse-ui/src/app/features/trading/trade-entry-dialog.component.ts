@@ -624,7 +624,7 @@ export interface TradeEntryDialogData {
     .mistake-chip {
       padding: 4px 10px; border-radius: var(--radius-full); font-size: 0.72rem; font-weight: 600;
       border: 1.5px solid var(--color-border); background: transparent; color: var(--color-text-secondary);
-      cursor: pointer; transition: all 0.15s;
+      cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
     }
     .mistake-chip:hover { border-color: var(--color-text-muted); }
     .mistake-chip.selected {
@@ -661,9 +661,9 @@ export interface TradeEntryDialogData {
       font-size: 0.95rem; font-weight: 700;
       display: flex; align-items: center; justify-content: center; gap: 8px;
       cursor: pointer; box-shadow: 0 4px 16px rgba(0, 122, 255, 0.3);
-      transition: all 0.2s;
+      transition: box-shadow 0.2s, opacity 0.2s;
     }
-    .save-btn:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(0, 122, 255, 0.4); transform: translateY(-1px); }
+    .save-btn:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(0, 122, 255, 0.4); }
     .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .save-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
     ::ng-deep .save-spinner circle { stroke: #fff !important; }

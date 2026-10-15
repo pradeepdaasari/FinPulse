@@ -218,8 +218,8 @@ import { DashboardSummary, FinancialSummary } from '../../../core/models/dashboa
       .panels { grid-template-columns: 1fr; }
     }
     @media (max-width: 599px) {
-      .panel { padding: 14px; -webkit-tap-highlight-color: transparent; transition: transform 0.1s ease; }
-      .panel:active { transform: scale(0.98); }
+      .panel { padding: 14px; -webkit-tap-highlight-color: transparent; transition: opacity 0.1s ease; }
+      .panel:active { opacity: 0.7; }
       .metrics-grid { gap: 10px 16px; }
       .metric-value { font-size: 1.05rem; }
       .trading-strip { flex-wrap: wrap; gap: 8px; }

@@ -101,9 +101,9 @@ import { DashboardInsight } from '../../../core/models/dashboard.model';
       .insights-card {
         padding: 14px 16px;
         -webkit-tap-highlight-color: transparent;
-        transition: transform 0.1s ease;
+        transition: opacity 0.1s ease;
       }
-      .insights-card:active { transform: scale(0.98); }
+      .insights-card:active { opacity: 0.7; }
       .insight-icon-wrap { min-width: 44px; min-height: 44px; width: 44px; height: 44px; }
     }
   `]

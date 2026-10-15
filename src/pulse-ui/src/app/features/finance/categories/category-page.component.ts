@@ -705,14 +705,14 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
       cursor: pointer; -webkit-tap-highlight-color: transparent;
       box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
-    .m-add-btn:active { transform: scale(0.92); }
+    .m-add-btn:active { opacity: 0.7; }
     .m-add-btn mat-icon { font-size: 22px; width: 22px; height: 22px; }
     .m-segment.sm { width: auto; }
     .m-seg-btn {
       flex: 1; border: none; background: transparent; padding: 8px 16px;
       font-size: var(--text-sm); font-weight: var(--weight-semibold); border-radius: 8px;
       color: var(--color-text-muted); cursor: pointer;
-      transition: all 0.2s; -webkit-tap-highlight-color: transparent;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s; -webkit-tap-highlight-color: transparent;
     }
     .m-seg-btn.active {
       background: var(--color-surface); color: var(--color-text);
@@ -744,7 +744,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
     .m-parent-meta { font-size: var(--text-xs); color: var(--color-text-muted); }
     .m-chevron {
       font-size: 22px; width: 22px; height: 22px;
-      color: var(--color-text-muted); transition: transform 0.25s;
+      color: var(--color-text-muted);
     }
     .m-chevron.expanded { transform: rotate(180deg); }
 
@@ -760,7 +760,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
       color: var(--color-text-muted); cursor: pointer;
       -webkit-tap-highlight-color: transparent;
     }
-    .m-action-pill:active { transform: scale(0.95); }
+    .m-action-pill:active { opacity: 0.7; }
     .m-action-pill mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .m-action-pill.danger { color: var(--color-danger); border-color: color-mix(in srgb, var(--color-danger) 30%, transparent); }
     .m-action-pill.primary { color: var(--color-primary); border-color: color-mix(in srgb, var(--color-primary) 30%, transparent); }
@@ -860,7 +860,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
       animation: slideUp 0.3s ease-out;
     }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    @keyframes slideUp { from { opacity: 0; } to { opacity: 1; } }
     .m-sheet-handle {
       width: 36px; height: 4px; border-radius: 2px;
       background: var(--color-border); margin: 0 auto 16px;

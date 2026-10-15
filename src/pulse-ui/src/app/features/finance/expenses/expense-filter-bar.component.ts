@@ -290,7 +290,7 @@ import { ExpenseFilter } from '../../../core/models/daily-expense.model';
       background: var(--color-surface);
       color: var(--color-text-secondary);
       font-size: 0.8rem; font-weight: 500;
-      cursor: pointer; transition: all 0.15s ease;
+      cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
       white-space: nowrap;
     }
     .period-chip:hover {

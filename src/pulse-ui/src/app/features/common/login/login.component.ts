@@ -123,9 +123,9 @@ import { AuthService } from '../../../core/services/auth.service';
       animation-delay: -14s;
     }
     @keyframes orbFloat {
-      0%, 100% { transform: translate(0, 0); }
-      33% { transform: translate(30px, -20px); }
-      66% { transform: translate(-20px, 15px); }
+      0%, 100% { opacity: 0.6; }
+      33% { opacity: 1; }
+      66% { opacity: 0.4; }
     }
 
     .login-card {
@@ -142,8 +142,8 @@ import { AuthService } from '../../../core/services/auth.service';
       z-index: 1;
     }
     @keyframes loginCardIn {
-      from { opacity: 0; transform: translateY(24px) scale(0.96); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     .brand {
@@ -192,8 +192,8 @@ import { AuthService } from '../../../core/services/auth.service';
       animation: fadeSlideUp 0.5s ease-out 0.2s both;
     }
     @keyframes fadeSlideUp {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
     .feature-pill {
       display: flex;
@@ -242,15 +242,14 @@ import { AuthService } from '../../../core/services/auth.service';
       font-weight: 600;
       letter-spacing: -0.01em;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: box-shadow 0.2s ease, opacity 0.2s ease;
       box-shadow: 0 4px 16px rgba(0, 122, 255, 0.3);
     }
     .sign-in-btn:hover:not(:disabled) {
       box-shadow: 0 6px 24px rgba(0, 122, 255, 0.4);
-      transform: translateY(-1px);
     }
     .sign-in-btn:active:not(:disabled) {
-      transform: translateY(0);
+      opacity: 0.7;
       box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
     }
     .sign-in-btn:disabled {
@@ -261,10 +260,6 @@ import { AuthService } from '../../../core/services/auth.service';
       font-size: 20px;
       width: 20px;
       height: 20px;
-      transition: transform 0.2s ease;
-    }
-    .sign-in-btn:hover:not(:disabled) .btn-arrow {
-      transform: translateX(3px);
     }
     .btn-spinner {
       display: inline-block;

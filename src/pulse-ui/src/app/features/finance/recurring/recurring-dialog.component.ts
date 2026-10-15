@@ -228,7 +228,7 @@ import { Observable } from 'rxjs';
       border-radius: var(--radius-full); cursor: pointer;
       font-size: 0.82rem; font-weight: 600; color: var(--color-text-secondary);
       background: var(--color-surface-secondary); border: 2px solid transparent;
-      transition: all 0.2s ease;
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     }
     .type-option mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .type-option.active {
@@ -293,7 +293,7 @@ import { Observable } from 'rxjs';
       width: 40px; height: 40px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       background: var(--color-surface-secondary);
-      transition: all 0.2s ease;
+      transition: background 0.2s ease, box-shadow 0.2s ease;
     }
     .txn-circle mat-icon { font-size: 19px; width: 19px; height: 19px; color: var(--color-text-secondary); }
     .txn-label {

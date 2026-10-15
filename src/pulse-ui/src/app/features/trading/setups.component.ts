@@ -158,9 +158,9 @@ import { NotificationService } from '../../core/services/notification.service';
     .setup-card {
       background: var(--color-surface); border-radius: var(--radius-md);
       padding: 18px; box-shadow: var(--shadow-sm);
-      transition: box-shadow 0.2s ease, transform 0.15s ease;
+      transition: box-shadow 0.2s ease, opacity 0.15s ease;
     }
-    .setup-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .setup-card:hover { box-shadow: var(--shadow-md); }
     .setup-card.inactive { opacity: 0.65; }
 
     .setup-card-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
@@ -219,7 +219,7 @@ import { NotificationService } from '../../core/services/notification.service';
 
       .setup-card {
         -webkit-tap-highlight-color: transparent;
-        &:active { transform: scale(0.98); }
+        &:active { opacity: 0.7; }
       }
 
       .setup-card-header { flex-wrap: wrap; gap: 8px; }

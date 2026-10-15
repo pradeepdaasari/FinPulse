@@ -191,7 +191,7 @@ import { NotificationService } from '../../core/services/notification.service';
       border: 2px solid var(--color-border);
       background: var(--color-surface);
       font-size: 0.7rem; font-weight: 700;
-      cursor: pointer; transition: all 0.15s ease;
+      cursor: pointer; transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
       display: flex; align-items: center; justify-content: center;
       color: var(--color-text-muted);
     }

@@ -448,7 +448,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
       .due-card { flex-wrap: wrap; gap: 8px; }
       .due-right { width: 100%; justify-content: flex-end; }
       .rec-card { -webkit-tap-highlight-color: transparent; }
-      .rec-card:active { transform: scale(0.98); }
+      .rec-card:active { opacity: 0.7; }
     }
 
   `]

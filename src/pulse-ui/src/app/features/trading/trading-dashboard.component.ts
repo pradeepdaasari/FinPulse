@@ -651,7 +651,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       .custom-range { flex-wrap: wrap; }
       .stats-grid {
         display: flex; overflow-x: auto; gap: 10px; padding-bottom: 4px;
-        -webkit-overflow-scrolling: touch; scrollbar-width: none;
+        scrollbar-width: none;
       }
       .stats-grid::-webkit-scrollbar { display: none; }
       .stat-card { flex: 0 0 auto; min-width: 140px; }
