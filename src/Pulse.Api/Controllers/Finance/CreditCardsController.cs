@@ -18,12 +18,14 @@ public class CreditCardsController : ControllerBase
     private readonly PulseDbContext _db;
     private readonly IFinancialCalculationService _calcService;
     private readonly IDebtAggregationService _aggregationService;
+    private readonly ICardSummaryService _cardSummaryService;
 
-    public CreditCardsController(PulseDbContext db, IFinancialCalculationService calcService, IDebtAggregationService aggregationService)
+    public CreditCardsController(PulseDbContext db, IFinancialCalculationService calcService, IDebtAggregationService aggregationService, ICardSummaryService cardSummaryService)
     {
         _db = db;
         _calcService = calcService;
         _aggregationService = aggregationService;
+        _cardSummaryService = cardSummaryService;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -36,7 +38,7 @@ public class CreditCardsController : ControllerBase
         var summaries = new Dictionary<int, CardSummary>();
         foreach (var card in cards)
         {
-            var summary = await ComputeCardSummary(card);
+            var summary = await _cardSummaryService.ComputeCardSummary(UserId, card);
             summaries[card.Id] = summary;
             if (summary.BalanceChanged)
             {
@@ -51,9 +53,7 @@ public class CreditCardsController : ControllerBase
             c.MinimumPayment, c.DueDay, c.BillingCycleDays, c.IsAutopay,
             c.PromoAprPercent, c.PromoEndDate, c.LastStatementDate,
             c.CreatedAt, c.UpdatedAt,
-            Utilization = c.CreditLimit > 0
-                ? Math.Min(100, Math.Round((double)c.CurrentBalance / (double)c.CreditLimit * 100, 1))
-                : 0,
+            Utilization = FinanceCalculationHelper.ComputeUtilization(c.CurrentBalance, c.CreditLimit),
             summaries[c.Id].RemainingMinimumPayment,
             summaries[c.Id].PostStatementPayments
         });
@@ -66,7 +66,7 @@ public class CreditCardsController : ControllerBase
         var card = await _db.CreditCards.FirstOrDefaultAsync(c => c.Id == id && c.UserId == UserId);
         if (card is null) return NotFound();
 
-        var s = await ComputeCardSummary(card);
+        var s = await _cardSummaryService.ComputeCardSummary(UserId, card);
         if (s.BalanceChanged) await _db.SaveChangesAsync();
 
         return Ok(new
@@ -340,64 +340,6 @@ public class CreditCardsController : ControllerBase
         return Ok(new { Payments = payments, TotalPaid = totalPaid });
     }
 
-    private record CardSummary(
-        decimal PostStatementCharges, decimal PostStatementRefunds, decimal PostStatementPayments,
-        decimal RemainingStatementBalance, decimal RemainingMinimumPayment,
-        decimal StatementBalance, DateTime? StatementDate, bool BalanceChanged);
-
-    private async Task<CardSummary> ComputeCardSummary(CreditCard card)
-    {
-        var stmt = await _db.StatementHistories
-            .Where(s => s.UserId == UserId && s.CreditCardId == card.Id)
-            .OrderByDescending(s => s.StatementDate)
-            .FirstOrDefaultAsync();
-
-        if (stmt is null)
-            return new(0, 0, 0, card.CurrentBalance, card.MinimumPayment,
-                card.CurrentBalance, null, false);
-
-        var stmtDate = stmt.StatementDate;
-        var stmtBal = stmt.StatementBalance;
-        var minPay = stmt.MinimumPayment;
-
-        var postCharges = await _db.DailyExpenses
-            .Where(e => e.UserId == UserId &&
-                e.FundingSourceType == FundingSourceType.CreditCard &&
-                e.FundingSourceId == card.Id &&
-                e.Date > stmtDate &&
-                e.TransactionType == TransactionType.Expense)
-            .SumAsync(e => e.Amount);
-
-        var postRefunds = await _db.DailyExpenses
-            .Where(e => e.UserId == UserId &&
-                e.FundingSourceType == FundingSourceType.CreditCard &&
-                e.FundingSourceId == card.Id &&
-                e.Date > stmtDate &&
-                e.TransactionType == TransactionType.Refund)
-            .SumAsync(e => e.Amount);
-
-        var postPayments = await _db.PaymentHistories
-            .Where(p => p.UserId == UserId &&
-                p.DebtType == DebtType.CreditCard &&
-                p.DebtId == card.Id &&
-                p.PaymentDate > stmtDate)
-            .SumAsync(p => p.AmountPaid);
-
-        var computed = Math.Round(stmtBal + postCharges - postRefunds - postPayments, 2);
-        var changed = computed != card.CurrentBalance;
-        if (changed) card.CurrentBalance = computed;
-
-        return new(
-            Math.Round(postCharges, 2),
-            Math.Round(postRefunds, 2),
-            Math.Round(postPayments, 2),
-            Math.Round(Math.Max(0, stmtBal - postPayments - postRefunds), 2),
-            Math.Round(Math.Max(0, minPay - postPayments), 2),
-            stmtBal,
-            stmtDate,
-            changed);
-    }
-
     private async Task AutoAdvanceMatchingRecurring(string debtName)
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
@@ -470,9 +412,7 @@ public class CreditCardsController : ControllerBase
             .SumAsync(e => e.Amount);
         var totalPayments = await paymentQuery.SumAsync(p => p.AmountPaid);
 
-        var utilization = card.CreditLimit > 0
-            ? Math.Min(100, Math.Round((double)card.CurrentBalance / (double)card.CreditLimit * 100, 1))
-            : 0;
+        var utilization = FinanceCalculationHelper.ComputeUtilization(card.CurrentBalance, card.CreditLimit);
 
         var today = now.Date;
         DateTime? nextDueDate = null;

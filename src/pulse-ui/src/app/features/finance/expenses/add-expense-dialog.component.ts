@@ -1360,7 +1360,7 @@ export class AddExpenseDialogComponent implements OnInit {
       this.cdr.detectChanges();
     });
     this.creditCardService.getAll().subscribe(cards => {
-      for (const c of cards) this.cardMinPayments.set(Number(c.id), c.minimumPayment);
+      for (const c of cards) this.cardMinPayments.set(Number(c.id), c.remainingMinimumPayment ?? c.minimumPayment);
     });
 
     this.form.get('transactionType')!.valueChanges.subscribe((type) => {

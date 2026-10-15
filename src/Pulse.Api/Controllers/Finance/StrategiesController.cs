@@ -16,11 +16,13 @@ public class StrategiesController : ControllerBase
 {
     private readonly PulseDbContext _db;
     private readonly IPayoffStrategyService _strategyService;
+    private readonly IDebtSnapshotHelper _snapshotHelper;
 
-    public StrategiesController(PulseDbContext db, IPayoffStrategyService strategyService)
+    public StrategiesController(PulseDbContext db, IPayoffStrategyService strategyService, IDebtSnapshotHelper snapshotHelper)
     {
         _db = db;
         _strategyService = strategyService;
+        _snapshotHelper = snapshotHelper;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -29,55 +31,11 @@ public class StrategiesController : ControllerBase
     public async Task<ActionResult<StrategyComparisonDto>> GetComparison([FromQuery] decimal extraPayment = 0)
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        var userNow = TimeZoneHelper.UserNow(tz);
-        var loans = await _db.PersonalLoans
-            .Where(l => l.UserId == UserId)
-            .Where(l => l.CurrentBalance > 0)
-            .ToListAsync();
-        var cards = await _db.CreditCards.Where(c => c.UserId == UserId && c.CurrentBalance > 0).ToListAsync();
         var profile = await _db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == UserId);
 
-        var snapshots = new List<DebtSnapshotDto>();
-
-        foreach (var loan in loans)
-        {
-            snapshots.Add(new DebtSnapshotDto
-            {
-                Id = loan.Id,
-                DebtType = DebtType.PersonalLoan,
-                Name = loan.LenderName,
-                Balance = loan.CurrentBalance,
-                AprPercent = loan.AprPercent,
-                MinimumPayment = loan.MonthlyEquivalentPayment,
-                EffectiveApr = loan.AprPercent,
-                PromoEndDate = null,
-                DueDay = loan.DueDay,
-                PaymentFrequency = loan.PaymentFrequency.ToString(),
-                StartDate = loan.StartDate,
-                PerPaymentAmount = loan.MonthlyPayment
-            });
-        }
-
-        foreach (var card in cards)
-        {
-            snapshots.Add(new DebtSnapshotDto
-            {
-                Id = card.Id,
-                DebtType = DebtType.CreditCard,
-                Name = card.CardName,
-                Balance = card.CurrentBalance,
-                AprPercent = card.AprPercent,
-                MinimumPayment = card.MinimumPayment,
-                EffectiveApr = card.PromoEndDate.HasValue && card.PromoEndDate > userNow
-                    ? card.PromoAprPercent ?? card.AprPercent
-                    : card.AprPercent,
-                PromoEndDate = card.PromoEndDate,
-                DueDay = card.DueDay,
-                PerPaymentAmount = card.MinimumPayment
-            });
-        }
-
-        snapshots = snapshots.Where(s => s.Balance > 0).ToList();
+        var userNow = TimeZoneHelper.UserNow(tz);
+        var snapshots = (await _snapshotHelper.GetDebtSnapshots(UserId, userNow))
+            .Where(s => s.Balance > 0).ToList();
 
         var totalMinimumPayments = snapshots.Sum(s => s.MinimumPayment);
 
@@ -90,7 +48,7 @@ public class StrategiesController : ControllerBase
         var monthlyIncome = profile?.MonthlyIncome ?? 0;
         if (profile?.NextPayDate != null && profile.NetPayPerCheck > 0)
         {
-            var payDates = GetPayDatesInMonth(profile.NextPayDate.Value, profile.PayFrequency, today.Year, today.Month);
+            var payDates = FinanceCalculationHelper.GetDatesInMonth(profile.NextPayDate.Value, profile.PayFrequency, today.Year, today.Month);
             monthlyIncome = payDates.Count * profile.NetPayPerCheck;
         }
 
@@ -106,7 +64,7 @@ public class StrategiesController : ControllerBase
 
         if (profile?.NextPayDate != null)
         {
-            var paychecks = GetPayDatesInMonth(profile.NextPayDate.Value, profile.PayFrequency, today.Year, today.Month);
+            var paychecks = FinanceCalculationHelper.GetDatesInMonth(profile.NextPayDate.Value, profile.PayFrequency, today.Year, today.Month);
             comparison.Paychecks = paychecks.Select(d => new PaycheckInfoDto
             {
                 Date = d.ToString("yyyy-MM-dd"),
@@ -130,35 +88,5 @@ public class StrategiesController : ControllerBase
             var bestPaycheck = paychecks.OrderBy(p => Math.Abs((p - dueDate).TotalDays)).First();
             step.PaycheckDate = bestPaycheck.ToString("yyyy-MM-dd");
         }
-    }
-
-    private static List<DateTime> GetPayDatesInMonth(DateTime anchor, PaymentFrequency freq, int year, int month)
-    {
-        if (freq == PaymentFrequency.Monthly)
-        {
-            var day = Math.Min(anchor.Day, DateTime.DaysInMonth(year, month));
-            return new List<DateTime> { new DateTime(year, month, day) };
-        }
-
-        var interval = freq == PaymentFrequency.Biweekly ? 14 : 7;
-        var monthStart = new DateTime(year, month, 1);
-        var monthEnd = new DateTime(year, month, DateTime.DaysInMonth(year, month));
-        var results = new List<DateTime>();
-
-        var current = anchor.Date;
-        while (current <= monthEnd)
-        {
-            if (current >= monthStart)
-                results.Add(current);
-            current = current.AddDays(interval);
-        }
-        current = anchor.Date.AddDays(-interval);
-        while (current >= monthStart)
-        {
-            results.Add(current);
-            current = current.AddDays(-interval);
-        }
-
-        return results.Distinct().OrderBy(d => d).ToList();
     }
 }

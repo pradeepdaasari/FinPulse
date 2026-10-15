@@ -75,7 +75,7 @@ public class DashboardController : ControllerBase
 
         foreach (var loan in activeLoans)
         {
-            var dueDate = GetNextLoanDueDate(loan, today);
+            var dueDate = FinanceCalculationHelper.GetNextLoanDueDate(loan, today);
             var daysUntilDue = (dueDate - today).Days;
 
             if (daysUntilDue <= 7)
@@ -95,7 +95,7 @@ public class DashboardController : ControllerBase
 
         foreach (var card in cards)
         {
-            var dueDate = GetNextDueDate(card.DueDay, today);
+            var dueDate = FinanceCalculationHelper.GetNextMonthlyDueDate(card.DueDay, today);
             var daysUntilDue = (dueDate - today).Days;
 
             if (daysUntilDue <= 7)
@@ -531,29 +531,6 @@ public class DashboardController : ControllerBase
         return Ok(snapshots);
     }
 
-    private static DateTime GetNextLoanDueDate(PersonalLoan loan, DateTime today)
-    {
-        if (loan.PaymentFrequency is PaymentFrequency.Weekly or PaymentFrequency.Biweekly)
-        {
-            var interval = loan.PaymentFrequency == PaymentFrequency.Biweekly ? 14 : 7;
-            var anchor = loan.StartDate.Date;
-            while (anchor < today)
-                anchor = anchor.AddDays(interval);
-            return anchor;
-        }
-        return GetNextDueDate(loan.DueDay, today);
-    }
-
-    private static DateTime GetNextDueDate(int dueDay, DateTime today)
-    {
-        var thisMonth = new DateTime(today.Year, today.Month, Math.Min(dueDay, DateTime.DaysInMonth(today.Year, today.Month)));
-        if (thisMonth >= today)
-            return thisMonth;
-
-        var nextMonth = today.AddMonths(1);
-        return new DateTime(nextMonth.Year, nextMonth.Month, Math.Min(dueDay, DateTime.DaysInMonth(nextMonth.Year, nextMonth.Month)));
-    }
-
     private static string GetUrgencyLevel(int daysUntilDue)
     {
         return daysUntilDue switch
@@ -578,7 +555,7 @@ public class DashboardController : ControllerBase
 
         foreach (var loan in allLoans)
         {
-            var dueDate = GetNextLoanDueDate(loan, userToday);
+            var dueDate = FinanceCalculationHelper.GetNextLoanDueDate(loan, userToday);
             if (dueDate == userToday)
             {
                 paymentsDueToday.Add(new { DebtName = loan.LenderName, Amount = loan.MonthlyPayment, DebtType = "PersonalLoan" });
@@ -587,7 +564,7 @@ public class DashboardController : ControllerBase
         }
         foreach (var card in cards)
         {
-            var dueDate = GetNextDueDate(card.DueDay, userToday);
+            var dueDate = FinanceCalculationHelper.GetNextMonthlyDueDate(card.DueDay, userToday);
             if (dueDate == userToday)
             {
                 paymentsDueToday.Add(new { DebtName = card.CardName, Amount = card.MinimumPayment, DebtType = "CreditCard" });
@@ -624,7 +601,7 @@ public class DashboardController : ControllerBase
         foreach (var loan in allLoans)
         {
             if (loan.CurrentBalance <= 0) continue;
-            var dueDate = GetNextLoanDueDate(loan, userToday);
+            var dueDate = FinanceCalculationHelper.GetNextLoanDueDate(loan, userToday);
             var days = (int)(dueDate - userToday).TotalDays;
             if (days >= 1 && days <= 5)
             {
@@ -637,7 +614,7 @@ public class DashboardController : ControllerBase
         }
         foreach (var card in cards)
         {
-            var dueDate = GetNextDueDate(card.DueDay, userToday);
+            var dueDate = FinanceCalculationHelper.GetNextMonthlyDueDate(card.DueDay, userToday);
             var days = (int)(dueDate - userToday).TotalDays;
             if (days >= 1 && days <= 5)
             {
@@ -776,12 +753,15 @@ public class DashboardController : ControllerBase
         foreach (var loan in loans)
         {
             if (loan.CurrentBalance <= 0) continue;
-            if (IsLoanDeferred(loan, today)) continue;
+            if (FinanceCalculationHelper.IsLoanDeferred(loan, today)) continue;
 
             var freq = loan.PaymentFrequency;
             var debtPayments = allPayments.Where(p => p.DebtId == loan.Id && p.DebtType == DebtType.PersonalLoan).ToList();
             var anchor = loan.NextPaymentDate?.Date ?? loan.StartDate.Date;
-            var dueDates = GetDueDatesInMonth(loan.DueDay, freq, anchor, year, month, monthEnd);
+            var dateAnchor = freq == PaymentFrequency.Monthly
+                ? new DateTime(year, month, Math.Min(loan.DueDay, DateTime.DaysInMonth(year, month)))
+                : anchor;
+            var dueDates = FinanceCalculationHelper.GetDatesInMonth(dateAnchor, freq, year, month);
 
             foreach (var dueDate in dueDates)
             {
@@ -794,7 +774,7 @@ public class DashboardController : ControllerBase
 
                 var amount = loan.MonthlyPayment;
                 var isPaid = loan.CurrentBalance <= 0 || nearbyPaid >= amount;
-                var (status, statusLabel) = ComputeStatus(isPaid, dueDate, today);
+                var (status, statusLabel) = FinanceCalculationHelper.ComputePaymentStatus(isPaid, dueDate, today);
 
                 var daysUntil = (int)(dueDate - today).TotalDays;
 
@@ -832,7 +812,7 @@ public class DashboardController : ControllerBase
             else
                 isPaid = nearbyPaid >= amount;
 
-            var (status, statusLabel) = ComputeStatus(isPaid, dueDate, today);
+            var (status, statusLabel) = FinanceCalculationHelper.ComputePaymentStatus(isPaid, dueDate, today);
 
             var cardDaysUntil = (int)(dueDate - today).TotalDays;
             var cardMinPaid = nearbyPaid > 0 && nearbyPaid >= amount;
@@ -872,7 +852,7 @@ public class DashboardController : ControllerBase
                     .Where(e => e.CategoryId == bill.CategoryId)
                     .Sum(e => e.Amount);
                 var isPaid = paidAmount >= bill.Amount;
-                var (status, statusLabel) = ComputeStatus(isPaid, dueDate, today);
+                var (status, statusLabel) = FinanceCalculationHelper.ComputePaymentStatus(isPaid, dueDate, today);
                 var daysUntil = (int)(dueDate - today).TotalDays;
 
                 rows.Add(new
@@ -911,30 +891,7 @@ public class DashboardController : ControllerBase
         if (profile?.NextPayDate != null)
         {
             var anchor = TimeZoneHelper.ToLocalDate(profile.NextPayDate.Value, tz);
-            var frequency = profile.PayFrequency;
-            DateTime nextPay;
-
-            if (frequency == PaymentFrequency.Biweekly || frequency == PaymentFrequency.Weekly)
-            {
-                var intervalDays = frequency == PaymentFrequency.Biweekly ? 14 : 7;
-                nextPay = anchor;
-                if (nextPay > today)
-                {
-                    while (nextPay.AddDays(-intervalDays) > today) nextPay = nextPay.AddDays(-intervalDays);
-                }
-                else
-                {
-                    while (nextPay <= today) nextPay = nextPay.AddDays(intervalDays);
-                }
-            }
-            else
-            {
-                var day = anchor.Day;
-                nextPay = today.Day < day
-                    ? new DateTime(today.Year, today.Month, day)
-                    : new DateTime(today.Year, today.Month, 1).AddMonths(1).AddDays(day - 1);
-            }
-
+            var nextPay = FinanceCalculationHelper.ComputeNextPaycheck(anchor, profile.PayFrequency, today);
             nextPaycheckDate = nextPay.ToString("o");
             daysUntilPaycheck = (int)Math.Ceiling((nextPay - today).TotalDays);
         }
@@ -971,34 +928,6 @@ public class DashboardController : ControllerBase
         });
     }
 
-    private static List<DateTime> GetDueDatesInMonth(int dueDay, PaymentFrequency freq, DateTime startDate, int year, int month, DateTime monthEnd)
-    {
-        if (freq == PaymentFrequency.Monthly)
-        {
-            var day = Math.Min(dueDay, monthEnd.Day);
-            return new List<DateTime> { new(year, month, day) };
-        }
-        var interval = freq == PaymentFrequency.Biweekly ? 14 : 7;
-        var anchor = startDate.Date;
-        var monthStart = new DateTime(year, month, 1);
-        var dates = new List<DateTime>();
-        var current = anchor;
-        while (current <= monthEnd) { if (current >= monthStart) dates.Add(current); current = current.AddDays(interval); }
-        current = anchor.AddDays(-interval);
-        while (current >= monthStart) { dates.Add(current); current = current.AddDays(-interval); }
-        dates.Sort();
-        return dates.Count > 0 ? dates : new List<DateTime> { new(year, month, Math.Min(dueDay, monthEnd.Day)) };
-    }
-
-    private static bool IsLoanDeferred(PersonalLoan loan, DateTime today)
-    {
-        if (!loan.NextPaymentDate.HasValue || loan.CurrentBalance <= 0) return false;
-        var daysAway = (loan.NextPaymentDate.Value.Date - today).TotalDays;
-        var cycleDays = loan.PaymentFrequency == PaymentFrequency.Weekly ? 7
-            : loan.PaymentFrequency == PaymentFrequency.Biweekly ? 14 : 31;
-        return daysAway > cycleDays + 7;
-    }
-
     private static List<DateTime> GetRecurringDueDatesInMonth(DateTime nextRunDate, RecurrenceFrequency freq, DateTime monthStart, DateTime monthEnd)
     {
         if (freq == RecurrenceFrequency.Monthly)
@@ -1027,19 +956,6 @@ public class DashboardController : ControllerBase
             dates.Add(new DateTime(monthStart.Year, monthStart.Month, day));
         }
         return dates;
-    }
-
-    private static (string status, string label) ComputeStatus(bool isPaid, DateTime dueDate, DateTime today)
-    {
-        if (isPaid) return ("paid", "Paid");
-        if (dueDate < today)
-        {
-            var daysLate = (int)(today - dueDate).TotalDays;
-            return ("overdue", $"{daysLate}d overdue — was due {dueDate:MMM d}");
-        }
-        if (dueDate == today) return ("due-today", "Due today");
-        if ((dueDate - today).TotalDays <= 3) return ("due-soon", $"Due {dueDate:MMM d}");
-        return ("upcoming", $"Due {dueDate:MMM d}");
     }
 
     [HttpGet("monthly-pulse")]

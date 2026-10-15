@@ -51,7 +51,7 @@ public class LoansController : ControllerBase
                 ? Math.Max(0, Math.Min(100, Math.Round((1 - (double)l.CurrentBalance / (double)l.OriginalAmount) * 100, 1)))
                 : 0,
             DaysUntilDue = ComputeDaysUntilDue(l, today),
-            IsDeferred = ComputeIsDeferred(l, today),
+            IsDeferred = FinanceCalculationHelper.IsLoanDeferred(l, today),
             l.CreatedAt, l.UpdatedAt
         });
         return Ok(result);
@@ -83,7 +83,7 @@ public class LoansController : ControllerBase
                 ? Math.Max(0, Math.Min(100, Math.Round((1 - (double)loan.CurrentBalance / (double)loan.OriginalAmount) * 100, 1)))
                 : 0,
             DaysUntilDue = ComputeDaysUntilDue(loan, today),
-            IsDeferred = ComputeIsDeferred(loan, today),
+            IsDeferred = FinanceCalculationHelper.IsLoanDeferred(loan, today),
             loan.CreatedAt, loan.UpdatedAt
         });
     }
@@ -609,14 +609,6 @@ public class LoansController : ControllerBase
         return Ok(await _aggregationService.GetLoanSummaryAsync(UserId));
     }
 
-    private static bool ComputeIsDeferred(PersonalLoan loan, DateTime today)
-    {
-        if (!loan.NextPaymentDate.HasValue || loan.CurrentBalance <= 0) return false;
-        var daysAway = (loan.NextPaymentDate.Value.Date - today).TotalDays;
-        var cycleDays = loan.PaymentFrequency == PaymentFrequency.Weekly ? 7
-            : loan.PaymentFrequency == PaymentFrequency.Biweekly ? 14 : 31;
-        return daysAway > cycleDays + 7;
-    }
 
     private static int? ComputeDaysUntilDue(PersonalLoan loan, DateTime today)
     {

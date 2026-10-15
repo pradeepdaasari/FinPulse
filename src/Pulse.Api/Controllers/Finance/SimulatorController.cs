@@ -1,10 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Pulse.Core.Data;
 using Pulse.Core.DTOs;
-using Pulse.Core.Models.Enums;
 using Pulse.Core.Services;
 
 namespace Pulse.Api.Controllers;
@@ -15,11 +13,13 @@ namespace Pulse.Api.Controllers;
 public class SimulatorController : ControllerBase
 {
     private readonly PulseDbContext _db;
+    private readonly IDebtSnapshotHelper _snapshotHelper;
     private readonly IWhatIfSimulatorService _simulatorService;
 
-    public SimulatorController(PulseDbContext db, IWhatIfSimulatorService simulatorService)
+    public SimulatorController(PulseDbContext db, IDebtSnapshotHelper snapshotHelper, IWhatIfSimulatorService simulatorService)
     {
         _db = db;
+        _snapshotHelper = snapshotHelper;
         _simulatorService = simulatorService;
     }
 
@@ -30,48 +30,8 @@ public class SimulatorController : ControllerBase
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         var userNow = TimeZoneHelper.UserNow(tz);
-        var loans = await _db.PersonalLoans
-            .Where(l => l.UserId == UserId)
-            .Where(l => l.CurrentBalance > 0)
-            .ToListAsync();
-        var cards = await _db.CreditCards.Where(c => c.UserId == UserId && c.CurrentBalance > 0).ToListAsync();
-
-        var snapshots = new List<DebtSnapshotDto>();
-
-        foreach (var loan in loans)
-        {
-            snapshots.Add(new DebtSnapshotDto
-            {
-                Id = loan.Id,
-                DebtType = DebtType.PersonalLoan,
-                Name = loan.LenderName,
-                Balance = loan.CurrentBalance,
-                AprPercent = loan.AprPercent,
-                MinimumPayment = loan.MonthlyEquivalentPayment,
-                EffectiveApr = loan.AprPercent,
-                PromoEndDate = null
-            });
-        }
-
-        foreach (var card in cards)
-        {
-            snapshots.Add(new DebtSnapshotDto
-            {
-                Id = card.Id,
-                DebtType = DebtType.CreditCard,
-                Name = card.CardName,
-                Balance = card.CurrentBalance,
-                AprPercent = card.AprPercent,
-                MinimumPayment = card.MinimumPayment,
-                EffectiveApr = card.PromoEndDate.HasValue && card.PromoEndDate > userNow
-                    ? card.PromoAprPercent ?? card.AprPercent
-                    : card.AprPercent,
-                PromoEndDate = card.PromoEndDate
-            });
-        }
-
+        var snapshots = await _snapshotHelper.GetDebtSnapshots(UserId, userNow);
         var result = _simulatorService.Simulate(snapshots, request);
-
         return Ok(result);
     }
 }

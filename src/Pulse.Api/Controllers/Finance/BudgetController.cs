@@ -18,12 +18,14 @@ public class BudgetController : ControllerBase
     private readonly PulseDbContext _db;
     private readonly IBudgetService _budgetService;
     private readonly IBudgetPlanService _budgetPlanService;
+    private readonly IDebtSnapshotHelper _snapshotHelper;
 
-    public BudgetController(PulseDbContext db, IBudgetService budgetService, IBudgetPlanService budgetPlanService)
+    public BudgetController(PulseDbContext db, IBudgetService budgetService, IBudgetPlanService budgetPlanService, IDebtSnapshotHelper snapshotHelper)
     {
         _db = db;
         _budgetService = budgetService;
         _budgetPlanService = budgetPlanService;
+        _snapshotHelper = snapshotHelper;
     }
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -226,31 +228,7 @@ public class BudgetController : ControllerBase
         // Paycheck info
         if (profile.NextPayDate != null)
         {
-            var anchor = profile.NextPayDate.Value.Date;
-            var frequency = profile.PayFrequency;
-            DateTime nextPay;
-
-            if (frequency == PaymentFrequency.Biweekly || frequency == PaymentFrequency.Weekly)
-            {
-                var intervalDays = frequency == PaymentFrequency.Biweekly ? 14 : 7;
-                nextPay = anchor;
-                if (nextPay > today)
-                {
-                    while (nextPay.AddDays(-intervalDays) > today) nextPay = nextPay.AddDays(-intervalDays);
-                }
-                else
-                {
-                    while (nextPay <= today) nextPay = nextPay.AddDays(intervalDays);
-                }
-            }
-            else
-            {
-                var day = anchor.Day;
-                nextPay = today.Day < day
-                    ? new DateTime(today.Year, today.Month, day)
-                    : new DateTime(today.Year, today.Month, 1).AddMonths(1).AddDays(day - 1);
-            }
-
+            var nextPay = FinanceCalculationHelper.ComputeNextPaycheck(profile.NextPayDate.Value.Date, profile.PayFrequency, today);
             plan.DaysUntilPaycheck = (int)Math.Ceiling((nextPay - today).TotalDays);
         }
 
@@ -383,51 +361,6 @@ public class BudgetController : ControllerBase
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         var userNow = TimeZoneHelper.UserNow(tz);
-        var loans = await _db.PersonalLoans
-            .Where(l => l.UserId == UserId && l.CurrentBalance > 0)
-            .ToListAsync();
-        var cards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
-        var snapshots = new List<DebtSnapshotDto>();
-
-        foreach (var loan in loans)
-        {
-            snapshots.Add(new DebtSnapshotDto
-            {
-                Id = loan.Id,
-                DebtType = DebtType.PersonalLoan,
-                Name = loan.LenderName,
-                Balance = loan.CurrentBalance,
-                AprPercent = loan.AprPercent,
-                MinimumPayment = loan.MonthlyEquivalentPayment,
-                EffectiveApr = loan.AprPercent,
-                PromoEndDate = null,
-                DueDay = loan.DueDay,
-                PaymentFrequency = loan.PaymentFrequency.ToString(),
-                StartDate = loan.StartDate,
-                PerPaymentAmount = loan.MonthlyPayment,
-                NextPaymentDate = loan.NextPaymentDate
-            });
-        }
-
-        foreach (var card in cards)
-        {
-            snapshots.Add(new DebtSnapshotDto
-            {
-                Id = card.Id,
-                DebtType = DebtType.CreditCard,
-                Name = card.CardName,
-                Balance = card.CurrentBalance,
-                AprPercent = card.AprPercent,
-                MinimumPayment = card.MinimumPayment,
-                EffectiveApr = card.PromoEndDate.HasValue && card.PromoEndDate > userNow
-                    ? card.PromoAprPercent ?? card.AprPercent
-                    : card.AprPercent,
-                PromoEndDate = card.PromoEndDate,
-                DueDay = card.DueDay,
-                PerPaymentAmount = card.MinimumPayment
-            });
-        }
-
-        return snapshots;
+        return await _snapshotHelper.GetDebtSnapshots(UserId, userNow);
     }
 }

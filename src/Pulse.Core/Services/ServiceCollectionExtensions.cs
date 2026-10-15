@@ -14,6 +14,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISnapshotService, SnapshotService>();
         services.AddScoped<IStreakService, StreakService>();
         services.AddScoped<IDebtAggregationService, DebtAggregationService>();
+        services.AddScoped<ICardSummaryService, CardSummaryService>();
+        services.AddScoped<IDebtSnapshotHelper, DebtSnapshotHelper>();
 
         return services;
     }
