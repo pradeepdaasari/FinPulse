@@ -845,7 +845,7 @@ public class DashboardController : ControllerBase
 
         foreach (var bill in bills)
         {
-            var dueDates = GetRecurringDueDatesInMonth(bill.NextRunDate, bill.Frequency, monthStart, monthEnd);
+            var dueDates = GetRecurringDueDatesInMonth(bill.NextRunDate, bill.Frequency, bill.IntervalCount, monthStart, monthEnd);
             foreach (var dueDate in dueDates)
             {
                 var paidAmount = dailyExpenses
@@ -928,34 +928,57 @@ public class DashboardController : ControllerBase
         });
     }
 
-    private static List<DateTime> GetRecurringDueDatesInMonth(DateTime nextRunDate, RecurrenceFrequency freq, DateTime monthStart, DateTime monthEnd)
+    private static List<DateTime> GetRecurringDueDatesInMonth(DateTime nextRunDate, RecurrenceFrequency freq, int intervalCount, DateTime monthStart, DateTime monthEnd)
     {
         if (freq == RecurrenceFrequency.Monthly)
         {
-            var day = Math.Min(nextRunDate.Day, monthEnd.Day);
-            return new List<DateTime> { new(monthStart.Year, monthStart.Month, day) };
+            if (intervalCount <= 1)
+            {
+                var day = Math.Min(nextRunDate.Day, monthEnd.Day);
+                return new List<DateTime> { new(monthStart.Year, monthStart.Month, day) };
+            }
+            var dates = new List<DateTime>();
+            var cursor = nextRunDate.Date;
+            while (cursor <= monthEnd)
+            {
+                if (cursor >= monthStart) dates.Add(cursor);
+                cursor = cursor.AddMonths(intervalCount);
+            }
+            cursor = nextRunDate.Date.AddMonths(-intervalCount);
+            while (cursor >= monthStart)
+            {
+                dates.Add(cursor);
+                cursor = cursor.AddMonths(-intervalCount);
+            }
+            dates.Sort();
+            if (dates.Count == 0)
+            {
+                var day = Math.Min(nextRunDate.Day, monthEnd.Day);
+                dates.Add(new DateTime(monthStart.Year, monthStart.Month, day));
+            }
+            return dates;
         }
 
         var interval = freq switch
         {
-            RecurrenceFrequency.Weekly => 7,
+            RecurrenceFrequency.Weekly => 7 * intervalCount,
             RecurrenceFrequency.Biweekly => 14,
-            RecurrenceFrequency.Daily => 1,
+            RecurrenceFrequency.Daily => intervalCount,
             _ => 30
         };
         var anchor = nextRunDate.Date;
-        var dates = new List<DateTime>();
+        var result = new List<DateTime>();
         var current = anchor;
-        while (current <= monthEnd) { if (current >= monthStart) dates.Add(current); current = current.AddDays(interval); }
+        while (current <= monthEnd) { if (current >= monthStart) result.Add(current); current = current.AddDays(interval); }
         current = anchor.AddDays(-interval);
-        while (current >= monthStart) { dates.Add(current); current = current.AddDays(-interval); }
-        dates.Sort();
-        if (dates.Count == 0)
+        while (current >= monthStart) { result.Add(current); current = current.AddDays(-interval); }
+        result.Sort();
+        if (result.Count == 0)
         {
             var day = Math.Min(nextRunDate.Day, monthEnd.Day);
-            dates.Add(new DateTime(monthStart.Year, monthStart.Month, day));
+            result.Add(new DateTime(monthStart.Year, monthStart.Month, day));
         }
-        return dates;
+        return result;
     }
 
     [HttpGet("monthly-pulse")]
@@ -1289,6 +1312,52 @@ public class DashboardController : ControllerBase
                 details = nwDetails
             }
         });
+    }
+
+    [HttpGet("daily-spending")]
+    public async Task<ActionResult> GetDailySpending([FromQuery] int days = 30)
+    {
+        if (days < 1 || days > 90) days = 30;
+
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var userToday = TimeZoneHelper.UserToday(tz);
+        var startDate = userToday.AddDays(-(days - 1));
+
+        var utcStart = TimeZoneHelper.ToUtc(startDate, tz);
+        var utcEnd = TimeZoneHelper.ToUtc(userToday.AddDays(1), tz);
+
+        var tradingParentId = await _db.CustomCategories
+            .Where(c => c.UserId == UserId && c.Name == "Day Trading" && c.ParentId == null)
+            .Select(c => c.Id).FirstOrDefaultAsync();
+        var tradingCatIds = tradingParentId == 0
+            ? new List<int>()
+            : await _db.CustomCategories
+                .Where(c => c.UserId == UserId && (c.Id == tradingParentId || c.ParentId == tradingParentId))
+                .Select(c => c.Id).ToListAsync();
+
+        var expenses = await _db.DailyExpenses
+            .Where(e => e.UserId == UserId
+                && e.Date >= utcStart && e.Date < utcEnd
+                && (e.TransactionType == TransactionType.Expense || e.TransactionType == null)
+                && (!e.CategoryId.HasValue || !tradingCatIds.Contains(e.CategoryId.Value)))
+            .Select(e => new { e.Date, e.Amount })
+            .ToListAsync();
+
+        var grouped = expenses
+            .GroupBy(e => TimeZoneHelper.ToLocalDate(e.Date, tz))
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
+
+        var result = Enumerable.Range(0, days).Select(i =>
+        {
+            var date = startDate.AddDays(i);
+            grouped.TryGetValue(date, out var amount);
+            return new { date = date.ToString("yyyy-MM-dd"), amount };
+        }).ToList();
+
+        var total = result.Sum(r => r.amount);
+        var average = days > 0 ? Math.Round(total / days, 2) : 0;
+
+        return Ok(new { days = result, total, average });
     }
 
     private record UpcomingGlanceItem(string Name, decimal MonthlyPayment, string DueDate, int DaysUntilDue, string Kind, bool IsAutopay);

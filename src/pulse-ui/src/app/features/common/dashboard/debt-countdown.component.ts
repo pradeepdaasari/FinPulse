@@ -68,7 +68,7 @@ import { DebtFreeCountdown } from '../../../core/models/dashboard.model';
   styles: [`
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
     .countdown-card {
-      margin-top: var(--spacing-md);
+      margin-bottom: var(--spacing-sm);
       background: var(--color-surface);
       border-radius: var(--radius-md);
       border: 1px solid var(--color-border);
@@ -94,12 +94,12 @@ import { DebtFreeCountdown } from '../../../core/models/dashboard.model';
       border-radius: 16px;
     }
     .overall-date.warning {
-      color: #E65100;
-      background: #FFF3E0;
+      color: var(--color-warning-text);
+      background: var(--color-warning-bg);
     }
     .overall-date.warning mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .title-with-icon { display: flex; align-items: center; }
-    .card-title-icon { font-size: 20px; width: 20px; height: 20px; margin-right: 8px; color: #FF3B30; }
+    .card-title-icon { font-size: 20px; width: 20px; height: 20px; margin-right: 8px; color: var(--color-danger); }
     .overall-date mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .projections { display: flex; flex-direction: column; gap: 14px; }
     .projection-row {
@@ -110,8 +110,8 @@ import { DebtFreeCountdown } from '../../../core/models/dashboard.model';
     }
     .projection-row.never-row { opacity: 0.85; }
     .projection-info { display: flex; flex-direction: column; }
-    .debt-name { font-weight: 600; font-size: 0.9375rem; }
-    .debt-meta { font-size: 0.8125rem; color: var(--color-text-muted); }
+    .debt-name { font-weight: 600; font-size: var(--text-sm); }
+    .debt-meta { font-size: var(--text-xs); color: var(--color-text-muted); }
     .projection-bar { min-width: 120px; }
     .payoff-date { font-size: 0.875rem; font-weight: 500; color: var(--color-text-secondary); white-space: nowrap; }
     .never-label {
@@ -120,10 +120,10 @@ import { DebtFreeCountdown } from '../../../core/models/dashboard.model';
       gap: 4px;
       font-size: 0.8125rem;
       font-weight: 500;
-      color: #E65100;
+      color: var(--color-warning-text);
     }
     .never-label mat-icon { font-size: 16px; width: 16px; height: 16px; }
-    .never-date { font-size: 0.8125rem; color: #E65100; font-weight: 500; }
+    .never-date { font-size: 0.8125rem; color: var(--color-warning-text); font-weight: 500; }
     @media (max-width: 599px) {
       .card-title-row { flex-direction: column; align-items: flex-start; gap: 6px; }
       .overall-date { font-size: 0.75rem; }

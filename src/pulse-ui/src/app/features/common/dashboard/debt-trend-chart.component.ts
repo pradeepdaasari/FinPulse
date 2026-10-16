@@ -45,7 +45,7 @@ import { TrendData } from '../../../core/models/dashboard.model';
   styles: [`
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
     .trend-card {
-      margin-top: var(--spacing-md);
+      margin-bottom: var(--spacing-xl);
       background: var(--color-surface);
       border-radius: var(--radius-md);
       border: 1px solid var(--color-border);
@@ -71,8 +71,8 @@ import { TrendData } from '../../../core/models/dashboard.model';
     .mom-change.negative { color: var(--color-success); background: var(--color-success-bg); }
     .mom-change.positive { color: var(--color-danger); background: var(--color-danger-bg); }
     .title-with-icon { display: flex; align-items: center; }
-    .card-title-icon { font-size: 20px; width: 20px; height: 20px; margin-right: 8px; color: #FF9500; }
-    .chart-container { position: relative; height: 280px; }
+    .card-title-icon { font-size: 20px; width: 20px; height: 20px; margin-right: 8px; color: var(--color-warning); }
+    .chart-container { position: relative; height: 240px; }
     .empty-state {
       display: flex;
       align-items: center;
@@ -117,16 +117,16 @@ export class DebtTrendChartComponent implements OnInit {
             {
               label: 'Total Debt',
               data: data.snapshots.map(s => s.totalDebt),
-              borderColor: '#dc2626',
-              backgroundColor: 'rgba(220, 38, 38, 0.1)',
+              borderColor: '#FF3B30',
+              backgroundColor: 'rgba(255, 59, 48, 0.1)',
               fill: true,
               tension: 0.3
             },
             {
               label: 'Paid This Month',
               data: data.snapshots.map(s => s.totalPaid),
-              borderColor: '#16a34a',
-              backgroundColor: 'rgba(22, 163, 74, 0.1)',
+              borderColor: '#34C759',
+              backgroundColor: 'rgba(52, 199, 89, 0.1)',
               fill: true,
               tension: 0.3
             }

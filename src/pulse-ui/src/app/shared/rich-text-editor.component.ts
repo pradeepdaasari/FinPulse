@@ -1,4 +1,5 @@
-import { Component, Input, forwardRef } from '@angular/core';
+import { Component, Input, forwardRef, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { QuillModule } from 'ngx-quill';
 
@@ -20,7 +21,8 @@ import { QuillModule } from 'ngx-quill';
       [styles]="editorStyles"
       theme="snow"
       format="html"
-      (onContentChanged)="onEditorChange($event)">
+      (onContentChanged)="onEditorChange($event)"
+      (onBlur)="onEditorBlur()">
     </quill-editor>
   `,
   styles: [`
@@ -121,11 +123,19 @@ export class RichTextEditorComponent implements ControlValueAccessor {
     return { 'min-height': this.height };
   }
 
+  private platformId = inject(PLATFORM_ID);
+
   onEditorChange(event: any): void {
     const html = event.html;
     this.value = html;
     this.onChange(html);
     this.onTouched();
+  }
+
+  onEditorBlur(): void {
+    if (isPlatformBrowser(this.platformId) && /iPhone|iPad|iPod/.test(navigator.userAgent)) {
+      setTimeout(() => window.scrollTo(0, window.scrollY), 100);
+    }
   }
 
   writeValue(val: string): void {

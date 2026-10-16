@@ -36,7 +36,7 @@ import { DashboardInsight } from '../../../core/models/dashboard.model';
       background: var(--color-surface);
       border: 1px solid var(--color-border);
       box-shadow: var(--shadow-sm);
-      margin-top: var(--spacing-md);
+      margin-bottom: var(--spacing-sm);
       display: flex;
       flex-direction: column;
       gap: 12px;
@@ -50,7 +50,7 @@ import { DashboardInsight } from '../../../core/models/dashboard.model';
       font-size: 18px;
       width: 18px;
       height: 18px;
-      color: #FFCC00;
+      color: var(--color-warning);
     }
     .header-text {
       font-size: var(--text-sm);
@@ -63,6 +63,7 @@ import { DashboardInsight } from '../../../core/models/dashboard.model';
       display: flex;
       align-items: center;
       gap: 12px;
+      padding: 4px 0;
     }
     .insight-icon-wrap {
       width: 32px;
@@ -85,6 +86,10 @@ import { DashboardInsight } from '../../../core/models/dashboard.model';
     .insight-icon-wrap.bg-green .insight-icon { color: var(--color-success); }
     .insight-icon-wrap.bg-amber .insight-icon { color: var(--color-warning); }
     .insight-icon-wrap.bg-red .insight-icon { color: var(--color-danger); }
+    .insight-icon-wrap.bg-blue { background: var(--color-info-bg); }
+    .insight-icon-wrap.bg-blue .insight-icon { color: var(--color-info); }
+    .insight-icon-wrap.bg-purple { background: var(--color-stat-purple-bg); }
+    .insight-icon-wrap.bg-purple .insight-icon { color: var(--color-stat-purple); }
     .insight-icon {
       font-size: 18px;
       width: 18px;

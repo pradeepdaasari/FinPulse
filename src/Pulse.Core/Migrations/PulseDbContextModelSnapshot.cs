@@ -1160,6 +1160,9 @@ namespace Pulse.Core.Migrations
                     b.Property<int?>("FundingSourceType")
                         .HasColumnType("int");
 
+                    b.Property<int>("IntervalCount")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 

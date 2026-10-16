@@ -179,10 +179,9 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                 <td class="amount">{{ r.amount | currency }}</td>
                 <td>
                   <span class="freq-badge" [class.freq-daily]="r.frequency === 'Daily'"
-                        [class.freq-weekly]="r.frequency === 'Weekly'"
-                        [class.freq-biweekly]="r.frequency === 'Biweekly'"
+                        [class.freq-weekly]="r.frequency === 'Weekly' || r.frequency === 'Biweekly'"
                         [class.freq-monthly]="r.frequency === 'Monthly'"
-                        >{{ r.frequency }}</span>
+                        ><mat-icon class="freq-icon">{{ frequencyIcon(r) }}</mat-icon>{{ frequencyLabel(r) }}</span>
                 </td>
                 <td>
                   <span [class.due-highlight]="isDue(r) && !isOverdue(r)" [class.overdue-highlight]="isOverdue(r)">{{ r.nextRunDate | localDate:'mediumDate' }}</span>
@@ -239,7 +238,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
               </div>
               <div class="rec-amount-col">
                 <span class="rec-amount" [class.overdue-amount]="isOverdue(r)">{{ r.amount | currency }}</span>
-                <span class="freq-badge" [class.freq-daily]="r.frequency === 'Daily'" [class.freq-weekly]="r.frequency === 'Weekly'" [class.freq-biweekly]="r.frequency === 'Biweekly'" [class.freq-monthly]="r.frequency === 'Monthly'" >{{ r.frequency }}</span>
+                <span class="freq-badge" [class.freq-daily]="r.frequency === 'Daily'" [class.freq-weekly]="r.frequency === 'Weekly' || r.frequency === 'Biweekly'" [class.freq-monthly]="r.frequency === 'Monthly'" ><mat-icon class="freq-icon">{{ frequencyIcon(r) }}</mat-icon>{{ frequencyLabel(r) }}</span>
               </div>
             </div>
             <div class="rec-bottom">
@@ -323,12 +322,14 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .merchant-text { font-size: var(--text-sm); color: var(--color-text-secondary); }
     .toggle-label { font-size: var(--text-xs); font-weight: var(--weight-medium); }
     .freq-badge {
-      display: inline-block; font-size: 0.68rem; font-weight: var(--weight-bold);
-      padding: 3px 10px; border-radius: var(--radius-full); white-space: nowrap;
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 0.7rem; font-weight: var(--weight-semibold);
+      padding: 4px 10px; border-radius: var(--radius-full); white-space: nowrap;
+      letter-spacing: 0.01em;
     }
+    .freq-icon { font-size: 13px; width: 13px; height: 13px; }
     .freq-daily { background: var(--color-freq-daily-bg); color: var(--color-freq-daily); }
     .freq-weekly { background: var(--color-freq-weekly-bg); color: var(--color-freq-weekly); }
-    .freq-biweekly { background: var(--color-freq-biweekly-bg); color: var(--color-freq-biweekly); }
     .freq-monthly { background: var(--color-freq-monthly-bg); color: var(--color-freq-monthly); }
 
     /* Action Buttons */
@@ -532,6 +533,7 @@ export class RecurringPageComponent implements OnInit {
       fundingSourceId: item.fundingSourceId,
       recurringType: this.recurringTypeToNumber(item.recurringType),
       frequency: this.frequencyToNumber(item.frequency),
+      intervalCount: item.intervalCount || 1,
       nextRunDate: item.nextRunDate,
       endDate: item.endDate,
       isActive: !item.isActive
@@ -545,8 +547,25 @@ export class RecurringPageComponent implements OnInit {
     });
   }
 
+  frequencyIcon(item: RecurringTransaction): string {
+    if (item.frequency === 'Daily') return 'today';
+    if (item.frequency === 'Weekly' || item.frequency === 'Biweekly') return 'date_range';
+    return 'calendar_month';
+  }
+
+  frequencyLabel(item: RecurringTransaction): string {
+    const n = item.intervalCount || 1;
+    if (item.frequency === 'Daily') return n > 1 ? `Every ${n} days` : 'Daily';
+    if (item.frequency === 'Weekly' || item.frequency === 'Biweekly') {
+      const weeks = item.frequency === 'Biweekly' ? 2 : n;
+      return weeks > 1 ? `Every ${weeks} wks` : 'Weekly';
+    }
+    if (item.frequency === 'Monthly') return n > 1 ? `Every ${n} mo` : 'Monthly';
+    return item.frequency;
+  }
+
   private frequencyToNumber(freq: string): number {
-    const map: Record<string, number> = { Daily: 0, Weekly: 1, Biweekly: 2, Monthly: 3 };
+    const map: Record<string, number> = { Daily: 0, Weekly: 1, Biweekly: 1, Monthly: 3 };
     return map[freq] ?? 3;
   }
 

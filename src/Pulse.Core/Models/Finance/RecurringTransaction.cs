@@ -20,6 +20,7 @@ public class RecurringTransaction
     public int? FundingSourceId { get; set; }
     public RecurringType RecurringType { get; set; } = RecurringType.Bill;
     public RecurrenceFrequency Frequency { get; set; }
+    public int IntervalCount { get; set; } = 1;
     public DateTime NextRunDate { get; set; }
     public DateTime? EndDate { get; set; }
     public bool IsActive { get; set; } = true;

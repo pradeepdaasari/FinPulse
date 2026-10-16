@@ -14,6 +14,7 @@ export interface RecurringTransaction {
   fundingSourceId: number | null;
   recurringType: RecurringType;
   frequency: RecurrenceFrequency;
+  intervalCount: number;
   nextRunDate: string;
   endDate: string | null;
   isActive: boolean;
@@ -39,6 +40,7 @@ export interface RecurringTransactionCreate {
   fundingSourceId?: number;
   recurringType: number;
   frequency: number;
+  intervalCount: number;
   nextRunDate: string;
   endDate?: string;
   isActive: boolean;

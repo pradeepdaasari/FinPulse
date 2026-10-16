@@ -894,8 +894,6 @@ import { routeFadeAnimation } from './route-animations';
       padding-bottom: env(safe-area-inset-bottom, 0px);
       box-sizing: border-box;
       background: var(--color-surface-solid);
-      backdrop-filter: blur(var(--glass-blur));
-      -webkit-backdrop-filter: blur(var(--glass-blur));
       border-top: 1px solid var(--color-border);
     }
 
@@ -1161,8 +1159,18 @@ export class NavShellComponent implements OnInit, OnDestroy {
 
   private checkKeyboard(): void {
     if (!window.visualViewport) return;
-    const shrink = this.initialViewportHeight - window.visualViewport.height;
-    this.keyboardOpen.set(shrink > 150);
+    const currentHeight = window.visualViewport.height;
+    const shrink = this.initialViewportHeight - currentHeight;
+    const wasOpen = this.keyboardOpen();
+    const isOpen = shrink > 150;
+    this.keyboardOpen.set(isOpen);
+
+    if (wasOpen && !isOpen) {
+      // iOS PWA: keyboard dismiss can corrupt sticky positioning and viewport height.
+      // Update baseline and force layout recalc.
+      this.initialViewportHeight = currentHeight;
+      window.scrollTo(0, window.scrollY);
+    }
   }
 
   onNavClick(): void {

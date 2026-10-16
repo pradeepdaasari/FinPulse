@@ -119,24 +119,34 @@ import { Observable } from 'rxjs';
           </mat-select>
         </mat-form-field>
 
-        <div class="form-row">
-          <mat-form-field appearance="outline">
-            <mat-label>Frequency</mat-label>
-            <mat-select formControlName="frequency">
-              <mat-option [value]="0">Daily</mat-option>
-              <mat-option [value]="1">Weekly</mat-option>
-              <mat-option [value]="2">Biweekly</mat-option>
-              <mat-option [value]="3">Monthly</mat-option>
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Start Date</mat-label>
-            <input matInput [matDatepicker]="startPicker" formControlName="nextRunDate">
-            <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
-            <mat-datepicker #startPicker></mat-datepicker>
-          </mat-form-field>
+        <div class="frequency-section">
+          <div class="field-label">Frequency</div>
+          <div class="freq-chips">
+            <div class="freq-chip" [class.active]="form.value.frequency === 0" (click)="setFrequency(0)">
+              <mat-icon>today</mat-icon><span>Daily</span>
+            </div>
+            <div class="freq-chip" [class.active]="form.value.frequency === 1" (click)="setFrequency(1)">
+              <mat-icon>date_range</mat-icon><span>Weekly</span>
+            </div>
+            <div class="freq-chip" [class.active]="form.value.frequency === 3" (click)="setFrequency(3)">
+              <mat-icon>calendar_month</mat-icon><span>Monthly</span>
+            </div>
+          </div>
+          @if (form.value.frequency === 1 || form.value.frequency === 3) {
+          <div class="interval-row">
+            <span class="interval-label">Every</span>
+            <input class="interval-input" type="number" inputmode="numeric" formControlName="intervalCount" min="1" max="12">
+            <span class="interval-unit">{{ form.value.frequency === 1 ? 'week(s)' : 'month(s)' }}</span>
+          </div>
+          }
         </div>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Start Date</mat-label>
+          <input matInput [matDatepicker]="startPicker" formControlName="nextRunDate">
+          <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+          <mat-datepicker #startPicker></mat-datepicker>
+        </mat-form-field>
 
         <div class="more-options-toggle" (click)="showMore.set(!showMore())">
           <mat-icon class="more-icon">{{ showMore() ? 'expand_less' : 'expand_more' }}</mat-icon>
@@ -174,8 +184,7 @@ import { Observable } from 'rxjs';
     :host { display: block; }
     .dialog-banner {
       position: relative;
-      margin: -24px -24px 12px;
-      padding: 16px 24px 14px;
+      padding: 18px 24px;
       background: var(--gradient-primary);
       overflow: hidden;
     }
@@ -257,7 +266,40 @@ import { Observable } from 'rxjs';
       width: 200px; height: 3px; border-radius: 2px;
       background: var(--gradient-primary); margin: 4px auto 0; opacity: 0.4;
     }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md); }
+    .frequency-section { margin-bottom: 8px; }
+    .field-label {
+      font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--color-text-muted); margin-bottom: 8px;
+    }
+    .freq-chips { display: flex; gap: 8px; margin-bottom: 8px; }
+    .freq-chip {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px 8px; border-radius: var(--radius-sm); cursor: pointer;
+      font-size: 0.82rem; font-weight: 600; color: var(--color-text-secondary);
+      background: var(--color-surface-secondary); border: 2px solid transparent;
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+    .freq-chip mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .freq-chip.active {
+      color: var(--color-primary); background: var(--color-stat-blue-bg);
+      border-color: var(--color-primary);
+    }
+    .interval-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; background: var(--color-surface-secondary);
+      border-radius: var(--radius-sm); margin-bottom: 4px;
+    }
+    .interval-label { font-size: 0.85rem; font-weight: 600; color: var(--color-text-secondary); }
+    .interval-input {
+      width: 52px; height: 36px; text-align: center; border: 2px solid var(--color-border);
+      border-radius: var(--radius-sm); font-size: 1rem; font-weight: 700;
+      color: var(--color-text-primary); background: var(--color-surface);
+      outline: none; -moz-appearance: textfield;
+    }
+    .interval-input:focus { border-color: var(--color-primary); }
+    .interval-input::-webkit-outer-spin-button,
+    .interval-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .interval-unit { font-size: 0.85rem; font-weight: 600; color: var(--color-text-secondary); }
     .more-options-toggle {
       display: flex; align-items: center; gap: 4px;
       cursor: pointer; color: var(--color-primary);
@@ -322,10 +364,11 @@ import { Observable } from 'rxjs';
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
     @media (max-width: 599px) {
       :host { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-      .dialog-banner { margin: -16px -16px 12px; padding: 14px 16px 12px; flex-shrink: 0; }
+      .dialog-banner { padding: 16px; flex-shrink: 0; }
       .amount-value { font-size: 2rem; width: 140px; }
       .amount-underline { width: 140px; }
-      .form-row { grid-template-columns: 1fr; }
+      .freq-chips { flex-wrap: wrap; }
+      .freq-chip { flex: 1 1 calc(33% - 6px); min-width: 0; font-size: 0.75rem; padding: 8px 4px; }
       .sticky-save-bar { padding: 10px 16px 14px; }
     }
   `]
@@ -375,17 +418,19 @@ export class RecurringDialogComponent implements OnInit {
     transactionType: [0],
     recurringType: [0],
     frequency: [3, Validators.required],
+    intervalCount: [1, [Validators.required, Validators.min(1), Validators.max(12)]],
     nextRunDate: [new Date(), Validators.required],
     endDate: [null],
     isActive: [true]
   });
 
-  private frequencyMap: Record<string, number> = { Daily: 0, Weekly: 1, Biweekly: 2, Monthly: 3 };
+  private frequencyMap: Record<string, number> = { Daily: 0, Weekly: 1, Biweekly: 1, Monthly: 3 };
   private typeMap: Record<string, number> = { Expense: 0, Income: 1, Transfer: 2, Refund: 3, CardPayment: 4 };
   private recurringTypeMap: Record<string, number> = { Bill: 0, Budget: 1 };
 
   ngOnInit(): void {
     if (this.data) {
+      const isBiweekly = this.data.frequency === 'Biweekly';
       this.form.patchValue({
         description: this.data.description,
         merchant: this.data.merchant,
@@ -394,6 +439,7 @@ export class RecurringDialogComponent implements OnInit {
         transactionType: this.typeMap[this.data.transactionType] ?? 0,
         recurringType: this.recurringTypeMap[this.data.recurringType] ?? 0,
         frequency: this.frequencyMap[this.data.frequency] ?? 3,
+        intervalCount: isBiweekly ? 2 : (this.data.intervalCount || 1),
         nextRunDate: new Date(this.data.nextRunDate),
         endDate: this.data.endDate ? new Date(this.data.endDate) : null,
         isActive: this.data.isActive
@@ -454,6 +500,11 @@ export class RecurringDialogComponent implements OnInit {
     }
   }
 
+  setFrequency(freq: number): void {
+    this.form.patchValue({ frequency: freq });
+    if (freq === 0) this.form.patchValue({ intervalCount: 1 });
+  }
+
   save(): void {
     if (this.form.invalid) return;
     this.saving.set(true);
@@ -466,6 +517,7 @@ export class RecurringDialogComponent implements OnInit {
       transactionType: val.transactionType,
       recurringType: val.recurringType,
       frequency: val.frequency,
+      intervalCount: val.frequency === 0 ? 1 : (val.intervalCount || 1),
       nextRunDate: toLocalISOString(new Date(val.nextRunDate)),
       endDate: val.endDate ? toLocalISOString(new Date(val.endDate)) : undefined,
       isActive: val.isActive

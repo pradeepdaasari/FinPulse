@@ -181,3 +181,14 @@ export interface DashboardInsight {
   text: string;
   color: 'green' | 'amber' | 'red';
 }
+
+export interface DailySpendingDay {
+  date: string;
+  amount: number;
+}
+
+export interface DailySpendingData {
+  days: DailySpendingDay[];
+  total: number;
+  average: number;
+}

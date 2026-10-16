@@ -50,6 +50,7 @@ public class RecurringController : ControllerBase
             r.FundingSourceId,
             RecurringType = r.RecurringType.ToString(),
             Frequency = r.Frequency.ToString(),
+            r.IntervalCount,
             r.NextRunDate,
             r.EndDate,
             r.IsActive,
@@ -81,6 +82,7 @@ public class RecurringController : ControllerBase
             FundingSourceId = dto.FundingSourceId,
             RecurringType = dto.RecurringType,
             Frequency = dto.Frequency,
+            IntervalCount = dto.IntervalCount,
             NextRunDate = dto.NextRunDate,
             EndDate = dto.EndDate,
             IsActive = dto.IsActive,
@@ -114,6 +116,7 @@ public class RecurringController : ControllerBase
         item.FundingSourceId = dto.FundingSourceId;
         item.RecurringType = dto.RecurringType;
         item.Frequency = dto.Frequency;
+        item.IntervalCount = dto.IntervalCount;
         item.NextRunDate = dto.NextRunDate;
         item.EndDate = dto.EndDate;
         item.IsActive = dto.IsActive;
@@ -138,7 +141,7 @@ public class RecurringController : ControllerBase
         var item = await _db.RecurringTransactions.FirstOrDefaultAsync(r => r.Id == id && r.UserId == UserId);
         if (item is null) return NotFound();
 
-        item.NextRunDate = AdvanceDate(item.NextRunDate, item.Frequency);
+        item.NextRunDate = AdvanceDate(item.NextRunDate, item.Frequency, item.IntervalCount);
         if (item.EndDate.HasValue && item.NextRunDate > item.EndDate.Value)
             item.IsActive = false;
 
@@ -251,7 +254,7 @@ public class RecurringController : ControllerBase
                     }
                 }
 
-                item.NextRunDate = AdvanceDate(item.NextRunDate, item.Frequency);
+                item.NextRunDate = AdvanceDate(item.NextRunDate, item.Frequency, item.IntervalCount);
                 if (item.EndDate.HasValue && item.NextRunDate > item.EndDate.Value)
                     item.IsActive = false;
 
@@ -345,7 +348,7 @@ public class RecurringController : ControllerBase
                         _db.DailyExpenses.Add(expense);
                         generated++;
 
-                        item.NextRunDate = AdvanceDate(item.NextRunDate, item.Frequency);
+                        item.NextRunDate = AdvanceDate(item.NextRunDate, item.Frequency, item.IntervalCount);
 
                         if (item.EndDate.HasValue && item.NextRunDate > item.EndDate.Value)
                         {
@@ -382,7 +385,7 @@ public class RecurringController : ControllerBase
             UserId = UserId
         });
 
-        item.NextRunDate = AdvanceDate(item.NextRunDate, item.Frequency);
+        item.NextRunDate = AdvanceDate(item.NextRunDate, item.Frequency, item.IntervalCount);
         if (item.EndDate.HasValue && item.NextRunDate > item.EndDate.Value)
             item.IsActive = false;
 
@@ -412,14 +415,14 @@ public class RecurringController : ControllerBase
             .ToListAsync();
 
         var activeItems = items.Where(i => i.IsActive).ToList();
-        var billMonthlyTotal = activeItems.Sum(i => i.Amount * i.Frequency switch
+        var billMonthlyTotal = activeItems.Sum(i => i.Amount * (i.Frequency switch
         {
             RecurrenceFrequency.Daily => 30m,
             RecurrenceFrequency.Weekly => 4.33m,
             RecurrenceFrequency.Biweekly => 2.17m,
             RecurrenceFrequency.Monthly => 1m,
             _ => 1m
-        });
+        } / i.IntervalCount));
 
         return Ok(new
         {
@@ -434,15 +437,15 @@ public class RecurringController : ControllerBase
         public string? Reason { get; set; }
     }
 
-    private static DateTime AdvanceDate(DateTime date, RecurrenceFrequency frequency)
+    private static DateTime AdvanceDate(DateTime date, RecurrenceFrequency frequency, int intervalCount = 1)
     {
         return frequency switch
         {
-            RecurrenceFrequency.Daily => date.AddDays(1),
-            RecurrenceFrequency.Weekly => date.AddDays(7),
+            RecurrenceFrequency.Daily => date.AddDays(intervalCount),
+            RecurrenceFrequency.Weekly => date.AddDays(7 * intervalCount),
             RecurrenceFrequency.Biweekly => date.AddDays(14),
-            RecurrenceFrequency.Monthly => date.AddMonths(1),
-            _ => date.AddMonths(1)
+            RecurrenceFrequency.Monthly => date.AddMonths(intervalCount),
+            _ => date.AddMonths(intervalCount)
         };
     }
 }

@@ -174,17 +174,79 @@ import { FinancialSummary, NetWorthSnapshot } from '../../../core/models/dashboa
           </div>
         }
       </div>
+      <div class="total-debt-bar">
+        <div class="td-left">
+          <div class="td-icon-wrap"><mat-icon>credit_score</mat-icon></div>
+          <div class="td-info">
+            <span class="td-label">Total Debt</span>
+            <span class="td-value">{{ (summary()!.totalCreditCardDebt + summary()!.totalLoanDebt) | currency:'USD':'symbol':'1.0-0' }}</span>
+          </div>
+        </div>
+        <div class="td-right">
+          <div class="td-detail">
+            <mat-icon class="td-detail-icon">credit_card</mat-icon>
+            <div class="td-detail-info">
+              <span class="td-detail-label">Cards</span>
+              <span class="td-detail-value">{{ summary()!.totalCreditCardDebt | currency:'USD':'symbol':'1.0-0' }}</span>
+            </div>
+          </div>
+          <div class="td-divider"></div>
+          <div class="td-detail">
+            <mat-icon class="td-detail-icon">real_estate_agent</mat-icon>
+            <div class="td-detail-info">
+              <span class="td-detail-label">Loans</span>
+              <span class="td-detail-value">{{ summary()!.totalLoanDebt | currency:'USD':'symbol':'1.0-0' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
     }
   `,
   styles: [`
     .net-worth-card {
       border-radius: var(--radius-lg);
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05));
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.03), rgba(139, 92, 246, 0.06));
       border: 1px solid var(--color-border);
       box-shadow: var(--shadow-sm);
-      margin-bottom: var(--spacing-md);
+      margin-bottom: var(--spacing-sm);
       overflow: hidden;
     }
+    .total-debt-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      border-radius: var(--radius-lg);
+      background: var(--color-surface-solid);
+      border: 1px solid var(--color-border);
+      border-left: 3px solid var(--color-danger);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: var(--spacing-lg);
+    }
+    .td-left { display: flex; align-items: center; gap: 12px; }
+    .td-icon-wrap {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: rgba(239, 68, 68, 0.08);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .td-icon-wrap mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-danger); }
+    .td-info { display: flex; flex-direction: column; gap: 1px; }
+    .td-label {
+      font-size: 0.68rem; font-weight: 600;
+      color: var(--color-text-muted); text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .td-value {
+      font-size: 1.35rem; font-weight: 800; color: var(--color-danger);
+      letter-spacing: -0.02em; line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+    .td-right { display: flex; align-items: center; gap: 16px; }
+    .td-divider { width: 1px; height: 28px; background: var(--color-border); }
+    .td-detail { display: flex; align-items: center; gap: 8px; }
+    .td-detail-icon { font-size: 16px; width: 16px; height: 16px; color: var(--color-text-muted); }
+    .td-detail-info { display: flex; flex-direction: column; }
+    .td-detail-label { font-size: 0.65rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .td-detail-value { font-size: 0.85rem; font-weight: 700; color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
     .nw-top {
       display: flex; align-items: center; justify-content: space-between;
       padding: 20px 24px;
@@ -196,7 +258,9 @@ import { FinancialSummary, NetWorthSnapshot } from '../../../core/models/dashboa
     .nw-top:active { opacity: 0.8; }
     .nw-main { display: flex; flex-direction: column; gap: 4px; }
     .expand-icon {
-      color: var(--color-text-muted);
+      font-size: 18px; width: 18px; height: 18px;
+      color: var(--color-text-muted); flex-shrink: 0;
+      transition: transform 0.2s ease;
     }
     .expand-icon.rotated { transform: rotate(180deg); }
     .nw-label {
@@ -204,13 +268,14 @@ import { FinancialSummary, NetWorthSnapshot } from '../../../core/models/dashboa
       font-weight: 600;
       color: var(--color-text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
     }
     .nw-value {
-      font-size: 2rem;
+      font-size: var(--text-3xl);
       font-weight: 800;
       letter-spacing: -0.03em;
       line-height: 1.1;
+      font-variant-numeric: tabular-nums;
     }
     .nw-value.positive { color: var(--color-value-green); }
     .nw-value.negative { color: var(--color-danger); }
@@ -237,6 +302,7 @@ import { FinancialSummary, NetWorthSnapshot } from '../../../core/models/dashboa
     .daily-detail-toggle:hover { opacity: 1; }
     .detail-chevron {
       font-size: 16px; width: 16px; height: 16px;
+      transition: transform 0.2s ease;
     }
     .detail-chevron.rotated { transform: rotate(180deg); }
     .daily-breakdown {
@@ -337,7 +403,7 @@ import { FinancialSummary, NetWorthSnapshot } from '../../../core/models/dashboa
     }
     .chart-label mat-icon {
       font-size: 16px; width: 16px; height: 16px;
-      color: #6366f1;
+      color: var(--color-accent);
     }
     .view-toggle {
       border-radius: var(--radius-sm) !important;
@@ -352,7 +418,7 @@ import { FinancialSummary, NetWorthSnapshot } from '../../../core/models/dashboa
       line-height: 28px !important;
       font-weight: 600;
     }
-    .chart-container { position: relative; height: 200px; }
+    .chart-container { position: relative; height: 220px; }
     .chart-loading {
       display: flex; justify-content: center; align-items: center;
       height: 120px;
@@ -367,11 +433,14 @@ import { FinancialSummary, NetWorthSnapshot } from '../../../core/models/dashboa
 
     @media (max-width: 599px) {
       .nw-top { padding: 16px; }
-      .nw-value { font-size: 1.5rem; }
+      .nw-value { font-size: 1.75rem; }
       .nw-breakdown { padding: 12px 16px 16px; }
       .breakdown-row { padding-left: 26px; font-size: 0.8rem; }
       .formula-row { font-size: 0.75rem; }
       .chart-container { height: 160px; }
+      .total-debt-bar { flex-wrap: wrap; padding: 12px 16px; gap: 10px; }
+      .td-right { gap: 12px; }
+      .td-value { font-size: 1.15rem; }
     }
   `]
 })

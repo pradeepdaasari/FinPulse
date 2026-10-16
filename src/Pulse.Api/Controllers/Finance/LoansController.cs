@@ -589,10 +589,10 @@ public class LoansController : ControllerBase
             {
                 rec.NextRunDate = rec.Frequency switch
                 {
-                    RecurrenceFrequency.Daily => rec.NextRunDate.AddDays(1),
-                    RecurrenceFrequency.Weekly => rec.NextRunDate.AddDays(7),
+                    RecurrenceFrequency.Daily => rec.NextRunDate.AddDays(rec.IntervalCount),
+                    RecurrenceFrequency.Weekly => rec.NextRunDate.AddDays(7 * rec.IntervalCount),
                     RecurrenceFrequency.Biweekly => rec.NextRunDate.AddDays(14),
-                    _ => rec.NextRunDate.AddMonths(1)
+                    _ => rec.NextRunDate.AddMonths(rec.IntervalCount)
                 };
                 if (rec.EndDate.HasValue && rec.NextRunDate > rec.EndDate.Value)
                     rec.IsActive = false;
