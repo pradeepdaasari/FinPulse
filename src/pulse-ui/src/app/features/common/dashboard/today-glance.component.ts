@@ -7,7 +7,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
 import { DashboardService } from '../../../core/services/dashboard.service';
+import { RecurringService } from '../../../core/services/recurring.service';
 import { MonthlyPaymentRow } from '../../../core/models/dashboard.model';
+import { DailyExpenseCreate } from '../../../core/models/daily-expense.model';
 import { PaymentRowComponent } from '../../../shared/payment-row.component';
 
 @Component({
@@ -255,6 +257,7 @@ import { PaymentRowComponent } from '../../../shared/payment-row.component';
 })
 export class TodayGlanceComponent implements OnInit {
   private dashboardService = inject(DashboardService);
+  private recurringService = inject(RecurringService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private cdr = inject(ChangeDetectorRef);
@@ -315,11 +318,16 @@ export class TodayGlanceComponent implements OnInit {
           data: {
             expense: null,
             prefill: { amount: row.amount, merchant: row.name, description: row.name },
-            prefilledCategoryId: row.categoryId ?? undefined
+            prefilledCategoryId: row.categoryId ?? undefined,
+            returnPayload: true
           }
         });
-        dialogRef.afterClosed().subscribe(result => {
-          if (result) this.ngOnInit();
+        dialogRef.afterClosed().subscribe((result: DailyExpenseCreate | undefined) => {
+          if (!result) return;
+          this.recurringService.pay(row.recurringId ?? row.id, result).subscribe({
+            next: () => this.ngOnInit(),
+            error: () => this.ngOnInit()
+          });
         });
       });
       return;

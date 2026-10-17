@@ -7,8 +7,10 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { RouterModule } from '@angular/router';
 import { DashboardService } from '../../../core/services/dashboard.service';
+import { RecurringService } from '../../../core/services/recurring.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { MonthlyPaymentRow, MonthlyPaymentsData } from '../../../core/models/dashboard.model';
+import { DailyExpenseCreate } from '../../../core/models/daily-expense.model';
 import { PaymentRowComponent } from '../../../shared/payment-row.component';
 
 @Component({
@@ -278,6 +280,7 @@ import { PaymentRowComponent } from '../../../shared/payment-row.component';
 })
 export class MonthlyPaymentsComponent implements OnInit {
   private dashboardService = inject(DashboardService);
+  private recurringService = inject(RecurringService);
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
   private cdr = inject(ChangeDetectorRef);
@@ -348,11 +351,16 @@ export class MonthlyPaymentsComponent implements OnInit {
           data: {
             expense: null,
             prefill: { amount: row.amount, merchant: row.name, description: row.name },
-            prefilledCategoryId: row.categoryId ?? undefined
+            prefilledCategoryId: row.categoryId ?? undefined,
+            returnPayload: true
           }
         });
-        dialogRef.afterClosed().subscribe(result => {
-          if (result) { this.notify.success('Payment recorded'); this.loadData(); }
+        dialogRef.afterClosed().subscribe((result: DailyExpenseCreate | undefined) => {
+          if (!result) return;
+          this.recurringService.pay(row.recurringId ?? row.id, result).subscribe({
+            next: () => { this.notify.success('Payment recorded'); this.loadData(); },
+            error: () => this.notify.error('Failed to record payment')
+          });
         });
       });
       return;
