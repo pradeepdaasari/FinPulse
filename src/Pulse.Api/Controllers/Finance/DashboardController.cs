@@ -789,7 +789,7 @@ public class DashboardController : ControllerBase
                     IsAutopay = loan.IsAutopay, Status = status, StatusLabel = statusLabel,
                     DebtType = "PersonalLoan", SubType = loan.LoanType.ToString(),
                     DaysUntilDue = daysUntil, MinimumPaid = false,
-                    RecurringId = (int?)null
+                    RecurringId = (int?)null, CategoryId = (int?)null
                 });
             }
         }
@@ -828,7 +828,7 @@ public class DashboardController : ControllerBase
                 IsAutopay = card.IsAutopay, Status = status, StatusLabel = statusLabel,
                 DebtType = "CreditCard", SubType = (string?)null,
                 DaysUntilDue = cardDaysUntil, MinimumPaid = cardMinPaid,
-                RecurringId = (int?)null
+                RecurringId = (int?)null, CategoryId = (int?)null
             });
         }
 
@@ -866,7 +866,7 @@ public class DashboardController : ControllerBase
                     IsAutopay = true, Status = status, StatusLabel = statusLabel,
                     DebtType = (string?)null, SubType = (string?)null,
                     DaysUntilDue = daysUntil, MinimumPaid = false,
-                    RecurringId = (int?)bill.Id
+                    RecurringId = (int?)bill.Id, CategoryId = bill.CategoryId
                 });
             }
         }

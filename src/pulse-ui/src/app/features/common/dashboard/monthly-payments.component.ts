@@ -347,7 +347,8 @@ export class MonthlyPaymentsComponent implements OnInit {
           panelClass: 'expense-dialog-panel',
           data: {
             expense: null,
-            prefill: { amount: row.amount, merchant: row.name, description: row.name }
+            prefill: { amount: row.amount, merchant: row.name, description: row.name },
+            prefilledCategoryId: row.categoryId ?? undefined
           }
         });
         dialogRef.afterClosed().subscribe(result => {

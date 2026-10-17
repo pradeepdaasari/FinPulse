@@ -159,6 +159,7 @@ export interface MonthlyPaymentRow {
   daysUntilDue: number;
   minimumPaid: boolean;
   recurringId?: number;
+  categoryId?: number | null;
 }
 
 export interface MonthlyPaymentsData {
