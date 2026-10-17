@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { BaseChartDirective } from 'ng2-charts';
@@ -79,7 +80,7 @@ import { PaymentRowComponent } from '../../../shared/payment-row.component';
         @if (allRows().length > 0) {
           <div class="rows-container">
             @for (row of allRows(); track row.id + row.kind + row.dueDate) {
-              <app-payment-row [row]="row" (recordPayment)="goToMonthlyPulse()" />
+              <app-payment-row [row]="row" (recordPayment)="recordPayment($event)" />
             }
           </div>
         } @else {
@@ -255,6 +256,7 @@ import { PaymentRowComponent } from '../../../shared/payment-row.component';
 export class TodayGlanceComponent implements OnInit {
   private dashboardService = inject(DashboardService);
   private router = inject(Router);
+  private dialog = inject(MatDialog);
   private cdr = inject(ChangeDetectorRef);
 
   loading = signal(true);
@@ -304,6 +306,36 @@ export class TodayGlanceComponent implements OnInit {
   };
 
   goToMonthlyPulse(): void { this.router.navigate(['/upcoming-payments']); }
+
+  recordPayment(row: MonthlyPaymentRow): void {
+    if (row.kind === 'recurring') {
+      import('../../finance/expenses/add-expense-dialog.component').then(m => {
+        const dialogRef = this.dialog.open(m.AddExpenseDialogComponent, {
+          panelClass: 'expense-dialog-panel',
+          data: { expense: null }
+        });
+        dialogRef.afterClosed().subscribe(result => {
+          if (result) this.ngOnInit();
+        });
+      });
+      return;
+    }
+    if (!row.debtType) return;
+    import('../../finance/expenses/add-expense-dialog.component').then(m => {
+      const preselectedType = row.debtType === 'CreditCard' ? 'CardPayment' : 'LoanPayment';
+      const dialogRef = this.dialog.open(m.AddExpenseDialogComponent, {
+        panelClass: 'expense-dialog-panel',
+        data: {
+          expense: null,
+          preselectedType,
+          preselectedDebtKey: `${row.debtType}:${row.id}`
+        }
+      });
+      dialogRef.afterClosed().subscribe(result => {
+        if (result) this.ngOnInit();
+      });
+    });
+  }
 
   toggleSpendingChart(): void {
     this.chartExpanded.update(v => !v);
