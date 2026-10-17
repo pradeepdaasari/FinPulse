@@ -312,7 +312,10 @@ export class TodayGlanceComponent implements OnInit {
       import('../../finance/expenses/add-expense-dialog.component').then(m => {
         const dialogRef = this.dialog.open(m.AddExpenseDialogComponent, {
           panelClass: 'expense-dialog-panel',
-          data: { expense: null }
+          data: {
+            expense: null,
+            prefill: { amount: row.amount, merchant: row.name, description: row.name }
+          }
         });
         dialogRef.afterClosed().subscribe(result => {
           if (result) this.ngOnInit();
