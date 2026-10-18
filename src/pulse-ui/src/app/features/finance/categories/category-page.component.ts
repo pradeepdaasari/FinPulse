@@ -6,15 +6,12 @@ import { inferCategoryIcon } from '../../../core/utils/category-icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatTabsModule } from '@angular/material/tabs';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatMenuModule } from '@angular/material/menu';
 import { SkeletonLoaderComponent } from '../../../shared/skeleton-loader.component';
@@ -96,8 +93,8 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule,
-    MatExpansionModule, MatFormFieldModule, MatInputModule, MatSlideToggleModule,
-    MatSnackBarModule, MatTooltipModule, MatChipsModule, MatTabsModule, MatButtonToggleModule,
+    MatFormFieldModule, MatInputModule, MatSlideToggleModule,
+    MatSnackBarModule, MatTooltipModule, MatButtonToggleModule,
     MatMenuModule, SkeletonLoaderComponent, PullToRefreshDirective
   ],
   template: `
@@ -166,7 +163,7 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
         @for (parent of activeCategories(); track parent.id) {
           <div class="m-group">
             <!-- Parent Header -->
-            <div class="m-parent-header" (click)="toggleMobileExpand(parent.id)">
+            <div class="m-parent-header" (click)="toggleExpand(parent.id)">
               <span class="m-row-icon" [style.background]="getCatBg(parent.name)" [style.border-color]="getCatColor(parent.name)">
                 <mat-icon [style.color]="getCatColor(parent.name)">{{ inferIcon(parent.name, parent.icon, 'category') }}</mat-icon>
               </span>
@@ -183,12 +180,12 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
                   <span class="m-parent-name">{{ parent.name }}</span>
                   <span class="m-parent-meta">{{ parent.children?.length || 0 }} items · {{ parent.isFixed ? 'Fixed' : 'Variable' }}</span>
                 </div>
-                <mat-icon class="m-chevron" [class.expanded]="isMobileExpanded(parent.id)">expand_more</mat-icon>
+                <mat-icon class="m-chevron" [class.expanded]="isExpanded(parent.id)">expand_more</mat-icon>
               }
             </div>
 
             <!-- Children (collapsible) -->
-            @if (isMobileExpanded(parent.id)) {
+            @if (isExpanded(parent.id)) {
               <!-- Actions Row -->
               <div class="m-actions-row">
                 <button class="m-action-pill" (click)="startEdit(parent)">
@@ -341,212 +338,198 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
 
     <!-- ═══════ DESKTOP VIEW ═══════ -->
     <div class="desktop-view">
-      <div class="page-header">
-        <button mat-raised-button color="primary" (click)="showAddParent.set(true)" [disabled]="showAddParent()">
-          <mat-icon>add</mat-icon> Add Category
-        </button>
-      </div>
 
-      <div class="stats-row">
-        <div class="stat-card stat-blue">
-          <mat-icon>category</mat-icon>
-          <div class="stat-content">
-            <span class="stat-value">{{ allCategories().length }}</span>
-            <span class="stat-label">Total Categories</span>
-          </div>
-        </div>
-        <div class="stat-card stat-amber">
-          <mat-icon>receipt_long</mat-icon>
-          <div class="stat-content">
-            <span class="stat-value">{{ expenseCategories().length }}</span>
-            <span class="stat-label">Expense</span>
-          </div>
-        </div>
-        <div class="stat-card stat-green">
-          <mat-icon>trending_up</mat-icon>
-          <div class="stat-content">
-            <span class="stat-value">{{ incomeCategories().length }}</span>
-            <span class="stat-label">Income</span>
-          </div>
-        </div>
-        <div class="stat-card stat-purple">
-          <mat-icon>lock</mat-icon>
-          <div class="stat-content">
-            <span class="stat-value">{{ fixedCount() }}</span>
-            <span class="stat-label">Fixed</span>
-          </div>
-        </div>
-      </div>
-
-      @if (showAddParent()) {
-        <mat-card class="add-form-card">
-          <mat-card-content>
-            <div class="inline-form">
-              <button mat-icon-button [matMenuTriggerFor]="newParentIconMenu" class="icon-picker-btn" matTooltip="Pick icon">
-                <mat-icon>{{ newParentIcon || 'category' }}</mat-icon>
-              </button>
-              <mat-menu #newParentIconMenu="matMenu" class="icon-menu" (closed)="iconSearch.set('')">
-                <div class="icon-groups-picker" (click)="$event.stopPropagation()">
-                  <div class="icon-search-box">
-                    <mat-icon>search</mat-icon>
-                    <input placeholder="Search icons..." [value]="iconSearch()" (input)="iconSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
-                  </div>
-                  @for (group of filteredIconGroups(); track group.label) {
-                    <div class="icon-group-section">
-                      <div class="icon-group-label" [style.color]="group.color">{{ group.label }}</div>
-                      <div class="icon-grid">
-                        @for (icon of group.icons; track icon) {
-                          <button mat-icon-button (click)="newParentIcon = icon" [class.selected]="newParentIcon === icon">
-                            <mat-icon [style.color]="newParentIcon === icon ? '#fff' : group.color">{{ icon }}</mat-icon>
-                          </button>
-                        }
-                      </div>
-                    </div>
-                  }
-                  @if (filteredIconGroups().length === 0) {
-                    <div class="icon-no-results">No icons found</div>
-                  }
-                </div>
-              </mat-menu>
-              <mat-form-field appearance="outline">
-                <mat-label>Category Name</mat-label>
-                <input matInput [(ngModel)]="newParentName" (keyup.enter)="saveParent()">
-              </mat-form-field>
-              <mat-button-toggle-group [(ngModel)]="newParentType" class="type-toggle">
-                <mat-button-toggle value="Expense">Expense</mat-button-toggle>
-                <mat-button-toggle value="Income">Income</mat-button-toggle>
-              </mat-button-toggle-group>
-              <mat-slide-toggle [(ngModel)]="newParentFixed">Fixed</mat-slide-toggle>
-              <button mat-icon-button color="primary" (click)="saveParent()" [disabled]="!newParentName.trim()" matTooltip="Save">
-                <mat-icon>check</mat-icon>
-              </button>
-              <button mat-icon-button (click)="cancelAddParent()" matTooltip="Cancel">
+      <!-- Filter Bar -->
+      <div class="cat-fb">
+        <div class="cat-fb-primary">
+          <div class="cat-fb-search" [class.cat-fb-search-active]="catSearchFocused">
+            <mat-icon class="cat-fb-search-icon">search</mat-icon>
+            <input class="cat-fb-search-input" [ngModel]="searchQuery()"
+                   (ngModelChange)="searchQuery.set($event)"
+                   placeholder="Search categories..."
+                   (focus)="catSearchFocused = true"
+                   (blur)="catSearchFocused = false">
+            @if (searchQuery()) {
+              <button class="cat-fb-search-clear" (click)="searchQuery.set('')">
                 <mat-icon>close</mat-icon>
               </button>
-            </div>
-          </mat-card-content>
-        </mat-card>
+            }
+          </div>
+
+          <div class="cat-fb-controls">
+            <span class="cat-fb-stat">{{ allCategories().length }} total</span>
+            <span class="cat-fb-stat cat-fb-stat-fixed">{{ fixedCount() }} fixed</span>
+            <button mat-raised-button color="primary" class="cat-fb-add-btn" (click)="showAddParent.set(true)" [disabled]="showAddParent()">
+              <mat-icon>add</mat-icon> Add Category
+            </button>
+          </div>
+        </div>
+
+        <div class="cat-fb-periods">
+          <button class="cat-fb-period" [class.cat-fb-period-active]="activeTab() === 'Expense'"
+                  (click)="activeTab.set('Expense')">
+            Expense ({{ expenseCategories().length }})
+          </button>
+          <button class="cat-fb-period" [class.cat-fb-period-active]="activeTab() === 'Income'"
+                  (click)="activeTab.set('Income')">
+            Income ({{ incomeCategories().length }})
+          </button>
+        </div>
+
+        @if (searchQuery()) {
+          <div class="cat-fb-active">
+            <span class="cat-fb-chip">
+              <mat-icon class="cat-fb-chip-icon">search</mat-icon>
+              "{{ searchQuery() }}"
+              <button class="cat-fb-chip-x" (click)="searchQuery.set('')"><mat-icon>close</mat-icon></button>
+            </span>
+            <button class="cat-fb-clear-all" (click)="searchQuery.set('')">Clear</button>
+          </div>
+        }
+      </div>
+
+      <!-- Add Category Form -->
+      @if (showAddParent()) {
+        <div class="cat-add-card">
+          <div class="inline-form">
+            <button mat-icon-button [matMenuTriggerFor]="newParentIconMenu" class="icon-picker-btn" matTooltip="Pick icon">
+              <mat-icon>{{ newParentIcon || 'category' }}</mat-icon>
+            </button>
+            <mat-menu #newParentIconMenu="matMenu" class="icon-menu" (closed)="iconSearch.set('')">
+              <div class="icon-groups-picker" (click)="$event.stopPropagation()">
+                <div class="icon-search-box">
+                  <mat-icon>search</mat-icon>
+                  <input placeholder="Search icons..." [value]="iconSearch()" (input)="iconSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
+                </div>
+                @for (group of filteredIconGroups(); track group.label) {
+                  <div class="icon-group-section">
+                    <div class="icon-group-label" [style.color]="group.color">{{ group.label }}</div>
+                    <div class="icon-grid">
+                      @for (icon of group.icons; track icon) {
+                        <button mat-icon-button (click)="newParentIcon = icon" [class.selected]="newParentIcon === icon">
+                          <mat-icon [style.color]="newParentIcon === icon ? '#fff' : group.color">{{ icon }}</mat-icon>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                }
+                @if (filteredIconGroups().length === 0) {
+                  <div class="icon-no-results">No icons found</div>
+                }
+              </div>
+            </mat-menu>
+            <mat-form-field appearance="outline">
+              <mat-label>Category Name</mat-label>
+              <input matInput [(ngModel)]="newParentName" (keyup.enter)="saveParent()">
+            </mat-form-field>
+            <mat-button-toggle-group [(ngModel)]="newParentType" class="type-toggle">
+              <mat-button-toggle value="Expense">Expense</mat-button-toggle>
+              <mat-button-toggle value="Income">Income</mat-button-toggle>
+            </mat-button-toggle-group>
+            <mat-slide-toggle [(ngModel)]="newParentFixed">Fixed</mat-slide-toggle>
+            <button mat-icon-button color="primary" (click)="saveParent()" [disabled]="!newParentName.trim()" matTooltip="Save">
+              <mat-icon>check</mat-icon>
+            </button>
+            <button mat-icon-button (click)="cancelAddParent()" matTooltip="Cancel">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </div>
       }
 
-      <mat-form-field appearance="outline" class="search-field">
-        <mat-label>Search categories</mat-label>
-        <mat-icon matPrefix>search</mat-icon>
-        <input matInput [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="e.g. Swimming, Insurance...">
-        @if (searchQuery()) {
-          <button matSuffix mat-icon-button (click)="searchQuery.set('')"><mat-icon>close</mat-icon></button>
-        }
-      </mat-form-field>
-
+      <!-- Search Results -->
       @if (searchQuery() && searchResults().length > 0) {
-        <div class="search-results">
+        <div class="cat-search-results">
           @for (result of searchResults(); track result.child?.id || result.parent.id) {
-            <div class="search-result-row">
+            <div class="cat-search-row">
               <span class="cat-icon-badge child-badge" [style.background]="getCatBg(result.child?.name || result.parent.name)" [style.border-color]="getCatColor(result.child?.name || result.parent.name)">
                 <mat-icon [style.color]="getCatColor(result.child?.name || result.parent.name)">{{ inferIcon(result.child?.name || result.parent.name, result.child?.icon || result.parent.icon, 'category') }}</mat-icon>
               </span>
-              <span class="search-result-name">
+              <span class="cat-search-name">
                 @if (result.child) {
                   {{ result.parent.name }} → {{ result.child.name }}
                 } @else {
                   {{ result.parent.name }}
                 }
               </span>
-              <mat-chip class="search-result-type">{{ result.parent.type }}</mat-chip>
+              <span class="cat-search-type">{{ result.parent.type }}</span>
             </div>
           }
         </div>
       } @else if (searchQuery() && searchResults().length === 0) {
-        <div class="search-no-results">
+        <div class="cat-search-empty">
           <mat-icon>search_off</mat-icon>
           <span>No categories match "{{ searchQuery() }}"</span>
         </div>
       }
 
-      <mat-tab-group (selectedTabChange)="onTabChange($event.index)">
-        <mat-tab label="Expense Categories">
-          <div class="tab-content">
-            <ng-container *ngTemplateOutlet="categoryList; context: { $implicit: expenseCategories() }"></ng-container>
-          </div>
-        </mat-tab>
-        <mat-tab label="Income Categories">
-          <div class="tab-content">
-            <ng-container *ngTemplateOutlet="categoryList; context: { $implicit: incomeCategories() }"></ng-container>
-          </div>
-        </mat-tab>
-      </mat-tab-group>
-
-      <ng-template #categoryList let-cats>
-        @if (cats.length > 0) {
-          <mat-accordion multi>
-            @for (parent of cats; track parent.id) {
-              <mat-expansion-panel>
-                <mat-expansion-panel-header>
-                  <mat-panel-title>
-                    <span class="cat-icon-badge parent-badge" [style.background]="getCatBg(parent.name)" [style.border-color]="getCatColor(parent.name)">
-                      <mat-icon [style.color]="getCatColor(parent.name)">{{ inferIcon(parent.name, parent.icon, 'category') }}</mat-icon>
-                    </span>
-                    @if (editingId() === parent.id) {
-                      <input class="inline-edit" [(ngModel)]="editName" (keyup.enter)="saveEdit(parent)" (click)="$event.stopPropagation()">
-                    } @else {
-                      <span class="cat-label">{{ parent.name }}</span>
-                    }
-                  </mat-panel-title>
-                  <mat-panel-description>
-                    <mat-chip>{{ parent.isFixed ? 'Fixed' : 'Variable' }}</mat-chip>
-                    <span class="child-count">{{ parent.children?.length || 0 }} subcategories</span>
-                  </mat-panel-description>
-                </mat-expansion-panel-header>
-
-                <div class="panel-actions">
-                  @if (editingId() === parent.id) {
-                    <button mat-icon-button [matMenuTriggerFor]="editIconMenu" class="icon-picker-btn" matTooltip="Change icon">
-                      <mat-icon>{{ editIcon || 'category' }}</mat-icon>
-                    </button>
-                    <mat-menu #editIconMenu="matMenu" class="icon-menu" (closed)="iconSearch.set('')">
-                      <div class="icon-groups-picker" (click)="$event.stopPropagation()">
-                        <div class="icon-search-box">
-                          <mat-icon>search</mat-icon>
-                          <input placeholder="Search icons..." [value]="iconSearch()" (input)="iconSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
-                        </div>
-                        @for (group of filteredIconGroups(); track group.label) {
-                          <div class="icon-group-section">
-                            <div class="icon-group-label" [style.color]="group.color">{{ group.label }}</div>
-                            <div class="icon-grid">
-                              @for (icon of group.icons; track icon) {
-                                <button mat-icon-button (click)="editIcon = icon" [class.selected]="editIcon === icon">
-                                  <mat-icon [style.color]="editIcon === icon ? '#fff' : group.color">{{ icon }}</mat-icon>
-                                </button>
-                              }
-                            </div>
-                          </div>
-                        }
-                        @if (filteredIconGroups().length === 0) {
-                          <div class="icon-no-results">No icons found</div>
-                        }
+      <!-- Category Groups -->
+      @if (!searchQuery()) {
+        @if (activeCategories().length > 0) {
+          @for (parent of activeCategories(); track parent.id) {
+            <div class="cat-group">
+              <div class="cat-parent-row" (click)="toggleExpand(parent.id)">
+                <span class="cat-icon-badge parent-badge" [style.background]="getCatBg(parent.name)" [style.border-color]="getCatColor(parent.name)">
+                  <mat-icon [style.color]="getCatColor(parent.name)">{{ inferIcon(parent.name, parent.icon, 'category') }}</mat-icon>
+                </span>
+                @if (editingId() === parent.id) {
+                  <input class="cat-inline-edit" [(ngModel)]="editName" (keyup.enter)="saveEdit(parent)" (click)="$event.stopPropagation()">
+                  <button mat-icon-button [matMenuTriggerFor]="editIconMenu" class="icon-picker-btn" matTooltip="Change icon" (click)="$event.stopPropagation()">
+                    <mat-icon>{{ editIcon || 'category' }}</mat-icon>
+                  </button>
+                  <mat-menu #editIconMenu="matMenu" class="icon-menu" (closed)="iconSearch.set('')">
+                    <div class="icon-groups-picker" (click)="$event.stopPropagation()">
+                      <div class="icon-search-box">
+                        <mat-icon>search</mat-icon>
+                        <input placeholder="Search icons..." [value]="iconSearch()" (input)="iconSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
                       </div>
-                    </mat-menu>
-                    <mat-slide-toggle [(ngModel)]="editFixed" class="edit-toggle">Fixed</mat-slide-toggle>
-                    <button mat-icon-button color="primary" (click)="saveEdit(parent)" matTooltip="Save">
-                      <mat-icon>check</mat-icon>
-                    </button>
-                    <button mat-icon-button (click)="cancelEdit()" matTooltip="Cancel">
-                      <mat-icon>close</mat-icon>
-                    </button>
-                  } @else {
-                    <button mat-icon-button class="action-btn action-edit" (click)="startEdit(parent)" matTooltip="Edit">
+                      @for (group of filteredIconGroups(); track group.label) {
+                        <div class="icon-group-section">
+                          <div class="icon-group-label" [style.color]="group.color">{{ group.label }}</div>
+                          <div class="icon-grid">
+                            @for (icon of group.icons; track icon) {
+                              <button mat-icon-button (click)="editIcon = icon" [class.selected]="editIcon === icon">
+                                <mat-icon [style.color]="editIcon === icon ? '#fff' : group.color">{{ icon }}</mat-icon>
+                              </button>
+                            }
+                          </div>
+                        </div>
+                      }
+                      @if (filteredIconGroups().length === 0) {
+                        <div class="icon-no-results">No icons found</div>
+                      }
+                    </div>
+                  </mat-menu>
+                  <mat-slide-toggle [(ngModel)]="editFixed" class="edit-toggle" (click)="$event.stopPropagation()">Fixed</mat-slide-toggle>
+                  <button mat-icon-button color="primary" (click)="saveEdit(parent); $event.stopPropagation()" matTooltip="Save">
+                    <mat-icon>check</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="cancelEdit(); $event.stopPropagation()" matTooltip="Cancel">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                } @else {
+                  <span class="cat-parent-name">{{ parent.name }}</span>
+                  <span class="cat-count-pill">{{ parent.children?.length || 0 }}</span>
+                  <span class="cat-type-chip" [class.cat-chip-fixed]="parent.isFixed">{{ parent.isFixed ? 'Fixed' : 'Variable' }}</span>
+                  <div class="cat-actions">
+                    <button mat-icon-button class="action-btn action-edit" (click)="startEdit(parent); $event.stopPropagation()" matTooltip="Edit">
                       <mat-icon>edit</mat-icon>
                     </button>
-                    <button mat-icon-button class="action-btn action-delete" (click)="deleteCategory(parent)" matTooltip="Delete">
+                    <button mat-icon-button class="action-btn action-delete" (click)="deleteCategory(parent); $event.stopPropagation()" matTooltip="Delete">
                       <mat-icon>delete_outline</mat-icon>
                     </button>
-                    <button mat-button color="primary" (click)="startAddChild(parent.id)">
-                      <mat-icon>add</mat-icon> Add Subcategory
+                    <button mat-icon-button color="primary" (click)="startAddChild(parent.id); $event.stopPropagation()" matTooltip="Add Subcategory">
+                      <mat-icon>add</mat-icon>
                     </button>
-                  }
-                </div>
+                  </div>
+                  <mat-icon class="cat-chevron" [class.expanded]="isExpanded(parent.id)">expand_more</mat-icon>
+                }
+              </div>
 
+              @if (isExpanded(parent.id)) {
+                <!-- Add child inline -->
                 @if (addingChildParentId() === parent.id) {
-                  <div class="inline-form child-form">
+                  <div class="cat-add-inline">
                     <button mat-icon-button [matMenuTriggerFor]="newChildIconMenuD" class="icon-picker-btn" matTooltip="Pick icon">
                       <mat-icon>{{ newChildIcon || 'label' }}</mat-icon>
                     </button>
@@ -588,74 +571,77 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
                 }
 
                 @if (parent.children && parent.children.length > 0) {
-                  <div class="children-list">
-                    @for (child of parent.children; track child.id) {
-                      <div class="child-row">
-                        <span class="cat-icon-badge child-badge" [style.background]="getCatBg(child.name)" [style.border-color]="getCatColor(child.name)">
-                          <mat-icon [style.color]="getCatColor(child.name)">{{ inferIcon(child.name, child.icon, 'label') }}</mat-icon>
-                        </span>
-                        @if (editingId() === child.id) {
-                          <button mat-icon-button [matMenuTriggerFor]="editChildIconMenuD" class="icon-picker-btn" matTooltip="Change icon">
-                            <mat-icon>{{ editIcon || 'label' }}</mat-icon>
-                          </button>
-                          <mat-menu #editChildIconMenuD="matMenu" class="icon-menu" (closed)="iconSearch.set('')">
-                            <div class="icon-groups-picker" (click)="$event.stopPropagation()">
-                              <div class="icon-search-box">
-                                <mat-icon>search</mat-icon>
-                                <input placeholder="Search icons..." [value]="iconSearch()" (input)="iconSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
-                              </div>
-                              @for (group of filteredIconGroups(); track group.label) {
-                                <div class="icon-group-section">
-                                  <div class="icon-group-label" [style.color]="group.color">{{ group.label }}</div>
-                                  <div class="icon-grid">
-                                    @for (icon of group.icons; track icon) {
-                                      <button mat-icon-button (click)="editIcon = icon" [class.selected]="editIcon === icon">
-                                        <mat-icon [style.color]="editIcon === icon ? '#fff' : group.color">{{ icon }}</mat-icon>
-                                      </button>
-                                    }
-                                  </div>
-                                </div>
-                              }
-                              @if (filteredIconGroups().length === 0) {
-                                <div class="icon-no-results">No icons found</div>
-                              }
+                  @for (child of parent.children; track child.id) {
+                    <div class="cat-child-row">
+                      <span class="cat-icon-badge child-badge" [style.background]="getCatBg(child.name)" [style.border-color]="getCatColor(child.name)">
+                        <mat-icon [style.color]="getCatColor(child.name)">{{ inferIcon(child.name, child.icon, 'label') }}</mat-icon>
+                      </span>
+                      @if (editingId() === child.id) {
+                        <button mat-icon-button [matMenuTriggerFor]="editChildIconMenuD" class="icon-picker-btn" matTooltip="Change icon">
+                          <mat-icon>{{ editIcon || 'label' }}</mat-icon>
+                        </button>
+                        <mat-menu #editChildIconMenuD="matMenu" class="icon-menu" (closed)="iconSearch.set('')">
+                          <div class="icon-groups-picker" (click)="$event.stopPropagation()">
+                            <div class="icon-search-box">
+                              <mat-icon>search</mat-icon>
+                              <input placeholder="Search icons..." [value]="iconSearch()" (input)="iconSearch.set($any($event.target).value)" (keydown)="$event.stopPropagation()">
                             </div>
-                          </mat-menu>
-                          <input class="inline-edit" [(ngModel)]="editName" (keyup.enter)="saveEdit(child)">
-                          <mat-slide-toggle [(ngModel)]="editFixed" class="edit-toggle">Fixed</mat-slide-toggle>
-                          <button mat-icon-button color="primary" (click)="saveEdit(child)" matTooltip="Save">
-                            <mat-icon>check</mat-icon>
-                          </button>
-                          <button mat-icon-button (click)="cancelEdit()" matTooltip="Cancel">
-                            <mat-icon>close</mat-icon>
-                          </button>
-                        } @else {
-                          <span class="child-name">{{ child.name }}</span>
-                          <mat-chip class="child-chip">{{ child.isFixed ? 'Fixed' : 'Variable' }}</mat-chip>
+                            @for (group of filteredIconGroups(); track group.label) {
+                              <div class="icon-group-section">
+                                <div class="icon-group-label" [style.color]="group.color">{{ group.label }}</div>
+                                <div class="icon-grid">
+                                  @for (icon of group.icons; track icon) {
+                                    <button mat-icon-button (click)="editIcon = icon" [class.selected]="editIcon === icon">
+                                      <mat-icon [style.color]="editIcon === icon ? '#fff' : group.color">{{ icon }}</mat-icon>
+                                    </button>
+                                  }
+                                </div>
+                              </div>
+                            }
+                            @if (filteredIconGroups().length === 0) {
+                              <div class="icon-no-results">No icons found</div>
+                            }
+                          </div>
+                        </mat-menu>
+                        <input class="cat-inline-edit" [(ngModel)]="editName" (keyup.enter)="saveEdit(child)">
+                        <mat-slide-toggle [(ngModel)]="editFixed" class="edit-toggle">Fixed</mat-slide-toggle>
+                        <button mat-icon-button color="primary" (click)="saveEdit(child)" matTooltip="Save">
+                          <mat-icon>check</mat-icon>
+                        </button>
+                        <button mat-icon-button (click)="cancelEdit()" matTooltip="Cancel">
+                          <mat-icon>close</mat-icon>
+                        </button>
+                      } @else {
+                        <span class="cat-child-name">{{ child.name }}</span>
+                        <span class="cat-type-chip cat-type-chip-sm" [class.cat-chip-fixed]="child.isFixed">{{ child.isFixed ? 'Fixed' : 'Variable' }}</span>
+                        <div class="cat-actions">
                           <button mat-icon-button class="action-btn action-edit" (click)="startEdit(child)" matTooltip="Edit">
                             <mat-icon>edit</mat-icon>
                           </button>
                           <button mat-icon-button class="action-btn action-delete" (click)="deleteCategory(child)" matTooltip="Delete">
                             <mat-icon>delete_outline</mat-icon>
                           </button>
-                        }
-                      </div>
-                    }
-                  </div>
+                        </div>
+                      }
+                    </div>
+                  }
                 } @else {
-                  <p class="no-children">No subcategories yet.</p>
+                  <div class="cat-child-row cat-child-empty">
+                    <mat-icon>info_outline</mat-icon>
+                    <span>No subcategories yet</span>
+                  </div>
                 }
-              </mat-expansion-panel>
-            }
-          </mat-accordion>
+              }
+            </div>
+          }
         } @else {
-          <mat-card>
-            <mat-card-content>
-              <p class="empty-state">No categories in this section. Click "Add Category" to create one.</p>
-            </mat-card-content>
-          </mat-card>
+          <div class="cat-empty">
+            <mat-icon>category</mat-icon>
+            <span>No categories in this section</span>
+            <span class="cat-empty-hint">Click "Add Category" to create one</span>
+          </div>
         }
-      </ng-template>
+      }
     </div>
 
     }
@@ -872,28 +858,246 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
     .m-sheet-save { width: 100%; height: 48px; font-size: var(--text-base); font-weight: var(--weight-semibold); border-radius: var(--radius-md); }
 
     /* ═══════ DESKTOP STYLES ═══════ */
-    .page-header {
-      display: flex; align-items: center; justify-content: flex-end;
-      margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);
+
+    /* ─── Filter bar (pill style) ─── */
+    .cat-fb {
+      display: flex; flex-direction: column; gap: 10px;
+      padding: 14px 18px;
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      margin-bottom: var(--spacing-md);
     }
-    .stats-row {
-      display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: var(--spacing-sm); margin-bottom: var(--spacing-md);
+    .cat-fb-primary { display: flex; gap: 10px; align-items: center; }
+    .cat-fb-search {
+      flex: 1; display: flex; align-items: center; gap: 8px;
+      padding: 0 12px; height: 38px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      background: #f8f9fb;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
     }
-    .stat-card {
-      display: flex; align-items: center; gap: 12px; padding: 16px;
-      border-radius: var(--radius-md); background: var(--color-surface-solid); border: 1px solid var(--color-border); box-shadow: var(--shadow-xs);
+    .cat-fb-search-active {
+      border-color: var(--color-primary); background: white;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
     }
-    .stat-card mat-icon {
-      font-size: 26px; width: 26px; height: 26px; padding: 10px; border-radius: var(--radius-sm); box-sizing: content-box; overflow: visible; flex-shrink: 0;
+    .cat-fb-search-icon { font-size: 18px; width: 18px; height: 18px; color: var(--color-text-muted); }
+    .cat-fb-search-input {
+      flex: 1; border: none; outline: none; background: transparent;
+      font-size: 0.85rem; color: var(--color-text);
     }
-    .stat-blue mat-icon { color: var(--color-stat-blue); background: var(--color-stat-blue-bg); }
-    .stat-green mat-icon { color: var(--color-stat-green); background: var(--color-stat-green-bg); }
-    .stat-amber mat-icon { color: var(--color-stat-amber); background: var(--color-stat-amber-bg); }
-    .stat-purple mat-icon { color: var(--color-stat-purple); background: var(--color-stat-purple-bg); }
-    .stat-content { display: flex; flex-direction: column; min-width: 0; }
-    .stat-value { font-size: 1.25rem; font-weight: var(--weight-bold); color: var(--color-text); letter-spacing: -0.02em; line-height: var(--leading-tight); }
-    .stat-label { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: var(--tracking-wide); margin-top: 2px; }
+    .cat-fb-search-input::placeholder { color: var(--color-text-muted); }
+    .cat-fb-search-clear {
+      display: flex; align-items: center; padding: 0; border: none;
+      background: none; cursor: pointer; color: var(--color-text-muted);
+      border-radius: 50%; transition: var(--transition-fast);
+    }
+    .cat-fb-search-clear mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .cat-fb-search-clear:hover { color: var(--color-text); background: var(--color-border); }
+
+    .cat-fb-controls { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+    .cat-fb-stat {
+      padding: 4px 12px; border-radius: var(--radius-full);
+      font-size: 0.78rem; font-weight: 600;
+      background: #f1f3f5; color: var(--color-text-secondary);
+      white-space: nowrap;
+    }
+    .cat-fb-stat-fixed {
+      background: color-mix(in srgb, var(--color-primary) 8%, white);
+      color: var(--color-primary);
+    }
+    .cat-fb-add-btn {
+      border-radius: var(--radius-full) !important;
+      font-size: 0.82rem !important;
+      padding: 0 18px !important;
+      height: 36px !important;
+    }
+
+    .cat-fb-periods { display: flex; flex-wrap: wrap; gap: 6px; }
+    .cat-fb-period {
+      padding: 5px 14px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--color-border);
+      background: white;
+      color: var(--color-text-secondary);
+      font-size: 0.78rem; font-weight: 500;
+      cursor: pointer; white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .cat-fb-period:hover {
+      border-color: var(--color-primary); color: var(--color-primary);
+      background: color-mix(in srgb, var(--color-primary) 4%, white);
+    }
+    .cat-fb-period-active {
+      background: var(--color-primary) !important;
+      color: white !important;
+      border-color: var(--color-primary) !important;
+      font-weight: 600;
+      box-shadow: 0 1px 4px color-mix(in srgb, var(--color-primary) 30%, transparent);
+    }
+
+    .cat-fb-active {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+      padding-top: 8px;
+      border-top: 1px dashed color-mix(in srgb, var(--color-primary) 20%, var(--color-border));
+    }
+    .cat-fb-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 6px 3px 8px;
+      font-size: 0.76rem; font-weight: 500;
+      border-radius: var(--radius-full);
+      background: #f1f3f5; color: var(--color-text-secondary);
+      border: 1px solid var(--color-border);
+    }
+    .cat-fb-chip-icon { font-size: 14px; width: 14px; height: 14px; }
+    .cat-fb-chip-x {
+      display: flex; align-items: center; padding: 0;
+      border: none; background: none; cursor: pointer;
+      color: inherit; opacity: 0.5; border-radius: 50%;
+      transition: var(--transition-fast);
+    }
+    .cat-fb-chip-x mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .cat-fb-chip-x:hover { opacity: 1; background: color-mix(in srgb, currentColor 10%, transparent); }
+    .cat-fb-clear-all {
+      border: none; background: none; cursor: pointer;
+      color: var(--color-text-muted); font-size: 0.74rem; font-weight: 500;
+      padding: 2px 8px; border-radius: var(--radius-sm);
+      transition: var(--transition-fast);
+    }
+    .cat-fb-clear-all:hover { color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 6%, white); }
+
+    /* ─── Add category card ─── */
+    .cat-add-card {
+      background: white; border: 1px solid var(--color-border);
+      border-radius: var(--radius-md); padding: 16px;
+      margin-bottom: var(--spacing-md);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .inline-form { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .inline-form mat-form-field { flex: 1; min-width: 200px; }
+    .type-toggle { font-size: 0.85rem; }
+    .edit-toggle { margin-right: 8px; }
+
+    /* ─── Search results ─── */
+    .cat-search-results {
+      background: white; border-radius: var(--radius-md);
+      border: 1px solid var(--color-border); box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      margin-bottom: var(--spacing-md);
+      padding: 4px 0; overflow: hidden;
+    }
+    .cat-search-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px; transition: background 0.15s;
+    }
+    .cat-search-row:hover { background: var(--color-surface-hover); }
+    .cat-search-name { flex: 1; font-size: 0.9rem; font-weight: 500; }
+    .cat-search-type {
+      font-size: 0.68rem; font-weight: 600; padding: 2px 10px;
+      border-radius: var(--radius-full);
+      background: #f1f3f5; color: var(--color-text-secondary);
+      text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    .cat-search-empty {
+      display: flex; align-items: center; gap: 8px; justify-content: center;
+      padding: 20px; color: var(--color-text-muted); font-size: 0.88rem;
+      margin-bottom: var(--spacing-md);
+    }
+
+    /* ─── Category groups (card-based) ─── */
+    .cat-group {
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      transition: box-shadow 0.15s;
+    }
+    .cat-group:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+
+    .cat-parent-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 18px; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .cat-parent-row:hover { background: #f8f9fb; }
+    .cat-parent-name {
+      flex: 1; font-size: 0.95rem; font-weight: 600;
+      color: var(--color-text); min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .cat-count-pill {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 22px; height: 22px; padding: 0 6px;
+      border-radius: var(--radius-full);
+      background: color-mix(in srgb, var(--color-primary) 10%, white);
+      color: var(--color-primary);
+      font-size: 0.72rem; font-weight: 700;
+    }
+    .cat-type-chip {
+      font-size: 0.68rem; font-weight: 600; padding: 2px 10px;
+      border-radius: var(--radius-full);
+      background: #f1f3f5; color: var(--color-text-muted);
+      white-space: nowrap;
+    }
+    .cat-type-chip-sm { font-size: 0.65rem; padding: 1px 8px; }
+    .cat-chip-fixed {
+      background: color-mix(in srgb, var(--color-primary) 8%, white);
+      color: var(--color-primary);
+    }
+    .cat-actions {
+      display: flex; gap: 2px; opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .cat-parent-row:hover .cat-actions,
+    .cat-child-row:hover .cat-actions { opacity: 1; }
+    .cat-chevron {
+      font-size: 20px; width: 20px; height: 20px;
+      color: var(--color-text-muted);
+      transition: transform 0.2s;
+    }
+    .cat-chevron.expanded { transform: rotate(180deg); }
+
+    .cat-child-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 18px 10px 52px;
+      border-top: 1px solid color-mix(in srgb, var(--color-border) 50%, white);
+      transition: background 0.15s;
+    }
+    .cat-child-row:hover { background: #fafbfc; }
+    .cat-child-name {
+      flex: 1; font-size: 0.88rem; font-weight: 500;
+      color: var(--color-text); min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .cat-child-empty {
+      justify-content: center; color: var(--color-text-muted);
+      font-size: 0.82rem; gap: 6px; padding: 16px 18px;
+    }
+    .cat-child-empty mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
+    .cat-add-inline {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      padding: 12px 18px 12px 52px;
+      border-top: 1px solid var(--color-border);
+      background: color-mix(in srgb, var(--color-primary) 3%, white);
+    }
+    .cat-add-inline mat-form-field { flex: 1; min-width: 180px; }
+
+    .cat-inline-edit {
+      border: 1px solid var(--color-primary); border-radius: var(--radius-full);
+      padding: 6px 14px; font-size: 0.88rem; flex: 1; min-width: 150px;
+      background: white; color: var(--color-text); outline: none;
+    }
+
+    .cat-empty {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 48px 20px; color: var(--color-text-muted);
+    }
+    .cat-empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.3; }
+    .cat-empty span { font-size: 0.95rem; font-weight: 600; }
+    .cat-empty-hint { font-size: 0.82rem; opacity: 0.6; }
 
     .action-btn { width: 34px; height: 34px; border-radius: var(--radius-xs) !important; transition: background var(--transition-fast) !important; }
     .action-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
@@ -902,24 +1106,14 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
     .action-delete { color: var(--color-action-delete) !important; }
     .action-delete:hover { background: var(--color-action-delete-bg) !important; }
 
-    .add-form-card { margin-bottom: var(--spacing-md); }
-    .inline-form { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .inline-form mat-form-field { flex: 1; min-width: 200px; }
-    .type-toggle { font-size: 0.85rem; }
-    .tab-content { padding: var(--spacing-sm) 0; }
-    .child-form { margin-top: var(--spacing-sm); padding: var(--spacing-sm) 0; }
-    .panel-actions { display: flex; align-items: center; gap: 8px; margin-bottom: var(--spacing-sm); }
-    .edit-toggle { margin-right: 8px; }
-
     .cat-icon-badge {
       display: inline-flex; align-items: center; justify-content: center;
-      border-radius: 10px; margin-right: 12px; flex-shrink: 0;
+      border-radius: 10px; margin-right: 0; flex-shrink: 0;
     }
     .parent-badge { width: 36px; height: 36px; border: 1px solid; }
     .parent-badge mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .child-badge { width: 30px; height: 30px; border: 1px solid; }
     .child-badge mat-icon { font-size: 16px; width: 16px; height: 16px; }
-    .cat-label { font-weight: var(--weight-semibold); }
 
     .icon-picker-btn { border: 1px dashed var(--color-border); border-radius: 8px; }
     .icon-groups-picker { max-height: 400px; overflow-y: auto; padding: 4px 8px 8px; max-width: 380px; }
@@ -940,49 +1134,6 @@ const ICON_OPTIONS = ICON_GROUPS.flatMap(g => g.icons);
     .icon-grid button { width: 36px; height: 36px; }
     .icon-grid button mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .icon-grid button.selected { background: var(--color-primary); border-radius: 8px; }
-
-    .children-list { padding: var(--spacing-sm) 0; }
-    .child-row {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 16px; border-radius: 10px; transition: background 0.15s;
-    }
-    .child-row:hover { background: var(--color-surface-hover); }
-    .child-name { flex: 1; font-size: var(--text-base); font-weight: var(--weight-medium); }
-    .child-chip { font-size: 0.75rem; }
-    .child-count { margin-left: auto; font-size: 0.85rem; opacity: 0.6; }
-
-    .inline-edit {
-      border: 1px solid var(--color-border); border-radius: 4px;
-      padding: 6px 10px; font-size: 0.95rem; flex: 1; min-width: 150px;
-      background: var(--color-surface); color: var(--color-text);
-    }
-    .no-children { opacity: 0.6; font-style: italic; padding-left: 16px; }
-    .empty-state { opacity: 0.6; font-style: italic; text-align: center; padding: var(--spacing-lg); }
-
-    .search-field { width: 100%; margin-bottom: var(--spacing-sm); }
-    .search-field mat-icon { color: var(--color-text-muted); }
-    .search-results {
-      background: var(--color-surface-solid); border-radius: var(--radius-md);
-      border: 1px solid var(--color-border); box-shadow: var(--shadow-xs); margin-bottom: var(--spacing-md);
-      padding: 8px 0; overflow: hidden;
-    }
-    .search-result-row {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 16px; transition: background 0.15s;
-    }
-    .search-result-row:hover { background: var(--color-surface-hover); }
-    .search-result-name { flex: 1; font-size: var(--text-base); font-weight: var(--weight-medium); }
-    .search-result-type { font-size: 0.72rem; }
-    .search-no-results {
-      display: flex; align-items: center; gap: 8px; justify-content: center;
-      padding: 16px; color: var(--color-text-muted); font-size: 0.9rem;
-      margin-bottom: var(--spacing-md);
-    }
-    mat-expansion-panel { margin-bottom: 8px; }
-
-    @media (max-width: 768px) {
-      .stats-row { grid-template-columns: repeat(2, 1fr); }
-    }
   `]
 })
 export class CategoryPageComponent implements OnInit {
@@ -1040,7 +1191,8 @@ export class CategoryPageComponent implements OnInit {
   iconGroups = ICON_GROUPS;
   iconSearch = signal('');
 
-  private mobileExpandedIds = signal<Set<number>>(new Set());
+  catSearchFocused = false;
+  private expandedIds = signal<Set<number>>(new Set());
 
   filteredIconGroups = computed(() => {
     const q = this.iconSearch().toLowerCase().replace(/[_\s]+/g, '');
@@ -1052,11 +1204,6 @@ export class CategoryPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCategories();
-  }
-
-  onTabChange(index: number): void {
-    this.activeTab.set(index === 0 ? 'Expense' : 'Income');
-    this.newParentType = this.activeTab();
   }
 
   loadCategories(): void {
@@ -1073,15 +1220,15 @@ export class CategoryPageComponent implements OnInit {
     });
   }
 
-  toggleMobileExpand(id: number): void {
-    const current = new Set(this.mobileExpandedIds());
+  toggleExpand(id: number): void {
+    const current = new Set(this.expandedIds());
     if (current.has(id)) current.delete(id);
     else current.add(id);
-    this.mobileExpandedIds.set(current);
+    this.expandedIds.set(current);
   }
 
-  isMobileExpanded(id: number): boolean {
-    return this.mobileExpandedIds().has(id);
+  isExpanded(id: number): boolean {
+    return this.expandedIds().has(id);
   }
 
   startMobileAdd(parentId: number): void {

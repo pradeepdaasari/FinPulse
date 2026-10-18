@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal, computed, ChangeDetectorRef, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
 import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
@@ -7,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
 import { MatChipsModule } from '@angular/material/chips';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
@@ -22,7 +24,7 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
   standalone: true,
   imports: [
     CommonModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatChipsModule, MatDialogModule, MatTooltipModule,
+    MatChipsModule, MatMenuModule, MatDialogModule, MatTooltipModule,
     CurrencyPipe, DatePipe, DecimalPipe, LocalDatePipe,
     SkeletonLoaderComponent, PullToRefreshDirective, TradeNotesPanelComponent
   ],
@@ -96,31 +98,84 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
       </div>
     </div>
 
-    <div class="controls-row">
-      <div class="month-nav">
-        <button mat-icon-button (click)="prevMonth()"><mat-icon>chevron_left</mat-icon></button>
-        <span class="month-label">{{ monthLabel() }}</span>
-        <button mat-icon-button (click)="nextMonth()"><mat-icon>chevron_right</mat-icon></button>
+    <div class="tj-fb">
+      <div class="tj-fb-primary">
+        <div class="tj-fb-month-nav">
+          <button class="tj-fb-month-btn" (click)="prevMonth()"><mat-icon>chevron_left</mat-icon></button>
+          <span class="tj-fb-month-label">{{ monthLabel() }}</span>
+          <button class="tj-fb-month-btn" (click)="nextMonth()"><mat-icon>chevron_right</mat-icon></button>
+        </div>
+
+        <div class="tj-fb-controls">
+          <button class="tj-fb-dropdown" [class.tj-fb-dropdown-active]="filter() !== 'all'"
+                  [matMenuTriggerFor]="statusMenu">
+            <mat-icon class="tj-fb-dd-icon">{{ statusIcon() }}</mat-icon>
+            <span>{{ statusLabel() }}</span>
+            <mat-icon class="tj-fb-dd-arrow">expand_more</mat-icon>
+          </button>
+
+          <button class="tj-fb-dropdown" [class.tj-fb-dropdown-active]="instrumentFilter() !== ''"
+                  [matMenuTriggerFor]="instrumentMenu">
+            <mat-icon class="tj-fb-dd-icon">candlestick_chart</mat-icon>
+            <span>{{ instrumentFilter() || 'Instrument' }}</span>
+            <mat-icon class="tj-fb-dd-arrow">expand_more</mat-icon>
+          </button>
+
+          <button mat-raised-button color="primary" class="tj-fb-add-btn" (click)="openAddTrade()">
+            <mat-icon>add</mat-icon> Quick Add
+          </button>
+        </div>
       </div>
-      <div class="filter-chips">
-        <button mat-stroked-button [class.active-chip]="filter() === 'all'" (click)="filter.set('all')">All</button>
-        <button mat-stroked-button [class.active-chip]="filter() === 'open'" (click)="filter.set('open')">
-          <mat-icon>lock_open</mat-icon> Open
-        </button>
-        <button mat-stroked-button [class.active-chip]="filter() === 'closed'" (click)="filter.set('closed')">
-          <mat-icon>lock</mat-icon> Closed
-        </button>
-        <button mat-stroked-button [class.active-chip]="filter() === 'compliant'" (click)="filter.set('compliant')">
-          <mat-icon>check_circle</mat-icon> Compliant
-        </button>
-        <button mat-stroked-button [class.active-chip]="filter() === 'non-compliant'" (click)="filter.set('non-compliant')">
-          <mat-icon>close</mat-icon> Non-Compliant
-        </button>
-      </div>
-      <button mat-raised-button color="primary" (click)="openAddTrade()">
-        <mat-icon>add</mat-icon> Quick Add
-      </button>
+
+      @if (filter() !== 'all' || instrumentFilter()) {
+        <div class="tj-fb-active">
+          @if (filter() !== 'all') {
+            <span class="tj-fb-chip tj-fb-chip-status">
+              <mat-icon class="tj-fb-chip-icon">{{ statusIcon() }}</mat-icon>
+              {{ statusLabel() }}
+              <button class="tj-fb-chip-x" (click)="filter.set('all')"><mat-icon>close</mat-icon></button>
+            </span>
+          }
+          @if (instrumentFilter()) {
+            <span class="tj-fb-chip tj-fb-chip-instrument">
+              <mat-icon class="tj-fb-chip-icon">candlestick_chart</mat-icon>
+              {{ instrumentFilter() }}
+              <button class="tj-fb-chip-x" (click)="instrumentFilter.set('')"><mat-icon>close</mat-icon></button>
+            </span>
+          }
+          <button class="tj-fb-clear-all" (click)="filter.set('all'); instrumentFilter.set('')">Clear all</button>
+        </div>
+      }
     </div>
+
+    <mat-menu #statusMenu="matMenu" class="tj-fb-menu">
+      <button mat-menu-item (click)="filter.set('all')">
+        <mat-icon>list</mat-icon> All Trades
+      </button>
+      <button mat-menu-item (click)="filter.set('open')">
+        <mat-icon>lock_open</mat-icon> Open
+      </button>
+      <button mat-menu-item (click)="filter.set('closed')">
+        <mat-icon>lock</mat-icon> Closed
+      </button>
+      <button mat-menu-item (click)="filter.set('compliant')">
+        <mat-icon>check_circle</mat-icon> Compliant
+      </button>
+      <button mat-menu-item (click)="filter.set('non-compliant')">
+        <mat-icon>cancel</mat-icon> Non-Compliant
+      </button>
+    </mat-menu>
+
+    <mat-menu #instrumentMenu="matMenu" class="tj-fb-menu">
+      <button mat-menu-item (click)="instrumentFilter.set('')">
+        <mat-icon>list</mat-icon> All Instruments
+      </button>
+      @for (inst of availableInstruments(); track inst) {
+        <button mat-menu-item (click)="instrumentFilter.set(inst)">
+          <mat-icon>candlestick_chart</mat-icon> {{ inst }}
+        </button>
+      }
+    </mat-menu>
 
     @if (filteredTrades().length > 0) {
       <!-- Desktop table -->
@@ -412,21 +467,109 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
     }
     .mobile-notes-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
 
-    /* ─── Controls ─── */
-    .controls-row {
-      display: flex; align-items: center; gap: var(--spacing-sm);
-      margin-bottom: var(--spacing-md); flex-wrap: wrap;
+    /* ─── Filter bar (pill style) ─── */
+    .tj-fb {
+      display: flex; flex-direction: column; gap: 10px;
+      padding: 14px 18px;
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      margin-bottom: var(--spacing-md);
     }
-    .month-nav {
-      display: flex; align-items: center; gap: var(--spacing-xs);
-      background: var(--color-surface-hover); border-radius: var(--radius-full); padding: 3px;
+    .tj-fb-primary {
+      display: flex; gap: 10px; align-items: center;
+    }
+    .tj-fb-month-nav {
+      display: flex; align-items: center; gap: 2px;
+      padding: 0 4px; height: 38px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      background: #f8f9fb;
+    }
+    .tj-fb-month-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 30px; height: 30px; border: none; border-radius: 50%;
+      background: transparent; color: var(--color-text-muted);
+      cursor: pointer; transition: var(--transition-fast);
+    }
+    .tj-fb-month-btn:hover { color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 8%, white); }
+    .tj-fb-month-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .tj-fb-month-label {
+      font-size: 0.85rem; font-weight: 600; min-width: 120px; text-align: center;
+      color: var(--color-text);
+    }
+    .tj-fb-controls { display: flex; gap: 6px; align-items: center; flex: 1; justify-content: flex-end; }
+    .tj-fb-dropdown {
+      display: flex; align-items: center; gap: 5px;
+      padding: 0 12px; height: 38px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      background: white;
+      color: var(--color-text-secondary);
+      font-size: 0.82rem; font-weight: 500;
+      cursor: pointer; white-space: nowrap;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+    .tj-fb-dropdown:hover {
+      border-color: color-mix(in srgb, var(--color-primary) 50%, var(--color-border));
+      color: var(--color-text);
+    }
+    .tj-fb-dropdown-active {
+      background: color-mix(in srgb, var(--color-primary) 8%, white);
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+    .tj-fb-dd-icon { font-size: 18px; width: 18px; height: 18px; }
+    .tj-fb-dd-arrow { font-size: 16px; width: 16px; height: 16px; opacity: 0.5; margin-left: -2px; }
+    .tj-fb-add-btn {
+      border-radius: var(--radius-full) !important;
+      font-weight: 600 !important;
+      font-size: 0.82rem !important;
+      height: 38px !important;
+    }
+
+    /* Active filter chips */
+    .tj-fb-active {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+      padding-top: 8px;
+      border-top: 1px dashed color-mix(in srgb, var(--color-primary) 20%, var(--color-border));
+    }
+    .tj-fb-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 6px 3px 8px;
+      font-size: 0.76rem; font-weight: 500;
+      border-radius: var(--radius-full);
+      background: #f1f3f5; color: var(--color-text-secondary);
       border: 1px solid var(--color-border);
     }
-    .month-label { font-size: var(--text-sm); font-weight: var(--weight-semibold); min-width: 120px; text-align: center; }
-    .filter-chips { display: flex; gap: 6px; flex: 1; }
-    .filter-chips button { font-size: var(--text-xs); border-radius: var(--radius-full) !important; transition: background var(--transition-fast), color var(--transition-fast); }
-    .filter-chips button mat-icon { font-size: 14px; width: 14px; height: 14px; margin-right: 2px; }
-    .active-chip { background: var(--color-primary) !important; color: #fff !important; border-color: var(--color-primary) !important; }
+    .tj-fb-chip-status {
+      background: color-mix(in srgb, var(--color-primary) 8%, white);
+      border-color: color-mix(in srgb, var(--color-primary) 25%, transparent);
+      color: var(--color-primary);
+    }
+    .tj-fb-chip-instrument {
+      background: color-mix(in srgb, #6366f1 8%, white);
+      border-color: color-mix(in srgb, #6366f1 25%, transparent);
+      color: #6366f1;
+    }
+    .tj-fb-chip-icon { font-size: 14px; width: 14px; height: 14px; }
+    .tj-fb-chip-x {
+      display: flex; align-items: center; padding: 0;
+      border: none; background: none; cursor: pointer;
+      color: inherit; opacity: 0.5; border-radius: 50%;
+      transition: var(--transition-fast);
+    }
+    .tj-fb-chip-x mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .tj-fb-chip-x:hover { opacity: 1; background: color-mix(in srgb, currentColor 10%, transparent); }
+    .tj-fb-clear-all {
+      border: none; background: none; cursor: pointer;
+      color: var(--color-text-muted); font-size: 0.74rem; font-weight: 500;
+      padding: 2px 8px; border-radius: var(--radius-sm);
+      transition: var(--transition-fast);
+    }
+    .tj-fb-clear-all:hover { color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 6%, white); }
 
     /* ─── Table ─── */
     .table-wrapper { overflow-x: auto; scrollbar-width: none; }
@@ -585,9 +728,9 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
       .stats-row::-webkit-scrollbar { display: none; }
       .stat-card { flex: 0 0 auto; min-width: 140px; padding: 12px 14px; }
       .stat-value { font-size: 1.1rem; }
-      .controls-row { flex-direction: row; flex-wrap: wrap; }
-      .filter-chips { justify-content: center; }
-      .filter-chips button { min-height: 44px; }
+      .tj-fb-primary { flex-wrap: wrap; }
+      .tj-fb-month-nav { width: 100%; justify-content: center; }
+      .tj-fb-controls { width: 100%; justify-content: space-between; }
       .desktop-only { display: none !important; }
       .mobile-feed { display: block; }
       .page-banner { margin: -14px -14px 16px; padding: 10px 16px; border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
@@ -600,11 +743,17 @@ export class JournalComponent implements OnInit {
   private dialog = inject(MatDialog);
   private cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
+  private route = inject(ActivatedRoute);
 
   loading = signal(true);
   trades = signal<TradeEntry[]>([]);
   setups = signal<TradingSetupSummary[]>([]);
   filter = signal<'all' | 'open' | 'closed' | 'compliant' | 'non-compliant'>('all');
+  instrumentFilter = signal<string>('');
+  availableInstruments = computed(() => {
+    const instruments = new Set(this.trades().map(t => t.instrument));
+    return [...instruments].sort();
+  });
   expandedTradeId = signal<number | null>(null);
   expandedInstrument = signal<string>('');
   currentYear = new Date().getFullYear();
@@ -612,16 +761,35 @@ export class JournalComponent implements OnInit {
   monthLabel = signal('');
   columns = ['date', 'setup', 'instrument', 'direction', 'pnl', 'compliance', 'actions'];
 
+  statusLabel(): string {
+    const labels: Record<string, string> = { all: 'Status', open: 'Open', closed: 'Closed', compliant: 'Compliant', 'non-compliant': 'Non-Compliant' };
+    return labels[this.filter()] || 'Status';
+  }
+
+  statusIcon(): string {
+    const icons: Record<string, string> = { all: 'filter_list', open: 'lock_open', closed: 'lock', compliant: 'check_circle', 'non-compliant': 'cancel' };
+    return icons[this.filter()] || 'filter_list';
+  }
+
   filteredTrades = computed(() => {
     const f = this.filter();
+    const inst = this.instrumentFilter().toLowerCase();
+    let result: TradeEntry[];
     if (f === 'all') {
       const open = this.trades().filter(t => t.status === 'Open');
       const closed = this.trades().filter(t => t.status !== 'Open');
-      return [...open, ...closed];
+      result = [...open, ...closed];
+    } else if (f === 'open') {
+      result = this.trades().filter(t => t.status === 'Open');
+    } else if (f === 'closed') {
+      result = this.trades().filter(t => t.status !== 'Open');
+    } else {
+      result = this.trades().filter(t => f === 'compliant' ? t.checklistCompleted : !t.checklistCompleted);
     }
-    if (f === 'open') return this.trades().filter(t => t.status === 'Open');
-    if (f === 'closed') return this.trades().filter(t => t.status !== 'Open');
-    return this.trades().filter(t => f === 'compliant' ? t.checklistCompleted : !t.checklistCompleted);
+    if (inst) {
+      result = result.filter(t => t.instrument.toLowerCase() === inst);
+    }
+    return result;
   });
 
   closedTrades = computed(() => this.trades().filter(t => t.status !== 'Open'));
@@ -634,6 +802,14 @@ export class JournalComponent implements OnInit {
   complianceRate = signal(0);
 
   ngOnInit(): void {
+    const params = this.route.snapshot.queryParams;
+    if (params['year'] && params['month']) {
+      this.currentYear = +params['year'];
+      this.currentMonth = +params['month'];
+    }
+    if (params['instrument']) {
+      this.instrumentFilter.set(params['instrument']);
+    }
     this.updateMonthLabel();
     this.loadTrades();
     this.tradingService.getSetups().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({

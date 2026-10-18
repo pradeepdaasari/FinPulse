@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common';
+import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
@@ -114,7 +115,7 @@ type Period = '3' | '6' | 'ytd';
           </div>
           <div class="month-columns">
             @for (m of d.trading.monthly; track $index) {
-              <div class="month-col">
+              <div class="month-col drill-month" (click)="drillToJournal($index)">
                 <span class="month-label">{{ d.months[$index].label }}</span>
                 <span class="month-value" [class.pnl-positive]="asTrading(m).netPnl > 0" [class.pnl-negative]="asTrading(m).netPnl < 0">
                   {{ asTrading(m).netPnl >= 0 ? '+' : '' }}{{ asTrading(m).netPnl | currency:'USD':'symbol':'1.0-0' }}
@@ -140,9 +141,12 @@ type Period = '3' | '6' | 'ytd';
                 <tbody>
                   @for (row of d.trading.details; track row.name) {
                     <tr>
-                      <td class="detail-name">{{ row.name }}</td>
+                      <td class="detail-name drill-cell" (click)="drillToJournal(-1, row.name)">
+                        <span class="bar-value">{{ row.name }}</span>
+                      </td>
                       @for (val of row.monthly; track $index) {
-                        <td class="detail-val bar-cell" [class.pnl-positive]="val > 0" [class.pnl-negative]="val < 0">
+                        <td class="detail-val bar-cell drill-cell" [class.pnl-positive]="val > 0" [class.pnl-negative]="val < 0"
+                            (click)="drillToJournal($index, row.name)">
                           <div class="bar-bg" [class.bar-pnl-pos]="val > 0" [class.bar-pnl-neg]="val < 0" [class.bar-neutral]="val === 0" [style.width.%]="barWidth(abs(val), maxAbsInColumn(d.trading.details, $index))"></div>
                           <span class="bar-value">{{ val >= 0 ? '+' : '' }}{{ val | currency:'USD':'symbol':'1.0-0' }}</span>
                         </td>
@@ -211,7 +215,7 @@ type Period = '3' | '6' | 'ytd';
                         {{ row.name }}
                       </td>
                       @for (val of row.monthly; track $index) {
-                        <td class="detail-val bar-cell">
+                        <td class="detail-val bar-cell drill-cell" (click)="drillToExpenses(row, $index, $event)">
                           @if (val > 0) {
                             <div class="bar-bg" [class.bar-up]="$index > 0 && val > row.monthly[$index - 1]" [class.bar-down]="$index > 0 && val < row.monthly[$index - 1]" [class.bar-neutral]="$index === 0 || val === row.monthly[$index - 1]" [style.width.%]="barWidth(val, maxInColumn(d.expenses.details, $index))"></div>
                           }
@@ -296,7 +300,7 @@ type Period = '3' | '6' | 'ytd';
                     <tr>
                       <td class="detail-name">{{ row.name }}</td>
                       @for (val of row.monthly; track $index) {
-                        <td class="detail-val bar-cell">
+                        <td class="detail-val bar-cell drill-cell" (click)="drillToTransactions(5, row, $index, $event)">
                           @if (val > 0) {
                             <div class="bar-bg" [class.bar-pay-up]="$index > 0 && val > row.monthly[$index - 1]" [class.bar-pay-down]="$index > 0 && val < row.monthly[$index - 1]" [class.bar-neutral]="$index === 0 || val === row.monthly[$index - 1]" [style.width.%]="barWidth(val, maxInColumn(d.loanPayments.details, $index))"></div>
                           }
@@ -359,7 +363,7 @@ type Period = '3' | '6' | 'ytd';
                     <tr>
                       <td class="detail-name">{{ row.name }}</td>
                       @for (val of row.monthly; track $index) {
-                        <td class="detail-val bar-cell">
+                        <td class="detail-val bar-cell drill-cell" (click)="drillToCardTransactions(row, $index, $event)">
                           @if (val > 0) {
                             <div class="bar-bg" [class.bar-pay-up]="$index > 0 && val > row.monthly[$index - 1]" [class.bar-pay-down]="$index > 0 && val < row.monthly[$index - 1]" [class.bar-neutral]="$index === 0 || val === row.monthly[$index - 1]" [style.width.%]="barWidth(val, maxInColumn(d.cardPayments.details, $index))"></div>
                           }
@@ -484,6 +488,13 @@ type Period = '3' | '6' | 'ytd';
     }
     .detail-row-icon { font-size: 16px; width: 16px; height: 16px; color: var(--color-text-muted); }
     .detail-val { text-align: right; font-variant-numeric: tabular-nums; }
+    .drill-cell { cursor: pointer; border-radius: 4px; transition: background 0.15s ease; }
+    .drill-cell .bar-value { color: var(--color-primary); }
+    .drill-cell:hover { background: var(--color-primary-subtle); }
+    .drill-cell:hover .bar-value { text-decoration: underline; }
+    .drill-month { cursor: pointer; transition: background 0.15s, box-shadow 0.15s; }
+    .drill-month:hover { background: rgba(99, 102, 241, 0.06); box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2); }
+    .drill-month:hover .month-value { text-decoration: underline; }
     .detail-total { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
     .detail-table tbody tr:hover { background: rgba(0,0,0,0.02); }
 
@@ -560,6 +571,7 @@ type Period = '3' | '6' | 'ytd';
 })
 export class MonthlyPulseComponent implements OnInit {
   private pulseService = inject(MonthlyPulseService);
+  private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
 
   data = signal<MonthlyPulseData | null>(null);
@@ -595,6 +607,56 @@ export class MonthlyPulseComponent implements OnInit {
 
   isCatExpanded(name: string): boolean {
     return this.expandedCats().has(name);
+  }
+
+  drillToExpenses(row: DetailRow, monthIndex: number, event: Event): void {
+    event.stopPropagation();
+    if (!row.categoryId) return;
+    const d = this.data();
+    if (!d) return;
+    const month = d.months[monthIndex];
+    this.router.navigate(['/expenses'], {
+      queryParams: { categoryId: row.categoryId, year: month.year, month: month.month }
+    });
+  }
+
+  drillToTransactions(transactionType: number, row: DetailRow, monthIndex: number, event: Event): void {
+    event.stopPropagation();
+    const d = this.data();
+    if (!d) return;
+    const month = d.months[monthIndex];
+    const queryParams: Record<string, string | number> = { transactionType, year: month.year, month: month.month };
+    if (row.debtId) {
+      queryParams['toFundingSourceId'] = row.debtId;
+    }
+    this.router.navigate(['/expenses'], { queryParams });
+  }
+
+  drillToJournal(monthIndex: number, instrument?: string): void {
+    const d = this.data();
+    if (!d) return;
+    const queryParams: Record<string, string | number> = {};
+    if (monthIndex >= 0) {
+      const month = d.months[monthIndex];
+      queryParams['year'] = month.year;
+      queryParams['month'] = month.month;
+    }
+    if (instrument) {
+      queryParams['instrument'] = instrument;
+    }
+    this.router.navigate(['/trading/journal'], { queryParams });
+  }
+
+  drillToCardTransactions(row: DetailRow, monthIndex: number, event: Event): void {
+    event.stopPropagation();
+    const d = this.data();
+    if (!d) return;
+    const month = d.months[monthIndex];
+    const queryParams: Record<string, string | number | string> = { year: month.year, month: month.month, fundingSourceType: 'CreditCard' };
+    if (row.debtId) {
+      queryParams['fundingSourceId'] = row.debtId;
+    }
+    this.router.navigate(['/expenses'], { queryParams });
   }
 
   loadData(): void {

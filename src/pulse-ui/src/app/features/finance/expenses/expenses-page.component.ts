@@ -1,5 +1,6 @@
 import { Component, OnInit, ViewChild, inject, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
@@ -96,7 +97,7 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
               <span class="expense-count">{{ filteredExpenses().length }} transactions</span>
             </div>
 
-            <app-expense-filter-bar [usedCategoryIds]="usedCategoryIds()" (filterChange)="onFilterChange($event)"></app-expense-filter-bar>
+            <app-expense-filter-bar [usedCategoryIds]="usedCategoryIds()" [initialCategoryIds]="initialCategoryIds()" [initialTransactionType]="initialTransactionType()" [initialToFundingSourceId]="initialToFundingSourceId()" [initialFundingSourceId]="initialFundingSourceId()" [initialFundingSourceType]="initialFundingSourceType()" (filterChange)="onFilterChange($event)"></app-expense-filter-bar>
 
             @if (filteredExpenses().length > 0) {
               <!-- Desktop table view -->
@@ -811,6 +812,8 @@ function compare(a: number | string, b: number | string, isAsc: boolean): number
 export class ExpensesPageComponent implements OnInit {
   private expenseService = inject(DailyExpenseService);
   private accountService = inject(BankAccountService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private notify = inject(NotificationService);
   private dialog = inject(MatDialog);
   private cdr = inject(ChangeDetectorRef);
@@ -853,9 +856,45 @@ export class ExpensesPageComponent implements OnInit {
   monthLabel = signal('');
 
   activeFilter: Partial<ExpenseFilter> = {};
+  initialCategoryIds = signal<number[]>([]);
+  initialTransactionType = signal<number | null>(null);
+  initialToFundingSourceId = signal<number | null>(null);
+  initialFundingSourceId = signal<number | null>(null);
+  initialFundingSourceType = signal<string | null>(null);
   logColumns = ['type', 'date', 'merchant', 'description', 'category', 'source', 'amount', 'actions'];
 
   ngOnInit(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const catId = params.get('categoryId');
+    const txnType = params.get('transactionType');
+    const year = params.get('year');
+    const month = params.get('month');
+    if (catId) {
+      const ids = [+catId];
+      this.initialCategoryIds.set(ids);
+      this.activeFilter = { categoryIds: ids };
+    }
+    if (txnType !== null) {
+      this.initialTransactionType.set(+txnType);
+      this.activeFilter = { ...this.activeFilter, transactionType: +txnType };
+    }
+    const toFundId = params.get('toFundingSourceId');
+    if (toFundId) {
+      this.initialToFundingSourceId.set(+toFundId);
+      this.activeFilter = { ...this.activeFilter, toFundingSourceId: +toFundId };
+    }
+    const fundSrcId = params.get('fundingSourceId');
+    const fundSrcType = params.get('fundingSourceType');
+    if (fundSrcId) {
+      this.initialFundingSourceId.set(+fundSrcId);
+      this.activeFilter = { ...this.activeFilter, fundingSourceId: +fundSrcId };
+    }
+    if (fundSrcType) {
+      this.initialFundingSourceType.set(fundSrcType);
+      this.activeFilter = { ...this.activeFilter, fundingSourceType: fundSrcType };
+    }
+    if (year) this.currentYear = +year;
+    if (month) this.currentMonth = +month;
     this.updateMonthLabel();
     this.loadData();
     this.accountService.getAll().subscribe({
@@ -1100,6 +1139,12 @@ export class ExpensesPageComponent implements OnInit {
 
   onFilterChange(filter: Partial<ExpenseFilter>): void {
     this.activeFilter = filter;
+    this.initialCategoryIds.set([]);
+    this.initialTransactionType.set(null);
+    this.initialToFundingSourceId.set(null);
+    this.initialFundingSourceId.set(null);
+    this.initialFundingSourceType.set(null);
+    this.router.navigate([], { queryParams: {}, replaceUrl: true });
     this.loadData();
   }
 

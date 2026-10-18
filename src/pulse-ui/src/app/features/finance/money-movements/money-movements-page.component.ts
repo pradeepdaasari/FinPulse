@@ -7,6 +7,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog } from '@angular/material/dialog';
 import { MoneyMovementService } from '../../../core/services/money-movement.service';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -19,7 +20,7 @@ import { toLocalDateString } from '../../../core/utils/date-utils';
 @Component({
   selector: 'app-money-movements-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatChipsModule, MatIconModule, MatButtonModule, CurrencyPipe, DatePipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [CommonModule, FormsModule, MatCardModule, MatChipsModule, MatIconModule, MatButtonModule, MatMenuModule, CurrencyPipe, DatePipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadMovements()">
       <div class="header-row">
@@ -32,46 +33,124 @@ import { toLocalDateString } from '../../../core/utils/date-utils';
         </button>
       </div>
 
-      <div class="filter-section">
-        <div class="filter-row">
-          <mat-chip-set>
-            <mat-chip [highlighted]="activeFilter() === 'all'" (click)="filterByType('all')">All</mat-chip>
-            <mat-chip [highlighted]="activeFilter() === 'LoanFunding'" (click)="filterByType('LoanFunding')">Loan Funding</mat-chip>
-            <mat-chip [highlighted]="activeFilter() === 'LoanPayment'" (click)="filterByType('LoanPayment')">Loan Payments</mat-chip>
-            <mat-chip [highlighted]="activeFilter() === 'CardPayment'" (click)="filterByType('CardPayment')">Card Payments</mat-chip>
-            <mat-chip [highlighted]="activeFilter() === 'Transfer'" (click)="filterByType('Transfer')">Transfers</mat-chip>
-            <mat-chip [highlighted]="activeFilter() === 'Deposit'" (click)="filterByType('Deposit')">Deposits</mat-chip>
-            <mat-chip [highlighted]="activeFilter() === 'Withdrawal'" (click)="filterByType('Withdrawal')">Withdrawals</mat-chip>
-            <mat-chip [highlighted]="activeFilter() === 'TradePnl'" (click)="filterByType('TradePnl')">Trade P&amp;L</mat-chip>
-            <mat-chip [highlighted]="activeFilter() === 'TradeFee'" (click)="filterByType('TradeFee')">Trade Fees</mat-chip>
-          </mat-chip-set>
-        </div>
-
-        <div class="date-filter-row">
-          <div class="date-presets">
-            @for (p of datePresets; track p.label) {
-              <button class="preset-chip" [class.active]="activePreset() === p.label" (click)="applyPreset(p)">
-                {{ p.label }}
-              </button>
-            }
-          </div>
-          <div class="date-inputs">
-            <div class="date-field">
-              <label>From</label>
-              <input type="date" [ngModel]="dateFrom()" (ngModelChange)="setDateFrom($event)">
-            </div>
-            <div class="date-field">
-              <label>To</label>
-              <input type="date" [ngModel]="dateTo()" (ngModelChange)="setDateTo($event)">
-            </div>
-            @if (dateFrom() || dateTo()) {
-              <button class="clear-dates-btn" (click)="clearDates()" aria-label="Clear dates">
+      <div class="mm-fb">
+        <div class="mm-fb-primary">
+          <div class="mm-fb-search" [class.mm-fb-search-active]="searchFocused">
+            <mat-icon class="mm-fb-search-icon">search</mat-icon>
+            <input class="mm-fb-search-input" [(ngModel)]="searchTerm"
+                   placeholder="Search movements..."
+                   (focus)="searchFocused = true"
+                   (blur)="searchFocused = false">
+            @if (searchTerm) {
+              <button class="mm-fb-search-clear" (click)="searchTerm = ''; allMovements.set(allMovements())">
                 <mat-icon>close</mat-icon>
               </button>
             }
           </div>
+
+          <div class="mm-fb-controls">
+            <button class="mm-fb-dropdown" [class.mm-fb-dropdown-active]="activeFilter() !== 'all'"
+                    [matMenuTriggerFor]="typeMenu">
+              <mat-icon class="mm-fb-dd-icon">{{ activeFilter() !== 'all' ? typeIcon(activeFilter()) : 'filter_list' }}</mat-icon>
+              <span>{{ activeFilter() !== 'all' ? typeLabel(activeFilter()) : 'Type' }}</span>
+              <mat-icon class="mm-fb-dd-arrow">expand_more</mat-icon>
+            </button>
+
+            <button class="mm-fb-more-toggle" [class.mm-fb-more-active]="showDateRange"
+                    (click)="showDateRange = !showDateRange">
+              <mat-icon>{{ showDateRange ? 'expand_less' : 'date_range' }}</mat-icon>
+              @if ((dateFrom() || dateTo()) && !showDateRange) {
+                <span class="mm-fb-badge">1</span>
+              }
+            </button>
+          </div>
         </div>
+
+        <div class="mm-fb-periods">
+          @for (p of datePresets; track p.label) {
+            <button class="mm-fb-period" [class.mm-fb-period-active]="activePreset() === p.label"
+                    (click)="applyPreset(p)">
+              {{ p.label }}
+            </button>
+          }
+        </div>
+
+        @if (showDateRange) {
+          <div class="mm-fb-dates">
+            <div class="mm-fb-pill-input">
+              <mat-icon class="mm-fb-pill-icon">event</mat-icon>
+              <input type="date" [ngModel]="dateFrom()" (ngModelChange)="setDateFrom($event)" placeholder="From">
+            </div>
+            <span class="mm-fb-date-sep">–</span>
+            <div class="mm-fb-pill-input">
+              <mat-icon class="mm-fb-pill-icon">event</mat-icon>
+              <input type="date" [ngModel]="dateTo()" (ngModelChange)="setDateTo($event)" placeholder="To">
+            </div>
+            @if (dateFrom() || dateTo()) {
+              <button class="mm-fb-date-clear" (click)="clearDates()">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </div>
+        }
+
+        @if (activeFilter() !== 'all' || dateFrom() || dateTo() || searchTerm) {
+          <div class="mm-fb-active">
+            @if (activeFilter() !== 'all') {
+              <span class="mm-fb-chip mm-fb-chip-type">
+                <mat-icon class="mm-fb-chip-icon">{{ typeIcon(activeFilter()) }}</mat-icon>
+                {{ typeLabel(activeFilter()) }}
+                <button class="mm-fb-chip-x" (click)="filterByType('all')"><mat-icon>close</mat-icon></button>
+              </span>
+            }
+            @if (dateFrom() || dateTo()) {
+              <span class="mm-fb-chip mm-fb-chip-date">
+                <mat-icon class="mm-fb-chip-icon">date_range</mat-icon>
+                {{ dateFrom() || '...' }} – {{ dateTo() || '...' }}
+                <button class="mm-fb-chip-x" (click)="clearDates()"><mat-icon>close</mat-icon></button>
+              </span>
+            }
+            @if (searchTerm) {
+              <span class="mm-fb-chip">
+                <mat-icon class="mm-fb-chip-icon">search</mat-icon>
+                "{{ searchTerm }}"
+                <button class="mm-fb-chip-x" (click)="searchTerm = ''"><mat-icon>close</mat-icon></button>
+              </span>
+            }
+            <button class="mm-fb-clear-all" (click)="clearAllFilters()">Clear all</button>
+          </div>
+        }
       </div>
+
+      <mat-menu #typeMenu="matMenu" class="mm-fb-menu">
+        <button mat-menu-item (click)="filterByType('all')">
+          <mat-icon>list</mat-icon> All Types
+        </button>
+        <button mat-menu-item (click)="filterByType('LoanFunding')">
+          <mat-icon>account_balance</mat-icon> Loan Funding
+        </button>
+        <button mat-menu-item (click)="filterByType('LoanPayment')">
+          <mat-icon>payments</mat-icon> Loan Payments
+        </button>
+        <button mat-menu-item (click)="filterByType('CardPayment')">
+          <mat-icon>credit_card</mat-icon> Card Payments
+        </button>
+        <button mat-menu-item (click)="filterByType('Transfer')">
+          <mat-icon>sync_alt</mat-icon> Transfers
+        </button>
+        <button mat-menu-item (click)="filterByType('Deposit')">
+          <mat-icon>arrow_downward</mat-icon> Deposits
+        </button>
+        <button mat-menu-item (click)="filterByType('Withdrawal')">
+          <mat-icon>arrow_upward</mat-icon> Withdrawals
+        </button>
+        <button mat-menu-item (click)="filterByType('TradePnl')">
+          <mat-icon>candlestick_chart</mat-icon> Trade P&amp;L
+        </button>
+        <button mat-menu-item (click)="filterByType('TradeFee')">
+          <mat-icon>receipt_long</mat-icon> Trade Fees
+        </button>
+      </mat-menu>
 
       @if (loading()) {
         <app-skeleton type="table"></app-skeleton>
@@ -252,109 +331,197 @@ import { toLocalDateString } from '../../../core/utils/date-utils';
       font-weight: var(--weight-semibold) !important;
     }
 
-    /* --- Filter section --- */
-    .filter-section {
+    /* --- Filter bar (pill style) --- */
+    .mm-fb {
+      display: flex; flex-direction: column; gap: 10px;
+      padding: 14px 18px;
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
       margin-bottom: var(--spacing-md);
     }
-    .filter-row {
-      margin-bottom: 12px;
-      overflow-x: auto;
+    .mm-fb-primary {
+      display: flex; gap: 10px; align-items: center;
     }
-    .filter-row::-webkit-scrollbar { display: none; }
-    mat-chip { cursor: pointer; }
+    .mm-fb-search {
+      flex: 1; display: flex; align-items: center; gap: 8px;
+      padding: 0 12px; height: 38px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      background: #f8f9fb;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+    .mm-fb-search-active {
+      border-color: var(--color-primary);
+      background: white;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
+    }
+    .mm-fb-search-icon { font-size: 18px; width: 18px; height: 18px; color: var(--color-text-muted); }
+    .mm-fb-search-input {
+      flex: 1; border: none; outline: none; background: transparent;
+      font-size: 0.85rem; color: var(--color-text);
+    }
+    .mm-fb-search-input::placeholder { color: var(--color-text-muted); }
+    .mm-fb-search-clear {
+      display: flex; align-items: center; padding: 0; border: none;
+      background: none; cursor: pointer; color: var(--color-text-muted);
+      border-radius: 50%; transition: var(--transition-fast);
+    }
+    .mm-fb-search-clear mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .mm-fb-search-clear:hover { color: var(--color-text); background: var(--color-border); }
 
-    /* Date filter */
-    .date-filter-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .date-presets {
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      flex-shrink: 0;
-    }
-    .date-presets::-webkit-scrollbar { display: none; }
-    .preset-chip {
-      padding: 6px 14px;
-      border-radius: 20px;
-      border: 1.5px solid var(--color-border);
-      background: var(--color-surface-solid);
+    .mm-fb-controls { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+
+    .mm-fb-dropdown {
+      display: flex; align-items: center; gap: 5px;
+      padding: 0 12px; height: 38px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      background: white;
       color: var(--color-text-secondary);
-      font-size: var(--text-sm);
-      font-weight: var(--weight-medium);
-      white-space: nowrap;
-      cursor: pointer;
-      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-      -webkit-tap-highlight-color: transparent;
+      font-size: 0.82rem; font-weight: 500;
+      cursor: pointer; white-space: nowrap;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
     }
-    .preset-chip:active {
-      opacity: 0.7;
-    }
-    .preset-chip.active {
-      background: var(--color-primary);
-      color: #fff;
-      border-color: var(--color-primary);
-    }
-    .date-inputs {
-      display: flex;
-      align-items: flex-end;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-    .date-field {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-    .date-field label {
-      font-size: var(--text-xs);
-      font-weight: var(--weight-semibold);
-      color: var(--color-text-muted);
-      text-transform: uppercase;
-      letter-spacing: var(--tracking-wide);
-    }
-    .date-field input[type="date"] {
-      padding: 7px 10px;
-      border-radius: 10px;
-      border: 1.5px solid var(--color-border);
-      background: var(--color-surface-solid);
+    .mm-fb-dropdown:hover {
+      border-color: color-mix(in srgb, var(--color-primary) 50%, var(--color-border));
       color: var(--color-text);
-      font-size: var(--text-sm);
-      font-family: inherit;
-      outline: none;
-      transition: border-color 0.2s ease;
-      -webkit-appearance: none;
-      min-height: 36px;
     }
-    .date-field input[type="date"]:focus {
+    .mm-fb-dropdown-active {
+      background: color-mix(in srgb, var(--color-primary) 8%, white);
       border-color: var(--color-primary);
+      color: var(--color-primary);
+      font-weight: 600;
     }
-    .clear-dates-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 36px;
-      height: 36px;
+    .mm-fb-dd-icon { font-size: 18px; width: 18px; height: 18px; }
+    .mm-fb-dd-arrow { font-size: 16px; width: 16px; height: 16px; opacity: 0.5; margin-left: -2px; }
+
+    .mm-fb-more-toggle {
+      display: flex; align-items: center; justify-content: center;
+      width: 38px; height: 38px;
+      border: 1px solid var(--color-border);
       border-radius: 50%;
-      border: none;
+      background: white;
+      color: var(--color-text-muted);
+      cursor: pointer; position: relative;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+    .mm-fb-more-toggle:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .mm-fb-more-active {
+      background: color-mix(in srgb, var(--color-primary) 8%, white);
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+    }
+    .mm-fb-more-toggle mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .mm-fb-badge {
+      position: absolute; top: -4px; right: -4px;
+      background: var(--color-primary); color: white;
+      font-size: 0.6rem; font-weight: 700;
+      width: 16px; height: 16px;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    }
+
+    /* Period pills */
+    .mm-fb-periods {
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .mm-fb-period {
+      padding: 5px 14px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--color-border);
+      background: white;
+      color: var(--color-text-secondary);
+      font-size: 0.78rem; font-weight: 500;
+      cursor: pointer; white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .mm-fb-period:hover {
+      border-color: var(--color-primary); color: var(--color-primary);
+      background: color-mix(in srgb, var(--color-primary) 4%, white);
+    }
+    .mm-fb-period-active {
+      background: var(--color-primary) !important;
+      color: white !important;
+      border-color: var(--color-primary) !important;
+      font-weight: 600;
+      box-shadow: 0 1px 4px color-mix(in srgb, var(--color-primary) 30%, transparent);
+    }
+
+    /* Custom date row */
+    .mm-fb-dates {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .mm-fb-pill-input {
+      display: flex; align-items: center; gap: 6px;
+      padding: 0 12px; height: 38px; flex: 1;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      background: #f8f9fb;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+    .mm-fb-pill-input:focus-within {
+      border-color: var(--color-primary); background: white;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
+    }
+    .mm-fb-pill-icon { font-size: 18px; width: 18px; height: 18px; color: var(--color-text-muted); flex-shrink: 0; }
+    .mm-fb-pill-input input {
+      flex: 1; border: none; outline: none; background: transparent;
+      font-size: 0.85rem; color: var(--color-text); font-family: inherit;
+      -webkit-appearance: none; min-width: 0;
+    }
+    .mm-fb-date-sep { color: var(--color-text-muted); font-weight: 500; font-size: 0.85rem; }
+    .mm-fb-date-clear {
+      display: flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; min-width: 36px;
+      border-radius: 50%; border: none;
       background: var(--color-surface-secondary);
       color: var(--color-text-muted);
-      cursor: pointer;
-      transition: background 0.15s ease, color 0.15s ease;
-      -webkit-tap-highlight-color: transparent;
-      flex-shrink: 0;
+      cursor: pointer; transition: background 0.15s, color 0.15s;
     }
-    .clear-dates-btn:active {
-      opacity: 0.7;
+    .mm-fb-date-clear:hover { color: var(--color-text); background: var(--color-border); }
+    .mm-fb-date-clear mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+    /* Active filter chips */
+    .mm-fb-active {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+      padding-top: 8px;
+      border-top: 1px dashed color-mix(in srgb, var(--color-primary) 20%, var(--color-border));
     }
-    .clear-dates-btn mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
+    .mm-fb-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 6px 3px 8px;
+      font-size: 0.76rem; font-weight: 500;
+      border-radius: var(--radius-full);
+      background: #f1f3f5; color: var(--color-text-secondary);
+      border: 1px solid var(--color-border);
     }
+    .mm-fb-chip-type {
+      background: color-mix(in srgb, var(--color-primary) 8%, white);
+      border-color: color-mix(in srgb, var(--color-primary) 25%, transparent);
+      color: var(--color-primary);
+    }
+    .mm-fb-chip-date {
+      background: color-mix(in srgb, #059669 8%, white);
+      border-color: color-mix(in srgb, #059669 25%, transparent);
+      color: #059669;
+    }
+    .mm-fb-chip-icon { font-size: 14px; width: 14px; height: 14px; }
+    .mm-fb-chip-x {
+      display: flex; align-items: center; padding: 0;
+      border: none; background: none; cursor: pointer;
+      color: inherit; opacity: 0.5; border-radius: 50%;
+      transition: var(--transition-fast);
+    }
+    .mm-fb-chip-x mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .mm-fb-chip-x:hover { opacity: 1; background: color-mix(in srgb, currentColor 10%, transparent); }
+    .mm-fb-clear-all {
+      border: none; background: none; cursor: pointer;
+      color: var(--color-text-muted); font-size: 0.74rem; font-weight: 500;
+      padding: 2px 8px; border-radius: var(--radius-sm);
+      transition: var(--transition-fast);
+    }
+    .mm-fb-clear-all:hover { color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 6%, white); }
 
     /* --- Summary cards (iOS grouped style) --- */
     .summary-row {
@@ -455,10 +622,10 @@ import { toLocalDateString } from '../../../core/utils/date-utils';
       .stat-icon-pill mat-icon { font-size: 20px; width: 20px; height: 20px; }
       .summary-value { font-size: 1rem; }
       .action-btn { min-width: 44px; min-height: 44px; }
-      .date-filter-row { flex-direction: column; align-items: stretch; }
-      .date-inputs { width: 100%; }
-      .date-field { flex: 1; }
-      .date-field input[type="date"] { width: 100%; }
+      .mm-fb-primary { flex-wrap: wrap; }
+      .mm-fb-search { min-width: 100%; }
+      .mm-fb-controls { flex-wrap: wrap; }
+      .mm-fb-dates { flex-wrap: wrap; }
     }
 
     .movement-card {
@@ -525,6 +692,9 @@ export class MoneyMovementsPageComponent implements OnInit {
   dateFrom = signal<string>('');
   dateTo = signal<string>('');
   activePreset = signal<string>('');
+  searchTerm = '';
+  searchFocused = false;
+  showDateRange = false;
   columns = ['movementDate', 'type', 'from', 'to', 'amount', 'note', 'actions'];
 
   datePresets: { label: string; from: () => string; to: () => string }[] = [
@@ -547,6 +717,14 @@ export class MoneyMovementsPageComponent implements OnInit {
     }
     if (to) {
       movements = movements.filter(m => m.movementDate <= to);
+    }
+    if (this.searchTerm) {
+      const q = this.searchTerm.toLowerCase();
+      movements = movements.filter(m =>
+        m.sourceName?.toLowerCase().includes(q) ||
+        m.destinationName?.toLowerCase().includes(q) ||
+        m.note?.toLowerCase().includes(q)
+      );
     }
     return movements;
   });
@@ -610,7 +788,16 @@ export class MoneyMovementsPageComponent implements OnInit {
     this.activePreset.set('');
   }
 
-  typeLabel(type: MovementType): string {
+  clearAllFilters(): void {
+    this.activeFilter.set('all');
+    this.dateFrom.set('');
+    this.dateTo.set('');
+    this.activePreset.set('');
+    this.searchTerm = '';
+    this.showDateRange = false;
+  }
+
+  typeLabel(type: MovementType | string): string {
     const labels: Record<string, string> = {
       LoanFunding: 'Loan Funding',
       LoanPayment: 'Loan Payment',
@@ -624,7 +811,7 @@ export class MoneyMovementsPageComponent implements OnInit {
     return labels[type] || type;
   }
 
-  typeIcon(type: MovementType): string {
+  typeIcon(type: MovementType | string): string {
     const icons: Record<string, string> = {
       LoanFunding: 'account_balance',
       LoanPayment: 'payments',

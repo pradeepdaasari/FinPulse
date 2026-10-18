@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog } from '@angular/material/dialog';
 import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
 import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
@@ -20,26 +21,46 @@ import { NotificationService } from '../../core/services/notification.service';
 @Component({
   selector: 'app-metrics-log',
   standalone: true,
-  imports: [MatCardModule, MatIconModule, MatButtonModule, MatSelectModule, MatFormFieldModule, MatTooltipModule, DatePipe, DecimalPipe, FormsModule, BaseChartDirective, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [MatCardModule, MatIconModule, MatButtonModule, MatSelectModule, MatFormFieldModule, MatMenuModule, MatTooltipModule, DatePipe, DecimalPipe, FormsModule, BaseChartDirective, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadMetrics()">
-    <!-- Header -->
-    <div class="page-header">
-      <div class="header-left">
-        <mat-form-field appearance="outline" class="filter-field">
-          <mat-select [(value)]="selectedType" (selectionChange)="onTypeChange()" placeholder="All Types">
-            <mat-option [value]="''">All Types</mat-option>
-            @for (type of types(); track type) {
-              <mat-option [value]="type">{{ getMetricLabel(type) }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-        <span class="record-count">{{ metrics().length }} records</span>
+    <div class="hm-fb">
+      <div class="hm-fb-primary">
+        <button class="hm-fb-dropdown" [class.hm-fb-dropdown-active]="selectedType !== ''"
+                [matMenuTriggerFor]="metricTypeMenu">
+          <mat-icon class="hm-fb-dd-icon">{{ selectedType ? getMetricIcon(selectedType) : 'monitor_heart' }}</mat-icon>
+          <span>{{ selectedType ? getMetricLabel(selectedType) : 'All Types' }}</span>
+          <mat-icon class="hm-fb-dd-arrow">expand_more</mat-icon>
+        </button>
+
+        <span class="hm-fb-stat">{{ metrics().length }} records</span>
+
+        <button mat-raised-button color="primary" class="hm-fb-add-btn" (click)="openAddDialog()">
+          <mat-icon>add</mat-icon> Log Metric
+        </button>
       </div>
-      <button mat-raised-button color="primary" (click)="openAddDialog()">
-        <mat-icon>add</mat-icon> Log Metric
-      </button>
+
+      @if (selectedType) {
+        <div class="hm-fb-active">
+          <span class="hm-fb-chip hm-fb-chip-type">
+            <mat-icon class="hm-fb-chip-icon">{{ getMetricIcon(selectedType) }}</mat-icon>
+            {{ getMetricLabel(selectedType) }}
+            <button class="hm-fb-chip-x" (click)="selectedType = ''; onTypeChange()"><mat-icon>close</mat-icon></button>
+          </span>
+        </div>
+      }
     </div>
+
+    <mat-menu #metricTypeMenu="matMenu">
+      <button mat-menu-item (click)="selectedType = ''; onTypeChange()">
+        <mat-icon>list</mat-icon> All Types
+      </button>
+      @for (type of types(); track type) {
+        <button mat-menu-item (click)="selectedType = type; onTypeChange()">
+          <mat-icon>{{ getMetricIcon(type) }}</mat-icon> {{ getMetricLabel(type) }}
+        </button>
+      }
+    </mat-menu>
 
     @if (loading()) {
       <app-skeleton type="table"></app-skeleton>
@@ -178,15 +199,79 @@ import { NotificationService } from '../../core/services/notification.service';
     </div>
   `,
   styles: [`
-    /* Header */
-    .page-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);
+    /* ─── Filter bar (pill style) ─── */
+    .hm-fb {
+      display: flex; flex-direction: column; gap: 10px;
+      padding: 14px 18px;
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      margin-bottom: var(--spacing-md);
     }
-    .header-left { display: flex; align-items: center; gap: 12px; }
-    .filter-field { width: 180px; }
-    .filter-field .mat-mdc-form-field-subscript-wrapper { display: none; }
-    .record-count { font-size: 0.85rem; color: var(--color-text-muted); font-weight: 500; }
+    .hm-fb-primary { display: flex; gap: 10px; align-items: center; }
+    .hm-fb-dropdown {
+      display: flex; align-items: center; gap: 5px;
+      padding: 0 12px; height: 38px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      background: white;
+      color: var(--color-text-secondary);
+      font-size: 0.82rem; font-weight: 500;
+      cursor: pointer; white-space: nowrap;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+    .hm-fb-dropdown:hover {
+      border-color: color-mix(in srgb, var(--color-primary) 50%, var(--color-border));
+      color: var(--color-text);
+    }
+    .hm-fb-dropdown-active {
+      background: color-mix(in srgb, var(--color-primary) 8%, white);
+      border-color: var(--color-primary);
+      color: var(--color-primary); font-weight: 600;
+    }
+    .hm-fb-dd-icon { font-size: 18px; width: 18px; height: 18px; }
+    .hm-fb-dd-arrow { font-size: 16px; width: 16px; height: 16px; opacity: 0.5; margin-left: -2px; }
+    .hm-fb-stat {
+      padding: 4px 12px; border-radius: var(--radius-full);
+      font-size: 0.78rem; font-weight: 600;
+      background: #f1f3f5; color: var(--color-text-secondary);
+      white-space: nowrap;
+    }
+    .hm-fb-add-btn {
+      margin-left: auto;
+      border-radius: var(--radius-full) !important;
+      font-weight: 600 !important;
+      font-size: 0.82rem !important;
+      height: 38px !important;
+    }
+    .hm-fb-active {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+      padding-top: 8px;
+      border-top: 1px dashed color-mix(in srgb, var(--color-primary) 20%, var(--color-border));
+    }
+    .hm-fb-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 6px 3px 8px;
+      font-size: 0.76rem; font-weight: 500;
+      border-radius: var(--radius-full);
+      background: #f1f3f5; color: var(--color-text-secondary);
+      border: 1px solid var(--color-border);
+    }
+    .hm-fb-chip-type {
+      background: color-mix(in srgb, var(--color-primary) 8%, white);
+      border-color: color-mix(in srgb, var(--color-primary) 25%, transparent);
+      color: var(--color-primary);
+    }
+    .hm-fb-chip-icon { font-size: 14px; width: 14px; height: 14px; }
+    .hm-fb-chip-x {
+      display: flex; align-items: center; padding: 0;
+      border: none; background: none; cursor: pointer;
+      color: inherit; opacity: 0.5; border-radius: 50%;
+      transition: var(--transition-fast);
+    }
+    .hm-fb-chip-x mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .hm-fb-chip-x:hover { opacity: 1; background: color-mix(in srgb, currentColor 10%, transparent); }
 
     /* Empty State */
     .empty-state {
@@ -301,9 +386,8 @@ import { NotificationService } from '../../core/services/notification.service';
     @media (max-width: 599px) {
       .desktop-only { display: none !important; }
       .mobile-cards { display: block; }
-      .page-header { flex-direction: column; align-items: stretch; }
-      .header-left { justify-content: space-between; }
-      .filter-field { width: 150px; }
+      .hm-fb-primary { flex-wrap: wrap; }
+      .hm-fb-add-btn { width: 100%; }
       .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
       .stat-card { padding: 12px; gap: 10px; }
       .stat-icon { font-size: 22px; width: 22px; height: 22px; }

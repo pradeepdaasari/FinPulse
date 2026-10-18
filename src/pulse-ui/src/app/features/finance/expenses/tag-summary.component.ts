@@ -9,13 +9,15 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
+import { FormsModule } from '@angular/forms';
 import { DailyExpenseService } from '../../../core/services/daily-expense.service';
 import { TagSummary } from '../../../core/models/daily-expense.model';
 
 @Component({
   selector: 'app-tag-summary',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, MatChipsModule, MatFormFieldModule, MatSelectModule, MatInputModule, MatButtonModule, CurrencyPipe, DatePipe, LocalDatePipe],
+  imports: [CommonModule, FormsModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, MatChipsModule, MatFormFieldModule, MatSelectModule, MatInputModule, MatButtonModule, MatMenuModule, CurrencyPipe, DatePipe, LocalDatePipe],
   template: `
     @if (loading()) {
       <div class="loading-container"><mat-spinner diameter="40"></mat-spinner></div>
@@ -33,45 +35,77 @@ import { TagSummary } from '../../../core/models/daily-expense.model';
         </div>
       </mat-card>
     } @else {
-      <div class="filters-row">
-        <mat-form-field appearance="outline" class="filter-field">
-          <mat-label>Filter by Tag Type</mat-label>
-          <mat-select [value]="selectedTagType()" (selectionChange)="selectedTagType.set($event.value)">
-            <mat-option value="">All Types</mat-option>
-            @for (type of availableTagTypes(); track type) {
-              <mat-option [value]="type">
-                <mat-icon>{{ typeIcon(type) }}</mat-icon>
-                {{ type }}
-              </mat-option>
+      <div class="ts-fb">
+        <div class="ts-fb-primary">
+          <div class="ts-fb-search" [class.ts-fb-search-active]="tsSearchFocused">
+            <mat-icon class="ts-fb-search-icon">search</mat-icon>
+            <input class="ts-fb-search-input" [ngModel]="searchQuery()"
+                   (ngModelChange)="searchQuery.set($event)"
+                   placeholder="Search tags..."
+                   (focus)="tsSearchFocused = true"
+                   (blur)="tsSearchFocused = false">
+            @if (searchQuery()) {
+              <button class="ts-fb-search-clear" (click)="searchQuery.set('')">
+                <mat-icon>close</mat-icon>
+              </button>
             }
-          </mat-select>
-        </mat-form-field>
+          </div>
 
-        <mat-form-field appearance="outline" class="filter-field search-field">
-          <mat-label>Search tags</mat-label>
-          <input matInput [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)" placeholder="Search by tag name...">
-          <mat-icon matPrefix>search</mat-icon>
-        </mat-form-field>
+          <div class="ts-fb-controls">
+            <button class="ts-fb-dropdown" [class.ts-fb-dropdown-active]="selectedTagType() !== ''"
+                    [matMenuTriggerFor]="tagTypeMenu">
+              <mat-icon class="ts-fb-dd-icon">{{ selectedTagType() ? typeIcon(selectedTagType()) : 'label' }}</mat-icon>
+              <span>{{ selectedTagType() || 'Tag Type' }}</span>
+              <mat-icon class="ts-fb-dd-arrow">expand_more</mat-icon>
+            </button>
 
-        <div class="filter-stats">
-          <span class="stat-badge">{{ filteredTags().length }} tags</span>
-          <span class="stat-badge total">{{ grandTotal() | currency }}</span>
+            <span class="ts-fb-stat">{{ filteredTags().length }} tags</span>
+            <span class="ts-fb-stat ts-fb-stat-total">{{ grandTotal() | currency }}</span>
+          </div>
         </div>
+
+        <div class="ts-fb-periods">
+          <button class="ts-fb-period" [class.ts-fb-period-active]="selectedTagType() === ''"
+                  (click)="selectedTagType.set('')">All</button>
+          @for (type of availableTagTypes(); track type) {
+            <button class="ts-fb-period" [class.ts-fb-period-active]="selectedTagType() === type"
+                    (click)="selectedTagType.set(type)">
+              {{ type }} ({{ countByType(type) }})
+            </button>
+          }
+        </div>
+
+        @if (selectedTagType() || searchQuery()) {
+          <div class="ts-fb-active">
+            @if (selectedTagType()) {
+              <span class="ts-fb-chip ts-fb-chip-type">
+                <mat-icon class="ts-fb-chip-icon">{{ typeIcon(selectedTagType()) }}</mat-icon>
+                {{ selectedTagType() }}
+                <button class="ts-fb-chip-x" (click)="selectedTagType.set('')"><mat-icon>close</mat-icon></button>
+              </span>
+            }
+            @if (searchQuery()) {
+              <span class="ts-fb-chip">
+                <mat-icon class="ts-fb-chip-icon">search</mat-icon>
+                "{{ searchQuery() }}"
+                <button class="ts-fb-chip-x" (click)="searchQuery.set('')"><mat-icon>close</mat-icon></button>
+              </span>
+            }
+            <button class="ts-fb-clear-all" (click)="selectedTagType.set(''); searchQuery.set('')">Clear all</button>
+          </div>
+        }
       </div>
 
-      <div class="chip-filters">
-        <mat-chip-set>
-          <mat-chip [highlighted]="selectedTagType() === ''" (click)="selectedTagType.set('')">
-            All
-          </mat-chip>
-          @for (type of availableTagTypes(); track type) {
-            <mat-chip [highlighted]="selectedTagType() === type" (click)="selectedTagType.set(type)">
-              <mat-icon matChipAvatar>{{ typeIcon(type) }}</mat-icon>
-              {{ type }} ({{ countByType(type) }})
-            </mat-chip>
-          }
-        </mat-chip-set>
-      </div>
+      <mat-menu #tagTypeMenu="matMenu">
+        <button mat-menu-item (click)="selectedTagType.set('')">
+          <mat-icon>list</mat-icon> All Types
+        </button>
+        @for (type of availableTagTypes(); track type) {
+          <button mat-menu-item (click)="selectedTagType.set(type)">
+            <mat-icon>{{ typeIcon(type) }}</mat-icon> {{ type }}
+          </button>
+        }
+      </mat-menu>
 
       @for (group of groupedTags(); track group.type) {
         <div class="type-group">
@@ -108,26 +142,135 @@ import { TagSummary } from '../../../core/models/daily-expense.model';
   `,
   styles: [`
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
-    .filters-row {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-md);
-      margin-bottom: var(--spacing-sm);
-      flex-wrap: wrap;
+
+    /* ─── Filter bar (pill style) ─── */
+    .ts-fb {
+      display: flex; flex-direction: column; gap: 10px;
+      padding: 14px 18px;
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      margin-bottom: var(--spacing-md);
     }
-    .filter-field { width: 200px; }
-    .search-field { flex: 1; min-width: 200px; }
-    .filter-stats { display: flex; gap: 8px; margin-left: auto; }
-    .stat-badge {
-      padding: 4px 12px;
-      border-radius: 16px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      background: var(--color-surface-variant, #f0f0f0);
+    .ts-fb-primary { display: flex; gap: 10px; align-items: center; }
+    .ts-fb-search {
+      flex: 1; display: flex; align-items: center; gap: 8px;
+      padding: 0 12px; height: 38px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      background: #f8f9fb;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+    .ts-fb-search-active {
+      border-color: var(--color-primary); background: white;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
+    }
+    .ts-fb-search-icon { font-size: 18px; width: 18px; height: 18px; color: var(--color-text-muted); }
+    .ts-fb-search-input {
+      flex: 1; border: none; outline: none; background: transparent;
+      font-size: 0.85rem; color: var(--color-text);
+    }
+    .ts-fb-search-input::placeholder { color: var(--color-text-muted); }
+    .ts-fb-search-clear {
+      display: flex; align-items: center; padding: 0; border: none;
+      background: none; cursor: pointer; color: var(--color-text-muted);
+      border-radius: 50%; transition: var(--transition-fast);
+    }
+    .ts-fb-search-clear mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .ts-fb-search-clear:hover { color: var(--color-text); background: var(--color-border); }
+
+    .ts-fb-controls { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+    .ts-fb-dropdown {
+      display: flex; align-items: center; gap: 5px;
+      padding: 0 12px; height: 38px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      background: white;
       color: var(--color-text-secondary);
+      font-size: 0.82rem; font-weight: 500;
+      cursor: pointer; white-space: nowrap;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
     }
-    .stat-badge.total { background: rgba(0, 122, 255, 0.1); color: var(--color-primary); }
-    .chip-filters { margin-bottom: var(--spacing-md); }
+    .ts-fb-dropdown:hover {
+      border-color: color-mix(in srgb, var(--color-primary) 50%, var(--color-border));
+      color: var(--color-text);
+    }
+    .ts-fb-dropdown-active {
+      background: color-mix(in srgb, var(--color-primary) 8%, white);
+      border-color: var(--color-primary);
+      color: var(--color-primary); font-weight: 600;
+    }
+    .ts-fb-dd-icon { font-size: 18px; width: 18px; height: 18px; }
+    .ts-fb-dd-arrow { font-size: 16px; width: 16px; height: 16px; opacity: 0.5; margin-left: -2px; }
+    .ts-fb-stat {
+      padding: 4px 12px; border-radius: var(--radius-full);
+      font-size: 0.78rem; font-weight: 600;
+      background: #f1f3f5; color: var(--color-text-secondary);
+      white-space: nowrap;
+    }
+    .ts-fb-stat-total {
+      background: color-mix(in srgb, var(--color-primary) 8%, white);
+      color: var(--color-primary);
+    }
+
+    .ts-fb-periods { display: flex; flex-wrap: wrap; gap: 6px; }
+    .ts-fb-period {
+      padding: 5px 14px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--color-border);
+      background: white;
+      color: var(--color-text-secondary);
+      font-size: 0.78rem; font-weight: 500;
+      cursor: pointer; white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .ts-fb-period:hover {
+      border-color: var(--color-primary); color: var(--color-primary);
+      background: color-mix(in srgb, var(--color-primary) 4%, white);
+    }
+    .ts-fb-period-active {
+      background: var(--color-primary) !important;
+      color: white !important;
+      border-color: var(--color-primary) !important;
+      font-weight: 600;
+      box-shadow: 0 1px 4px color-mix(in srgb, var(--color-primary) 30%, transparent);
+    }
+
+    .ts-fb-active {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+      padding-top: 8px;
+      border-top: 1px dashed color-mix(in srgb, var(--color-primary) 20%, var(--color-border));
+    }
+    .ts-fb-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 6px 3px 8px;
+      font-size: 0.76rem; font-weight: 500;
+      border-radius: var(--radius-full);
+      background: #f1f3f5; color: var(--color-text-secondary);
+      border: 1px solid var(--color-border);
+    }
+    .ts-fb-chip-type {
+      background: color-mix(in srgb, var(--color-primary) 8%, white);
+      border-color: color-mix(in srgb, var(--color-primary) 25%, transparent);
+      color: var(--color-primary);
+    }
+    .ts-fb-chip-icon { font-size: 14px; width: 14px; height: 14px; }
+    .ts-fb-chip-x {
+      display: flex; align-items: center; padding: 0;
+      border: none; background: none; cursor: pointer;
+      color: inherit; opacity: 0.5; border-radius: 50%;
+      transition: var(--transition-fast);
+    }
+    .ts-fb-chip-x mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .ts-fb-chip-x:hover { opacity: 1; background: color-mix(in srgb, currentColor 10%, transparent); }
+    .ts-fb-clear-all {
+      border: none; background: none; cursor: pointer;
+      color: var(--color-text-muted); font-size: 0.74rem; font-weight: 500;
+      padding: 2px 8px; border-radius: var(--radius-sm);
+      transition: var(--transition-fast);
+    }
+    .ts-fb-clear-all:hover { color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 6%, white); }
     .type-group { margin-bottom: var(--spacing-lg); }
     .type-header {
       display: flex;
@@ -163,9 +306,9 @@ import { TagSummary } from '../../../core/models/daily-expense.model';
     .tag-help li { margin-bottom: 6px; }
     @media (max-width: 768px) {
       .summary-grid { grid-template-columns: 1fr; }
-      .filters-row { flex-direction: column; align-items: stretch; }
-      .filter-field { width: 100%; }
-      .filter-stats { margin-left: 0; }
+      .ts-fb-primary { flex-wrap: wrap; }
+      .ts-fb-search { min-width: 100%; }
+      .ts-fb-controls { flex-wrap: wrap; }
     }
   `]
 })
@@ -180,6 +323,7 @@ export class TagSummaryComponent implements OnInit {
   loading = signal(true);
   selectedTagType = signal('');
   searchQuery = signal('');
+  tsSearchFocused = false;
 
   availableTagTypes = signal<string[]>([]);
 

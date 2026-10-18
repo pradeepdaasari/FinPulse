@@ -34,6 +34,8 @@ export interface DetailChild {
 export interface DetailRow {
   name: string;
   icon?: string | null;
+  categoryId?: number | null;
+  debtId?: number | null;
   balance?: number;
   monthly: number[];
   total: number;

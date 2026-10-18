@@ -100,7 +100,7 @@ public class ExpenseController : ControllerBase
             || !string.IsNullOrWhiteSpace(categoryIds)
             || !string.IsNullOrWhiteSpace(search)
             || !string.IsNullOrWhiteSpace(tag)
-            || (transactionType.HasValue && transactionType.Value != (int)TransactionType.CardPayment);
+            || (transactionType.HasValue && transactionType.Value != (int)TransactionType.CardPayment && transactionType.Value != (int)TransactionType.LoanPayment);
 
         var paymentQuery = _db.PaymentHistories.Where(p => p.UserId == UserId);
         if (dateFrom.HasValue && dateTo.HasValue)
@@ -126,6 +126,11 @@ public class ExpenseController : ControllerBase
             paymentQuery = paymentQuery.Where(p => p.DebtId == toFundingSourceId.Value);
         else if (toFundingSourceId.HasValue && toFundingSourceType == "BankAccount")
             paymentQuery = paymentQuery.Where(p => false);
+
+        if (transactionType.HasValue && transactionType.Value == (int)TransactionType.LoanPayment)
+            paymentQuery = paymentQuery.Where(p => p.DebtType == DebtType.PersonalLoan);
+        else if (transactionType.HasValue && transactionType.Value == (int)TransactionType.CardPayment)
+            paymentQuery = paymentQuery.Where(p => p.DebtType == DebtType.CreditCard);
 
         var payments = skipPayments
             ? new List<Pulse.Core.Models.PaymentHistory>()

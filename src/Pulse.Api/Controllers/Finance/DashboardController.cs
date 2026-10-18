@@ -1047,7 +1047,7 @@ public class DashboardController : ControllerBase
                 }
                 return new { Name = mg.Key, Monthly = mAmounts, Total = mg.Sum(e => e.Amount) };
             }).OrderByDescending(m => m.Total).ToList();
-            return new { Name = g.Key, Icon = g.First().CategoryIcon, Monthly = monthlyAmounts, Total = g.Sum(e => e.Amount), Children = children };
+            return new { Name = g.Key, Icon = g.First().CategoryIcon, CategoryId = g.First().CategoryId, Monthly = monthlyAmounts, Total = g.Sum(e => e.Amount), Children = children };
         }).OrderByDescending(c => c.Total).ToList();
 
         // 2. Loan Payments
@@ -1085,7 +1085,7 @@ public class DashboardController : ControllerBase
                 var mEnd = mStart.AddMonths(1);
                 monthlyAmounts.Add(g.Where(p => p.PaymentDate >= mStart && p.PaymentDate < mEnd).Sum(p => p.AmountPaid));
             }
-            return new { Name = info?.Name ?? "Unknown", Balance = info?.CurrentBalance ?? 0, Monthly = monthlyAmounts, Total = g.Sum(p => p.AmountPaid) };
+            return new { Name = info?.Name ?? "Unknown", DebtId = g.Key, Balance = info?.CurrentBalance ?? 0, Monthly = monthlyAmounts, Total = g.Sum(p => p.AmountPaid) };
         }).OrderByDescending(l => l.Total).ToList();
 
         // 3. Credit Card Payments
@@ -1117,7 +1117,7 @@ public class DashboardController : ControllerBase
                 var mEnd = mStart.AddMonths(1);
                 monthlyAmounts.Add(g.Where(p => p.PaymentDate >= mStart && p.PaymentDate < mEnd).Sum(p => p.AmountPaid));
             }
-            return new { Name = info?.CardName ?? "Unknown", Balance = info?.CurrentBalance ?? 0, Monthly = monthlyAmounts, Total = g.Sum(p => p.AmountPaid) };
+            return new { Name = info?.CardName ?? "Unknown", DebtId = g.Key, Balance = info?.CurrentBalance ?? 0, Monthly = monthlyAmounts, Total = g.Sum(p => p.AmountPaid) };
         }).OrderByDescending(c => c.Total).ToList();
 
         // 4. Trading P&L — attribute to close date (same as trading calendar)
