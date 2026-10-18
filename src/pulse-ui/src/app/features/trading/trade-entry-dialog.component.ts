@@ -17,7 +17,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TradingService } from '../../core/services/trading.service';
 import { toLocalISOString } from '../../core/utils/date-utils';
 import { BankAccountService } from '../../core/services/bank-account.service';
-import { TradeEntry, TradeDirection, TradeStatus, TradingSetupSummary } from '../../core/models/trading.model';
+import { TradeEntry, TradeDirection, TradeStatus, ExitReason, TradingSetupSummary, DisciplineStatus } from '../../core/models/trading.model';
 import { BankAccount } from '../../core/models/bank-account.model';
 import { NotificationService } from '../../core/services/notification.service';
 import { RichTextEditorComponent } from '../../shared/rich-text-editor.component';
@@ -62,6 +62,35 @@ export interface TradeEntryDialogData {
       } @else {
       <form [formGroup]="form" class="trade-form" (submit)="$event.preventDefault()">
 
+        <!-- Discipline Status Banner -->
+        @if (!data?.trade && disciplineStatus(); as ds) {
+          <div class="discipline-banner" [class.banner-green]="ds.trafficLight === 'green'"
+               [class.banner-yellow]="ds.trafficLight === 'yellow'"
+               [class.banner-red]="ds.trafficLight === 'red'">
+            <div class="discipline-banner-row">
+              <mat-icon>{{ ds.trafficLight === 'green' ? 'check_circle' : ds.trafficLight === 'yellow' ? 'warning' : 'block' }}</mat-icon>
+              <span class="discipline-status-text">
+                {{ ds.trafficLight === 'green' ? 'Clear to trade' : ds.trafficLight === 'yellow' ? 'Proceed with caution' : 'Trading blocked' }}
+              </span>
+            </div>
+            <div class="discipline-stats">
+              <span class="discipline-chip">{{ ds.tradesToday }}/{{ ds.maxTrades }} trades</span>
+              @if (!ds.hasPreMarketNote) {
+                <span class="discipline-chip chip-warn">No pre-market plan</span>
+              }
+            </div>
+            @if (ds.recentLoss) {
+              <div class="cooldown-warning">
+                <mat-icon>pause_circle</mat-icon>
+                <span>Recent loss{{ ds.lastLossInstrument ? ' on ' + ds.lastLossInstrument : '' }}. Is this trade from your plan?</span>
+              </div>
+            }
+            @if (ds.trafficLight === 'red' && ds.violations.length > 0) {
+              <div class="discipline-block-msg">{{ ds.violations[0] }}</div>
+            }
+          </div>
+        }
+
         <!-- Compact date + time row -->
         <div class="date-compact-row" (click)="picker.open()">
           <mat-icon class="date-icon">calendar_today</mat-icon>
@@ -96,6 +125,15 @@ export interface TradeEntryDialogData {
             </mat-select>
           </mat-form-field>
         </div>
+
+        <!-- Trade Thesis -->
+        @if (!data?.trade || data?.trade?.tradeThesis) {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Why am I taking this trade?</mat-label>
+            <textarea matInput formControlName="tradeThesis" rows="2" maxlength="500"
+              placeholder="e.g., SPX rejected 4500, bearish engulfing on 5min, targeting 4480"></textarea>
+          </mat-form-field>
+        }
 
         <!-- Status Toggle -->
         <div class="status-toggle-row">
@@ -295,8 +333,20 @@ export interface TradeEntryDialogData {
               <span matTextPrefix>$</span>
             </mat-form-field>
           </div>
-        } @else {
           <div class="row-2col">
+            <mat-form-field appearance="outline">
+              <mat-label>Stop Loss</mat-label>
+              <input matInput type="number" inputmode="decimal" formControlName="stopLoss" step="0.01">
+              <span matTextPrefix>$&nbsp;</span>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Target</mat-label>
+              <input matInput type="number" inputmode="decimal" formControlName="profitTarget" step="0.01">
+              <span matTextPrefix>$&nbsp;</span>
+            </mat-form-field>
+          </div>
+        } @else {
+          <div class="row-4col">
             <mat-form-field appearance="outline">
               <mat-label>Qty</mat-label>
               <input matInput type="number" inputmode="decimal" formControlName="quantity" min="1">
@@ -304,6 +354,16 @@ export interface TradeEntryDialogData {
             <mat-form-field appearance="outline">
               <mat-label>Multiplier</mat-label>
               <input matInput type="number" inputmode="decimal" formControlName="multiplier" min="1">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Stop Loss</mat-label>
+              <input matInput type="number" inputmode="decimal" formControlName="stopLoss" step="0.01">
+              <span matTextPrefix>$&nbsp;</span>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Target</mat-label>
+              <input matInput type="number" inputmode="decimal" formControlName="profitTarget" step="0.01">
+              <span matTextPrefix>$&nbsp;</span>
             </mat-form-field>
           </div>
         }
@@ -371,6 +431,38 @@ export interface TradeEntryDialogData {
               </div>
             </div>
           }
+        }
+
+        <!-- Post-Trade Reflection -->
+        @if (form.value.status === 'Closed') {
+          <div class="reflection-section">
+            <label class="section-label">Post-Trade Reflection</label>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Exit Reason</mat-label>
+              <mat-select formControlName="exitReason">
+                <mat-option value="Hit Target">Hit Target</mat-option>
+                <mat-option value="Hit Stop">Hit Stop</mat-option>
+                <mat-option value="Time Exit">Time Exit</mat-option>
+                <mat-option value="Manual Close">Manual Close</mat-option>
+                <mat-option value="Panic Exit">Panic Exit</mat-option>
+                <mat-option value="Revenge Close">Revenge Close</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <label class="section-label">How are you feeling after this trade?</label>
+            <mat-button-toggle-group formControlName="exitEmotion" class="emotion-toggle">
+              @for (e of emotions; track e.value) {
+                <mat-button-toggle [value]="e.value" class="emotion-btn">
+                  <span class="emotion-icon">{{ e.icon }}</span>
+                  <span class="emotion-label">{{ e.label }}</span>
+                </mat-button-toggle>
+              }
+            </mat-button-toggle-group>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>What did you learn?</mat-label>
+              <textarea matInput formControlName="lessonsLearned" rows="2" maxlength="1000"
+                placeholder="e.g., Should have waited for confirmation. Entry was solid but held too long."></textarea>
+            </mat-form-field>
+          </div>
         }
 
         <mat-checkbox formControlName="checklistCompleted" color="primary" class="checklist-check">
@@ -674,6 +766,51 @@ export interface TradeEntryDialogData {
       position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
       background: rgba(255,255,255,0.7); border-radius: inherit; z-index: 10;
     }
+    .discipline-banner {
+      border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 4px;
+      border: 1px solid var(--color-border);
+    }
+    .discipline-banner.banner-green {
+      background: color-mix(in srgb, var(--color-success) 6%, white);
+      border-color: color-mix(in srgb, var(--color-success) 30%, transparent);
+    }
+    .discipline-banner.banner-yellow {
+      background: color-mix(in srgb, var(--color-warning) 8%, white);
+      border-color: color-mix(in srgb, var(--color-warning) 40%, transparent);
+    }
+    .discipline-banner.banner-red {
+      background: color-mix(in srgb, var(--color-danger) 6%, white);
+      border-color: color-mix(in srgb, var(--color-danger) 40%, transparent);
+    }
+    .discipline-banner-row {
+      display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.85rem;
+    }
+    .banner-green .discipline-banner-row { color: var(--color-success); }
+    .banner-yellow .discipline-banner-row { color: var(--color-warning); }
+    .banner-red .discipline-banner-row { color: var(--color-danger); }
+    .discipline-banner-row mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .discipline-stats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .discipline-chip {
+      font-size: 0.7rem; font-weight: 600; padding: 2px 8px;
+      background: rgba(0,0,0,0.05); border-radius: var(--radius-full);
+      color: var(--color-text-secondary);
+    }
+    .discipline-chip.chip-warn { color: var(--color-danger); background: color-mix(in srgb, var(--color-danger) 8%, white); }
+    .cooldown-warning {
+      display: flex; align-items: center; gap: 6px; margin-top: 8px;
+      padding: 6px 10px; border-radius: var(--radius-sm);
+      background: color-mix(in srgb, var(--color-warning) 10%, white);
+      font-size: 0.75rem; color: var(--color-warning-text);
+    }
+    .cooldown-warning mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .discipline-block-msg { margin-top: 8px; font-size: 0.75rem; color: var(--color-danger); font-weight: 500; }
+    .reflection-section {
+      border: 1px solid color-mix(in srgb, var(--color-success) 30%, var(--color-border));
+      border-radius: var(--radius-md); padding: 14px 12px 8px; margin: 6px 0 10px;
+      background: color-mix(in srgb, var(--color-success) 4%, white);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
     @media (max-width: 1024px) {
       .row-2col { grid-template-columns: 1fr 1fr; }
       .toggle-row.row-2col { grid-template-columns: 1fr 1fr; }
@@ -701,6 +838,8 @@ export interface TradeEntryDialogData {
       .mistake-chip { padding: 6px 12px; font-size: 0.75rem; min-height: 44px; display: flex; align-items: center; }
       .save-bar { padding: 10px 16px 14px; margin: 0 -16px -16px; }
       .date-compact-row { padding: 14px 16px; }
+      .discipline-banner { padding: 8px 12px; margin-bottom: 2px; }
+      .reflection-section { padding: 10px 8px 6px; }
     }
   `]
 })
@@ -716,6 +855,7 @@ export class TradeEntryDialogComponent implements OnInit {
   loading = signal(true);
   saving = signal(false);
   showMore = signal(false);
+  disciplineStatus = signal<DisciplineStatus | null>(null);
   selectedMistakes = signal<string[]>(this.data?.trade?.mistakeTags ?? []);
 
   get bannerSubtitle(): string {
@@ -784,15 +924,35 @@ export class TradeEntryDialogComponent implements OnInit {
     tags: [this.data?.trade?.tags?.join(', ') ?? ''],
     status: [this.data?.trade?.status ?? 'Open'],
     closedDate: [this.data?.trade?.closedDate ? new Date(this.data.trade.closedDate) : new Date()],
-    closedTime: [this.data?.trade?.exitTime || this.getTimeStr(this.data?.trade?.closedDate)]
+    closedTime: [this.data?.trade?.exitTime || this.getTimeStr(this.data?.trade?.closedDate)],
+    tradeThesis: [this.data?.trade?.tradeThesis ?? ''],
+    stopLoss: [this.data?.trade?.stopLoss ?? null as number | null],
+    profitTarget: [this.data?.trade?.profitTarget ?? null as number | null],
+    exitReason: [this.data?.trade?.exitReason ?? null as string | null],
+    exitEmotion: [this.data?.trade?.exitEmotion ?? null as string | null],
+    lessonsLearned: [this.data?.trade?.lessonsLearned ?? ''],
   });
 
   ngOnInit(): void {
     if (this.data?.closeMode) {
       this.form.patchValue({ status: 'Closed', closedDate: new Date() });
     }
+    if (!this.data?.trade) {
+      this.tradingService.getDisciplineStatus().subscribe({
+        next: ds => { this.disciplineStatus.set(ds); this.cdr.detectChanges(); },
+        error: () => {}
+      });
+      this.form.get('tradeThesis')!.setValidators([Validators.required, Validators.maxLength(500)]);
+      this.form.get('tradeThesis')!.updateValueAndValidity();
+      this.form.get('stopLoss')!.setValidators([Validators.required, Validators.min(0.01)]);
+      this.form.get('stopLoss')!.updateValueAndValidity();
+    }
     this.updateFeeValidators(this.form.value.status as string);
-    this.form.get('status')!.valueChanges.subscribe(s => this.updateFeeValidators(s as string));
+    this.form.get('status')!.valueChanges.subscribe(s => {
+      this.updateFeeValidators(s as string);
+      this.updateExitValidators(s as string);
+    });
+    this.updateExitValidators(this.form.value.status as string);
     if (this.data?.trade) {
       const t = this.data.trade;
       if ((t.mistakeTags && t.mistakeTags.length > 0) || t.notes || (t.tags && t.tags.length > 0)) {
@@ -863,6 +1023,17 @@ export class TradeEntryDialogComponent implements OnInit {
     } else {
       controls.forEach(c => { c.clearValidators(); c.updateValueAndValidity(); });
     }
+  }
+
+  private updateExitValidators(status?: string): void {
+    const s = status ?? this.form.value.status;
+    const exitReasonCtrl = this.form.get('exitReason')!;
+    if (s === 'Closed') {
+      exitReasonCtrl.setValidators([Validators.required]);
+    } else {
+      exitReasonCtrl.clearValidators();
+    }
+    exitReasonCtrl.updateValueAndValidity();
   }
 
   onFeesChanged(): void {
@@ -942,6 +1113,12 @@ export class TradeEntryDialogComponent implements OnInit {
       isRevengeTrading: this.selectedMistakes().includes('Revenge'),
       emotionAtEntry: val.emotionAtEntry || undefined,
       plannedRisk: val.plannedRisk ?? undefined,
+      stopLoss: val.stopLoss ?? undefined,
+      profitTarget: val.profitTarget ?? undefined,
+      tradeThesis: val.tradeThesis || undefined,
+      exitReason: val.status === 'Closed' ? (val.exitReason as ExitReason || undefined) : undefined,
+      exitEmotion: val.status === 'Closed' ? (val.exitEmotion || undefined) : undefined,
+      lessonsLearned: val.status === 'Closed' ? (val.lessonsLearned || undefined) : undefined,
       mistakeTags: this.selectedMistakes().length > 0 ? this.selectedMistakes() : undefined,
       checklistResponses: [],
       assetType: val.assetType ?? 'Options',
@@ -975,7 +1152,17 @@ export class TradeEntryDialogComponent implements OnInit {
 
     obs.subscribe({
       next: () => { this.saving.set(false); this.notify.success('Trade saved'); this.cdr.detectChanges(); this.dialogRef.close(true); },
-      error: (err) => { this.saving.set(false); const msg = err?.error?.error || err?.error?.title || 'Failed to save trade'; this.notify.error(msg); console.error('Trade save error:', err); this.cdr.detectChanges(); }
+      error: (err) => {
+        this.saving.set(false);
+        if (err.status === 422 && err.error?.violations) {
+          const msgs = err.error.violations.map((v: any) => v.message || v).join(' ');
+          this.notify.error(msgs);
+        } else {
+          const msg = err?.error?.error || err?.error?.title || 'Failed to save trade';
+          this.notify.error(msg);
+        }
+        this.cdr.detectChanges();
+      }
     });
   }
 }

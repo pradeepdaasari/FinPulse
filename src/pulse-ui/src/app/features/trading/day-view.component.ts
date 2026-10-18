@@ -224,6 +224,15 @@ interface TradeGroup {
                         <span class="no-checklist-warn">⚠ No checklist</span>
                       }
                     </div>
+                    @if (group.trade.tradeThesis) {
+                      <div class="tl-thesis">"{{ group.trade.tradeThesis }}"</div>
+                    }
+                    @if (group.trade.stopLoss || group.trade.profitTarget) {
+                      <div class="tl-risk-levels">
+                        @if (group.trade.stopLoss) { <span class="risk-tag risk-stop">Stop: {{ group.trade.stopLoss | currency }}</span> }
+                        @if (group.trade.profitTarget) { <span class="risk-tag risk-target">Target: {{ group.trade.profitTarget | currency }}</span> }
+                      </div>
+                    }
                   </div>
                 </div>
               } @else {
@@ -296,6 +305,20 @@ interface TradeGroup {
                     </div>
                     @if (group.trade.totalFees) {
                       <span class="fee-note">{{ group.trade.totalFees | currency }} in fees</span>
+                    }
+                    @if (group.trade.exitReason) {
+                      <span class="exit-badge" [class.exit-target]="group.trade.exitReason === 'Hit Target'"
+                            [class.exit-stop]="group.trade.exitReason === 'Hit Stop'"
+                            [class.exit-panic]="group.trade.exitReason === 'Panic Exit' || group.trade.exitReason === 'Revenge Close'"
+                            [class.exit-neutral]="group.trade.exitReason === 'Time Exit' || group.trade.exitReason === 'Manual Close'">
+                        {{ group.trade.exitReason }}
+                      </span>
+                    }
+                    @if (group.trade.lessonsLearned) {
+                      <div class="tl-lesson">
+                        <mat-icon class="lesson-icon">lightbulb</mat-icon>
+                        <span>{{ group.trade.lessonsLearned }}</span>
+                      </div>
                     }
                   </div>
                 </div>
@@ -601,6 +624,31 @@ interface TradeGroup {
     .pnl-positive { color: var(--color-success); }
     .pnl-negative { color: var(--color-danger); }
     .fee-note { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px; display: block; }
+    .tl-thesis {
+      font-size: var(--text-xs); color: var(--color-text-secondary); font-style: italic;
+      margin-top: 4px; line-height: var(--leading-normal);
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .tl-risk-levels { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+    .risk-tag {
+      font-size: 0.625rem; font-weight: var(--weight-semibold); padding: 1px 7px;
+      border-radius: var(--radius-full);
+    }
+    .risk-stop { background: var(--color-stat-amber-bg); color: var(--color-stat-amber); }
+    .risk-target { background: var(--color-success-bg); color: var(--color-success-text); }
+    .exit-badge {
+      display: inline-block; padding: 2px 8px; border-radius: var(--radius-full);
+      font-size: 0.625rem; font-weight: var(--weight-bold); white-space: nowrap; margin-top: 4px;
+    }
+    .exit-target { background: var(--color-success-bg); color: var(--color-success-text); }
+    .exit-stop { background: var(--color-stat-amber-bg); color: var(--color-stat-amber); }
+    .exit-panic { background: var(--color-danger-bg, #fef2f2); color: var(--color-danger, #dc2626); }
+    .exit-neutral { background: #f1f3f5; color: var(--color-text-secondary); }
+    .tl-lesson {
+      display: flex; align-items: flex-start; gap: 4px; margin-top: 6px;
+      font-size: var(--text-xs); color: var(--color-text-secondary); line-height: var(--leading-normal);
+    }
+    .lesson-icon { font-size: 14px; width: 14px; height: 14px; color: var(--color-stat-amber); flex-shrink: 0; margin-top: 1px; }
 
     .note-emotion { font-size: var(--text-xs); font-weight: var(--weight-semibold); }
     .note-trade-ref {

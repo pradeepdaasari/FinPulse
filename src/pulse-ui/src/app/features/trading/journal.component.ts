@@ -190,6 +190,8 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
                   <th>Instrument</th>
                   <th>Dir</th>
                   <th>P&L</th>
+                  <th>Thesis</th>
+                  <th>Exit</th>
                   <th>Checklist</th>
                   <th></th>
                 </tr>
@@ -266,6 +268,25 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
                       }
                     </td>
                     <td>
+                      @if (t.tradeThesis) {
+                        <span class="thesis-cell" [matTooltip]="t.tradeThesis">{{ t.tradeThesis }}</span>
+                      } @else {
+                        <span class="thesis-empty">—</span>
+                      }
+                    </td>
+                    <td>
+                      @if (t.exitReason) {
+                        <span class="exit-badge" [class.exit-target]="t.exitReason === 'Hit Target'"
+                              [class.exit-stop]="t.exitReason === 'Hit Stop'"
+                              [class.exit-panic]="t.exitReason === 'Panic Exit' || t.exitReason === 'Revenge Close'"
+                              [class.exit-neutral]="t.exitReason === 'Time Exit' || t.exitReason === 'Manual Close'">
+                          {{ t.exitReason }}
+                        </span>
+                      } @else if (t.status === 'Closed') {
+                        <span class="thesis-empty">—</span>
+                      }
+                    </td>
+                    <td>
                       <mat-icon class="compliance-icon" [class.compliant]="t.checklistCompleted" [class.non-compliant]="!t.checklistCompleted">
                         {{ t.checklistCompleted ? 'check_circle' : 'radio_button_unchecked' }}
                       </mat-icon>
@@ -324,6 +345,9 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
                 }
                 <span class="setup-badge-sm">{{ t.setupName }}</span>
               </span>
+              @if (t.tradeThesis) {
+                <span class="mobile-thesis">{{ t.tradeThesis }}</span>
+              }
               <span class="trade-meta">{{ formatTradeDate(t) }}@if (t.entryTime && t.exitTime) { · {{ formatTime12(t.entryTime) }}→{{ formatTime12(t.exitTime) }} ({{ getDuration(t.entryTime, t.exitTime) }})} · {{ t.quantity }} contracts
                 @if (t.expirationDate) { · exp {{ t.expirationDate | localDate:'M/d' }} }
                 @if (t.strikePrice) {
@@ -351,6 +375,14 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
                 @if (t.totalFees) {
                   <span class="mobile-fees">{{ t.totalFees | currency }} fees</span>
                 }
+              }
+              @if (t.exitReason) {
+                <span class="exit-badge exit-badge-sm" [class.exit-target]="t.exitReason === 'Hit Target'"
+                      [class.exit-stop]="t.exitReason === 'Hit Stop'"
+                      [class.exit-panic]="t.exitReason === 'Panic Exit' || t.exitReason === 'Revenge Close'"
+                      [class.exit-neutral]="t.exitReason === 'Time Exit' || t.exitReason === 'Manual Close'">
+                  {{ t.exitReason }}
+                </span>
               }
               <mat-icon class="compliance-icon-sm" [class.compliant]="t.checklistCompleted" [class.non-compliant]="!t.checklistCompleted">
                 {{ t.checklistCompleted ? 'check_circle' : 'radio_button_unchecked' }}
@@ -701,6 +733,30 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
     .trade-meta { display: block; font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px; line-height: var(--leading-normal); }
     .trade-right { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
     .compliance-icon-sm { font-size: 14px; width: 14px; height: 14px; }
+
+    /* ─── Thesis & Exit ─── */
+    .thesis-cell {
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden; text-overflow: ellipsis;
+      font-size: var(--text-xs); color: var(--color-text-secondary);
+      max-width: 180px; line-height: var(--leading-normal); cursor: help;
+    }
+    .thesis-empty { color: var(--color-text-muted); font-size: var(--text-xs); }
+    .exit-badge {
+      display: inline-block; padding: 2px 8px; border-radius: var(--radius-full);
+      font-size: 0.625rem; font-weight: var(--weight-bold); white-space: nowrap;
+    }
+    .exit-badge-sm { font-size: 0.575rem; padding: 1px 6px; }
+    .exit-target { background: var(--color-success-bg); color: var(--color-success-text); }
+    .exit-stop { background: var(--color-stat-amber-bg); color: var(--color-stat-amber); }
+    .exit-panic { background: var(--color-danger-bg, #fef2f2); color: var(--color-danger, #dc2626); }
+    .exit-neutral { background: #f1f3f5; color: var(--color-text-secondary); }
+    .mobile-thesis {
+      display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+      overflow: hidden; text-overflow: ellipsis;
+      font-size: var(--text-xs); color: var(--color-text-secondary);
+      font-style: italic; margin-top: 1px;
+    }
 
     /* ─── Empty State ─── */
     .empty-state { text-align: center; padding: var(--spacing-3xl) var(--spacing-lg); }

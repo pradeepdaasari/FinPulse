@@ -1619,6 +1619,10 @@ namespace Pulse.Core.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("ExitEmotion")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<decimal?>("ExitPremium")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
@@ -1626,6 +1630,10 @@ namespace Pulse.Core.Migrations
                     b.Property<decimal?>("ExitPrice")
                         .HasPrecision(18, 6)
                         .HasColumnType("decimal(18,6)");
+
+                    b.Property<string>("ExitReason")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("ExitTime")
                         .HasMaxLength(20)
@@ -1644,6 +1652,10 @@ namespace Pulse.Core.Migrations
 
                     b.Property<bool>("IsRevengeTrading")
                         .HasColumnType("bit");
+
+                    b.Property<string>("LessonsLearned")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<int?>("LinkedExpenseId")
                         .HasColumnType("int");
@@ -1674,6 +1686,9 @@ namespace Pulse.Core.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal?>("ProfitTarget")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("Quantity")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
@@ -1693,6 +1708,9 @@ namespace Pulse.Core.Migrations
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
+
+                    b.Property<decimal?>("StopLoss")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal?>("StrikePrice")
                         .HasPrecision(18, 6)
@@ -1716,6 +1734,10 @@ namespace Pulse.Core.Migrations
                     b.Property<decimal?>("TotalFees")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("TradeThesis")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");

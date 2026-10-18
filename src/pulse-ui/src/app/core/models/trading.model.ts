@@ -90,6 +90,12 @@ export interface TradeEntry {
   totalFees?: number;
   netPnl?: number;
   plannedRisk?: number;
+  stopLoss?: number;
+  profitTarget?: number;
+  tradeThesis?: string;
+  exitReason?: ExitReason;
+  exitEmotion?: string;
+  lessonsLearned?: string;
   mistakeTags?: string[];
   status?: TradeStatus;
   closedDate?: string;
@@ -97,6 +103,21 @@ export interface TradeEntry {
 }
 
 export type TradeStatus = 'Open' | 'Closed';
+export type ExitReason = 'Hit Target' | 'Hit Stop' | 'Time Exit' | 'Manual Close' | 'Panic Exit' | 'Revenge Close';
+
+export interface DisciplineStatus {
+  hasPreMarketNote: boolean;
+  tradesToday: number;
+  maxTrades: number;
+  pnlToday: number;
+  maxLoss: number;
+  tradeLimitHit: boolean;
+  lossLimitHit: boolean;
+  trafficLight: 'green' | 'yellow' | 'red';
+  recentLoss: boolean;
+  lastLossInstrument?: string;
+  violations: string[];
+}
 
 export interface TradeStats {
   winRate: number;

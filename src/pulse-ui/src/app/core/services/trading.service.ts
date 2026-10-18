@@ -7,7 +7,7 @@ import {
   TradingRule, DailyReview, DailyLimits, TradingStats, TradingWisdom,
   WisdomCategory, WeeklyFocus, WeeklySummary, TradingDashboard,
   TradingGoal, GoalProgress, GoalHistory, TradeNote, TradingDayView,
-  TradesWithStats
+  TradesWithStats, DisciplineStatus
 } from '../models/trading.model';
 
 @Injectable({ providedIn: 'root' })
@@ -157,6 +157,10 @@ export class TradingService {
 
   updateLimits(limits: Partial<DailyLimits>): Observable<DailyLimits> {
     return this.http.put<DailyLimits>(`${this.baseUrl}/limits`, limits);
+  }
+
+  getDisciplineStatus(): Observable<DisciplineStatus> {
+    return this.http.get<DisciplineStatus>(`${this.baseUrl}/discipline-status`);
   }
 
   // --- Stats ---

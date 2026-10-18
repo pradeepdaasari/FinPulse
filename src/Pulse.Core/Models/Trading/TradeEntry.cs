@@ -48,6 +48,18 @@ public class TradeEntry
 
     // Risk & R-Multiple
     public decimal? PlannedRisk { get; set; }
+    public decimal? StopLoss { get; set; }
+    public decimal? ProfitTarget { get; set; }
+
+    // Discipline
+    [MaxLength(500)]
+    public string? TradeThesis { get; set; }
+    [MaxLength(50)]
+    public string? ExitReason { get; set; }
+    [MaxLength(50)]
+    public string? ExitEmotion { get; set; }
+    [MaxLength(1000)]
+    public string? LessonsLearned { get; set; }
 
     // Mistake tracking
     [MaxLength(500)]

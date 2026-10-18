@@ -429,11 +429,73 @@ public class TradingController : ControllerBase
                 t.StrikePrice, t.StrikePrice2, t.StrikePrice3, t.StrikePrice4,
                 t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.Multiplier,
                 t.BankAccountId, t.CommissionFees, t.RegExchangeFees, t.TotalFees, t.NetPnl,
-                t.PlannedRisk,
+                t.PlannedRisk, t.StopLoss, t.ProfitTarget,
+                t.TradeThesis, t.ExitReason, t.ExitEmotion, t.LessonsLearned,
                 MistakeTags = t.MistakeTags != null ? JsonSerializer.Deserialize<string[]>(t.MistakeTags) : null,
                 t.Status, t.ClosedDate,
                 NotesCount = t.TradeNotes.Count
             }).ToList()
+        });
+    }
+
+    [HttpGet("discipline-status")]
+    public async Task<ActionResult> GetDisciplineStatus()
+    {
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var today = TimeZoneHelper.UserToday(tz);
+        var dayStart = TimeZoneHelper.ToUtc(today, tz);
+        var dayEnd = TimeZoneHelper.ToUtc(today.AddDays(1), tz);
+
+        var premarket = await _db.PreMarketNotes
+            .FirstOrDefaultAsync(n => n.UserId == UserId && n.Date >= dayStart && n.Date < dayEnd);
+        var limits = await _db.DailyLimits.FirstOrDefaultAsync(l => l.UserId == UserId);
+
+        var maxTrades = premarket?.MaxTrades ?? limits?.MaxTradesPerDay ?? 5;
+        var maxLoss = premarket?.MaxLoss ?? limits?.MaxDailyLoss ?? 500;
+
+        var todayTrades = await _db.TradeEntries
+            .Where(t => t.UserId == UserId && t.Date >= dayStart && t.Date < dayEnd)
+            .ToListAsync();
+
+        var tradesToday = todayTrades.Count;
+        var pnlToday = todayTrades.Where(t => t.Status == "Closed").Sum(t => t.NetPnl ?? t.Pnl ?? 0);
+        var tradeLimitHit = tradesToday >= maxTrades;
+        var lossLimitHit = pnlToday <= -maxLoss;
+
+        var recentLoss = false;
+        string? lastLossInstrument = null;
+        var tenMinAgo = DateTime.UtcNow.AddMinutes(-10);
+        var lastClosed = todayTrades
+            .Where(t => t.Status == "Closed" && t.UpdatedAt >= tenMinAgo && (t.NetPnl ?? t.Pnl ?? 0) < 0)
+            .OrderByDescending(t => t.UpdatedAt)
+            .FirstOrDefault();
+        if (lastClosed != null)
+        {
+            recentLoss = true;
+            lastLossInstrument = lastClosed.Instrument;
+        }
+
+        var trafficLight = "green";
+        var violations = new List<string>();
+        if (premarket == null) { violations.Add("Pre-market plan required before trading."); }
+        if (tradeLimitHit) { violations.Add($"Daily trade limit reached ({tradesToday}/{maxTrades})."); }
+        if (lossLimitHit) { violations.Add($"Max loss limit reached."); }
+        if (violations.Count > 0) trafficLight = "red";
+        else if (tradesToday >= maxTrades - 1 || pnlToday <= -(maxLoss * 0.8m)) trafficLight = "yellow";
+
+        return Ok(new
+        {
+            HasPreMarketNote = premarket != null,
+            TradesToday = tradesToday,
+            MaxTrades = maxTrades,
+            PnlToday = Math.Round(pnlToday, 2),
+            MaxLoss = maxLoss,
+            TradeLimitHit = tradeLimitHit,
+            LossLimitHit = lossLimitHit,
+            TrafficLight = trafficLight,
+            RecentLoss = recentLoss,
+            LastLossInstrument = lastLossInstrument,
+            Violations = violations
         });
     }
 
@@ -445,9 +507,50 @@ public class TradingController : ControllerBase
         input.Instrument = input.Instrument.Trim();
         input.Notes = input.Notes?.Trim();
 
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+
+        // Discipline validation for same-day trades
+        var today = TimeZoneHelper.UserToday(tz);
+        var tradeDate = input.Date.Date;
+        if (tradeDate == today)
+        {
+            var dayStart = TimeZoneHelper.ToUtc(today, tz);
+            var dayEnd = TimeZoneHelper.ToUtc(today.AddDays(1), tz);
+            var dViolations = new List<object>();
+
+            var hasPremarket = await _db.PreMarketNotes
+                .AnyAsync(n => n.UserId == UserId && n.Date >= dayStart && n.Date < dayEnd);
+            if (!hasPremarket)
+                dViolations.Add(new { code = "NO_PREMARKET", message = "Pre-market plan required before trading." });
+
+            var premarket = await _db.PreMarketNotes
+                .FirstOrDefaultAsync(n => n.UserId == UserId && n.Date >= dayStart && n.Date < dayEnd);
+            var limits = await _db.DailyLimits.FirstOrDefaultAsync(l => l.UserId == UserId);
+            var maxTrades = premarket?.MaxTrades ?? limits?.MaxTradesPerDay ?? 5;
+            var todayTradeCount = await _db.TradeEntries
+                .CountAsync(t => t.UserId == UserId && t.Date >= dayStart && t.Date < dayEnd);
+            if (todayTradeCount >= maxTrades)
+                dViolations.Add(new { code = "TRADE_LIMIT", message = $"Daily trade limit reached ({todayTradeCount}/{maxTrades})." });
+
+            var maxLoss = premarket?.MaxLoss ?? limits?.MaxDailyLoss ?? 500;
+            var pnlToday = await _db.TradeEntries
+                .Where(t => t.UserId == UserId && t.Date >= dayStart && t.Date < dayEnd && t.Status == "Closed")
+                .SumAsync(t => (decimal?)(t.NetPnl ?? t.Pnl) ?? 0);
+            if (pnlToday <= -maxLoss)
+                dViolations.Add(new { code = "LOSS_LIMIT", message = $"Max loss limit reached." });
+
+            if ((input.Status ?? "Open") == "Open" && string.IsNullOrWhiteSpace(input.TradeThesis))
+                dViolations.Add(new { code = "NO_THESIS", message = "Trade thesis required. Why are you taking this trade?" });
+
+            if ((input.Status ?? "Open") == "Open" && !input.StopLoss.HasValue)
+                dViolations.Add(new { code = "NO_STOP", message = "Stop loss required. Know your exit before you enter." });
+
+            if (dViolations.Count > 0)
+                return UnprocessableEntity(new { error = "Discipline violations", violations = dViolations });
+        }
+
         try
         {
-            var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
             var commission = input.CommissionFees ?? 0;
             var regExchange = input.RegExchangeFees ?? 0;
             var fees = commission + regExchange;
@@ -488,6 +591,12 @@ public class TradingController : ControllerBase
                 Multiplier = input.Multiplier,
                 BankAccountId = input.BankAccountId,
                 PlannedRisk = input.PlannedRisk,
+                StopLoss = input.StopLoss,
+                ProfitTarget = input.ProfitTarget,
+                TradeThesis = input.TradeThesis?.Trim(),
+                ExitReason = (input.Status == "Closed") ? input.ExitReason : null,
+                ExitEmotion = (input.Status == "Closed") ? input.ExitEmotion : null,
+                LessonsLearned = (input.Status == "Closed") ? input.LessonsLearned?.Trim() : null,
                 MistakeTags = input.MistakeTags != null ? JsonSerializer.Serialize(input.MistakeTags) : null,
                 Status = input.Status ?? "Open",
                 ClosedDate = input.ClosedDate,
@@ -562,6 +671,12 @@ public class TradingController : ControllerBase
             trade.Multiplier = input.Multiplier;
             trade.BankAccountId = input.BankAccountId;
             trade.PlannedRisk = input.PlannedRisk;
+            trade.StopLoss = input.StopLoss;
+            trade.ProfitTarget = input.ProfitTarget;
+            trade.TradeThesis = input.TradeThesis?.Trim();
+            trade.ExitReason = (input.Status == "Closed") ? input.ExitReason : trade.ExitReason;
+            trade.ExitEmotion = (input.Status == "Closed") ? input.ExitEmotion : trade.ExitEmotion;
+            trade.LessonsLearned = (input.Status == "Closed") ? input.LessonsLearned?.Trim() : trade.LessonsLearned;
             trade.MistakeTags = input.MistakeTags != null ? JsonSerializer.Serialize(input.MistakeTags) : null;
             trade.Status = input.Status ?? "Open";
             trade.ClosedDate = input.ClosedDate;
@@ -915,7 +1030,8 @@ public class TradingController : ControllerBase
                 t.StrikePrice, t.StrikePrice2, t.StrikePrice3, t.StrikePrice4,
                 t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.Multiplier,
                 t.BankAccountId, t.CommissionFees, t.RegExchangeFees, t.TotalFees, t.NetPnl,
-                t.PlannedRisk,
+                t.PlannedRisk, t.StopLoss, t.ProfitTarget,
+                t.TradeThesis, t.ExitReason, t.ExitEmotion, t.LessonsLearned,
                 MistakeTags = t.MistakeTags != null ? JsonSerializer.Deserialize<string[]>(t.MistakeTags) : null,
                 t.Status, t.ClosedDate,
                 TradeNotes = t.TradeNotes.OrderBy(n => n.CreatedAt).Select(n => new { n.Id, n.TradeEntryId, n.Note, n.Emotion, n.CreatedAt, n.UpdatedAt }).ToList()
@@ -2124,6 +2240,12 @@ public class TradeEntryCreateDto
     public decimal? TotalFees { get; set; }
     public decimal? NetPnl { get; set; }
     public decimal? PlannedRisk { get; set; }
+    public decimal? StopLoss { get; set; }
+    public decimal? ProfitTarget { get; set; }
+    public string? TradeThesis { get; set; }
+    public string? ExitReason { get; set; }
+    public string? ExitEmotion { get; set; }
+    public string? LessonsLearned { get; set; }
     public string[]? MistakeTags { get; set; }
     public string Status { get; set; } = "Open";
     public DateTime? ClosedDate { get; set; }
