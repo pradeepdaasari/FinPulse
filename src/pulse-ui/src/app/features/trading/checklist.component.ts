@@ -11,6 +11,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { MatDialog } from '@angular/material/dialog';
 import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component';
 import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { TradingService } from '../../core/services/trading.service';
@@ -18,6 +19,7 @@ import { TradingSetupSummary, TradingSetup, PreMarketNote, TradeEntry, DailyLimi
 import { NotificationService } from '../../core/services/notification.service';
 import { toLocalDateString } from '../../core/utils/date-utils';
 import { RichTextEditorComponent } from '../../shared/rich-text-editor.component';
+import { TradeEntryDialogComponent } from './trade-entry-dialog.component';
 
 @Component({
   selector: 'app-checklist',
@@ -283,58 +285,11 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
               }
             </div>
 
-            <!-- Trade Entry Form (only when all checked) -->
+            <!-- Log Trade (only when all checked) -->
             @if (allChecked()) {
               <div class="trade-entry">
-                <div class="entry-header">
-                  <mat-icon>rocket_launch</mat-icon>
-                  <h4>Confirm Trade Entry</h4>
-                </div>
-                <form [formGroup]="tradeForm" class="entry-form" (submit)="$event.preventDefault()">
-                  <div class="entry-grid">
-                    <mat-form-field appearance="outline">
-                      <mat-label>Instrument</mat-label>
-                      <mat-select formControlName="instrument">
-                        <mat-option value="SPX">SPX</mat-option>
-                        <mat-option value="NDX">NDX</mat-option>
-                        <mat-option value="QQQ">QQQ</mat-option>
-                        <mat-option value="SPY">SPY</mat-option>
-                        <mat-option value="ES">ES (Futures)</mat-option>
-                        <mat-option value="NQ">NQ (Futures)</mat-option>
-                        <mat-option value="other">Other</mat-option>
-                      </mat-select>
-                    </mat-form-field>
-
-                    <div class="direction-toggle">
-                      <span class="dir-label">Direction</span>
-                      <div class="dir-buttons">
-                        <button type="button" class="dir-btn long" [class.active]="tradeForm.value.direction === 'long'" (click)="tradeForm.patchValue({direction: 'long'})">
-                          <mat-icon>arrow_upward</mat-icon> Long
-                        </button>
-                        <button type="button" class="dir-btn short" [class.active]="tradeForm.value.direction === 'short'" (click)="tradeForm.patchValue({direction: 'short'})">
-                          <mat-icon>arrow_downward</mat-icon> Short
-                        </button>
-                      </div>
-                    </div>
-
-                    <mat-form-field appearance="outline">
-                      <mat-label>Entry Price</mat-label>
-                      <input matInput type="number" inputmode="decimal" formControlName="entryPrice" step="0.01">
-                      <span matTextPrefix>$&nbsp;</span>
-                    </mat-form-field>
-
-                    <mat-form-field appearance="outline">
-                      <mat-label>Contracts</mat-label>
-                      <input matInput type="number" inputmode="decimal" formControlName="quantity" min="1">
-                    </mat-form-field>
-                  </div>
-
-                  <app-rich-text-editor label="Notes (optional)" formControlName="notes" height="80px"
-                    placeholder="Why are you taking this trade?"></app-rich-text-editor>
-
-                </form>
                 <div class="log-btn-bar">
-                  <button class="log-btn" (click)="logTrade()" [disabled]="tradeForm.invalid">
+                  <button class="log-btn" (click)="openLogTradeDialog()">
                     <mat-icon>add_task</mat-icon> Log Trade
                   </button>
                 </div>
@@ -576,6 +531,7 @@ export class ChecklistComponent implements OnInit {
   private notify = inject(NotificationService);
   private fb = inject(FormBuilder);
   private cdr = inject(ChangeDetectorRef);
+  private dialog = inject(MatDialog);
 
   loading = signal(true);
   hasPreMarketNote = signal(false);
@@ -691,32 +647,33 @@ export class ChecklistComponent implements OnInit {
     this.checkStates.set(states);
   }
 
-  logTrade(): void {
+  openLogTradeDialog(): void {
     const setup = this.selectedSetup();
-    if (!setup || !this.tradeForm.valid) return;
+    if (!setup) return;
 
-    const val = this.tradeForm.value;
     const responses: ChecklistResponse[] = setup.checklistItems.map((item, i) => ({
       checklistItemId: item.id ?? i,
       label: item.label,
       checked: this.checkStates()[i]
     }));
 
-    this.tradingService.createTrade({
-      date: toLocalDateString(new Date()),
-      setupId: setup.id,
-      instrument: val.instrument!,
-      direction: val.direction!,
-      entryPrice: val.entryPrice!,
-      quantity: val.quantity!,
-      notes: val.notes || undefined,
-      checklistCompleted: this.allChecked(),
-      checklistResponses: responses,
-      isRevengeTrading: this.isRevenge() === true,
-      emotionAtEntry: this.emotionalState() ?? undefined
-    }).subscribe({
-      next: () => {
-        this.notify.success('Trade logged successfully');
+    const ref = this.dialog.open(TradeEntryDialogComponent, {
+      panelClass: 'responsive-dialog-panel',
+      data: {
+        trade: null,
+        setups: this.setups(),
+        checklistPrefill: {
+          setupId: setup.id,
+          checklistCompleted: this.allChecked(),
+          checklistResponses: responses,
+          emotionAtEntry: this.emotionalState() ?? undefined,
+          isRevengeTrading: this.isRevenge() === true
+        }
+      }
+    });
+
+    ref.afterClosed().subscribe(result => {
+      if (result) {
         const todayStr = toLocalDateString(new Date());
         this.tradingService.getTradesWithStats(todayStr, todayStr).subscribe(d => {
           this.todayTrades.set(d.trades);
@@ -724,8 +681,7 @@ export class ChecklistComponent implements OnInit {
         });
         this.resetForm();
         this.cdr.detectChanges();
-      },
-      error: () => this.notify.error('Failed to log trade')
+      }
     });
   }
 

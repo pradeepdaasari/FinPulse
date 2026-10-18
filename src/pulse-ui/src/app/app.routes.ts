@@ -135,14 +135,23 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
-    path: 'trading/day',
-    loadComponent: () => import('./features/trading/day-view.component').then(m => m.DayViewComponent),
+    path: 'trading/flow',
+    loadComponent: () => import('./features/trading/daily-flow.component').then(m => m.DailyFlowComponent),
     canActivate: [authGuard]
   },
   {
-    path: 'trading/day/:date',
-    loadComponent: () => import('./features/trading/day-view.component').then(m => m.DayViewComponent),
+    path: 'trading/flow/:date',
+    loadComponent: () => import('./features/trading/daily-flow.component').then(m => m.DailyFlowComponent),
     canActivate: [authGuard]
+  },
+  {
+    path: 'trading/day',
+    redirectTo: 'trading/flow',
+    pathMatch: 'full'
+  },
+  {
+    path: 'trading/day/:date',
+    redirectTo: 'trading/flow/:date'
   },
   {
     path: 'trading/goals',

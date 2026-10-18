@@ -163,14 +163,14 @@ import { routeFadeAnimation } from './route-animations';
             </button>
             @if (expandedSections().includes('trading')) {
               <div class="ios-section-group">
+                <a class="ios-nav-item" routerLink="/trading/flow" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-blue"><mat-icon>bolt</mat-icon></span>
+                  <span class="ios-nav-label">Trading Day</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
                 <a class="ios-nav-item" routerLink="/trading" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-purple"><mat-icon>candlestick_chart</mat-icon></span>
                   <span class="ios-nav-label">Overview</span>
-                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
-                </a>
-                <a class="ios-nav-item" routerLink="/trading/day" routerLinkActive="active-link" (click)="onNavClick()">
-                  <span class="ios-icon-pill ic-amber"><mat-icon>today</mat-icon></span>
-                  <span class="ios-nav-label">Day View</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
                 <div class="ios-sub-header">Pre-Trade</div>
@@ -1054,6 +1054,7 @@ export class NavShellComponent implements OnInit, OnDestroy {
     '/health/workout': "Today's Workout",
     '/health/progress': 'Progress & PRs',
     '/trading': 'Dashboard',
+    '/trading/flow': "Trading Day",
     '/trading/analytics': 'Trading Analytics',
     '/trading/goals': 'Trading Goals',
     '/trading/premarket': 'Pre-Market Plan',

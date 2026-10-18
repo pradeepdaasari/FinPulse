@@ -17,7 +17,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TradingService } from '../../core/services/trading.service';
 import { toLocalISOString } from '../../core/utils/date-utils';
 import { BankAccountService } from '../../core/services/bank-account.service';
-import { TradeEntry, TradeDirection, TradeStatus, ExitReason, TradingSetupSummary, DisciplineStatus } from '../../core/models/trading.model';
+import { TradeEntry, TradeDirection, TradeStatus, ExitReason, TradingSetupSummary, DisciplineStatus, ChecklistItem } from '../../core/models/trading.model';
 import { BankAccount } from '../../core/models/bank-account.model';
 import { NotificationService } from '../../core/services/notification.service';
 import { RichTextEditorComponent } from '../../shared/rich-text-editor.component';
@@ -26,6 +26,13 @@ export interface TradeEntryDialogData {
   trade: TradeEntry | null;
   setups: TradingSetupSummary[];
   closeMode?: boolean;
+  checklistPrefill?: {
+    setupId: number;
+    checklistCompleted: boolean;
+    checklistResponses: any[];
+    emotionAtEntry?: string;
+    isRevengeTrading?: boolean;
+  };
 }
 
 @Component({
@@ -125,6 +132,26 @@ export interface TradeEntryDialogData {
             </mat-select>
           </mat-form-field>
         </div>
+
+        <!-- Checklist -->
+        @if (checklistItems().length > 0 && !data?.trade) {
+          <div class="checklist-section">
+            <div class="checklist-header">
+              <mat-icon [class.checklist-done]="allChecked()">{{ allChecked() ? 'verified' : 'checklist' }}</mat-icon>
+              <span>{{ checkStates().filter(c => c).length }}/{{ checklistItems().length }} checks</span>
+            </div>
+            <div class="checklist-list">
+              @for (item of checklistItems(); track item.orderIndex; let i = $index) {
+                <div class="checklist-row" [class.checked]="checkStates()[i]" (click)="toggleCheck(i)">
+                  <div class="check-box" [class.checked]="checkStates()[i]">
+                    @if (checkStates()[i]) { <mat-icon>check</mat-icon> }
+                  </div>
+                  <span>{{ item.label }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        }
 
         <!-- Trade Thesis -->
         @if (!data?.trade || data?.trade?.tradeThesis) {
@@ -840,7 +867,37 @@ export interface TradeEntryDialogData {
       .date-compact-row { padding: 14px 16px; }
       .discipline-banner { padding: 8px 12px; margin-bottom: 2px; }
       .reflection-section { padding: 10px 8px 6px; }
+      .checklist-row { min-height: 44px; }
     }
+
+    .checklist-section {
+      margin: -4px 0 12px; padding: 12px; background: var(--color-surface-secondary);
+      border-radius: var(--radius-md); border: 1px solid var(--color-border);
+    }
+    .checklist-header {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+      font-size: 0.85rem; font-weight: 600; color: var(--color-text-secondary);
+    }
+    .checklist-header mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-text-muted); }
+    .checklist-header .checklist-done { color: var(--color-success); }
+    .checklist-list { display: flex; flex-direction: column; gap: 6px; }
+    .checklist-row {
+      display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+      border-radius: var(--radius-sm); cursor: pointer; transition: background 0.15s ease;
+      font-size: 0.88rem; color: var(--color-text-secondary);
+    }
+    .checklist-row:hover { background: var(--color-surface); }
+    .checklist-row.checked { color: var(--color-text-muted); }
+    .checklist-row.checked span { text-decoration: line-through; }
+    .check-box {
+      width: 22px; height: 22px; border-radius: 4px; flex-shrink: 0;
+      border: 2px solid var(--color-border); display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .check-box.checked {
+      background: var(--color-success); border-color: var(--color-success);
+    }
+    .check-box mat-icon { font-size: 14px; width: 14px; height: 14px; color: #fff; }
   `]
 })
 export class TradeEntryDialogComponent implements OnInit {
@@ -856,7 +913,9 @@ export class TradeEntryDialogComponent implements OnInit {
   saving = signal(false);
   showMore = signal(false);
   disciplineStatus = signal<DisciplineStatus | null>(null);
-  selectedMistakes = signal<string[]>(this.data?.trade?.mistakeTags ?? []);
+  selectedMistakes = signal<string[]>(
+    this.data?.trade?.mistakeTags ?? (this.data?.checklistPrefill?.isRevengeTrading ? ['Revenge'] : [])
+  );
 
   get bannerSubtitle(): string {
     if (this.data?.closeMode) return 'Record exit details and lock in your P&L';
@@ -881,6 +940,9 @@ export class TradeEntryDialogComponent implements OnInit {
   balanceAfter = signal(0);
   maxRisk = signal<number | null>(null);
   computedR = signal<number | null>(null);
+  checklistItems = signal<ChecklistItem[]>([]);
+  checkStates = signal<boolean[]>([]);
+  allChecked = computed(() => this.checklistItems().length > 0 && this.checkStates().every(c => c));
 
   private getTimeStr(dateStr?: string): string {
     const d = dateStr ? new Date(dateStr) : new Date();
@@ -895,7 +957,7 @@ export class TradeEntryDialogComponent implements OnInit {
   form = this.fb.group({
     date: [this.data?.trade?.date ? new Date(this.data.trade.date) : new Date(), Validators.required],
     time: [this.data?.trade?.entryTime || this.getTimeStr(), Validators.required],
-    setupId: [this.data?.trade?.setupId ?? null, Validators.required],
+    setupId: [this.data?.checklistPrefill?.setupId ?? this.data?.trade?.setupId ?? null, Validators.required],
     instrument: [this.data?.trade?.instrument ?? 'SPX', Validators.required],
     direction: [this.data?.trade?.direction ?? 'short', Validators.required],
     assetType: [this.data?.trade?.assetType ?? 'Options'],
@@ -917,8 +979,8 @@ export class TradeEntryDialogComponent implements OnInit {
     bankAccountId: [this.data?.trade?.bankAccountId ?? null as number | null],
     commissionFees: [this.data?.trade?.commissionFees ?? null as number | null],
     regExchangeFees: [this.data?.trade?.regExchangeFees ?? null as number | null],
-    checklistCompleted: [this.data?.trade?.checklistCompleted ?? false],
-    emotionAtEntry: [this.data?.trade?.emotionAtEntry ?? null as string | null],
+    checklistCompleted: [this.data?.checklistPrefill?.checklistCompleted ?? this.data?.trade?.checklistCompleted ?? false],
+    emotionAtEntry: [this.data?.checklistPrefill?.emotionAtEntry ?? this.data?.trade?.emotionAtEntry ?? null as string | null],
     plannedRisk: [this.data?.trade?.plannedRisk ?? null as number | null],
     notes: [this.data?.trade?.notes ?? ''],
     tags: [this.data?.trade?.tags?.join(', ') ?? ''],
@@ -947,6 +1009,18 @@ export class TradeEntryDialogComponent implements OnInit {
       this.form.get('stopLoss')!.setValidators([Validators.required, Validators.min(0.01)]);
       this.form.get('stopLoss')!.updateValueAndValidity();
     }
+    this.form.get('setupId')!.valueChanges.subscribe(id => {
+      if (id) this.loadChecklist(id);
+      else { this.checklistItems.set([]); this.checkStates.set([]); }
+    });
+    if (this.data?.checklistPrefill) {
+      const pf = this.data.checklistPrefill;
+      this.checkStates.set(pf.checklistResponses.map(r => r.checked));
+      this.loadChecklist(pf.setupId);
+    } else if (this.form.value.setupId) {
+      this.loadChecklist(this.form.value.setupId);
+    }
+
     this.updateFeeValidators(this.form.value.status as string);
     this.form.get('status')!.valueChanges.subscribe(s => {
       this.updateFeeValidators(s as string);
@@ -975,6 +1049,26 @@ export class TradeEntryDialogComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  private loadChecklist(setupId: number): void {
+    this.tradingService.getSetup(setupId).subscribe({
+      next: setup => {
+        const items = setup.checklistItems || [];
+        this.checklistItems.set(items);
+        if (this.checkStates().length !== items.length) {
+          this.checkStates.set(items.map(() => false));
+        }
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
+  }
+
+  toggleCheck(index: number): void {
+    const states = [...this.checkStates()];
+    states[index] = !states[index];
+    this.checkStates.set(states);
   }
 
   onExpiredWorthlessChange(checked: boolean): void {
@@ -1107,7 +1201,7 @@ export class TradeEntryDialogComponent implements OnInit {
       exitPrice: val.status === 'Closed' ? (val.exitPrice ?? undefined) : undefined,
       quantity: val.quantity!,
       pnl: val.status === 'Closed' ? (val.pnl ?? undefined) : undefined,
-      checklistCompleted: val.checklistCompleted ?? false,
+      checklistCompleted: this.checklistItems().length > 0 ? this.allChecked() : (val.checklistCompleted ?? false),
       notes: val.notes || undefined,
       tags: val.tags ? val.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
       isRevengeTrading: this.selectedMistakes().includes('Revenge'),
@@ -1120,7 +1214,13 @@ export class TradeEntryDialogComponent implements OnInit {
       exitEmotion: val.status === 'Closed' ? (val.exitEmotion || undefined) : undefined,
       lessonsLearned: val.status === 'Closed' ? (val.lessonsLearned || undefined) : undefined,
       mistakeTags: this.selectedMistakes().length > 0 ? this.selectedMistakes() : undefined,
-      checklistResponses: [],
+      checklistResponses: this.checklistItems().length > 0
+        ? this.checklistItems().map((item, i) => ({
+            checklistItemId: item.id ?? 0,
+            label: item.label,
+            checked: this.checkStates()[i] ?? false
+          }))
+        : (this.data?.checklistPrefill?.checklistResponses ?? []),
       assetType: val.assetType ?? 'Options',
       optionType: val.assetType === 'Options' && val.spreadType !== 'IronCondor' ? val.optionType ?? undefined : undefined,
       spreadType: val.assetType === 'Options' ? val.spreadType ?? undefined : undefined,

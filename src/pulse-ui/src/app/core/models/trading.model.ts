@@ -393,3 +393,26 @@ export interface GoalHistory {
   streak: number;
   snapshots: GoalSnapshot[];
 }
+
+export interface DailyFlowReviewSummary {
+  id: number;
+  date: string;
+  grade: TradeGrade | null;
+  isObservationOnly: boolean;
+}
+
+export interface DailyFlow {
+  dayView: TradingDayView;
+  disciplineStatus: DisciplineStatus;
+  rules: TradingRule[];
+  setups: TradingSetupSummary[];
+  premarketStreak: number;
+  wisdom: TradingWisdom;
+  template: PreMarketTemplate | null;
+  activePhase: 'morning' | 'session' | 'review';
+  recentMentalStates: string[];
+  recentReviews: DailyFlowReviewSummary[];
+  allPhasesComplete: boolean;
+  isToday: boolean;
+  targetDate: string;
+}

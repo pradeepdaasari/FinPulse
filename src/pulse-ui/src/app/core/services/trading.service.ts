@@ -7,7 +7,7 @@ import {
   TradingRule, DailyReview, DailyLimits, TradingStats, TradingWisdom,
   WisdomCategory, WeeklyFocus, WeeklySummary, TradingDashboard,
   TradingGoal, GoalProgress, GoalHistory, TradeNote, TradingDayView,
-  TradesWithStats, DisciplineStatus
+  TradesWithStats, DisciplineStatus, DailyFlow
 } from '../models/trading.model';
 
 @Injectable({ providedIn: 'root' })
@@ -229,6 +229,12 @@ export class TradingService {
     if (periods) params = params.set('periods', periods);
     if (fromDate) params = params.set('fromDate', fromDate);
     return this.http.get<GoalHistory>(`${this.baseUrl}/goals/history`, { params });
+  }
+
+  // --- Daily Flow ---
+  getDailyFlow(date?: string): Observable<DailyFlow> {
+    const params = date ? `?date=${date}` : '';
+    return this.http.get<DailyFlow>(`${this.baseUrl}/daily-flow${params}`);
   }
 
   // --- Day View ---

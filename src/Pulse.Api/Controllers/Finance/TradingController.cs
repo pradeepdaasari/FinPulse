@@ -1069,6 +1069,230 @@ public class TradingController : ControllerBase
         });
     }
 
+    // ─── Daily Flow ─────────────────────────────────────────
+
+    [HttpGet("daily-flow")]
+    public async Task<ActionResult> GetDailyFlow([FromQuery] string? date = null)
+    {
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var today = TimeZoneHelper.UserToday(tz);
+        var now = TimeZoneHelper.UserNow(tz);
+
+        var targetDate = today;
+        if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsed))
+            targetDate = parsed.Date;
+
+        var isToday = targetDate == today;
+        var dayStart = TimeZoneHelper.ToUtc(targetDate, tz);
+        var dayEnd = TimeZoneHelper.ToUtc(targetDate.AddDays(1), tz);
+
+        // --- Day View data (reuse GetDayView logic) ---
+        var premarket = await _db.PreMarketNotes
+            .Where(p => p.UserId == UserId && p.Date >= dayStart && p.Date < dayEnd)
+            .FirstOrDefaultAsync();
+
+        var trades = await _db.TradeEntries
+            .Where(t => t.UserId == UserId &&
+                ((t.Date >= dayStart && t.Date < dayEnd) ||
+                 (t.ClosedDate.HasValue && t.ClosedDate.Value >= dayStart && t.ClosedDate.Value < dayEnd) ||
+                 (t.TradeNotes.Any(n => n.CreatedAt >= dayStart && n.CreatedAt < dayEnd)) ||
+                 (isToday && t.Status == "Open" && t.Date < dayStart)))
+            .Include(t => t.ChecklistResponses)
+            .OrderBy(t => t.Date)
+            .Select(t => new
+            {
+                t.Id, t.Date, t.SetupId,
+                SetupName = t.Setup != null ? t.Setup.Name : null,
+                t.Instrument, t.Direction, t.EntryPrice, t.ExitPrice, t.Quantity,
+                t.Pnl, t.ChecklistCompleted, t.ChecklistResponses,
+                t.EntryTime, t.ExitTime, t.Notes,
+                Tags = t.Tags != null ? JsonSerializer.Deserialize<string[]>(t.Tags) : null,
+                t.IsRevengeTrading, t.EmotionAtEntry, t.CreatedAt,
+                t.AssetType, t.OptionType, t.SpreadType,
+                t.StrikePrice, t.StrikePrice2, t.StrikePrice3, t.StrikePrice4,
+                t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.Multiplier,
+                t.BankAccountId, t.CommissionFees, t.RegExchangeFees, t.TotalFees, t.NetPnl,
+                t.PlannedRisk, t.StopLoss, t.ProfitTarget,
+                t.TradeThesis, t.ExitReason, t.ExitEmotion, t.LessonsLearned,
+                MistakeTags = t.MistakeTags != null ? JsonSerializer.Deserialize<string[]>(t.MistakeTags) : null,
+                t.Status, t.ClosedDate,
+                IsCarryOver = t.Date < dayStart,
+                TradeNotes = t.TradeNotes.OrderBy(n => n.CreatedAt).Select(n => new { n.Id, n.TradeEntryId, n.Note, n.Emotion, n.CreatedAt, n.UpdatedAt }).ToList()
+            })
+            .ToListAsync();
+
+        var review = await _db.DailyReviews
+            .Where(r => r.UserId == UserId && r.Date >= dayStart && r.Date < dayEnd)
+            .FirstOrDefaultAsync();
+
+        var limits = await _db.DailyLimits
+            .Where(l => l.UserId == UserId)
+            .FirstOrDefaultAsync();
+
+        var closedTrades = trades.Where(t => t.Status == "Closed").ToList();
+
+        // --- Discipline Status (reuse logic) ---
+        var maxTrades = premarket?.MaxTrades ?? limits?.MaxTradesPerDay ?? 5;
+        var maxLoss = premarket?.MaxLoss ?? limits?.MaxDailyLoss ?? 500;
+        var todayOpened = await _db.TradeEntries
+            .Where(t => t.UserId == UserId && t.Date >= dayStart && t.Date < dayEnd)
+            .ToListAsync();
+        var tradesToday = todayOpened.Count;
+        var pnlToday = todayOpened.Where(t => t.Status == "Closed").Sum(t => t.NetPnl ?? t.Pnl ?? 0);
+        var tradeLimitHit = tradesToday >= maxTrades;
+        var lossLimitHit = pnlToday <= -maxLoss;
+
+        var recentLoss = false;
+        string? lastLossInstrument = null;
+        var tenMinAgo = DateTime.UtcNow.AddMinutes(-10);
+        var lastClosed = todayOpened
+            .Where(t => t.Status == "Closed" && t.UpdatedAt >= tenMinAgo && (t.NetPnl ?? t.Pnl ?? 0) < 0)
+            .OrderByDescending(t => t.UpdatedAt)
+            .FirstOrDefault();
+        if (lastClosed != null)
+        {
+            recentLoss = true;
+            lastLossInstrument = lastClosed.Instrument;
+        }
+
+        var trafficLight = "green";
+        var violations = new List<string>();
+        if (premarket == null) { violations.Add("Pre-market plan required before trading."); }
+        if (tradeLimitHit) { violations.Add($"Daily trade limit reached ({tradesToday}/{maxTrades})."); }
+        if (lossLimitHit) { violations.Add("Max loss limit reached."); }
+        if (violations.Count > 0) trafficLight = "red";
+        else if (tradesToday >= maxTrades - 1 || pnlToday <= -(maxLoss * 0.8m)) trafficLight = "yellow";
+
+        // --- Rules (active only) ---
+        var rules = await _db.TradingRules
+            .Where(r => r.UserId == UserId && r.IsActive)
+            .OrderBy(r => r.OrderIndex)
+            .ToListAsync();
+
+        // --- Setups (for Log Trade dialog) ---
+        var setups = await _db.TradingSetups
+            .Where(s => s.UserId == UserId && s.IsActive)
+            .OrderBy(s => s.Name)
+            .Select(s => new { s.Id, s.Name, s.Description, s.IsActive })
+            .ToListAsync();
+
+        // --- Wisdom ---
+        object wisdom;
+        var wisdomCount = await _db.TradingWisdoms.CountAsync();
+        if (wisdomCount == 0)
+            wisdom = new { id = 0, text = "Discipline is the bridge between goals and accomplishment.", category = "discipline", author = "Jim Rohn" };
+        else
+        {
+            var dayOfYear = DateTime.UtcNow.DayOfYear;
+            wisdom = await _db.TradingWisdoms.Skip(dayOfYear % wisdomCount).Take(1).FirstAsync();
+        }
+
+        // --- Template ---
+        var template = await _db.PreMarketTemplates.FirstOrDefaultAsync(t => t.UserId == UserId);
+
+        // --- Premarket Streak (consecutive weekdays with premarket notes) ---
+        var recentNotes = await _db.PreMarketNotes
+            .Where(n => n.UserId == UserId)
+            .OrderByDescending(n => n.Date)
+            .Take(60)
+            .ToListAsync();
+
+        int premarketStreak = 0;
+        var checkDate = targetDate;
+        foreach (var note in recentNotes)
+        {
+            while (checkDate.DayOfWeek == DayOfWeek.Saturday || checkDate.DayOfWeek == DayOfWeek.Sunday)
+                checkDate = checkDate.AddDays(-1);
+            var noteDate = TimeZoneHelper.ToLocalDate(note.Date, tz);
+            if (noteDate == checkDate)
+            {
+                premarketStreak++;
+                checkDate = checkDate.AddDays(-1);
+            }
+            else
+                break;
+        }
+
+        // --- Recent Mental States (last 5) ---
+        var recentMentalStates = recentNotes.Take(5).Select(n => n.MentalState).ToList();
+
+        // --- Recent Reviews (last 30 for grade history) ---
+        var recentReviews = await _db.DailyReviews
+            .Where(r => r.UserId == UserId)
+            .OrderByDescending(r => r.Date)
+            .Take(30)
+            .Select(r => new { r.Id, r.Date, r.Grade, r.IsObservationOnly })
+            .ToListAsync();
+
+        // --- Active Phase ---
+        string activePhase;
+        bool allPhasesComplete = false;
+        if (!isToday)
+        {
+            activePhase = "review";
+            allPhasesComplete = premarket != null || review != null || trades.Count > 0;
+        }
+        else if (premarket == null)
+            activePhase = "morning";
+        else if (review != null)
+        {
+            activePhase = "review";
+            allPhasesComplete = true;
+        }
+        else if (now.Hour < 16)
+            activePhase = "session";
+        else
+            activePhase = "review";
+
+        return Ok(new
+        {
+            DayView = new
+            {
+                Date = today.ToString("yyyy-MM-dd"),
+                Premarket = premarket,
+                Trades = trades,
+                Review = review,
+                Limits = limits,
+                Stats = new
+                {
+                    TotalTrades = trades.Count,
+                    OpenTrades = trades.Count(t => t.Status == "Open"),
+                    ClosedTrades = closedTrades.Count,
+                    TotalPnl = closedTrades.Sum(t => t.Pnl ?? 0),
+                    TotalNetPnl = closedTrades.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
+                    TotalFees = closedTrades.Sum(t => t.TotalFees ?? 0),
+                    WinRate = closedTrades.Count > 0 ? Math.Round((double)closedTrades.Count(t => (t.Pnl ?? 0) > 0) / closedTrades.Count * 100, 1) : 0,
+                    ComplianceRate = trades.Count > 0 ? Math.Round((double)trades.Count(t => t.ChecklistCompleted) / trades.Count * 100) : 0
+                }
+            },
+            DisciplineStatus = new
+            {
+                HasPreMarketNote = premarket != null,
+                TradesToday = tradesToday,
+                MaxTrades = maxTrades,
+                PnlToday = Math.Round(pnlToday, 2),
+                MaxLoss = maxLoss,
+                TradeLimitHit = tradeLimitHit,
+                LossLimitHit = lossLimitHit,
+                TrafficLight = trafficLight,
+                RecentLoss = recentLoss,
+                LastLossInstrument = lastLossInstrument,
+                Violations = violations
+            },
+            Rules = rules,
+            Setups = setups,
+            PremarketStreak = premarketStreak,
+            Wisdom = wisdom,
+            Template = template,
+            ActivePhase = activePhase,
+            RecentMentalStates = recentMentalStates,
+            RecentReviews = recentReviews,
+            AllPhasesComplete = allPhasesComplete,
+            IsToday = isToday,
+            TargetDate = targetDate.ToString("yyyy-MM-dd")
+        });
+    }
+
     // ─── Stats ────────────────────────────────────────────
 
     [HttpGet("stats")]
