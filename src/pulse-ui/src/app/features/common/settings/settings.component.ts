@@ -88,6 +88,10 @@ const TIMEZONES: TimezoneOption[] = [
                 <span class="summary-label">Next Pay Date</span>
                 <span class="summary-value">{{ profileNextPayDate || 'Not set' }}</span>
               </div>
+              <div class="summary-row">
+                <span class="summary-label">Market Open Time</span>
+                <span class="summary-value">{{ profileMarketOpenTime || '09:30' }} (your timezone)</span>
+              </div>
             </div>
             <div class="card-actions">
               <button mat-raised-button color="primary" (click)="profileEditing.set(true)">
@@ -121,6 +125,11 @@ const TIMEZONES: TimezoneOption[] = [
                   <mat-label>Next Pay Date</mat-label>
                   <input matInput type="date" [(ngModel)]="profileNextPayDate">
                   <mat-hint>Anchor date — all paycheck dates are calculated from this</mat-hint>
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="full-width-field">
+                  <mat-label>Market Open Time</mat-label>
+                  <input matInput type="time" [(ngModel)]="profileMarketOpenTime">
+                  <mat-hint>Uses your display timezone — morning prep stays editable until this time</mat-hint>
                 </mat-form-field>
               </div>
               <div class="card-actions">
@@ -226,6 +235,7 @@ const TIMEZONES: TimezoneOption[] = [
       gap: 12px; margin-bottom: 12px;
     }
     .form-grid mat-form-field { width: 100%; }
+    .form-grid .full-width-field { grid-column: 1 / -1; max-width: 50%; }
 
     .tz-select { width: 100%; margin-bottom: 8px; }
 
@@ -239,6 +249,7 @@ const TIMEZONES: TimezoneOption[] = [
     @media (max-width: 599px) {
       .settings-card { padding: 16px !important; }
       .form-grid { grid-template-columns: 1fr; gap: 8px; }
+      .form-grid .full-width-field { max-width: 100%; }
       .card-header { gap: 10px; }
       .card-icon-wrap { width: 36px; height: 36px; min-width: 36px; }
       .card-icon-wrap mat-icon { font-size: 18px; width: 18px; height: 18px; }
@@ -265,6 +276,7 @@ export class SettingsComponent implements OnInit {
   profilePayFrequency: PayFrequency = 'Biweekly';
   profileNetPay = 0;
   profileNextPayDate = '';
+  profileMarketOpenTime = '09:30';
 
   private originalProfile: UserProfile | null = null;
 
@@ -294,6 +306,7 @@ export class SettingsComponent implements OnInit {
     this.profilePayFrequency = profile.payFrequency || 'Biweekly';
     this.profileNetPay = profile.netPayPerCheck || 0;
     this.profileNextPayDate = profile.nextPayDate ? profile.nextPayDate.split('T')[0] : '';
+    this.profileMarketOpenTime = profile.marketOpenTime || '09:30';
   }
 
   cancelProfileEdit(): void {
@@ -308,6 +321,7 @@ export class SettingsComponent implements OnInit {
       payFrequency: this.profilePayFrequency,
       netPayPerCheck: this.profileNetPay,
       nextPayDate: this.profileNextPayDate || null,
+      marketOpenTime: this.profileMarketOpenTime || '09:30',
     };
     this.profileService.saveProfile(payload).subscribe({
       next: (saved) => {

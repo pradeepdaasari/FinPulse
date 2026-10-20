@@ -202,11 +202,16 @@ import { TradingSetupSummary } from '../../core/models/trading.model';
           </div>
         }
 
-        <!-- Add Note for open trades -->
+        <!-- Actions for open trades -->
         @if (g.trade.status === 'Open' && isToday()) {
-          <button class="fs-add-note-btn" (click)="addNote(g.trade)">
-            <mat-icon>add_comment</mat-icon> Add Note
-          </button>
+          <div class="fs-open-actions">
+            <button class="fs-add-note-btn" (click)="addNote(g.trade)">
+              <mat-icon>add_comment</mat-icon> Add Note
+            </button>
+            <button class="fs-close-trade-btn" (click)="closeTrade(g.trade)">
+              <mat-icon>lock</mat-icon> Close Trade
+            </button>
+          </div>
         }
 
         <!-- Closed trade result -->
@@ -583,15 +588,25 @@ import { TradingSetupSummary } from '../../core/models/trading.model';
     .fs-empty a { min-height: 44px; }
     .fs-empty a mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; }
 
+    .fs-open-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
     .fs-add-note-btn {
       display: inline-flex; align-items: center; gap: 6px;
-      margin-top: 8px; padding: 6px 14px; border-radius: var(--radius-full);
+      padding: 6px 14px; border-radius: var(--radius-full);
       border: 1px dashed var(--color-primary); background: transparent;
       color: var(--color-primary); font-size: 0.82rem; font-weight: 600;
       cursor: pointer; font-family: inherit; transition: background 0.2s ease;
     }
     .fs-add-note-btn:hover { background: var(--color-stat-blue-bg); }
     .fs-add-note-btn mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .fs-close-trade-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: var(--radius-full);
+      border: 1px solid var(--color-stat-purple); background: transparent;
+      color: var(--color-stat-purple); font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: background 0.2s ease;
+    }
+    .fs-close-trade-btn:hover { background: var(--color-stat-purple-bg); }
+    .fs-close-trade-btn mat-icon { font-size: 16px; width: 16px; height: 16px; }
 
     @media (max-width: 599px) {
       .fs-stats { gap: 8px; }
@@ -676,6 +691,16 @@ export class FlowSessionComponent {
     });
     ref.afterClosed().subscribe(r => {
       if (r) this.noteAdded.emit();
+    });
+  }
+
+  closeTrade(trade: any): void {
+    const ref = this.dialog.open(TradeEntryDialogComponent, {
+      panelClass: 'responsive-dialog-panel',
+      data: { trade, setups: this.setups(), closeMode: true } as TradeEntryDialogData
+    });
+    ref.afterClosed().subscribe(r => {
+      if (r) this.tradeAdded.emit();
     });
   }
 

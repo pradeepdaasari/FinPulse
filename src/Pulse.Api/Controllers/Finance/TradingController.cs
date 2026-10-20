@@ -1086,6 +1086,9 @@ public class TradingController : ControllerBase
         var dayStart = TimeZoneHelper.ToUtc(targetDate, tz);
         var dayEnd = TimeZoneHelper.ToUtc(targetDate.AddDays(1), tz);
 
+        var userProfile = await _db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == UserId);
+        var marketOpenTime = userProfile?.MarketOpenTime ?? new TimeSpan(9, 30, 0);
+
         // --- Day View data (reuse GetDayView logic) ---
         var premarket = await _db.PreMarketNotes
             .Where(p => p.UserId == UserId && p.Date >= dayStart && p.Date < dayEnd)
@@ -1289,6 +1292,8 @@ public class TradingController : ControllerBase
             RecentReviews = recentReviews,
             AllPhasesComplete = allPhasesComplete,
             IsToday = isToday,
+            IsMarketOpen = isToday && now.TimeOfDay >= marketOpenTime,
+            MarketOpenTime = marketOpenTime.ToString(@"hh\:mm"),
             TargetDate = targetDate.ToString("yyyy-MM-dd")
         });
     }

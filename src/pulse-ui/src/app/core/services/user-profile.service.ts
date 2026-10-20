@@ -10,6 +10,7 @@ export interface UserProfile {
   payFrequency: PayFrequency;
   netPayPerCheck: number;
   nextPayDate: string | null;
+  marketOpenTime: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

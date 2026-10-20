@@ -496,18 +496,20 @@ export interface TradeEntryDialogData {
           Checklist completed
         </mat-checkbox>
 
-        <!-- Emotion at entry -->
-        <div class="emotion-section">
-          <label class="section-label">How are you feeling?</label>
-          <mat-button-toggle-group formControlName="emotionAtEntry" class="emotion-toggle">
-            @for (e of emotions; track e.value) {
-              <mat-button-toggle [value]="e.value" class="emotion-btn">
-                <span class="emotion-icon">{{ e.icon }}</span>
-                <span class="emotion-label">{{ e.label }}</span>
-              </mat-button-toggle>
-            }
-          </mat-button-toggle-group>
-        </div>
+        <!-- Emotion at entry (hide in close mode — exitEmotion covers it) -->
+        @if (form.value.status !== 'Closed') {
+          <div class="emotion-section">
+            <label class="section-label">How are you feeling?</label>
+            <mat-button-toggle-group formControlName="emotionAtEntry" class="emotion-toggle">
+              @for (e of emotions; track e.value) {
+                <mat-button-toggle [value]="e.value" class="emotion-btn">
+                  <span class="emotion-icon">{{ e.icon }}</span>
+                  <span class="emotion-label">{{ e.label }}</span>
+                </mat-button-toggle>
+              }
+            </mat-button-toggle-group>
+          </div>
+        }
 
         <!-- More options: mistakes, notes, tags -->
         <button type="button" class="more-toggle" (click)="showMore.set(!showMore())">

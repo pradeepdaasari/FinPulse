@@ -83,7 +83,9 @@ import { FlowReviewComponent } from './flow-review.component';
             }
           </div>
           <div class="df-phase-right">
-            @if (data.dayView.premarket && isFutureOrToday() && !data.isToday) {
+            @if (data.dayView.premarket && data.isToday && !data.isMarketOpen) {
+              <span class="df-badge df-badge-active">In Progress</span>
+            } @else if (data.dayView.premarket && isFutureOrToday() && !data.isToday) {
               <span class="df-badge df-badge-active">In Progress</span>
             } @else if (data.dayView.premarket) {
               <span class="df-badge df-badge-done">Completed</span>
@@ -438,6 +440,7 @@ export class DailyFlowComponent implements OnInit {
     if (!data) return 'upcoming';
     const isFuture = this.isFutureOrToday() && !data.isToday;
     if (key === 'morning') {
+      if (data.dayView.premarket && data.isToday && !data.isMarketOpen) return 'active';
       if (data.dayView.premarket && !isFuture) return 'done';
       if (data.dayView.premarket && isFuture) return 'active';
       if (data.activePhase === 'morning' || isFuture) return 'active';

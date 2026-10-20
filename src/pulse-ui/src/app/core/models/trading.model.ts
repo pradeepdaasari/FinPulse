@@ -422,5 +422,6 @@ export interface DailyFlow {
   recentReviews: DailyFlowReviewSummary[];
   allPhasesComplete: boolean;
   isToday: boolean;
+  isMarketOpen: boolean;
   targetDate: string;
 }

@@ -189,7 +189,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
             } @else if (isFuture()) {
               <mat-icon>edit_note</mat-icon> Save as Draft
             } @else {
-              <mat-icon>lock</mat-icon> Save & Lock In
+              <mat-icon>save</mat-icon> Save
             }
           </button>
         </div>

@@ -2047,6 +2047,9 @@ namespace Pulse.Core.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<TimeSpan?>("MarketOpenTime")
+                        .HasColumnType("time");
+
                     b.Property<decimal>("MonthlyIncome")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");

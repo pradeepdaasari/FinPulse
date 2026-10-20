@@ -622,19 +622,23 @@ import { routeFadeAnimation } from './route-animations';
 
     /* ─── Toolbar ─── */
     .app-toolbar {
-      background: var(--color-surface-solid) !important;
+      background: #ffffff !important;
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
       color: var(--color-text) !important;
-      border-bottom: 1px solid var(--color-border);
+      border-bottom: 1.5px solid var(--color-border);
       box-shadow: none;
       height: 56px;
       position: sticky;
       top: 0;
       z-index: 10;
     }
-    .app-toolbar.tb-finance { background: linear-gradient(180deg, #dce9fc 0%, #ffffff 100%) !important; border-bottom: 1.5px solid #c4d9f5; }
-    .app-toolbar.tb-trading { background: linear-gradient(180deg, #e3e3f7 0%, #ffffff 100%) !important; border-bottom: 1.5px solid #cccce8; }
-    .app-toolbar.tb-health { background: linear-gradient(180deg, #fce0e6 0%, #ffffff 100%) !important; border-bottom: 1.5px solid #f0c4cd; }
-    .app-toolbar.tb-insights { background: linear-gradient(180deg, #e3e3f7 0%, #ffffff 100%) !important; border-bottom: 1.5px solid #cccce8; }
+    .app-toolbar.tb-finance { background: #eaf1fd !important; border-bottom-color: #c4d9f5; }
+    .app-toolbar.tb-trading { background: #edecf9 !important; border-bottom-color: #cccce8; }
+    .app-toolbar.tb-health { background: #fceef1 !important; border-bottom-color: #f0c4cd; }
+    .app-toolbar.tb-insights { background: #edecf9 !important; border-bottom-color: #cccce8; }
 
     .toolbar-title-group {
       display: flex;
@@ -796,17 +800,18 @@ import { routeFadeAnimation } from './route-animations';
         padding-bottom: 100px;
       }
       .app-toolbar {
-        height: 48px;
-        padding: 0 10px !important;
-        backdrop-filter: none;
+        height: calc(48px + env(safe-area-inset-top, 0px));
+        padding: env(safe-area-inset-top, 0px) 10px 0 !important;
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
         border-bottom: none !important;
         box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
       }
-      .app-toolbar.tb-finance { background: linear-gradient(180deg, #d4e4fb 0%, #ffffff 100%) !important; }
-      .app-toolbar.tb-trading { background: linear-gradient(180deg, #ddddf5 0%, #ffffff 100%) !important; }
-      .app-toolbar.tb-health { background: linear-gradient(180deg, #fbdbe2 0%, #ffffff 100%) !important; }
-      .app-toolbar.tb-insights { background: linear-gradient(180deg, #ddddf5 0%, #ffffff 100%) !important; }
-      .app-toolbar.tb-settings { background: linear-gradient(180deg, #ededee 0%, #ffffff 100%) !important; }
+      .app-toolbar.tb-finance { background: #e5eefb !important; }
+      .app-toolbar.tb-trading { background: #e8e7f6 !important; }
+      .app-toolbar.tb-health { background: #fbeaee !important; }
+      .app-toolbar.tb-insights { background: #e8e7f6 !important; }
+      .app-toolbar.tb-settings { background: #f0f0f1 !important; }
       .app-toolbar button[mat-icon-button] {
         width: 36px;
         height: 36px;
@@ -945,15 +950,16 @@ import { routeFadeAnimation } from './route-animations';
       padding-bottom: env(safe-area-inset-bottom, 0px);
       box-sizing: border-box;
       background: #f8f9fc;
-      border-top: none;
-      box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
+      border-top: 1.5px solid var(--color-border);
+      box-shadow: none;
     }
-    .bottom-tabs.bt-finance { background: linear-gradient(0deg, #dce9fc 0%, #ffffff 100%); border-top: 1.5px solid #c4d9f5; }
-    .bottom-tabs.bt-trading { background: linear-gradient(0deg, #e3e3f7 0%, #ffffff 100%); border-top: 1.5px solid #cccce8; }
-    .bottom-tabs.bt-health { background: linear-gradient(0deg, #fce0e6 0%, #ffffff 100%); border-top: 1.5px solid #f0c4cd; }
-    .bottom-tabs.bt-insights { background: linear-gradient(0deg, #e3e3f7 0%, #ffffff 100%); border-top: 1.5px solid #cccce8; }
-    .bottom-tabs.bt-settings { background: linear-gradient(0deg, #ededee 0%, #ffffff 100%); border-top: 1.5px solid #d8d8d9;
-    }
+    .bottom-tabs.bt-finance { background: #eaf1fd !important; border-top-color: #c4d9f5; }
+    .bottom-tabs.bt-trading { background: #edecf9 !important; border-top-color: #cccce8; }
+    .bottom-tabs.bt-health { background: #fceef1 !important; border-top-color: #f0c4cd; }
+    .bottom-tabs.bt-insights { background: #edecf9 !important; border-top-color: #cccce8; }
+    .bottom-tabs.bt-settings { background: #f0f0f1 !important; border-top-color: #d8d8d9; }
 
     .tab-item {
       display: flex;
