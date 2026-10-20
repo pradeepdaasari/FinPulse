@@ -44,6 +44,7 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<TradeNote> TradeNotes => Set<TradeNote>();
     public DbSet<TradingGoal> TradingGoals => Set<TradingGoal>();
     public DbSet<TradingGoalSnapshot> TradingGoalSnapshots => Set<TradingGoalSnapshot>();
+    public DbSet<WeeklyReflection> WeeklyReflections => Set<WeeklyReflection>();
 
     // Health & Fitness
     public DbSet<HealthMetric> HealthMetrics => Set<HealthMetric>();
@@ -373,6 +374,13 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(e => e.UserId).IsUnique();
         });
 
+        // WeeklyReflection
+        modelBuilder.Entity<WeeklyReflection>(entity =>
+        {
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => new { e.UserId, e.WeekStart }).IsUnique();
+        });
+
     }
 
     public override int SaveChanges()
@@ -540,6 +548,12 @@ public class PulseDbContext : IdentityDbContext<ApplicationUser>
             else if (entry.Entity is DailyLimits limits)
             {
                 limits.UpdatedAt = now;
+            }
+            else if (entry.Entity is WeeklyReflection reflection)
+            {
+                reflection.UpdatedAt = now;
+                if (entry.State == EntityState.Added)
+                    reflection.CreatedAt = now;
             }
             else if (entry.Entity is MoneyMovement movement)
             {

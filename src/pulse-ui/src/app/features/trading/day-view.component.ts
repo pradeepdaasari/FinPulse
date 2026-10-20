@@ -57,17 +57,6 @@ interface TradeGroup {
     SkeletonLoaderComponent, TradeNotesPanelComponent, EmotionArcComponent
   ],
   template: `
-    <div class="page-banner">
-      <div class="banner-pattern"></div>
-      <div class="banner-content">
-        <div class="banner-icon"><mat-icon>today</mat-icon></div>
-        <div class="banner-text">
-          <h2>Trading Day</h2>
-          <p class="banner-subtitle">Your complete day, one timeline.</p>
-        </div>
-      </div>
-    </div>
-
     <!-- Date Navigator -->
     <div class="date-nav">
       <button mat-icon-button (click)="prevDay()"><mat-icon>chevron_left</mat-icon></button>
@@ -407,30 +396,6 @@ interface TradeGroup {
   styles: [`
     :host { display: block; }
 
-    .page-banner {
-      position: relative;
-      margin: -28px -36px var(--spacing-md);
-      padding: 14px 24px;
-      background: var(--gradient-primary);
-      border-radius: 0 0 var(--radius-xl) var(--radius-xl);
-      overflow: hidden;
-    }
-    .banner-pattern {
-      position: absolute; inset: 0;
-      background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.07) 0%, transparent 50%),
-                  radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 40%);
-    }
-    .banner-content { position: relative; display: flex; align-items: center; gap: 12px; }
-    .banner-icon {
-      width: 42px; height: 42px; border-radius: var(--radius-md);
-      background: rgba(255,255,255,0.18);
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; border: 1px solid rgba(255,255,255,0.25);
-    }
-    .banner-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #fff; }
-    h2 { margin: 0; color: #fff; font-size: 1rem; font-weight: var(--weight-bold); letter-spacing: -0.02em; }
-    .banner-subtitle { color: rgba(255,255,255,0.7); font-size: var(--text-xs); margin: 1px 0 0; }
-
     /* Date Nav */
     .date-nav {
       display: flex; align-items: center; gap: var(--spacing-xs);
@@ -726,7 +691,6 @@ interface TradeGroup {
 
     /* Responsive */
     @media (max-width: 599px) {
-      .page-banner { margin: -14px -14px 16px; padding: 10px 16px; border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
       .stats-strip { gap: 6px; }
       .stat-item { padding: 8px 10px; min-width: 64px; }
       .stat-num { font-size: 0.95rem; }

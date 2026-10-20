@@ -62,6 +62,7 @@ import { NotificationService } from '../../core/services/notification.service';
 
       <!-- Workout Stats -->
       @if (workoutStats()) {
+        <div class="stats-scroll-wrap">
         <div class="stats-row">
           <div class="stat-card">
             <div class="stat-icon-wrap blue">
@@ -99,6 +100,7 @@ import { NotificationService } from '../../core/services/notification.service';
               <span class="stat-label">Volume (kg)</span>
             </div>
           </div>
+        </div>
         </div>
       }
 
@@ -175,9 +177,18 @@ import { NotificationService } from '../../core/services/notification.service';
     .mc-value { display: block; font-weight: var(--weight-bold); font-size: var(--text-base); color: var(--color-primary); }
     .mc-unit { display: block; font-size: var(--text-xs); color: var(--color-text-muted); }
 
+    .stats-scroll-wrap {
+      position: relative; margin-top: var(--spacing-md);
+    }
+    .stats-scroll-wrap::after {
+      content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 32px;
+      background: linear-gradient(90deg, transparent, var(--color-background));
+      pointer-events: none; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      z-index: 1;
+    }
     .stats-row {
       display: flex; gap: 12px; overflow-x: auto;
-      margin-top: var(--spacing-md); padding-bottom: 4px;
+      padding-bottom: 4px; scroll-snap-type: x mandatory;
       scrollbar-width: none;
     }
     .stats-row::-webkit-scrollbar { display: none; }
@@ -250,7 +261,7 @@ import { NotificationService } from '../../core/services/notification.service';
     .quick-links { margin-top: var(--spacing-md); }
 
     @media (max-width: 599px) {
-      .stat-card { min-width: 140px; flex: 0 0 auto; }
+      .stat-card { min-width: 140px; flex: 0 0 auto; scroll-snap-align: start; }
     }
   `]
 })

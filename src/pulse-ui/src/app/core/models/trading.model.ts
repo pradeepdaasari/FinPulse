@@ -261,6 +261,14 @@ export interface WeeklySummary {
   strengths: string[];
   dangerZones: string[];
   mentorFeedback: string;
+  reflection: WeeklyReflection | null;
+}
+
+export interface WeeklyReflection {
+  id: number;
+  whatWorked: string;
+  whatHurt: string;
+  oneChange: string;
 }
 
 export interface SetupWeeklyPerformance {

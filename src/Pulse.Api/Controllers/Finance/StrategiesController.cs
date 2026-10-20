@@ -56,7 +56,30 @@ public class StrategiesController : ControllerBase
         var totalMonthlyBudget = totalMinimumPayments + availableAfterBills + extraPayment;
 
         var comparison = _strategyService.CompareStrategies(snapshots, totalMonthlyBudget);
-        comparison.TotalDebt = snapshots.Sum(s => s.Balance);
+
+        var allLoans = await _db.PersonalLoans.Where(l => l.UserId == UserId).ToListAsync();
+        var allCards = await _db.CreditCards.Where(c => c.UserId == UserId).ToListAsync();
+        var totalLoanDebt = allLoans.Sum(l => l.CurrentBalance);
+        var totalCardDebt = 0m;
+        foreach (var c in allCards)
+        {
+            var cardBal = c.CurrentBalance;
+            if (c.LastStatementDate.HasValue)
+            {
+                var charges = await _db.DailyExpenses
+                    .Where(e => e.UserId == UserId && e.FundingSourceType == FundingSourceType.CreditCard
+                        && e.FundingSourceId == c.Id && e.Date > c.LastStatementDate.Value
+                        && e.TransactionType != TransactionType.CardPayment)
+                    .SumAsync(e => (decimal?)e.Amount ?? 0);
+                var payments = await _db.PaymentHistories
+                    .Where(p => p.UserId == UserId && p.DebtType == DebtType.CreditCard
+                        && p.DebtId == c.Id && p.PaymentDate > c.LastStatementDate.Value)
+                    .SumAsync(p => (decimal?)p.AmountPaid ?? 0);
+                cardBal += charges - payments;
+            }
+            totalCardDebt += cardBal;
+        }
+        comparison.TotalDebt = totalLoanDebt + totalCardDebt;
         comparison.MonthlyIncome = monthlyIncome;
         comparison.NetPayPerCheck = profile?.NetPayPerCheck ?? 0;
         comparison.RecurringExpenses = recurringExpenses;

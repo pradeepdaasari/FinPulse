@@ -1,5 +1,8 @@
-import { Component, OnInit, inject, signal, computed, ChangeDetectorRef, DestroyRef } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectorRef, DestroyRef, effect } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { LocalDatePipe } from '../../shared/local-date.pipe';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,25 +12,16 @@ import { SkeletonLoaderComponent } from '../../shared/skeleton-loader.component'
 import { PullToRefreshDirective } from '../../shared/pull-to-refresh.directive';
 import { TradingService } from '../../core/services/trading.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { WeeklySummary } from '../../core/models/trading.model';
+import { WeeklySummary, WeeklyReflection } from '../../core/models/trading.model';
+import { NotificationService } from '../../core/services/notification.service';
 import { toLocalDateString } from '../../core/utils/date-utils';
 
 @Component({
   selector: 'app-weekly-summary',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule, CurrencyPipe, DatePipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
+  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatFormFieldModule, MatInputModule, CurrencyPipe, DatePipe, LocalDatePipe, SkeletonLoaderComponent, PullToRefreshDirective],
   template: `
     <div appPullToRefresh (refresh)="loadWeek()">
-    <div class="page-banner">
-      <div class="banner-pattern"></div>
-      <div class="banner-content">
-        <div class="banner-icon"><mat-icon>analytics</mat-icon></div>
-        <div class="banner-text">
-          <h2>Weekly Summary</h2>
-          <p class="banner-subtitle">Learn from your data. Improve every week.</p>
-        </div>
-      </div>
-    </div>
 
     @if (loading()) {
       <app-skeleton type="card"></app-skeleton>
@@ -247,6 +241,75 @@ import { toLocalDateString } from '../../core/utils/date-utils';
         </mat-card-content>
       </mat-card>
 
+      <!-- Weekly Reflection -->
+      <div class="reflection-section">
+        <div class="reflection-header">
+          <div class="reflection-title-row">
+            <mat-icon class="reflection-icon">edit_note</mat-icon>
+            <h3 class="reflection-title">Your Weekly Reflection</h3>
+          </div>
+          @if (!reflectionEditing()) {
+            <button mat-stroked-button class="reflection-edit-btn" (click)="startReflection()">
+              <mat-icon>{{ hasReflection() ? 'edit' : 'add' }}</mat-icon>
+              {{ hasReflection() ? 'Edit' : 'Write Reflection' }}
+            </button>
+          }
+        </div>
+
+        @if (reflectionEditing()) {
+          <div class="reflection-form">
+            <div class="reflection-prompt">
+              <div class="prompt-label"><mat-icon class="prompt-icon good">thumb_up</mat-icon> What worked this week?</div>
+              <mat-form-field appearance="outline" class="full-width">
+                <textarea matInput [(ngModel)]="refWhatWorked" rows="3"
+                  placeholder="Setups that hit, rules you followed, emotional wins..."></textarea>
+              </mat-form-field>
+            </div>
+            <div class="reflection-prompt">
+              <div class="prompt-label"><mat-icon class="prompt-icon warn">warning</mat-icon> What hurt me?</div>
+              <mat-form-field appearance="outline" class="full-width">
+                <textarea matInput [(ngModel)]="refWhatHurt" rows="3"
+                  placeholder="Rule breaks, revenge trades, over-sizing, ignoring checklist..."></textarea>
+              </mat-form-field>
+            </div>
+            <div class="reflection-prompt">
+              <div class="prompt-label"><mat-icon class="prompt-icon change">flag</mat-icon> One thing to change next week</div>
+              <mat-form-field appearance="outline" class="full-width">
+                <textarea matInput [(ngModel)]="refOneChange" rows="2"
+                  placeholder="One specific, actionable commitment for next week..."></textarea>
+              </mat-form-field>
+            </div>
+            <div class="reflection-actions">
+              <button mat-stroked-button (click)="cancelReflection()">Cancel</button>
+              <button mat-flat-button color="primary" (click)="saveReflection()" [disabled]="reflectionSaving()">
+                <mat-icon>{{ reflectionSaving() ? 'hourglass_empty' : 'save' }}</mat-icon>
+                {{ reflectionSaving() ? 'Saving...' : 'Save Reflection' }}
+              </button>
+            </div>
+          </div>
+        } @else if (hasReflection()) {
+          <div class="reflection-view">
+            <div class="reflection-card good">
+              <div class="rv-label"><mat-icon>thumb_up</mat-icon> What Worked</div>
+              <p class="rv-text">{{ summary()!.reflection!.whatWorked }}</p>
+            </div>
+            <div class="reflection-card warn">
+              <div class="rv-label"><mat-icon>warning</mat-icon> What Hurt</div>
+              <p class="rv-text">{{ summary()!.reflection!.whatHurt }}</p>
+            </div>
+            <div class="reflection-card change">
+              <div class="rv-label"><mat-icon>flag</mat-icon> One Change</div>
+              <p class="rv-text">{{ summary()!.reflection!.oneChange }}</p>
+            </div>
+          </div>
+        } @else {
+          <div class="reflection-empty">
+            <mat-icon>self_improvement</mat-icon>
+            <p>Take 10 minutes to reflect on your week. What patterns do you see in the data above?</p>
+          </div>
+        }
+      </div>
+
       <!-- Week over Week Trend -->
       @if (pastWeeks().length > 1) {
         <div class="section">
@@ -259,7 +322,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
                   {{ week.totalPnl | currency:'USD':'symbol':'1.0-0' }}
                 </span>
                 <span class="trend-win">{{ week.winRate | number:'1.0-1' }}%</span>
-                <span class="trend-compliance">{{ week.checklistCompliance }}% CL</span>
+                <span class="trend-compliance">{{ week.checklistCompliance | number:'1.0-0' }}% CL</span>
               </div>
             }
           </div>
@@ -271,31 +334,6 @@ import { toLocalDateString } from '../../core/utils/date-utils';
   `,
   styles: [`
     :host { display: block; }
-
-    .page-banner {
-      position: relative;
-      margin: -24px -24px 24px;
-      padding: 14px 24px;
-      background: var(--gradient-primary);
-      border-radius: 0 0 var(--radius-xl) var(--radius-xl);
-      overflow: hidden;
-    }
-    .banner-pattern {
-      position: absolute; inset: 0;
-      background:
-        radial-gradient(circle at 20% 80%, rgba(52, 199, 89, 0.12) 0%, transparent 50%),
-        radial-gradient(circle at 80% 20%, rgba(0, 122, 255, 0.1) 0%, transparent 40%);
-    }
-    .banner-content { position: relative; display: flex; align-items: center; gap: 12px; }
-    .banner-icon {
-      width: 42px; height: 42px; border-radius: var(--radius-md);
-      background: rgba(255, 255, 255, 0.18);
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    .banner-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #fff; }
-    h2 { margin: 0; color: #fff; font-size: 1rem; font-weight: 700; }
-    .banner-subtitle { color: rgba(255, 255, 255, 0.65); font-size: var(--text-xs); margin: 1px 0 0; }
 
     .week-nav {
       display: flex; align-items: center; justify-content: center; gap: 12px;
@@ -354,8 +392,8 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     .section { margin-bottom: var(--spacing-lg); }
     .section-title {
       display: flex; align-items: center; gap: 8px;
-      font-size: 0.85rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.03em; color: var(--color-text-secondary); margin: 0 0 12px;
+      font-size: 0.88rem; font-weight: 600;
+      color: var(--color-text-secondary); margin: 0 0 12px;
     }
     .section-title mat-icon { font-size: 18px; width: 18px; height: 18px; }
 
@@ -431,7 +469,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     .mentor-card { border-left: 4px solid var(--color-stat-purple); margin-bottom: var(--spacing-md); }
     .mentor-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
     .mentor-icon { color: var(--color-stat-purple); }
-    .mentor-title { font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.02em; }
+    .mentor-title { font-weight: 600; font-size: 0.88rem; }
     .mentor-text { font-size: 0.9rem; line-height: 1.5; margin: 0 0 12px; color: var(--color-text-secondary); }
     .mentor-encouragement {
       display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px;
@@ -439,6 +477,46 @@ import { toLocalDateString } from '../../core/utils/date-utils';
       font-size: 0.8rem; color: var(--color-stat-green); line-height: 1.4;
     }
     .mentor-encouragement mat-icon { font-size: 16px; width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; }
+
+    /* Reflection */
+    .reflection-section {
+      margin-top: var(--spacing-md); padding: 16px;
+      border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm);
+    }
+    .reflection-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    .reflection-title-row { display: flex; align-items: center; gap: 8px; }
+    .reflection-icon { color: var(--color-primary); }
+    .reflection-title { margin: 0; font-size: 1rem; font-weight: 600; }
+    .reflection-edit-btn { font-size: 0.82rem; white-space: nowrap; }
+    .reflection-edit-btn mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 2px; }
+
+    .reflection-form { display: flex; flex-direction: column; gap: 8px; }
+    .reflection-prompt { display: flex; flex-direction: column; gap: 4px; }
+    .prompt-label { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600; }
+    .prompt-icon { font-size: 18px; width: 18px; height: 18px; }
+    .prompt-icon.good { color: var(--color-success); }
+    .prompt-icon.warn { color: var(--color-warning); }
+    .prompt-icon.change { color: var(--color-primary); }
+    .full-width { width: 100%; }
+    .reflection-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+
+    .reflection-view { display: flex; flex-direction: column; gap: 12px; }
+    .reflection-card {
+      padding: 14px 16px; border-radius: var(--radius-md); border-left: 3px solid;
+    }
+    .reflection-card.good { border-color: var(--color-success); background: color-mix(in srgb, var(--color-success) 6%, transparent); }
+    .reflection-card.warn { border-color: var(--color-warning); background: color-mix(in srgb, var(--color-warning) 6%, transparent); }
+    .reflection-card.change { border-color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 6%, transparent); }
+    .rv-label { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 6px; }
+    .rv-label mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .rv-text { margin: 0; font-size: 0.88rem; line-height: 1.5; white-space: pre-wrap; }
+
+    .reflection-empty {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      padding: 16px 12px; text-align: center; color: var(--color-text-muted);
+    }
+    .reflection-empty mat-icon { font-size: 28px; width: 28px; height: 28px; opacity: 0.4; }
+    .reflection-empty p { margin: 0; font-size: 0.82rem; max-width: 280px; line-height: 1.4; }
 
     .trend-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: var(--spacing-sm); }
     .trend-card {
@@ -454,7 +532,6 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     .trend-compliance { font-size: 0.65rem; color: var(--color-text-muted); }
 
     @media (max-width: 599px) {
-      .page-banner { margin: -16px -16px 20px; padding: 12px 16px; }
       .grade-banner { flex-direction: column; text-align: center; }
       .grade-right { justify-content: center; }
       .metrics-grid { grid-template-columns: repeat(2, 1fr); }
@@ -469,6 +546,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
 })
 export class WeeklySummaryComponent implements OnInit {
   private tradingService = inject(TradingService);
+  private notify = inject(NotificationService);
   private cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
 
@@ -478,7 +556,14 @@ export class WeeklySummaryComponent implements OnInit {
   currentWeekStart = signal(this.getWeekStart(new Date()));
   selectedWeekStart = signal(this.getWeekStart(new Date()));
 
+  reflectionEditing = signal(false);
+  reflectionSaving = signal(false);
+  refWhatWorked = '';
+  refWhatHurt = '';
+  refOneChange = '';
+
   isCurrentWeek = computed(() => this.selectedWeekStart() === this.currentWeekStart());
+  hasReflection = computed(() => !!this.summary()?.reflection);
 
   overallGradeLetter = computed(() => {
     const avg = this.summary()?.averageGrade ?? 0;
@@ -516,6 +601,44 @@ export class WeeklySummaryComponent implements OnInit {
     d.setDate(d.getDate() + 7);
     this.selectedWeekStart.set(this.formatDate(d));
     this.loadWeek();
+  }
+
+  startReflection(): void {
+    const r = this.summary()?.reflection;
+    this.refWhatWorked = r?.whatWorked ?? '';
+    this.refWhatHurt = r?.whatHurt ?? '';
+    this.refOneChange = r?.oneChange ?? '';
+    this.reflectionEditing.set(true);
+  }
+
+  cancelReflection(): void {
+    this.reflectionEditing.set(false);
+  }
+
+  saveReflection(): void {
+    this.reflectionSaving.set(true);
+    this.tradingService.saveWeeklyReflection({
+      weekStart: this.selectedWeekStart(),
+      whatWorked: this.refWhatWorked,
+      whatHurt: this.refWhatHurt,
+      oneChange: this.refOneChange
+    }).subscribe({
+      next: (saved) => {
+        const s = this.summary();
+        if (s) {
+          this.summary.set({ ...s, reflection: saved });
+        }
+        this.reflectionEditing.set(false);
+        this.reflectionSaving.set(false);
+        this.notify.success('Reflection saved');
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.reflectionSaving.set(false);
+        this.notify.error('Failed to save reflection');
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   private getWeekStart(date: Date): string {

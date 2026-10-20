@@ -5,7 +5,7 @@ import { environment } from '../../../environments/environment';
 import {
   TradingSetup, TradingSetupSummary, PreMarketNote, PreMarketTemplate, TradeEntry,
   TradingRule, DailyReview, DailyLimits, TradingStats, TradingWisdom,
-  WisdomCategory, WeeklyFocus, WeeklySummary, TradingDashboard,
+  WisdomCategory, WeeklyFocus, WeeklySummary, WeeklyReflection, TradingDashboard,
   TradingGoal, GoalProgress, GoalHistory, TradeNote, TradingDayView,
   TradesWithStats, DisciplineStatus, DailyFlow
 } from '../models/trading.model';
@@ -192,6 +192,10 @@ export class TradingService {
     let params = new HttpParams();
     if (count) params = params.set('count', count.toString());
     return this.http.get<WeeklySummary[]>(`${this.baseUrl}/weekly-summaries`, { params });
+  }
+
+  saveWeeklyReflection(data: { weekStart: string; whatWorked: string; whatHurt: string; oneChange: string }): Observable<WeeklyReflection> {
+    return this.http.put<WeeklyReflection>(`${this.baseUrl}/weekly-reflection`, data);
   }
 
   // --- Wisdom/Mentor ---

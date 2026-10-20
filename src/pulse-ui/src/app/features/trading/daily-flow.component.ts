@@ -20,7 +20,7 @@ import { FlowReviewComponent } from './flow-review.component';
     FlowPremarketComponent, FlowSessionComponent, FlowReviewComponent
   ],
   template: `
-    <div appPullToRefresh (refresh)="loadData()">
+    <div appPullToRefresh (refresh)="loadData(false)">
     <!-- Date Navigation -->
     <div class="df-date-nav">
       <button class="df-nav-btn" (click)="prevDay()">
@@ -32,7 +32,7 @@ import { FlowReviewComponent } from './flow-review.component';
           <button class="df-today-btn" (click)="goToday()">Today</button>
         }
       </div>
-      <button class="df-nav-btn" [disabled]="isToday()" (click)="nextDay()">
+      <button class="df-nav-btn" [disabled]="atMaxFutureDate()" (click)="nextDay()">
         <mat-icon>chevron_right</mat-icon>
       </button>
     </div>
@@ -83,7 +83,9 @@ import { FlowReviewComponent } from './flow-review.component';
             }
           </div>
           <div class="df-phase-right">
-            @if (data.dayView.premarket) {
+            @if (data.dayView.premarket && isFutureOrToday() && !data.isToday) {
+              <span class="df-badge df-badge-active">In Progress</span>
+            } @else if (data.dayView.premarket) {
               <span class="df-badge df-badge-done">Completed</span>
             } @else if (data.activePhase === 'morning') {
               <span class="df-badge df-badge-active">In Progress</span>
@@ -100,8 +102,9 @@ import { FlowReviewComponent } from './flow-review.component';
               [template]="data.template"
               [streak]="data.premarketStreak"
               [recentMentalStates]="data.recentMentalStates"
-              [isToday]="data.isToday"
-              (saved)="loadData()">
+              [isToday]="isFutureOrToday()"
+              [targetDate]="data.targetDate"
+              (saved)="loadData(false)">
             </app-flow-premarket>
           </div>
         }
@@ -135,8 +138,8 @@ import { FlowReviewComponent } from './flow-review.component';
               [limits]="data.dayView.limits"
               [setups]="data.setups"
               [isToday]="data.isToday"
-              (noteAdded)="loadData()"
-              (tradeAdded)="loadData()">
+              (noteAdded)="loadData(false)"
+              (tradeAdded)="loadData(false)">
             </app-flow-session>
           </div>
         }
@@ -170,7 +173,7 @@ import { FlowReviewComponent } from './flow-review.component';
               [premarket]="data.dayView.premarket"
               [recentReviews]="data.recentReviews"
               [isToday]="data.isToday"
-              (saved)="loadData()">
+              (saved)="loadData(false)">
             </app-flow-review>
           </div>
         }
@@ -318,7 +321,7 @@ import { FlowReviewComponent } from './flow-review.component';
     @media (max-width: 599px) {
       .df-step-label { display: none; }
       .df-step-dot { width: 28px; height: 28px; }
-      .df-step-line { min-width: 32px; max-width: 80px; }
+      .df-step-line { min-width: 32px; max-width: 80px; margin-bottom: 0; }
       .df-wisdom { padding: 10px 12px; }
       .df-wisdom-author { display: none; }
       .df-phase-header { padding: 12px 14px; }
@@ -343,11 +346,34 @@ export class DailyFlowComponent implements OnInit {
 
   isToday = computed(() => this.flowData()?.isToday ?? true);
 
+  isFutureOrToday = computed(() => {
+    const data = this.flowData();
+    if (!data) return true;
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    return data.targetDate >= todayStr;
+  });
+
+  atMaxFutureDate = computed(() => {
+    const data = this.flowData();
+    if (!data) return false;
+    const today = new Date();
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + 7);
+    const maxStr = `${maxDate.getFullYear()}-${String(maxDate.getMonth() + 1).padStart(2, '0')}-${String(maxDate.getDate()).padStart(2, '0')}`;
+    return data.targetDate >= maxStr;
+  });
+
   dateLabel = computed(() => {
     const data = this.flowData();
     if (!data) return '';
     if (data.isToday) return 'Today';
     const d = new Date(data.targetDate + 'T12:00:00');
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+    if (data.targetDate === tomorrowStr) return 'Tomorrow';
     const opts: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' };
     return d.toLocaleDateString('en-US', opts);
   });
@@ -366,13 +392,13 @@ export class DailyFlowComponent implements OnInit {
     });
   }
 
-  loadData(): void {
+  loadData(resetOpenStates = true): void {
     this.loading.set(true);
     this.tradingService.getDailyFlow(this.selectedDate()).subscribe({
       next: (data) => {
         this.flowData.set(data);
         this.loading.set(false);
-        this.setDefaultOpenStates(data);
+        if (resetOpenStates) this.setDefaultOpenStates(data);
       },
       error: () => {
         this.loading.set(false);
@@ -389,14 +415,14 @@ export class DailyFlowComponent implements OnInit {
   }
 
   nextDay(): void {
-    if (this.isToday()) return;
+    if (this.atMaxFutureDate()) return;
     const current = this.flowData()?.targetDate || new Date().toISOString().split('T')[0];
     const d = new Date(current + 'T12:00:00');
     d.setDate(d.getDate() + 1);
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    if (dateStr >= todayStr) {
+    if (dateStr === todayStr) {
       this.router.navigate(['/trading/flow']);
     } else {
       this.router.navigate(['/trading/flow', dateStr]);
@@ -410,18 +436,22 @@ export class DailyFlowComponent implements OnInit {
   phaseStatus(key: string): 'done' | 'active' | 'upcoming' {
     const data = this.flowData();
     if (!data) return 'upcoming';
+    const isFuture = this.isFutureOrToday() && !data.isToday;
     if (key === 'morning') {
-      if (data.dayView.premarket) return 'done';
-      if (data.activePhase === 'morning') return 'active';
+      if (data.dayView.premarket && !isFuture) return 'done';
+      if (data.dayView.premarket && isFuture) return 'active';
+      if (data.activePhase === 'morning' || isFuture) return 'active';
       return 'upcoming';
     }
     if (key === 'session') {
+      if (isFuture) return 'upcoming';
       if (data.dayView.review) return 'done';
       if (data.dayView.stats.totalTrades > 0 && !data.dayView.review) return 'active';
       if (data.activePhase === 'session') return 'active';
       return 'upcoming';
     }
     if (key === 'review') {
+      if (isFuture) return 'upcoming';
       if (data.dayView.review) return 'done';
       if (data.activePhase === 'review') return 'active';
       return 'upcoming';
@@ -444,10 +474,16 @@ export class DailyFlowComponent implements OnInit {
   }
 
   private setDefaultOpenStates(data: DailyFlow): void {
-    if (!data.isToday) {
+    if (!data.isToday && !this.isFutureOrToday()) {
       this.morningOpen.set(!!data.dayView.premarket);
       this.sessionOpen.set(data.dayView.trades.length > 0);
       this.reviewOpen.set(!!data.dayView.review);
+      return;
+    }
+    if (this.isFutureOrToday() && !data.isToday) {
+      this.morningOpen.set(true);
+      this.sessionOpen.set(false);
+      this.reviewOpen.set(false);
       return;
     }
     const phase = data.activePhase;

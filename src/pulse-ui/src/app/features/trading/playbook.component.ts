@@ -28,17 +28,6 @@ interface WisdomItem {
     MatFormFieldModule, MatInputModule, MatChipsModule, MatDialogModule, CurrencyPipe, SkeletonLoaderComponent
   ],
   template: `
-    <div class="page-banner">
-      <div class="banner-pattern"></div>
-      <div class="banner-content">
-        <div class="banner-icon"><mat-icon>menu_book</mat-icon></div>
-        <div class="banner-text">
-          <h2>Playbook & Rules</h2>
-          <p class="banner-subtitle">Your trading constitution. Follow it religiously.</p>
-        </div>
-      </div>
-    </div>
-
     @if (loading()) {
       <app-skeleton type="table"></app-skeleton>
     } @else {
@@ -180,16 +169,6 @@ interface WisdomItem {
   styles: [`
     :host { display: block; }
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 40vh; }
-    .page-banner {
-      position: relative; margin: -24px -24px 24px; padding: 14px 24px;
-      background: var(--gradient-primary); border-radius: 0 0 var(--radius-lg) var(--radius-lg); overflow: hidden;
-    }
-    .banner-pattern { position: absolute; inset: 0; background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.08) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.06) 0%, transparent 40%); }
-    .banner-content { position: relative; display: flex; align-items: center; gap: 12px; }
-    .banner-icon { width: 42px; height: 42px; border-radius: var(--radius-md); background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.25); }
-    .banner-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #fff; }
-    h2 { margin: 0; color: #fff; font-size: 1rem; font-weight: var(--weight-bold); }
-    .banner-subtitle { color: rgba(255,255,255,0.7); font-size: var(--text-xs); margin: 1px 0 0; }
 
     /* Streak */
     .streak-card { margin-bottom: var(--spacing-md); background: var(--color-surface-solid); border: 1px solid var(--color-border); box-shadow: var(--shadow-xs); }
@@ -281,7 +260,6 @@ interface WisdomItem {
     .wcat-process { background: var(--color-stat-green-bg); color: var(--color-success); }
 
     @media (max-width: 599px) {
-      .page-banner { margin: -16px -16px 20px; padding: 10px 16px; }
       .streak-value { font-size: 3rem; }
       .limits-grid { grid-template-columns: 1fr; }
       .rule-actions button { width: 44px; height: 44px; }

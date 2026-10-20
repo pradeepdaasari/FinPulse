@@ -919,8 +919,6 @@ textarea:focus-visible {
 .goal-card, .setup-card, .trade-card,
 .metric-card, .workout-card,
 .promo-section, .fees-section {
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -971,7 +969,7 @@ textarea:focus-visible {
   }
 
   html {
-    font-size: 17px;
+    font-size: 18px;
     -webkit-text-size-adjust: 100%;
   }
 

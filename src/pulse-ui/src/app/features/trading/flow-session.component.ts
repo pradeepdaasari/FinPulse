@@ -105,7 +105,11 @@ import { TradingSetupSummary } from '../../core/models/trading.model';
         <div class="fs-trade-header">
           <span class="fs-trade-badge" [class.fs-badge-open]="g.trade.status === 'Open'"
                 [class.fs-badge-carry]="g.isCarryOver">
-            {{ g.isCarryOver ? 'CARRY' : g.trade.status === 'Open' ? 'OPEN' : 'CLOSED' }}
+            @if (g.isCarryOver) {
+              CARRY · {{ g.trade.date | date:'MMM d' }}
+            } @else {
+              {{ g.trade.status === 'Open' ? 'OPEN' : 'CLOSED' }}
+            }
           </span>
           <span class="fs-instrument">{{ g.trade.instrument }}</span>
           @if (g.trade.optionType || g.trade.spreadType) {
@@ -463,8 +467,18 @@ import { TradingSetupSummary } from '../../core/models/trading.model';
       text-transform: capitalize; color: var(--color-primary);
     }
     .fs-note-time { font-size: 0.7rem; color: var(--color-text-muted); }
-    .fs-note-text { color: var(--color-text-secondary); }
-    .fs-note-text ::ng-deep p { margin: 0; }
+    .fs-note-text {
+      color: var(--color-text-secondary); line-height: 1.5;
+      word-break: break-word; white-space: normal;
+    }
+    .fs-note-text ::ng-deep {
+      p { margin: 0 0 4px; }
+      p:last-child { margin-bottom: 0; }
+      ul, ol { margin: 4px 0; padding-left: 20px; }
+      li { margin-bottom: 2px; }
+      strong { font-weight: 600; }
+      br + br { display: none; }
+    }
     .fs-lessons ::ng-deep p { margin: 0; display: inline; }
     .fs-note-actions {
       display: flex; flex-direction: column; gap: 2px; flex-shrink: 0;

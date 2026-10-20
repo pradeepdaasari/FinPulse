@@ -16,17 +16,6 @@ import { NotificationService } from '../../core/services/notification.service';
   standalone: true,
   imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, MatChipsModule, SkeletonLoaderComponent],
   template: `
-    <div class="page-banner">
-      <div class="banner-pattern"></div>
-      <div class="banner-content">
-        <div class="banner-icon"><mat-icon>tune</mat-icon></div>
-        <div class="banner-text">
-          <h2>My Setups</h2>
-          <p class="banner-subtitle">Define your edge. Trade only what you've mastered.</p>
-        </div>
-      </div>
-    </div>
-
     @if (setups().length > 3) {
       <div class="mentor-tip">
         <mat-icon>lightbulb</mat-icon>
@@ -105,26 +94,6 @@ import { NotificationService } from '../../core/services/notification.service';
   `,
   styles: [`
     :host { display: block; }
-
-    .page-banner {
-      position: relative; margin: -24px -24px 24px; padding: 14px 24px;
-      background: var(--gradient-primary); border-radius: 0 0 var(--radius-lg) var(--radius-lg); overflow: hidden;
-    }
-    .banner-pattern {
-      position: absolute; inset: 0;
-      background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.08) 0%, transparent 50%),
-                  radial-gradient(circle at 80% 20%, rgba(255,255,255,0.06) 0%, transparent 40%);
-    }
-    .banner-content { position: relative; display: flex; align-items: center; gap: 12px; }
-    .banner-icon {
-      width: 42px; height: 42px; border-radius: var(--radius-md);
-      background: rgba(255,255,255,0.18);
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; border: 1px solid rgba(255,255,255,0.25);
-    }
-    .banner-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #fff; }
-    h2 { margin: 0; color: #fff; font-size: 1rem; font-weight: 700; }
-    .banner-subtitle { color: rgba(255,255,255,0.7); font-size: var(--text-xs); margin: 1px 0 0; }
 
     .mentor-tip {
       display: flex; align-items: center; gap: 10px;
@@ -207,7 +176,6 @@ import { NotificationService } from '../../core/services/notification.service';
     .action-delete:hover { background: var(--color-action-delete-bg) !important; }
 
     @media (max-width: 599px) {
-      .page-banner { margin: -16px -16px 20px; padding: 10px 16px; }
       .setups-grid { grid-template-columns: 1fr; }
 
       .header-row button,

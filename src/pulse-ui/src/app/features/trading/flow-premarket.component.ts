@@ -1,4 +1,4 @@
-import { Component, inject, signal, input, output, effect, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, signal, computed, input, output, effect, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSliderModule } from '@angular/material/slider';
+import { RouterModule } from '@angular/router';
 import { TradingService } from '../../core/services/trading.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { RichTextEditorComponent } from '../../shared/rich-text-editor.component';
@@ -16,7 +17,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
   selector: 'app-flow-premarket',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule, MatIconModule, MatButtonModule,
+    CommonModule, ReactiveFormsModule, RouterModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatSliderModule, CurrencyPipe,
     RichTextEditorComponent
   ],
@@ -171,6 +172,9 @@ import { toLocalDateString } from '../../core/utils/date-utils';
             <button mat-stroked-button type="button" class="fp-template-btn" (click)="loadTemplate()">
               <mat-icon>auto_fix_high</mat-icon> Load Template
             </button>
+            <a class="fp-manage-template" routerLink="/trading/premarket/template">
+              <mat-icon>settings</mat-icon> Manage Template
+            </a>
           </div>
         }
 
@@ -182,6 +186,8 @@ import { toLocalDateString } from '../../core/utils/date-utils';
           <button class="fp-save-btn" type="submit" [disabled]="form.invalid || saving()">
             @if (saving()) {
               <span class="fp-btn-spinner"></span> Saving...
+            } @else if (isFuture()) {
+              <mat-icon>edit_note</mat-icon> Save as Draft
             } @else {
               <mat-icon>lock</mat-icon> Save & Lock In
             }
@@ -297,11 +303,17 @@ import { toLocalDateString } from '../../core/utils/date-utils';
 
     /* Template */
     .fp-template-row {
-      display: flex; justify-content: center; padding: 10px 0;
+      display: flex; align-items: center; justify-content: center; gap: 16px; padding: 10px 0;
       border-top: 1px dashed var(--color-border);
     }
     .fp-template-btn { font-size: 0.82rem; }
     .fp-template-btn mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 2px; }
+    .fp-manage-template {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 0.78rem; color: var(--color-text-muted); text-decoration: none; cursor: pointer;
+    }
+    .fp-manage-template:hover { color: var(--color-primary); }
+    .fp-manage-template mat-icon { font-size: 14px; width: 14px; height: 14px; }
 
     /* Actions */
     .fp-actions { display: flex; gap: 10px; margin-top: var(--spacing-sm); }
@@ -353,11 +365,20 @@ export class FlowPremarketComponent {
   streak = input(0);
   recentMentalStates = input<string[]>([]);
   isToday = input<boolean>(true);
+  targetDate = input<string | undefined>(undefined);
 
   saved = output<void>();
 
   editing = signal(false);
   saving = signal(false);
+
+  isFuture = computed(() => {
+    const td = this.targetDate();
+    if (!td) return false;
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    return td > todayStr;
+  });
 
   form = this.fb.group({
     mentalState: ['green' as MentalState, Validators.required],
@@ -405,7 +426,7 @@ export class FlowPremarketComponent {
     this.saving.set(true);
     const val = this.form.value;
     const payload: Partial<PreMarketNote> = {
-      date: toLocalDateString(new Date()),
+      date: this.targetDate() || toLocalDateString(new Date()),
       mentalState: val.mentalState as MentalState,
       marketBias: val.marketBias as MarketBias,
       keyLevels: val.keyLevels || undefined,
@@ -461,4 +482,5 @@ export class FlowPremarketComponent {
     });
     this.notify.success('Template loaded');
   }
+
 }

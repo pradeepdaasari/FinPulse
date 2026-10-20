@@ -2089,9 +2089,54 @@ public class TradingController : ControllerBase
             Improvements = new List<string>(),
             Strengths = new List<string>(),
             DangerZones = new List<string>(),
-            MentorFeedback = ""
+            MentorFeedback = "",
+            Reflection = await _db.WeeklyReflections
+                .Where(r => r.UserId == UserId && r.WeekStart == start)
+                .Select(r => new { r.Id, r.WhatWorked, r.WhatHurt, r.OneChange })
+                .FirstOrDefaultAsync()
         };
         return Ok(summary);
+    }
+
+    [HttpPut("weekly-reflection")]
+    public async Task<ActionResult> SaveWeeklyReflection([FromBody] WeeklyReflectionDto dto)
+    {
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var localDate = TimeZoneHelper.UserToday(tz);
+        var start = DateTime.TryParse(dto.WeekStart, CultureInfo.InvariantCulture, DateTimeStyles.None, out var ws) ? ws.Date : GetMondayOfWeek(localDate);
+
+        var existing = await _db.WeeklyReflections
+            .FirstOrDefaultAsync(r => r.UserId == UserId && r.WeekStart == start);
+
+        if (existing != null)
+        {
+            existing.WhatWorked = dto.WhatWorked;
+            existing.WhatHurt = dto.WhatHurt;
+            existing.OneChange = dto.OneChange;
+        }
+        else
+        {
+            existing = new WeeklyReflection
+            {
+                UserId = UserId,
+                WeekStart = start,
+                WhatWorked = dto.WhatWorked,
+                WhatHurt = dto.WhatHurt,
+                OneChange = dto.OneChange
+            };
+            _db.WeeklyReflections.Add(existing);
+        }
+
+        await _db.SaveChangesAsync();
+        return Ok(new { existing.Id, existing.WhatWorked, existing.WhatHurt, existing.OneChange });
+    }
+
+    public class WeeklyReflectionDto
+    {
+        public string? WeekStart { get; set; }
+        public string? WhatWorked { get; set; }
+        public string? WhatHurt { get; set; }
+        public string? OneChange { get; set; }
     }
 
     [HttpGet("weekly-summaries")]

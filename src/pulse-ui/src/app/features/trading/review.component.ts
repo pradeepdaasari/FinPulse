@@ -25,16 +25,6 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
   ],
   template: `
     <div appPullToRefresh (refresh)="loadData()">
-    <div class="page-banner">
-      <div class="banner-pattern"></div>
-      <div class="banner-content">
-        <div class="banner-icon"><mat-icon>grading</mat-icon></div>
-        <div class="banner-text">
-          <h2>Daily Review</h2>
-          <p class="banner-subtitle">Grade your process, not your P&L</p>
-        </div>
-      </div>
-    </div>
 
     @if (loading()) {
       <app-skeleton type="card"></app-skeleton>
@@ -229,16 +219,6 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
   `,
   styles: [`
     :host { display: block; }
-    .page-banner {
-      position: relative; margin: -24px -24px 24px; padding: 14px 24px;
-      background: var(--gradient-primary); border-radius: 0 0 var(--radius-lg) var(--radius-lg); overflow: hidden;
-    }
-    .banner-pattern { position: absolute; inset: 0; background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.08) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.06) 0%, transparent 40%); }
-    .banner-content { position: relative; display: flex; align-items: center; gap: 12px; }
-    .banner-icon { width: 42px; height: 42px; border-radius: var(--radius-md); background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.25); }
-    .banner-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #fff; }
-    h2 { margin: 0; color: #fff; font-size: 1rem; font-weight: var(--weight-bold); }
-    .banner-subtitle { color: rgba(255,255,255,0.7); font-size: var(--text-xs); margin: 1px 0 0; }
 
     .date-nav {
       display: flex; align-items: center; justify-content: center; gap: var(--spacing-xs);
@@ -351,7 +331,6 @@ import { RichTextEditorComponent } from '../../shared/rich-text-editor.component
     .condition-btn mat-icon { font-size: 24px; width: 24px; height: 24px; }
 
     @media (max-width: 599px) {
-      .page-banner { margin: -16px -16px 20px; padding: 10px 16px; }
       .grade-buttons { grid-template-columns: repeat(5, 1fr); gap: 4px; }
       .grade-btn { padding: 12px 4px; min-height: 54px; }
       .grade-letter { font-size: 1.2rem; }

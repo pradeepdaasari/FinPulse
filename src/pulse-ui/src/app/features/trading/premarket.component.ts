@@ -29,16 +29,6 @@ import { toLocalDateString } from '../../core/utils/date-utils';
   ],
   template: `
     <div appPullToRefresh (refresh)="loadData()">
-    <div class="page-banner">
-      <div class="banner-pattern"></div>
-      <div class="banner-content">
-        <div class="banner-icon"><mat-icon>wb_twilight</mat-icon></div>
-        <div class="banner-text">
-          <h2>Pre-Market Plan</h2>
-          <p class="banner-subtitle">Prepare your mind before the market opens</p>
-        </div>
-      </div>
-    </div>
 
     <!-- Date Navigator -->
     <div class="date-nav">
@@ -248,30 +238,6 @@ import { toLocalDateString } from '../../core/utils/date-utils';
   styles: [`
     :host { display: block; }
 
-    .page-banner {
-      position: relative;
-      margin: -24px -24px 24px;
-      padding: 14px 24px;
-      background: var(--gradient-primary);
-      border-radius: 0 0 var(--radius-xl) var(--radius-xl);
-      overflow: hidden;
-    }
-    .banner-pattern {
-      position: absolute; inset: 0;
-      background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.07) 0%, transparent 50%),
-                  radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 40%);
-    }
-    .banner-content { position: relative; display: flex; align-items: center; gap: 12px; }
-    .banner-icon {
-      width: 42px; height: 42px; border-radius: var(--radius-md);
-      background: rgba(255,255,255,0.18);
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; border: 1px solid rgba(255,255,255,0.25);
-    }
-    .banner-icon mat-icon { font-size: 22px; width: 22px; height: 22px; color: #fff; }
-    h2 { margin: 0; color: #fff; font-size: 1rem; font-weight: var(--weight-bold); letter-spacing: -0.02em; }
-    .banner-subtitle { color: rgba(255,255,255,0.7); font-size: var(--text-xs); margin: 1px 0 0; }
-
     .date-nav {
       display: flex; align-items: center; justify-content: center;
       gap: 8px; margin-bottom: var(--spacing-md);
@@ -434,7 +400,6 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     .history-limits { font-size: 0.75rem; color: var(--color-text-muted); }
 
     @media (max-width: 599px) {
-      .page-banner { margin: -16px -16px 20px; padding: 12px 16px; }
       .stats-row { grid-template-columns: 1fr; }
       .mental-state-row { grid-template-columns: repeat(3, 1fr); gap: 8px; }
       .mental-btn { padding: 12px 4px; }

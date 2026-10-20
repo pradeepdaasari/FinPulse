@@ -1996,6 +1996,46 @@ namespace Pulse.Core.Migrations
                     b.ToTable("TradingWisdoms");
                 });
 
+            modelBuilder.Entity("Pulse.Core.Models.Trading.WeeklyReflection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OneChange")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("WeekStart")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("WhatHurt")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("WhatWorked")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "WeekStart")
+                        .IsUnique()
+                        .HasFilter("[UserId] IS NOT NULL");
+
+                    b.ToTable("WeeklyReflections");
+                });
+
             modelBuilder.Entity("Pulse.Core.Models.UserProfile", b =>
                 {
                     b.Property<int>("Id")

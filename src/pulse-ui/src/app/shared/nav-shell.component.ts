@@ -168,39 +168,12 @@ import { routeFadeAnimation } from './route-animations';
                   <span class="ios-nav-label">Trading Day</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
-                <a class="ios-nav-item" routerLink="/trading" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}" (click)="onNavClick()">
-                  <span class="ios-icon-pill ic-purple"><mat-icon>candlestick_chart</mat-icon></span>
-                  <span class="ios-nav-label">Overview</span>
-                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
-                </a>
-                <div class="ios-sub-header">Pre-Trade</div>
-                <a class="ios-nav-item" routerLink="/trading/premarket" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}" (click)="onNavClick()">
-                  <span class="ios-icon-pill ic-amber"><mat-icon>wb_twilight</mat-icon></span>
-                  <span class="ios-nav-label">Pre-Market</span>
-                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
-                </a>
-                <a class="ios-nav-item" routerLink="/trading/premarket/template" routerLinkActive="active-link" (click)="onNavClick()">
-                  <span class="ios-icon-pill ic-amber"><mat-icon>auto_fix_high</mat-icon></span>
-                  <span class="ios-nav-label">Pre-Market Template</span>
-                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
-                </a>
-                <a class="ios-nav-item" routerLink="/trading/checklist" routerLinkActive="active-link" (click)="onNavClick()">
-                  <span class="ios-icon-pill ic-green"><mat-icon>checklist</mat-icon></span>
-                  <span class="ios-nav-label">Trade Checklist</span>
-                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
-                </a>
-                <div class="ios-sub-header">Journal</div>
+                <div class="ios-sub-header">Journal & Review</div>
                 <a class="ios-nav-item" routerLink="/trading/journal" routerLinkActive="active-link" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-blue"><mat-icon>auto_stories</mat-icon></span>
                   <span class="ios-nav-label">Trade Journal</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
-                <a class="ios-nav-item" routerLink="/trading/review" routerLinkActive="active-link" (click)="onNavClick()">
-                  <span class="ios-icon-pill ic-orange"><mat-icon>grading</mat-icon></span>
-                  <span class="ios-nav-label">Daily Review</span>
-                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
-                </a>
-                <div class="ios-sub-header">Review</div>
                 <a class="ios-nav-item" routerLink="/trading/calendar" routerLinkActive="active-link" (click)="onNavClick()">
                   <span class="ios-icon-pill ic-red"><mat-icon>calendar_month</mat-icon></span>
                   <span class="ios-nav-label">Calendar</span>
@@ -216,10 +189,10 @@ import { routeFadeAnimation } from './route-animations';
                   <span class="ios-nav-label">Weekly Summary</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
-                <div class="ios-sub-header">Reference</div>
-                <a class="ios-nav-item" routerLink="/trading/goals" routerLinkActive="active-link" (click)="onNavClick()">
-                  <span class="ios-icon-pill ic-green"><mat-icon>flag</mat-icon></span>
-                  <span class="ios-nav-label">Goals</span>
+                <div class="ios-sub-header">Setup & Reference</div>
+                <a class="ios-nav-item" routerLink="/trading/playbook" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-indigo"><mat-icon>menu_book</mat-icon></span>
+                  <span class="ios-nav-label">Playbook & Rules</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
                 <a class="ios-nav-item" routerLink="/trading/setups" routerLinkActive="active-link" (click)="onNavClick()">
@@ -227,9 +200,14 @@ import { routeFadeAnimation } from './route-animations';
                   <span class="ios-nav-label">My Setups</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
-                <a class="ios-nav-item" routerLink="/trading/playbook" routerLinkActive="active-link" (click)="onNavClick()">
-                  <span class="ios-icon-pill ic-indigo"><mat-icon>menu_book</mat-icon></span>
-                  <span class="ios-nav-label">Playbook & Rules</span>
+                <a class="ios-nav-item" routerLink="/trading/premarket/template" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-amber"><mat-icon>auto_fix_high</mat-icon></span>
+                  <span class="ios-nav-label">Pre-Market Template</span>
+                  <mat-icon class="ios-chevron">chevron_right</mat-icon>
+                </a>
+                <a class="ios-nav-item last" routerLink="/trading/goals" routerLinkActive="active-link" (click)="onNavClick()">
+                  <span class="ios-icon-pill ic-green"><mat-icon>flag</mat-icon></span>
+                  <span class="ios-nav-label">Goals</span>
                   <mat-icon class="ios-chevron">chevron_right</mat-icon>
                 </a>
               </div>
@@ -302,13 +280,18 @@ import { routeFadeAnimation } from './route-animations';
         @if (routeLoading()) {
           <div class="route-progress-bar"><div class="route-progress-fill"></div></div>
         }
-        <mat-toolbar class="app-toolbar">
+        <mat-toolbar [class]="'app-toolbar tb-' + activeModule()">
           @if (isMobile()) {
             <a class="mobile-brand" routerLink="/dashboard">
               <mat-icon class="mobile-brand-icon">monitor_heart</mat-icon>
             </a>
           }
-          <span class="toolbar-title">{{ pageTitle() }}</span>
+          <div class="toolbar-title-group">
+            <span class="toolbar-title" [class]="'tt-' + activeModule()">{{ pageTitle() }}</span>
+            @if (pageSubtitle()) {
+              <span class="toolbar-subtitle">{{ pageSubtitle() }}</span>
+            }
+          </div>
           <span class="toolbar-spacer"></span>
           <button mat-button class="search-trigger" (click)="openPalette()" aria-label="Search">
             <mat-icon>search</mat-icon>
@@ -372,7 +355,7 @@ import { routeFadeAnimation } from './route-animations';
     </mat-menu>
 
     @if (isMobile()) {
-      <nav class="bottom-tabs" [class.kb-hidden]="keyboardOpen()" role="navigation" aria-label="Main navigation">
+      <nav class="bottom-tabs" [class.kb-hidden]="keyboardOpen()" [class]="'bottom-tabs bt-' + activeModule() + (keyboardOpen() ? ' kb-hidden' : '')" role="navigation" aria-label="Main navigation">
         <a class="tab-item" [class.tab-active]="activeModule() === 'finance' && !isExpensesRoute()" routerLink="/dashboard">
           <mat-icon class="tab-ic-blue">dashboard</mat-icon>
           <span>Home</span>
@@ -381,7 +364,7 @@ import { routeFadeAnimation } from './route-animations';
           <mat-icon class="tab-ic-teal">swap_horiz</mat-icon>
           <span>Transactions</span>
         </a>
-        <a class="tab-item" [class.tab-active]="activeModule() === 'trading'" routerLink="/trading">
+        <a class="tab-item" [class.tab-active]="activeModule() === 'trading'" routerLink="/trading/flow">
           <mat-icon class="tab-ic-purple">candlestick_chart</mat-icon>
           <span>Trading</span>
         </a>
@@ -479,7 +462,7 @@ import { routeFadeAnimation } from './route-animations';
     .ios-section-header .section-label {
       font-size: 0.8125rem;
       font-weight: 700;
-      color: var(--color-text-muted);
+      color: var(--color-text-secondary);
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
@@ -511,13 +494,13 @@ import { routeFadeAnimation } from './route-animations';
 
     .ios-sub-header {
       font-size: 10px;
-      font-weight: 500;
+      font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      color: var(--color-text-muted);
+      color: var(--color-text-secondary);
       padding: 6px 20px 1px;
       margin: 0;
-      opacity: 0.35;
+      opacity: 0.7;
     }
 
     .ios-nav-item {
@@ -648,14 +631,42 @@ import { routeFadeAnimation } from './route-animations';
       top: 0;
       z-index: 10;
     }
+    .app-toolbar.tb-finance { background: linear-gradient(180deg, #dce9fc 0%, #ffffff 100%) !important; border-bottom: 1.5px solid #c4d9f5; }
+    .app-toolbar.tb-trading { background: linear-gradient(180deg, #e3e3f7 0%, #ffffff 100%) !important; border-bottom: 1.5px solid #cccce8; }
+    .app-toolbar.tb-health { background: linear-gradient(180deg, #fce0e6 0%, #ffffff 100%) !important; border-bottom: 1.5px solid #f0c4cd; }
+    .app-toolbar.tb-insights { background: linear-gradient(180deg, #e3e3f7 0%, #ffffff 100%) !important; border-bottom: 1.5px solid #cccce8; }
 
+    .toolbar-title-group {
+      display: flex;
+      flex-direction: column;
+      margin-left: 8px;
+      min-width: 0;
+    }
     .toolbar-title {
       font-family: var(--font-primary);
       font-size: var(--text-lg);
-      font-weight: 700;
-      margin-left: 8px;
-      letter-spacing: -0.02em;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.2;
     }
+    .toolbar-subtitle {
+      font-size: 0.7rem;
+      color: var(--color-text-muted);
+      font-weight: 400;
+      letter-spacing: 0;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .tt-finance { background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%); -webkit-background-clip: text; background-clip: text; }
+    .tt-insights { background: linear-gradient(135deg, #5856D6 0%, #AF52DE 100%); -webkit-background-clip: text; background-clip: text; }
+    .tt-trading { background: linear-gradient(135deg, #5856D6 0%, #007AFF 100%); -webkit-background-clip: text; background-clip: text; }
+    .tt-health { background: linear-gradient(135deg, #FF2D55 0%, #FF6B6B 100%); -webkit-background-clip: text; background-clip: text; }
+    .tt-settings { background: linear-gradient(135deg, #8E8E93 0%, #636366 100%); -webkit-background-clip: text; background-clip: text; }
 
     .toolbar-spacer {
       flex: 1 1 auto;
@@ -731,6 +742,9 @@ import { routeFadeAnimation } from './route-animations';
       .toolbar-title {
         font-size: var(--text-base);
       }
+      .toolbar-subtitle {
+        font-size: 0.65rem;
+      }
       .search-trigger .search-hint {
         display: none;
       }
@@ -783,23 +797,60 @@ import { routeFadeAnimation } from './route-animations';
       }
       .app-toolbar {
         height: 48px;
-        padding: 0 12px !important;
-        background: var(--color-surface-solid) !important;
+        padding: 0 10px !important;
         backdrop-filter: none;
+        border-bottom: none !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
       }
+      .app-toolbar.tb-finance { background: linear-gradient(180deg, #d4e4fb 0%, #ffffff 100%) !important; }
+      .app-toolbar.tb-trading { background: linear-gradient(180deg, #ddddf5 0%, #ffffff 100%) !important; }
+      .app-toolbar.tb-health { background: linear-gradient(180deg, #fbdbe2 0%, #ffffff 100%) !important; }
+      .app-toolbar.tb-insights { background: linear-gradient(180deg, #ddddf5 0%, #ffffff 100%) !important; }
+      .app-toolbar.tb-settings { background: linear-gradient(180deg, #ededee 0%, #ffffff 100%) !important; }
       .app-toolbar button[mat-icon-button] {
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
       }
       .app-toolbar button[mat-icon-button] mat-icon {
-        font-size: 22px !important;
-        width: 22px !important;
-        height: 22px !important;
+        font-size: 20px !important;
+        width: 20px !important;
+        height: 20px !important;
+        color: var(--color-text-secondary);
       }
       .toolbar-title {
-        font-size: 1.0625rem !important;
-        font-weight: 700 !important;
-        letter-spacing: -0.02em;
+        font-size: 1.125rem !important;
+        font-weight: 800 !important;
+        letter-spacing: -0.03em;
+      }
+      .toolbar-subtitle {
+        font-size: 0.62rem !important;
+        max-width: 200px;
+      }
+      .search-trigger {
+        min-width: 32px !important;
+        width: 32px !important;
+        height: 32px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        background: var(--color-surface-secondary) !important;
+        border: none !important;
+        margin-right: 2px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+      }
+      .search-trigger mat-icon {
+        font-size: 18px !important; width: 18px !important; height: 18px !important;
+        opacity: 0.5 !important; margin: 0 !important;
+      }
+      .user-info {
+        padding: 4px !important;
+        background: none !important;
+        margin-right: 0 !important;
+      }
+      .user-avatar {
+        font-size: 26px !important; width: 26px !important; height: 26px !important;
+        color: var(--color-primary) !important;
       }
     }
 
@@ -893,8 +944,15 @@ import { routeFadeAnimation } from './route-animations';
       padding-top: 6px;
       padding-bottom: env(safe-area-inset-bottom, 0px);
       box-sizing: border-box;
-      background: var(--color-surface-solid);
-      border-top: 1px solid var(--color-border);
+      background: #f8f9fc;
+      border-top: none;
+      box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+    }
+    .bottom-tabs.bt-finance { background: linear-gradient(0deg, #dce9fc 0%, #ffffff 100%); border-top: 1.5px solid #c4d9f5; }
+    .bottom-tabs.bt-trading { background: linear-gradient(0deg, #e3e3f7 0%, #ffffff 100%); border-top: 1.5px solid #cccce8; }
+    .bottom-tabs.bt-health { background: linear-gradient(0deg, #fce0e6 0%, #ffffff 100%); border-top: 1.5px solid #f0c4cd; }
+    .bottom-tabs.bt-insights { background: linear-gradient(0deg, #e3e3f7 0%, #ffffff 100%); border-top: 1.5px solid #cccce8; }
+    .bottom-tabs.bt-settings { background: linear-gradient(0deg, #ededee 0%, #ffffff 100%); border-top: 1.5px solid #d8d8d9;
     }
 
     .tab-item {
@@ -1020,6 +1078,9 @@ export class NavShellComponent implements OnInit, OnDestroy {
   private initialViewportHeight = 0;
   private viewportHandler = () => this.checkKeyboard();
   pageTitle = signal('Dashboard');
+  pageSubtitle = signal('');
+  pageIcon = signal('dashboard');
+  pageIconColor = signal('blue');
   expandedSections = signal<string[]>(['finance', 'insights', 'trading', 'health']);
   activeModule = signal<string>('finance');
   private currentUrl = signal('/dashboard');
@@ -1071,6 +1132,60 @@ export class NavShellComponent implements OnInit, OnDestroy {
     '/admin/users': 'User Management',
   };
 
+  private pageSubtitles: Record<string, string> = {
+    '/trading/flow': 'Your complete trading day, one flow',
+    '/trading/journal': 'Every trade tells a story. Learn from yours.',
+    '/trading/playbook': 'Your trading constitution. Follow it religiously.',
+    '/trading/premarket/template': 'Set your defaults — auto-fills every new day',
+    '/trading/premarket': 'Prepare your mind before the market opens',
+    '/trading/review': 'Grade your process, not your P&L',
+    '/trading/setups': "Define your edge. Trade only what you've mastered.",
+    '/trading/analytics': 'Visual breakdowns of your trading performance',
+    '/trading/goals': 'Define targets, track history, refine your edge.',
+    '/trading/weekly': 'Learn from your data. Improve every week.',
+    '/trading/checklist': 'Every great trade starts with a process',
+    '/trading/calendar': 'Your trading calendar at a glance',
+  };
+
+  private pageIcons: Record<string, [string, string]> = {
+    '/dashboard': ['dashboard', 'blue'],
+    '/upcoming-payments': ['event_upcoming', 'amber'],
+    '/monthly-pulse': ['monitoring', 'purple'],
+    '/loans': ['account_balance', 'teal'],
+    '/cards': ['credit_card', 'orange'],
+    '/accounts': ['account_balance_wallet', 'green'],
+    '/strategies': ['trending_up', 'indigo'],
+    '/simulator': ['calculate', 'cyan'],
+    '/paychecks': ['payments', 'green'],
+    '/budget': ['pie_chart', 'purple'],
+    '/expenses': ['swap_horiz', 'teal'],
+    '/categories': ['category', 'amber'],
+    '/recurring': ['autorenew', 'blue'],
+    '/goals': ['flag', 'green'],
+    '/money-movements': ['swap_calls', 'indigo'],
+    '/health': ['monitoring', 'red'],
+    '/health/metrics': ['favorite', 'red'],
+    '/health/blood-work': ['science', 'purple'],
+    '/health/plans': ['fitness_center', 'orange'],
+    '/health/workout': ['exercise', 'green'],
+    '/health/progress': ['emoji_events', 'amber'],
+    '/trading': ['candlestick_chart', 'purple'],
+    '/trading/flow': ['bolt', 'blue'],
+    '/trading/analytics': ['insights', 'teal'],
+    '/trading/goals': ['flag', 'green'],
+    '/trading/premarket': ['wb_twilight', 'amber'],
+    '/trading/premarket/template': ['auto_fix_high', 'amber'],
+    '/trading/checklist': ['checklist', 'green'],
+    '/trading/journal': ['auto_stories', 'blue'],
+    '/trading/calendar': ['calendar_month', 'red'],
+    '/trading/review': ['grading', 'orange'],
+    '/trading/setups': ['tune', 'teal'],
+    '/trading/playbook': ['menu_book', 'indigo'],
+    '/trading/weekly': ['analytics', 'cyan'],
+    '/settings': ['settings', 'gray'],
+    '/admin': ['admin_panel_settings', 'red'],
+  };
+
   constructor() {
     this.breakpointObserver.observe(['(max-width: 1199px)']).subscribe(result => {
       this.isMobile.set(result.matches);
@@ -1082,6 +1197,8 @@ export class NavShellComponent implements OnInit, OnDestroy {
 
     const initialUrl = this.router.url;
     this.pageTitle.set(this.pageTitles[initialUrl] ?? this.pageTitles['/' + initialUrl.split('/')[1]] ?? 'Pulse');
+    this.pageSubtitle.set(this.pageSubtitles[initialUrl] ?? '');
+    this.setPageIcon(initialUrl);
     this.expandSectionForRoute(initialUrl);
 
     this.router.events.subscribe(event => {
@@ -1098,6 +1215,8 @@ export class NavShellComponent implements OnInit, OnDestroy {
       const url = event.urlAfterRedirects;
       const path = '/' + url.split('/')[1];
       this.pageTitle.set(this.pageTitles[url] ?? this.pageTitles[path] ?? 'Pulse');
+      this.pageSubtitle.set(this.pageSubtitles[url] ?? '');
+      this.setPageIcon(url);
       this.expandSectionForRoute(url);
       this.sidenavContent?.getElementRef().nativeElement.scrollTo(0, 0);
       if (this.isMobile() && this.sidenav) {
@@ -1189,12 +1308,20 @@ export class NavShellComponent implements OnInit, OnDestroy {
     }
   }
 
+  private setPageIcon(url: string): void {
+    const path = '/' + url.split('/')[1];
+    const icon = this.pageIcons[url] ?? this.pageIcons[path] ?? ['dashboard', 'blue'];
+    this.pageIcon.set(icon[0]);
+    this.pageIconColor.set(icon[1]);
+  }
+
   private expandSectionForRoute(url: string): void {
     let section = 'finance';
     if (url.startsWith('/monthly-pulse')) section = 'insights';
     else if (url.startsWith('/trading')) section = 'trading';
     else if (url.startsWith('/health')) section = 'health';
-    else if (url.startsWith('/admin')) section = 'admin';
+    else if (url.startsWith('/settings')) section = 'settings';
+    else if (url.startsWith('/admin')) section = 'settings';
 
     this.activeModule.set(section);
     this.currentUrl.set(url);
