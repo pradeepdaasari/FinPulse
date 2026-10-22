@@ -122,6 +122,9 @@ import { Observable } from 'rxjs';
         <div class="frequency-section">
           <div class="field-label">Frequency</div>
           <div class="freq-chips">
+            <div class="freq-chip" [class.active]="form.value.frequency === 4" (click)="setFrequency(4)">
+              <mat-icon>event</mat-icon><span>One Time</span>
+            </div>
             <div class="freq-chip" [class.active]="form.value.frequency === 0" (click)="setFrequency(0)">
               <mat-icon>today</mat-icon><span>Daily</span>
             </div>
@@ -424,7 +427,7 @@ export class RecurringDialogComponent implements OnInit {
     isActive: [true]
   });
 
-  private frequencyMap: Record<string, number> = { Daily: 0, Weekly: 1, Biweekly: 1, Monthly: 3 };
+  private frequencyMap: Record<string, number> = { Daily: 0, Weekly: 1, Biweekly: 2, Monthly: 3, OneTime: 4 };
   private typeMap: Record<string, number> = { Expense: 0, Income: 1, Transfer: 2, Refund: 3, CardPayment: 4 };
   private recurringTypeMap: Record<string, number> = { Bill: 0, Budget: 1 };
 
@@ -502,7 +505,7 @@ export class RecurringDialogComponent implements OnInit {
 
   setFrequency(freq: number): void {
     this.form.patchValue({ frequency: freq });
-    if (freq === 0) this.form.patchValue({ intervalCount: 1 });
+    if (freq === 0 || freq === 4) this.form.patchValue({ intervalCount: 1 });
   }
 
   save(): void {

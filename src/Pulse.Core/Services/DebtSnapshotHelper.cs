@@ -62,7 +62,8 @@ public class DebtSnapshotHelper : IDebtSnapshotHelper
                     : card.AprPercent,
                 PromoEndDate = card.PromoEndDate,
                 DueDay = card.DueDay,
-                PerPaymentAmount = card.MinimumPayment
+                PerPaymentAmount = card.MinimumPayment,
+                CreditLimit = card.CreditLimit
             });
         }
 

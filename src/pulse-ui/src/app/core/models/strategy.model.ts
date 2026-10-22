@@ -11,6 +11,7 @@ export interface PayoffStrategy {
 export interface StrategyComparison {
   avalanche: PayoffStrategy;
   snowball: PayoffStrategy;
+  scoreRecovery: PayoffStrategy;
   interestSaved: number;
   timeDifference: number;
   totalDebt: number;

@@ -930,6 +930,12 @@ public class DashboardController : ControllerBase
 
     private static List<DateTime> GetRecurringDueDatesInMonth(DateTime nextRunDate, RecurrenceFrequency freq, int intervalCount, DateTime monthStart, DateTime monthEnd)
     {
+        if (freq == RecurrenceFrequency.OneTime)
+        {
+            var d = nextRunDate.Date;
+            return (d >= monthStart && d <= monthEnd) ? new List<DateTime> { d } : new List<DateTime>();
+        }
+
         if (freq == RecurrenceFrequency.Monthly)
         {
             if (intervalCount <= 1)

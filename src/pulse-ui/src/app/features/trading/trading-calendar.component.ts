@@ -1430,8 +1430,7 @@ export class TradingCalendarComponent implements OnInit {
       `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const buildDay = (d: number, dateStr: string, isCurrent: boolean): CalendarDay => {
       const dayTrades = tradesByDate.get(dateStr) || [];
-      const pnlEntry = pnlMap?.get(dateStr);
-      const totalPnl = pnlEntry ? pnlEntry.netPnl : 0;
+      const totalPnl = dayTrades.reduce((sum, t) => sum + (t.netPnl ?? t.pnl ?? 0), 0);
       return { date: d, isCurrentMonth: isCurrent, isToday: isCurrent && isCurrentMonth && today.getDate() === d,
         trades: dayTrades, totalPnl: Math.round(totalPnl * 100) / 100, tradeCount: dayTrades.length, dateStr };
     };

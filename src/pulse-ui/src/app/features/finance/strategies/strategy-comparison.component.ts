@@ -247,6 +247,10 @@ import { forkJoin, catchError, of } from 'rxjs';
               <mat-icon>ac_unit</mat-icon>
               <span>Snowball</span>
             </mat-button-toggle>
+            <mat-button-toggle value="scoreRecovery">
+              <mat-icon>credit_score</mat-icon>
+              <span>Score Recovery</span>
+            </mat-button-toggle>
           </mat-button-toggle-group>
         </div>
 
@@ -263,6 +267,11 @@ import { forkJoin, catchError, of } from 'rxjs';
                 {{ comparison()!.snowball.totalInterest | currency:'USD':'symbol':'1.0-0' }}
                 <span class="mini-tag">Snowball</span>
               </span>
+              <span class="mini-vs">vs</span>
+              <span class="mini-val" [class.active-val]="chosenStrategy() === 'scoreRecovery'">
+                {{ comparison()!.scoreRecovery.totalInterest | currency:'USD':'symbol':'1.0-0' }}
+                <span class="mini-tag">Score</span>
+              </span>
             </div>
           </div>
           <div class="mini-stat">
@@ -276,6 +285,11 @@ import { forkJoin, catchError, of } from 'rxjs';
               <span class="mini-val" [class.active-val]="chosenStrategy() === 'snowball'">
                 {{ comparison()!.snowball.monthsToPayoff }}
                 <span class="mini-tag">Snowball</span>
+              </span>
+              <span class="mini-vs">vs</span>
+              <span class="mini-val" [class.active-val]="chosenStrategy() === 'scoreRecovery'">
+                {{ comparison()!.scoreRecovery.monthsToPayoff }}
+                <span class="mini-tag">Score</span>
               </span>
             </div>
           </div>
@@ -372,6 +386,8 @@ import { forkJoin, catchError, of } from 'rxjs';
                       This is your current target — all extra payments go here because
                       @if (chosenStrategy() === 'avalanche') {
                         it has the highest interest rate
+                      } @else if (chosenStrategy() === 'scoreRecovery') {
+                        it has the highest credit card utilization
                       } @else {
                         it has the smallest balance
                       }
@@ -1134,7 +1150,10 @@ export class StrategyComparisonComponent implements OnInit {
   activeStrategy = computed(() => {
     const comp = this.comparison();
     if (!comp) return null;
-    return this.chosenStrategy() === 'snowball' ? comp.snowball : comp.avalanche;
+    const choice = this.chosenStrategy();
+    if (choice === 'snowball') return comp.snowball;
+    if (choice === 'scoreRecovery') return comp.scoreRecovery;
+    return comp.avalanche;
   });
 
   debtFreeDate = computed(() => {
@@ -1181,8 +1200,12 @@ export class StrategyComparisonComponent implements OnInit {
   strategyExplanation = computed(() => {
     const comp = this.comparison();
     if (!comp) return '';
+    const choice = this.chosenStrategy();
+    if (choice === 'scoreRecovery') {
+      return "You're targeting your highest credit card utilization first — that's the fastest way to boost your credit score. Lower utilization = higher score, often within 1-2 billing cycles.";
+    }
     if (comp.interestSaved > 100) {
-      if (this.chosenStrategy() === 'avalanche') {
+      if (choice === 'avalanche') {
         return "You're targeting the highest-interest debt first because it's costing you the most money every month. Think of interest like a leak — we're plugging the biggest leak first.";
       } else {
         return "You're targeting the smallest balance first to feel the win of eliminating a debt quickly. Momentum matters! Once it's gone, that payment rolls into the next one.";
@@ -1276,8 +1299,10 @@ export class StrategyComparisonComponent implements OnInit {
     const base = this.baseComparison();
     const current = this.comparison();
     if (!base || !current) return 0;
-    const baseMonths = this.chosenStrategy() === 'snowball' ? base.snowball.monthsToPayoff : base.avalanche.monthsToPayoff;
-    const curMonths = this.chosenStrategy() === 'snowball' ? current.snowball.monthsToPayoff : current.avalanche.monthsToPayoff;
+    const choice = this.chosenStrategy();
+    const getStrategy = (c: StrategyComparison) => choice === 'snowball' ? c.snowball : choice === 'scoreRecovery' ? c.scoreRecovery : c.avalanche;
+    const baseMonths = getStrategy(base).monthsToPayoff;
+    const curMonths = getStrategy(current).monthsToPayoff;
     return baseMonths - curMonths;
   });
 
@@ -1285,8 +1310,10 @@ export class StrategyComparisonComponent implements OnInit {
     const base = this.baseComparison();
     const current = this.comparison();
     if (!base || !current) return 0;
-    const baseInt = this.chosenStrategy() === 'snowball' ? base.snowball.totalInterest : base.avalanche.totalInterest;
-    const curInt = this.chosenStrategy() === 'snowball' ? current.snowball.totalInterest : current.avalanche.totalInterest;
+    const choice2 = this.chosenStrategy();
+    const getStrat = (c: StrategyComparison) => choice2 === 'snowball' ? c.snowball : choice2 === 'scoreRecovery' ? c.scoreRecovery : c.avalanche;
+    const baseInt = getStrat(base).totalInterest;
+    const curInt = getStrat(current).totalInterest;
     return baseInt - curInt;
   });
 
@@ -1334,8 +1361,8 @@ export class StrategyComparisonComponent implements OnInit {
   chooseStrategy(type: string): void {
     try { localStorage.setItem('pulse_chosen_strategy', type); } catch { /* private browsing */ }
     this.chosenStrategy.set(type);
-    const label = type === 'avalanche' ? 'Avalanche' : 'Snowball';
-    this.notificationService.success(`${label} strategy selected!`);
+    const labels: Record<string, string> = { avalanche: 'Avalanche', snowball: 'Snowball', scoreRecovery: 'Score Recovery' };
+    this.notificationService.success(`${labels[type] || type} strategy selected!`);
   }
 
   sliderLabel(value: number): string {

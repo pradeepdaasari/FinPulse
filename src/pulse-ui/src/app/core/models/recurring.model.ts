@@ -1,4 +1,4 @@
-export type RecurrenceFrequency = 'Daily' | 'Weekly' | 'Biweekly' | 'Monthly';
+export type RecurrenceFrequency = 'Daily' | 'Weekly' | 'Biweekly' | 'Monthly' | 'OneTime';
 export type RecurringType = 'Bill' | 'Budget';
 
 export interface RecurringTransaction {

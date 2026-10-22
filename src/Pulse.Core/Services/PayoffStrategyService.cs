@@ -11,11 +11,13 @@ public class PayoffStrategyService : IPayoffStrategyService
     {
         var avalanche = RunStrategy(debts, totalMonthlyBudget, "Avalanche");
         var snowball = RunStrategy(debts, totalMonthlyBudget, "Snowball");
+        var scoreRecovery = RunStrategy(debts, totalMonthlyBudget, "ScoreRecovery");
 
         return new StrategyComparisonDto
         {
             Avalanche = avalanche,
             Snowball = snowball,
+            ScoreRecovery = scoreRecovery,
             InterestSaved = snowball.TotalInterest - avalanche.TotalInterest,
             TimeDifference = snowball.MonthsToPayoff - avalanche.MonthsToPayoff
         };
@@ -38,6 +40,8 @@ public class PayoffStrategyService : IPayoffStrategyService
             PaymentFrequency = d.PaymentFrequency,
             StartDate = d.StartDate,
             PerPaymentAmount = d.PerPaymentAmount > 0 ? d.PerPaymentAmount : d.MinimumPayment,
+            CreditLimit = d.CreditLimit,
+            DebtType = d.DebtType,
             TotalInterestPaid = 0,
             PaidOff = false,
             PayoffMonth = 0
@@ -121,6 +125,11 @@ public class PayoffStrategyService : IPayoffStrategyService
 
             if (strategyName == "Avalanche")
                 targetDebts = targetDebts.OrderByDescending(d => d.EffectiveApr).ToList();
+            else if (strategyName == "ScoreRecovery")
+                targetDebts = targetDebts
+                    .OrderByDescending(d => d.DebtType == DebtType.CreditCard ? 1 : 0)
+                    .ThenByDescending(d => d.CreditLimit > 0 ? d.Balance / d.CreditLimit : 0)
+                    .ToList();
             else
                 targetDebts = targetDebts.OrderBy(d => d.Balance).ToList();
 
@@ -154,9 +163,16 @@ public class PayoffStrategyService : IPayoffStrategyService
             }
         }
 
-        var sortedDebts = strategyName == "Avalanche"
-            ? workingDebts.OrderByDescending(d => d.EffectiveApr).ThenBy(d => d.PayoffMonth)
-            : workingDebts.OrderBy(d => d.OriginalBalance).ThenBy(d => d.PayoffMonth);
+        IOrderedEnumerable<WorkingDebt> sortedDebts;
+        if (strategyName == "Avalanche")
+            sortedDebts = workingDebts.OrderByDescending(d => d.EffectiveApr).ThenBy(d => d.PayoffMonth);
+        else if (strategyName == "ScoreRecovery")
+            sortedDebts = workingDebts
+                .OrderByDescending(d => d.DebtType == DebtType.CreditCard ? 1 : 0)
+                .ThenByDescending(d => d.CreditLimit > 0 ? d.OriginalBalance / d.CreditLimit : 0)
+                .ThenBy(d => d.PayoffMonth);
+        else
+            sortedDebts = workingDebts.OrderBy(d => d.OriginalBalance).ThenBy(d => d.PayoffMonth);
 
         foreach (var debt in sortedDebts)
         {
@@ -247,6 +263,8 @@ public class PayoffStrategyService : IPayoffStrategyService
         public string? PaymentFrequency { get; set; }
         public DateTime? StartDate { get; set; }
         public decimal PerPaymentAmount { get; set; }
+        public decimal CreditLimit { get; set; }
+        public DebtType DebtType { get; set; }
         public bool PaidOff { get; set; }
         public int PayoffMonth { get; set; }
     }

@@ -69,6 +69,36 @@ export interface TradeEntryDialogData {
       } @else {
       <form [formGroup]="form" class="trade-form" (submit)="$event.preventDefault()">
 
+        @if (isMultiStep()) {
+          <div class="step-indicator">
+            <div class="step-dot" [class.active]="currentStep() === 1" (click)="currentStep.set(1)">1</div>
+            <div class="step-line" [class.done]="currentStep() === 2"></div>
+            <div class="step-dot" [class.active]="currentStep() === 2" (click)="currentStep.set(2)">2</div>
+            <div class="step-labels">
+              <span [class.active]="currentStep() === 1">Entry</span>
+              <span [class.active]="currentStep() === 2">Close &amp; Reflect</span>
+            </div>
+          </div>
+        }
+
+        @if (currentStep() === 1) {
+
+        @if (data?.closeMode) {
+          <div class="entry-summary-card">
+            <div class="summary-row">
+              <span class="summary-instrument">{{ data.trade?.instrument }}</span>
+              <span class="summary-direction" [class.long]="data.trade?.direction === 'long'" [class.short]="data.trade?.direction === 'short'">{{ data.trade?.direction }}</span>
+              <span class="summary-setup">{{ data.trade?.setupName || 'Setup' }}</span>
+            </div>
+            <div class="summary-meta">
+              Entry {{ (data.trade?.assetType === 'Options' ? data.trade?.entryPremium : data.trade?.entryPrice) | currency }} · {{ data.trade?.quantity }} ct · {{ data.trade?.date | date:'MMM d' }}
+            </div>
+            @if (data.trade?.tradeThesis) {
+              <div class="summary-thesis">"{{ data.trade?.tradeThesis }}"</div>
+            }
+          </div>
+        } @else {
+
         <!-- Discipline Status Banner -->
         @if (!data?.trade && disciplineStatus(); as ds) {
           <div class="discipline-banner" [class.banner-green]="ds.trafficLight === 'green'"
@@ -172,17 +202,6 @@ export interface TradeEntryDialogData {
               <mat-icon>lock</mat-icon> Closed
             </mat-button-toggle>
           </mat-button-toggle-group>
-          @if (form.value.status === 'Closed') {
-            <div class="closed-date-field" (click)="closedPicker.open()">
-              <mat-icon class="date-icon">event_available</mat-icon>
-              <span class="closed-date-value">Closed {{ form.value.closedDate | date:'MMM d, yyyy' }}</span>
-              <input matInput [matDatepicker]="closedPicker" formControlName="closedDate" class="hidden-date-input">
-              <mat-datepicker #closedPicker></mat-datepicker>
-              <span class="date-sep">|</span>
-              <mat-icon class="date-icon" (click)="$event.stopPropagation(); closedTimeInput.focus()">schedule</mat-icon>
-              <input #closedTimeInput type="time" class="time-input closed-time" formControlName="closedTime" (click)="$event.stopPropagation()">
-            </div>
-          }
         </div>
 
         <!-- Direction + Asset Type side by side -->
@@ -299,104 +318,113 @@ export interface TradeEntryDialogData {
               </div>
             }
 
-            <!-- Premiums -->
-            <div [class]="form.value.status === 'Closed' ? 'row-2col' : 'full-width'">
-              <mat-form-field appearance="outline" [class.full-width]="form.value.status !== 'Closed'">
-                <mat-label>Entry Premium</mat-label>
-                <input matInput type="number" inputmode="decimal" formControlName="entryPremium" step="0.01" (input)="calcPnl()">
-                <span matTextPrefix>$</span>
-              </mat-form-field>
-              @if (form.value.status === 'Closed') {
-                <mat-form-field appearance="outline">
-                  <mat-label>Exit Premium</mat-label>
-                  <input matInput type="number" inputmode="decimal" formControlName="exitPremium" step="0.01" (input)="calcPnl()" [readonly]="!!form.value.expiredWorthless">
-                  <span matTextPrefix>$</span>
-                </mat-form-field>
+            <!-- Entry Premium -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Entry Premium</mat-label>
+              <input matInput type="number" inputmode="decimal" formControlName="entryPremium" step="0.01" (input)="calcPnl()">
+              <span matTextPrefix>$</span>
+            </mat-form-field>
+          </div>
+        } @else {
+          <!-- Entry Price (non-options) -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Entry Price</mat-label>
+            <input matInput type="number" inputmode="decimal" formControlName="entryPrice" step="0.01" (input)="calcPnl()">
+            <span matTextPrefix>$</span>
+          </mat-form-field>
+        }
+
+        <!-- Qty, Multiplier, Stop, Target -->
+        <div class="row-4col">
+          <mat-form-field appearance="outline">
+            <mat-label>Qty</mat-label>
+            <input matInput type="number" inputmode="decimal" formControlName="quantity" min="1" (input)="calcPnl()">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Multiplier</mat-label>
+            <input matInput type="number" inputmode="decimal" formControlName="multiplier" min="1" (input)="calcPnl()">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Stop Loss</mat-label>
+            <input matInput type="number" inputmode="decimal" formControlName="stopLoss" step="0.01">
+            <span matTextPrefix>$&nbsp;</span>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Target</mat-label>
+            <input matInput type="number" inputmode="decimal" formControlName="profitTarget" step="0.01">
+            <span matTextPrefix>$&nbsp;</span>
+          </mat-form-field>
+        </div>
+
+        <mat-checkbox formControlName="checklistCompleted" color="primary" class="checklist-check">
+          Checklist completed
+        </mat-checkbox>
+
+        <!-- Emotion at entry (hide in close mode — exitEmotion covers it) -->
+        @if (form.value.status !== 'Closed') {
+          <div class="emotion-section">
+            <label class="section-label">How are you feeling?</label>
+            <mat-button-toggle-group formControlName="emotionAtEntry" class="emotion-toggle">
+              @for (e of emotions; track e.value) {
+                <mat-button-toggle [value]="e.value" class="emotion-btn">
+                  <span class="emotion-icon">{{ e.icon }}</span>
+                  <span class="emotion-label">{{ e.label }}</span>
+                </mat-button-toggle>
               }
-            </div>
-            @if (form.value.status === 'Closed') {
-              <mat-checkbox formControlName="expiredWorthless" color="primary" class="expired-check" (change)="onExpiredWorthlessChange($event.checked)">
-                Expired Worthless <span class="expired-hint">(no exit brokerage — option expired, not closed)</span>
-              </mat-checkbox>
-            }
-          </div>
-        } @else {
-          <!-- Non-options: standard price fields -->
-          <div [class]="form.value.status === 'Closed' ? 'row-2col' : 'full-width'">
-            <mat-form-field appearance="outline" [class.full-width]="form.value.status !== 'Closed'">
-              <mat-label>Entry Price</mat-label>
-              <input matInput type="number" inputmode="decimal" formControlName="entryPrice" step="0.01" (input)="calcPnl()">
-              <span matTextPrefix>$</span>
-            </mat-form-field>
-            @if (form.value.status === 'Closed') {
-              <mat-form-field appearance="outline">
-                <mat-label>Exit Price</mat-label>
-                <input matInput type="number" inputmode="decimal" formControlName="exitPrice" step="0.01" (input)="calcPnl()">
-                <span matTextPrefix>$</span>
-              </mat-form-field>
-            }
+            </mat-button-toggle-group>
           </div>
         }
 
-        <!-- Contracts, Multiplier, P&L, Risk -->
-        @if (form.value.status === 'Closed') {
-          <div class="row-4col">
-            <mat-form-field appearance="outline">
-              <mat-label>Qty</mat-label>
-              <input matInput type="number" inputmode="decimal" formControlName="quantity" min="1" (input)="calcPnl()">
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Multiplier</mat-label>
-              <input matInput type="number" inputmode="decimal" formControlName="multiplier" min="1" (input)="calcPnl()">
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>P&L</mat-label>
-              <input matInput type="number" inputmode="decimal" formControlName="pnl" step="0.01">
-              <span matTextPrefix>$</span>
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Risk</mat-label>
-              <input matInput type="number" inputmode="decimal" formControlName="plannedRisk" step="1" min="0">
-              <span matTextPrefix>$</span>
-            </mat-form-field>
-          </div>
-          <div class="row-2col">
-            <mat-form-field appearance="outline">
-              <mat-label>Stop Loss</mat-label>
-              <input matInput type="number" inputmode="decimal" formControlName="stopLoss" step="0.01">
-              <span matTextPrefix>$&nbsp;</span>
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Target</mat-label>
-              <input matInput type="number" inputmode="decimal" formControlName="profitTarget" step="0.01">
-              <span matTextPrefix>$&nbsp;</span>
-            </mat-form-field>
-          </div>
+        } <!-- end close-mode else -->
+        } <!-- end step 1 -->
+
+        @if (currentStep() === 2) {
+
+        <!-- Close Date -->
+        <div class="closed-date-field step2-close-date" (click)="closedPicker2.open()">
+          <mat-icon class="date-icon">event_available</mat-icon>
+          <span class="closed-date-value">Closed {{ form.value.closedDate | date:'MMM d, yyyy' }}</span>
+          <input matInput [matDatepicker]="closedPicker2" formControlName="closedDate" class="hidden-date-input">
+          <mat-datepicker #closedPicker2></mat-datepicker>
+          <span class="date-sep">|</span>
+          <mat-icon class="date-icon" (click)="$event.stopPropagation(); closedTimeInput2.focus()">schedule</mat-icon>
+          <input #closedTimeInput2 type="time" class="time-input closed-time" formControlName="closedTime" (click)="$event.stopPropagation()">
+        </div>
+
+        <!-- Exit Premium / Price -->
+        @if (form.value.assetType === 'Options') {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Exit Premium</mat-label>
+            <input matInput type="number" inputmode="decimal" formControlName="exitPremium" step="0.01" (input)="calcPnl()" [readonly]="!!form.value.expiredWorthless">
+            <span matTextPrefix>$</span>
+          </mat-form-field>
+          <mat-checkbox formControlName="expiredWorthless" color="primary" class="expired-check" (change)="onExpiredWorthlessChange($event.checked)">
+            Expired Worthless <span class="expired-hint">(no exit brokerage — option expired, not closed)</span>
+          </mat-checkbox>
         } @else {
-          <div class="row-4col">
-            <mat-form-field appearance="outline">
-              <mat-label>Qty</mat-label>
-              <input matInput type="number" inputmode="decimal" formControlName="quantity" min="1">
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Multiplier</mat-label>
-              <input matInput type="number" inputmode="decimal" formControlName="multiplier" min="1">
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Stop Loss</mat-label>
-              <input matInput type="number" inputmode="decimal" formControlName="stopLoss" step="0.01">
-              <span matTextPrefix>$&nbsp;</span>
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Target</mat-label>
-              <input matInput type="number" inputmode="decimal" formControlName="profitTarget" step="0.01">
-              <span matTextPrefix>$&nbsp;</span>
-            </mat-form-field>
-          </div>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Exit Price</mat-label>
+            <input matInput type="number" inputmode="decimal" formControlName="exitPrice" step="0.01" (input)="calcPnl()">
+            <span matTextPrefix>$</span>
+          </mat-form-field>
         }
 
-        <!-- Brokerage + Fees (only when closing) -->
-        @if (form.value.status === 'Closed' && brokerageAccounts().length > 0) {
+        <!-- P&L + Risk -->
+        <div class="row-2col">
+          <mat-form-field appearance="outline">
+            <mat-label>P&L</mat-label>
+            <input matInput type="number" inputmode="decimal" formControlName="pnl" step="0.01">
+            <span matTextPrefix>$</span>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Risk</mat-label>
+            <input matInput type="number" inputmode="decimal" formControlName="plannedRisk" step="1" min="0">
+            <span matTextPrefix>$</span>
+          </mat-form-field>
+        </div>
+
+        <!-- Brokerage + Fees -->
+        @if (brokerageAccounts().length > 0) {
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Account</mat-label>
             <mat-select formControlName="bankAccountId" (selectionChange)="calcPnl()">
@@ -461,55 +489,34 @@ export interface TradeEntryDialogData {
         }
 
         <!-- Post-Trade Reflection -->
-        @if (form.value.status === 'Closed') {
-          <div class="reflection-section">
-            <label class="section-label">Post-Trade Reflection</label>
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Exit Reason</mat-label>
-              <mat-select formControlName="exitReason">
-                <mat-option value="Hit Target">Hit Target</mat-option>
-                <mat-option value="Hit Stop">Hit Stop</mat-option>
-                <mat-option value="Time Exit">Time Exit</mat-option>
-                <mat-option value="Manual Close">Manual Close</mat-option>
-                <mat-option value="Panic Exit">Panic Exit</mat-option>
-                <mat-option value="Revenge Close">Revenge Close</mat-option>
-              </mat-select>
-            </mat-form-field>
-            <label class="section-label">How are you feeling after this trade?</label>
-            <mat-button-toggle-group formControlName="exitEmotion" class="emotion-toggle">
-              @for (e of emotions; track e.value) {
-                <mat-button-toggle [value]="e.value" class="emotion-btn">
-                  <span class="emotion-icon">{{ e.icon }}</span>
-                  <span class="emotion-label">{{ e.label }}</span>
-                </mat-button-toggle>
-              }
-            </mat-button-toggle-group>
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>What did you learn?</mat-label>
-              <textarea matInput formControlName="lessonsLearned" rows="2" maxlength="1000"
-                placeholder="e.g., Should have waited for confirmation. Entry was solid but held too long."></textarea>
-            </mat-form-field>
-          </div>
-        }
-
-        <mat-checkbox formControlName="checklistCompleted" color="primary" class="checklist-check">
-          Checklist completed
-        </mat-checkbox>
-
-        <!-- Emotion at entry (hide in close mode — exitEmotion covers it) -->
-        @if (form.value.status !== 'Closed') {
-          <div class="emotion-section">
-            <label class="section-label">How are you feeling?</label>
-            <mat-button-toggle-group formControlName="emotionAtEntry" class="emotion-toggle">
-              @for (e of emotions; track e.value) {
-                <mat-button-toggle [value]="e.value" class="emotion-btn">
-                  <span class="emotion-icon">{{ e.icon }}</span>
-                  <span class="emotion-label">{{ e.label }}</span>
-                </mat-button-toggle>
-              }
-            </mat-button-toggle-group>
-          </div>
-        }
+        <div class="reflection-section">
+          <label class="section-label">Post-Trade Reflection</label>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Exit Reason</mat-label>
+            <mat-select formControlName="exitReason">
+              <mat-option value="Hit Target">Hit Target</mat-option>
+              <mat-option value="Hit Stop">Hit Stop</mat-option>
+              <mat-option value="Time Exit">Time Exit</mat-option>
+              <mat-option value="Manual Close">Manual Close</mat-option>
+              <mat-option value="Panic Exit">Panic Exit</mat-option>
+              <mat-option value="Revenge Close">Revenge Close</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <label class="section-label">How are you feeling after this trade?</label>
+          <mat-button-toggle-group formControlName="exitEmotion" class="emotion-toggle">
+            @for (e of emotions; track e.value) {
+              <mat-button-toggle [value]="e.value" class="emotion-btn">
+                <span class="emotion-icon">{{ e.icon }}</span>
+                <span class="emotion-label">{{ e.label }}</span>
+              </mat-button-toggle>
+            }
+          </mat-button-toggle-group>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>What did you learn?</mat-label>
+            <textarea matInput formControlName="lessonsLearned" rows="2" maxlength="1000"
+              placeholder="e.g., Should have waited for confirmation. Entry was solid but held too long."></textarea>
+          </mat-form-field>
+        </div>
 
         <!-- More options: mistakes, notes, tags -->
         <button type="button" class="more-toggle" (click)="showMore.set(!showMore())">
@@ -538,6 +545,8 @@ export interface TradeEntryDialogData {
             </mat-form-field>
           </div>
         }
+
+        } <!-- end step 2 -->
       </form>
       }
       @if (saving()) {
@@ -545,21 +554,46 @@ export interface TradeEntryDialogData {
       }
     </mat-dialog-content>
     <div class="save-bar">
-      <button class="save-btn" (click)="save()" [disabled]="form.invalid || loading() || saving()">
-        @if (saving()) {
-          <mat-spinner diameter="20" class="save-spinner"></mat-spinner>
-          Saving...
-        } @else {
-          <mat-icon>{{ data?.closeMode ? 'lock' : (data?.trade ? 'check' : 'save') }}</mat-icon>
-          {{ data?.closeMode ? 'Close Trade' : (data?.trade ? 'Update Trade' : (form.value.status === 'Open' ? 'Open Trade' : 'Save Trade')) }}
-        }
-      </button>
+      @if (currentStep() === 1 && isMultiStep()) {
+        <button class="save-btn next-btn" (click)="currentStep.set(2)">
+          Next <mat-icon>arrow_forward</mat-icon>
+        </button>
+      } @else if (currentStep() === 2) {
+        <div class="save-bar-split">
+          <button class="back-btn" (click)="currentStep.set(1)">
+            <mat-icon>arrow_back</mat-icon> Back
+          </button>
+          <button class="save-btn" (click)="save()" [disabled]="form.invalid || loading() || saving()">
+            @if (saving()) {
+              <mat-spinner diameter="20" class="save-spinner"></mat-spinner>
+              Saving...
+            } @else {
+              <mat-icon>{{ data?.closeMode ? 'lock' : 'check' }}</mat-icon>
+              {{ data?.closeMode ? 'Close Trade' : 'Save Trade' }}
+            }
+          </button>
+        </div>
+      } @else {
+        <button class="save-btn" (click)="save()" [disabled]="form.invalid || loading() || saving()">
+          @if (saving()) {
+            <mat-spinner diameter="20" class="save-spinner"></mat-spinner>
+            Saving...
+          } @else {
+            <mat-icon>{{ data?.trade ? 'check' : 'save' }}</mat-icon>
+            {{ data?.trade ? 'Update Trade' : 'Open Trade' }}
+          }
+        </button>
+      }
     </div>
   `,
   styles: [`
+    :host {
+      display: flex; flex-direction: column; max-height: 100vh; overflow: hidden;
+    }
     .dialog-banner {
       position: relative; padding: 18px 24px 14px;
       background: var(--gradient-primary); overflow: hidden;
+      flex-shrink: 0; z-index: 2;
     }
     .banner-pattern {
       position: absolute; inset: 0;
@@ -613,7 +647,7 @@ export interface TradeEntryDialogData {
     }
     .time-input::-webkit-calendar-picker-indicator { display: none; -webkit-appearance: none; }
 
-    .trade-form { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding-top: 12px; }
+    .trade-form { display: flex; flex-direction: column; gap: 14px; min-width: 0; padding-top: 12px; }
 
     .row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: center; }
     .row-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; align-items: start; }
@@ -756,6 +790,78 @@ export interface TradeEntryDialogData {
     .expired-hint { font-size: 0.72rem; color: var(--color-text-muted); margin-left: 4px; }
     .max-risk-line { border-top: 1px dashed var(--color-border, #e0e0e0); padding-top: 4px; margin-top: 2px; }
 
+    .step-indicator {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; padding: 4px 0 8px; flex-wrap: wrap;
+    }
+    .step-dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700;
+      background: var(--color-surface-secondary); color: var(--color-text-muted);
+      border: 2px solid var(--color-border); cursor: pointer;
+      transition: all 0.2s;
+    }
+    .step-dot.active {
+      background: var(--color-primary); color: #fff; border-color: var(--color-primary);
+    }
+    .step-line {
+      width: 40px; height: 2px; background: var(--color-border);
+      transition: background 0.2s;
+    }
+    .step-line.done { background: var(--color-primary); }
+    .step-labels {
+      width: 100%; display: flex; justify-content: space-between;
+      padding: 4px 16px 0; font-size: 0.7rem; font-weight: 600;
+      color: var(--color-text-muted);
+    }
+    .step-labels span.active { color: var(--color-primary); }
+
+    .entry-summary-card {
+      background: var(--color-surface-secondary); border-radius: var(--radius-md);
+      padding: 14px 16px; border: 1px solid var(--color-border);
+    }
+    .summary-row {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .summary-instrument {
+      font-size: 1rem; font-weight: 700; color: var(--color-text);
+    }
+    .summary-direction {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      padding: 2px 8px; border-radius: var(--radius-full);
+    }
+    .summary-direction.long { background: var(--color-stat-green-bg); color: var(--color-success); }
+    .summary-direction.short { background: var(--color-stat-red-bg); color: var(--color-danger); }
+    .summary-setup {
+      font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted);
+    }
+    .summary-meta {
+      font-size: 0.8rem; color: var(--color-text-secondary); margin-top: 6px;
+    }
+    .summary-thesis {
+      font-size: 0.75rem; color: var(--color-text-muted); font-style: italic;
+      margin-top: 6px; line-height: 1.4;
+    }
+
+    .step2-close-date { width: fit-content; }
+
+    .save-bar-split {
+      display: flex; gap: 10px; align-items: center;
+    }
+    .back-btn {
+      height: 48px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm);
+      background: var(--color-surface); color: var(--color-text-secondary);
+      font-size: 0.85rem; font-weight: 600;
+      display: flex; align-items: center; gap: 4px;
+      cursor: pointer; padding: 0 16px; white-space: nowrap;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .back-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .back-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .save-bar-split .save-btn { flex: 1; }
+    .next-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
     .more-toggle {
       display: flex; align-items: center; gap: 4px;
       background: none; border: none; cursor: pointer;
@@ -771,8 +877,8 @@ export interface TradeEntryDialogData {
     }
 
     .save-bar {
-      flex-shrink: 0;
-      padding: 12px 24px 16px;
+      flex-shrink: 0; z-index: 2;
+      padding: 12px 24px calc(16px + env(safe-area-inset-bottom, 0px));
       background: var(--color-surface);
       border-top: 1px solid var(--color-border);
     }
@@ -790,7 +896,10 @@ export interface TradeEntryDialogData {
     ::ng-deep .save-spinner circle { stroke: #fff !important; }
 
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 200px; }
-    mat-dialog-content { position: relative; }
+    mat-dialog-content {
+      position: relative; flex: 1 1 auto; min-height: 0;
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+    }
     .saving-overlay {
       position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
       background: rgba(255,255,255,0.7); border-radius: inherit; z-index: 10;
@@ -845,7 +954,7 @@ export interface TradeEntryDialogData {
       .toggle-row.row-2col { grid-template-columns: 1fr 1fr; }
     }
     @media (max-width: 599px) {
-      :host { display: flex; flex-direction: column; height: 100%; min-height: 0; max-width: 100%; overflow: hidden; }
+      :host { height: 100%; max-width: 100%; }
       .dialog-banner { padding: 14px 16px 12px; flex-shrink: 0; }
       .banner-text h2 { font-size: 0.95rem; }
       .trade-form { max-width: 100%; overflow: hidden; box-sizing: border-box; }
@@ -914,6 +1023,8 @@ export class TradeEntryDialogComponent implements OnInit {
   loading = signal(true);
   saving = signal(false);
   showMore = signal(false);
+  currentStep = signal(1);
+  isMultiStep = signal(false);
   disciplineStatus = signal<DisciplineStatus | null>(null);
   selectedMistakes = signal<string[]>(
     this.data?.trade?.mistakeTags ?? (this.data?.checklistPrefill?.isRevengeTrading ? ['Revenge'] : [])
@@ -1000,12 +1111,11 @@ export class TradeEntryDialogComponent implements OnInit {
   ngOnInit(): void {
     if (this.data?.closeMode) {
       this.form.patchValue({ status: 'Closed', closedDate: new Date() });
+      this.currentStep.set(2);
     }
     if (!this.data?.trade) {
-      this.tradingService.getDisciplineStatus().subscribe({
-        next: ds => { this.disciplineStatus.set(ds); this.cdr.detectChanges(); },
-        error: () => {}
-      });
+      this.fetchDisciplineStatus();
+      this.form.get('date')!.valueChanges.subscribe(() => this.fetchDisciplineStatus());
       this.form.get('tradeThesis')!.setValidators([Validators.required, Validators.maxLength(500)]);
       this.form.get('tradeThesis')!.updateValueAndValidity();
       this.form.get('stopLoss')!.setValidators([Validators.required, Validators.min(0.01)]);
@@ -1023,8 +1133,10 @@ export class TradeEntryDialogComponent implements OnInit {
       this.loadChecklist(this.form.value.setupId);
     }
 
+    this.isMultiStep.set(this.form.value.status === 'Closed');
     this.updateFeeValidators(this.form.value.status as string);
     this.form.get('status')!.valueChanges.subscribe(s => {
+      this.isMultiStep.set(s === 'Closed');
       this.updateFeeValidators(s as string);
       this.updateExitValidators(s as string);
     });
@@ -1071,6 +1183,15 @@ export class TradeEntryDialogComponent implements OnInit {
     const states = [...this.checkStates()];
     states[index] = !states[index];
     this.checkStates.set(states);
+  }
+
+  private fetchDisciplineStatus(): void {
+    const d = this.form.value.date;
+    const dateParam = d instanceof Date ? d.toISOString() : undefined;
+    this.tradingService.getDisciplineStatus(dateParam).subscribe({
+      next: ds => { this.disciplineStatus.set(ds); this.cdr.detectChanges(); },
+      error: () => {}
+    });
   }
 
   onExpiredWorthlessChange(checked: boolean): void {
@@ -1193,6 +1314,16 @@ export class TradeEntryDialogComponent implements OnInit {
     const d = val.date instanceof Date ? val.date : new Date(val.date!);
     const [hh, mm] = (val.time || '00:00').split(':').map(Number);
     d.setHours(hh, mm, 0, 0);
+
+    if (val.status === 'Closed' && val.closedDate) {
+      const cd = val.closedDate instanceof Date ? val.closedDate : new Date(val.closedDate);
+      const entryOnly = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const closeOnly = new Date(cd.getFullYear(), cd.getMonth(), cd.getDate());
+      if (closeOnly < entryOnly) {
+        this.notify.error('Close date cannot be before entry date.');
+        return;
+      }
+    }
     const payload: Partial<TradeEntry> = {
       date: toLocalISOString(d),
       entryTime: val.time || undefined,

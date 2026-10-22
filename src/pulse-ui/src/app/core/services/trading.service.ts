@@ -159,8 +159,9 @@ export class TradingService {
     return this.http.put<DailyLimits>(`${this.baseUrl}/limits`, limits);
   }
 
-  getDisciplineStatus(): Observable<DisciplineStatus> {
-    return this.http.get<DisciplineStatus>(`${this.baseUrl}/discipline-status`);
+  getDisciplineStatus(date?: string): Observable<DisciplineStatus> {
+    const params = date ? `?date=${date}` : '';
+    return this.http.get<DisciplineStatus>(`${this.baseUrl}/discipline-status${params}`);
   }
 
   // --- Stats ---

@@ -142,7 +142,8 @@ public class RecurringController : ControllerBase
         if (item is null) return NotFound();
 
         item.NextRunDate = AdvanceDate(item.NextRunDate, item.Frequency, item.IntervalCount);
-        if (item.EndDate.HasValue && item.NextRunDate > item.EndDate.Value)
+        if (item.Frequency == RecurrenceFrequency.OneTime ||
+            (item.EndDate.HasValue && item.NextRunDate > item.EndDate.Value))
             item.IsActive = false;
 
         await _db.SaveChangesAsync();
@@ -255,7 +256,8 @@ public class RecurringController : ControllerBase
                 }
 
                 item.NextRunDate = AdvanceDate(item.NextRunDate, item.Frequency, item.IntervalCount);
-                if (item.EndDate.HasValue && item.NextRunDate > item.EndDate.Value)
+                if (item.Frequency == RecurrenceFrequency.OneTime ||
+                    (item.EndDate.HasValue && item.NextRunDate > item.EndDate.Value))
                     item.IsActive = false;
 
                 await _db.SaveChangesAsync();
@@ -350,7 +352,8 @@ public class RecurringController : ControllerBase
 
                         item.NextRunDate = AdvanceDate(item.NextRunDate, item.Frequency, item.IntervalCount);
 
-                        if (item.EndDate.HasValue && item.NextRunDate > item.EndDate.Value)
+                        if (item.Frequency == RecurrenceFrequency.OneTime ||
+                            (item.EndDate.HasValue && item.NextRunDate > item.EndDate.Value))
                         {
                             item.IsActive = false;
                             break;
@@ -386,7 +389,8 @@ public class RecurringController : ControllerBase
         });
 
         item.NextRunDate = AdvanceDate(item.NextRunDate, item.Frequency, item.IntervalCount);
-        if (item.EndDate.HasValue && item.NextRunDate > item.EndDate.Value)
+        if (item.Frequency == RecurrenceFrequency.OneTime ||
+            (item.EndDate.HasValue && item.NextRunDate > item.EndDate.Value))
             item.IsActive = false;
 
         await _db.SaveChangesAsync();
@@ -421,8 +425,9 @@ public class RecurringController : ControllerBase
             RecurrenceFrequency.Weekly => 4.33m,
             RecurrenceFrequency.Biweekly => 2.17m,
             RecurrenceFrequency.Monthly => 1m,
+            RecurrenceFrequency.OneTime => 0m,
             _ => 1m
-        } / i.IntervalCount));
+        } / Math.Max(i.IntervalCount, 1)));
 
         return Ok(new
         {
@@ -445,6 +450,7 @@ public class RecurringController : ControllerBase
             RecurrenceFrequency.Weekly => date.AddDays(7 * intervalCount),
             RecurrenceFrequency.Biweekly => date.AddDays(14),
             RecurrenceFrequency.Monthly => date.AddMonths(intervalCount),
+            RecurrenceFrequency.OneTime => date,
             _ => date.AddMonths(intervalCount)
         };
     }

@@ -19,7 +19,9 @@ public class BudgetPlanService : IBudgetPlanService
 
         var fixedExpenses = expenses.Where(e => e.Category?.IsFixed ?? e.IsFixed).ToList();
         var variableExpenses = expenses.Where(e => !(e.Category?.IsFixed ?? e.IsFixed)).ToList();
-        var recurringInMonth = recurring.Where(r => r.IsActive).ToList();
+        var recurringInMonth = recurring.Where(r => r.IsActive &&
+            (r.Frequency != RecurrenceFrequency.OneTime ||
+             (r.NextRunDate.Year == year && r.NextRunDate.Month == month))).ToList();
 
         var windowStart = breakdowns.Min(b => b.WindowStart.Date);
         var windowEnd = breakdowns.Max(b => b.WindowEnd.Date);
@@ -85,6 +87,29 @@ public class BudgetPlanService : IBudgetPlanService
         foreach (var rec in recurringInMonth)
         {
             var dueDay = rec.NextRunDate.Day;
+
+            if (rec.Frequency == RecurrenceFrequency.OneTime)
+            {
+                var dueDate = rec.NextRunDate.Date;
+                if (dueDate >= windowStart && dueDate <= windowEnd)
+                {
+                    var assigned = FindOwningPaycheck(breakdowns, dueDate);
+                    assigned.Expenses.Add(new PaycheckExpenseDto
+                    {
+                        ExpenseId = rec.Id,
+                        Name = rec.Description + " (One Time)",
+                        CategoryId = rec.CategoryId,
+                        CategoryName = rec.Category?.Name ?? "Unknown",
+                        Amount = rec.Amount,
+                        DueDay = dueDay,
+                        DueDate = dueDate,
+                        IsAutopay = true,
+                        IsFixed = true
+                    });
+                }
+                continue;
+            }
+
             foreach (var (y, m) in coveredMonths)
             {
                 var dueDate = new DateTime(y, m, Math.Min(dueDay, DateTime.DaysInMonth(y, m)));

@@ -96,6 +96,7 @@ public class StrategiesController : ControllerBase
 
             AssignPaycheckDates(comparison.Avalanche.MonthlyPlan, paychecks, today);
             AssignPaycheckDates(comparison.Snowball.MonthlyPlan, paychecks, today);
+            AssignPaycheckDates(comparison.ScoreRecovery.MonthlyPlan, paychecks, today);
         }
 
         return Ok(comparison);

@@ -5,5 +5,6 @@ public enum RecurrenceFrequency
     Daily,
     Weekly,
     Biweekly,
-    Monthly
+    Monthly,
+    OneTime
 }

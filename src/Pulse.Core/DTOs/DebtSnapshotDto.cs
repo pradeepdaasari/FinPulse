@@ -17,4 +17,5 @@ public class DebtSnapshotDto
     public DateTime? StartDate { get; set; }
     public decimal PerPaymentAmount { get; set; }
     public DateTime? NextPaymentDate { get; set; }
+    public decimal CreditLimit { get; set; }
 }

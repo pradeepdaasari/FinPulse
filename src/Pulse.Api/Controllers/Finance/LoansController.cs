@@ -587,15 +587,22 @@ public class LoansController : ControllerBase
                 (desc.Length > 0 && (name.Contains(desc) || desc.Contains(name))) ||
                 (merch.Length > 0 && (name.Contains(merch) || merch.Contains(name))))
             {
-                rec.NextRunDate = rec.Frequency switch
+                if (rec.Frequency == RecurrenceFrequency.OneTime)
                 {
-                    RecurrenceFrequency.Daily => rec.NextRunDate.AddDays(rec.IntervalCount),
-                    RecurrenceFrequency.Weekly => rec.NextRunDate.AddDays(7 * rec.IntervalCount),
-                    RecurrenceFrequency.Biweekly => rec.NextRunDate.AddDays(14),
-                    _ => rec.NextRunDate.AddMonths(rec.IntervalCount)
-                };
-                if (rec.EndDate.HasValue && rec.NextRunDate > rec.EndDate.Value)
                     rec.IsActive = false;
+                }
+                else
+                {
+                    rec.NextRunDate = rec.Frequency switch
+                    {
+                        RecurrenceFrequency.Daily => rec.NextRunDate.AddDays(rec.IntervalCount),
+                        RecurrenceFrequency.Weekly => rec.NextRunDate.AddDays(7 * rec.IntervalCount),
+                        RecurrenceFrequency.Biweekly => rec.NextRunDate.AddDays(14),
+                        _ => rec.NextRunDate.AddMonths(rec.IntervalCount)
+                    };
+                    if (rec.EndDate.HasValue && rec.NextRunDate > rec.EndDate.Value)
+                        rec.IsActive = false;
+                }
                 matched = true;
             }
         }

@@ -548,12 +548,14 @@ export class RecurringPageComponent implements OnInit {
   }
 
   frequencyIcon(item: RecurringTransaction): string {
+    if (item.frequency === 'OneTime') return 'event';
     if (item.frequency === 'Daily') return 'today';
     if (item.frequency === 'Weekly' || item.frequency === 'Biweekly') return 'date_range';
     return 'calendar_month';
   }
 
   frequencyLabel(item: RecurringTransaction): string {
+    if (item.frequency === 'OneTime') return 'One Time';
     const n = item.intervalCount || 1;
     if (item.frequency === 'Daily') return n > 1 ? `Every ${n} days` : 'Daily';
     if (item.frequency === 'Weekly' || item.frequency === 'Biweekly') {
@@ -565,7 +567,7 @@ export class RecurringPageComponent implements OnInit {
   }
 
   private frequencyToNumber(freq: string): number {
-    const map: Record<string, number> = { Daily: 0, Weekly: 1, Biweekly: 1, Monthly: 3 };
+    const map: Record<string, number> = { Daily: 0, Weekly: 1, Biweekly: 2, Monthly: 3, OneTime: 4 };
     return map[freq] ?? 3;
   }
 

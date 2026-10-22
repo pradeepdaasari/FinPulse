@@ -439,12 +439,12 @@ public class TradingController : ControllerBase
     }
 
     [HttpGet("discipline-status")]
-    public async Task<ActionResult> GetDisciplineStatus()
+    public async Task<ActionResult> GetDisciplineStatus([FromQuery] DateTime? date = null)
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        var today = TimeZoneHelper.UserToday(tz);
-        var dayStart = TimeZoneHelper.ToUtc(today, tz);
-        var dayEnd = TimeZoneHelper.ToUtc(today.AddDays(1), tz);
+        var targetDate = date.HasValue ? date.Value.Date : TimeZoneHelper.UserToday(tz);
+        var dayStart = TimeZoneHelper.ToUtc(targetDate, tz);
+        var dayEnd = TimeZoneHelper.ToUtc(targetDate.AddDays(1), tz);
 
         var premarket = await _db.PreMarketNotes
             .FirstOrDefaultAsync(n => n.UserId == UserId && n.Date >= dayStart && n.Date < dayEnd);
@@ -464,15 +464,19 @@ public class TradingController : ControllerBase
 
         var recentLoss = false;
         string? lastLossInstrument = null;
-        var tenMinAgo = DateTime.UtcNow.AddMinutes(-10);
-        var lastClosed = todayTrades
-            .Where(t => t.Status == "Closed" && t.UpdatedAt >= tenMinAgo && (t.NetPnl ?? t.Pnl ?? 0) < 0)
-            .OrderByDescending(t => t.UpdatedAt)
-            .FirstOrDefault();
-        if (lastClosed != null)
+        var isToday = targetDate == TimeZoneHelper.UserToday(tz);
+        if (isToday)
         {
-            recentLoss = true;
-            lastLossInstrument = lastClosed.Instrument;
+            var tenMinAgo = DateTime.UtcNow.AddMinutes(-10);
+            var lastClosed = todayTrades
+                .Where(t => t.Status == "Closed" && t.UpdatedAt >= tenMinAgo && (t.NetPnl ?? t.Pnl ?? 0) < 0)
+                .OrderByDescending(t => t.UpdatedAt)
+                .FirstOrDefault();
+            if (lastClosed != null)
+            {
+                recentLoss = true;
+                lastLossInstrument = lastClosed.Instrument;
+            }
         }
 
         var trafficLight = "green";
@@ -548,6 +552,9 @@ public class TradingController : ControllerBase
             if (dViolations.Count > 0)
                 return UnprocessableEntity(new { error = "Discipline violations", violations = dViolations });
         }
+
+        if (input.ClosedDate.HasValue && input.ClosedDate.Value < input.Date)
+            return BadRequest(new { error = "Close date cannot be before entry date." });
 
         try
         {
@@ -630,6 +637,9 @@ public class TradingController : ControllerBase
             .Include(t => t.ChecklistResponses)
             .FirstOrDefaultAsync(t => t.Id == id && t.UserId == UserId);
         if (trade == null) return NotFound();
+
+        if (input.ClosedDate.HasValue && input.ClosedDate.Value < input.Date)
+            return BadRequest(new { error = "Close date cannot be before entry date." });
 
         try
         {
