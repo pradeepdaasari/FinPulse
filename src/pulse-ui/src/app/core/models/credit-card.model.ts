@@ -21,6 +21,7 @@ export interface CreditCard {
   statementBalance?: number;
   statementDate?: string;
   utilization?: number;
+  nextDueDate?: string;
 }
 
 export interface CardSummary {

@@ -181,6 +181,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
                   <span class="freq-badge" [class.freq-daily]="r.frequency === 'Daily'"
                         [class.freq-weekly]="r.frequency === 'Weekly' || r.frequency === 'Biweekly'"
                         [class.freq-monthly]="r.frequency === 'Monthly'"
+                        [class.freq-onetime]="r.frequency === 'OneTime'"
                         ><mat-icon class="freq-icon">{{ frequencyIcon(r) }}</mat-icon>{{ frequencyLabel(r) }}</span>
                 </td>
                 <td>
@@ -238,7 +239,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
               </div>
               <div class="rec-amount-col">
                 <span class="rec-amount" [class.overdue-amount]="isOverdue(r)">{{ r.amount | currency }}</span>
-                <span class="freq-badge" [class.freq-daily]="r.frequency === 'Daily'" [class.freq-weekly]="r.frequency === 'Weekly' || r.frequency === 'Biweekly'" [class.freq-monthly]="r.frequency === 'Monthly'" ><mat-icon class="freq-icon">{{ frequencyIcon(r) }}</mat-icon>{{ frequencyLabel(r) }}</span>
+                <span class="freq-badge" [class.freq-daily]="r.frequency === 'Daily'" [class.freq-weekly]="r.frequency === 'Weekly' || r.frequency === 'Biweekly'" [class.freq-monthly]="r.frequency === 'Monthly'" [class.freq-onetime]="r.frequency === 'OneTime'" ><mat-icon class="freq-icon">{{ frequencyIcon(r) }}</mat-icon>{{ frequencyLabel(r) }}</span>
               </div>
             </div>
             <div class="rec-bottom">
@@ -271,6 +272,113 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
           </div>
         }
       </div>
+      }
+
+      <!-- Budget Items Section -->
+      @if (budgetItems().length > 0) {
+        <div class="budget-section">
+          <div class="budget-section-header">
+            <mat-icon>account_balance_wallet</mat-icon>
+            <span>Budget Items</span>
+            <span class="budget-count">{{ budgetItems().length }}</span>
+          </div>
+
+          <!-- Desktop table -->
+          <mat-card class="desktop-only budget-table-card">
+            <div class="table-wrapper">
+            <table class="activity-table">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th>Amount</th>
+                  <th>Frequency</th>
+                  <th>Next Run</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of budgetItems(); track r.id) {
+                  <tr>
+                    <td>
+                      <div class="desc-cell">
+                        <div class="cat-icon-wrap budget-icon-wrap">
+                          <mat-icon class="cat-icon">{{ getIcon(r) }}</mat-icon>
+                        </div>
+                        <div>
+                          <div class="desc-text">{{ r.description }}</div>
+                          @if (r.merchant) { <div class="merchant-text">{{ r.merchant }}</div> }
+                        </div>
+                      </div>
+                    </td>
+                    <td class="amount budget-amount">{{ r.amount | currency }}</td>
+                    <td>
+                      <span class="freq-badge" [class.freq-daily]="r.frequency === 'Daily'"
+                            [class.freq-weekly]="r.frequency === 'Weekly' || r.frequency === 'Biweekly'"
+                            [class.freq-monthly]="r.frequency === 'Monthly'"
+                            [class.freq-onetime]="r.frequency === 'OneTime'"
+                            ><mat-icon class="freq-icon">{{ frequencyIcon(r) }}</mat-icon>{{ frequencyLabel(r) }}</span>
+                    </td>
+                    <td>{{ r.nextRunDate | localDate:'mediumDate' }}</td>
+                    <td>
+                      <mat-slide-toggle
+                        [checked]="r.isActive"
+                        (change)="toggleStatus(r)"
+                        [aria-label]="r.isActive ? 'Pause ' + r.description : 'Activate ' + r.description"
+                        color="primary">
+                        <span class="toggle-label">{{ r.isActive ? 'Active' : 'Paused' }}</span>
+                      </mat-slide-toggle>
+                    </td>
+                    <td>
+                      <div class="action-group">
+                        <button mat-icon-button class="action-btn action-edit" (click)="edit(r)" matTooltip="Edit">
+                          <mat-icon>edit</mat-icon>
+                        </button>
+                        <button mat-icon-button class="action-btn action-delete" (click)="deleteItem(r)" matTooltip="Delete">
+                          <mat-icon>delete_outline</mat-icon>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            </div>
+          </mat-card>
+
+          <!-- Mobile cards -->
+          <div class="mobile-cards">
+            @for (r of budgetItems(); track r.id) {
+              <div class="rec-card budget-card" [class.rec-paused]="!r.isActive">
+                <div class="rec-top">
+                  <div class="rec-icon-wrap budget-icon-wrap">
+                    <mat-icon>{{ getIcon(r) }}</mat-icon>
+                  </div>
+                  <div class="rec-info">
+                    <span class="rec-name">{{ r.description }}</span>
+                    @if (r.merchant) { <span class="rec-merchant">{{ r.merchant }}</span> }
+                  </div>
+                  <div class="rec-amount-col">
+                    <span class="rec-amount budget-amount">{{ r.amount | currency }}</span>
+                    <span class="freq-badge" [class.freq-daily]="r.frequency === 'Daily'" [class.freq-weekly]="r.frequency === 'Weekly' || r.frequency === 'Biweekly'" [class.freq-monthly]="r.frequency === 'Monthly'" [class.freq-onetime]="r.frequency === 'OneTime'" ><mat-icon class="freq-icon">{{ frequencyIcon(r) }}</mat-icon>{{ frequencyLabel(r) }}</span>
+                  </div>
+                </div>
+                <div class="rec-bottom">
+                  <span class="rec-next">Next: {{ r.nextRunDate | localDate:'MMM d' }}</span>
+                  <div class="rec-actions">
+                    <mat-slide-toggle [checked]="r.isActive" (change)="toggleStatus(r)" color="primary" [aria-label]="r.isActive ? 'Pause ' + r.description : 'Activate ' + r.description"></mat-slide-toggle>
+                    <button mat-icon-button class="action-btn action-edit" (click)="edit(r)" aria-label="Edit">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn action-delete" (click)="deleteItem(r)" aria-label="Delete">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
       }
     }
     </div>
@@ -331,6 +439,7 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .freq-daily { background: var(--color-freq-daily-bg); color: var(--color-freq-daily); }
     .freq-weekly { background: var(--color-freq-weekly-bg); color: var(--color-freq-weekly); }
     .freq-monthly { background: var(--color-freq-monthly-bg); color: var(--color-freq-monthly); }
+    .freq-onetime { background: var(--color-stat-purple-bg); color: var(--color-stat-purple); }
 
     /* Action Buttons */
     .action-group { display: flex; gap: 2px; }
@@ -419,6 +528,26 @@ import { PullToRefreshDirective } from '../../../shared/pull-to-refresh.directiv
     .overdue-highlight { color: var(--color-danger); font-weight: var(--weight-semibold); }
     .overdue-badge { font-size: 0.65rem; font-weight: var(--weight-bold); padding: 2px 8px; border-radius: var(--radius-full); background: var(--color-danger-bg); color: var(--color-danger); }
 
+    /* Budget Section */
+    .budget-section { margin-top: var(--spacing-lg); }
+    .budget-section-header {
+      display: flex; align-items: center; gap: 8px;
+      font-size: var(--text-base); font-weight: var(--weight-semibold);
+      color: var(--color-text); margin-bottom: var(--spacing-sm);
+      padding-bottom: 8px; border-bottom: 2px solid var(--color-stat-purple);
+    }
+    .budget-section-header mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-stat-purple); }
+    .budget-count {
+      font-size: var(--text-xs); font-weight: var(--weight-bold);
+      background: var(--color-stat-purple-bg); color: var(--color-stat-purple);
+      padding: 2px 8px; border-radius: var(--radius-full);
+    }
+    .budget-icon-wrap { background: var(--color-stat-purple-bg) !important; }
+    .budget-icon-wrap mat-icon, .budget-icon-wrap .cat-icon { color: var(--color-stat-purple) !important; }
+    .budget-amount { color: var(--color-stat-purple) !important; }
+    .budget-card { border-left-color: var(--color-stat-purple); }
+    .budget-table-card { margin-bottom: var(--spacing-sm); }
+
     /* Empty State */
     .empty-state { text-align: center; padding: 48px 24px; }
     .empty-icon-wrap {
@@ -474,6 +603,7 @@ export class RecurringPageComponent implements OnInit {
   });
 
   billItems = computed(() => this.items().filter(i => i.recurringType !== 'Budget'));
+  budgetItems = computed(() => this.items().filter(i => i.recurringType === 'Budget'));
   overdueItems = computed(() => this.billItems().filter(i => i.isActive && i.nextRunDate.slice(0, 10) < this.todayStr()));
   dueTodayItems = computed(() => this.billItems().filter(i => i.isActive && i.nextRunDate.slice(0, 10) === this.todayStr()));
   dueItems = computed(() => this.billItems().filter(i => i.isActive && i.nextRunDate.slice(0, 10) <= this.todayStr()));

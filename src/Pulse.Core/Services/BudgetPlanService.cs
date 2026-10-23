@@ -168,14 +168,14 @@ public class BudgetPlanService : IBudgetPlanService
         var inMonthCount = inMonthBreakdowns.Count;
         var payPerCheck = profile.NetPayPerCheck;
 
-        var debtActualTotals = new Dictionary<int, decimal>();
+        var debtActualTotals = new Dictionary<(DebtType, int), decimal>();
         foreach (var debt in activeDebts)
         {
             var dueDates = GetDebtDueDatesInMonth(debt, year, month, monthEnd);
             var perPayment = dueDates.Count > 1 && debt.PerPaymentAmount > 0
                 ? debt.PerPaymentAmount
                 : debt.MinimumPayment;
-            debtActualTotals[debt.Id] = perPayment * dueDates.Count;
+            debtActualTotals[(debt.DebtType, debt.Id)] = perPayment * dueDates.Count;
         }
 
         var totalFixed = fixedExpenses.Sum(e => e.Amount);
@@ -206,7 +206,7 @@ public class BudgetPlanService : IBudgetPlanService
             {
                 CategoryId = 0,
                 CategoryName = debt.Name,
-                Amount = debtActualTotals.GetValueOrDefault(debt.Id, debt.MinimumPayment),
+                Amount = debtActualTotals.GetValueOrDefault((debt.DebtType, debt.Id), debt.MinimumPayment),
                 IsFixed = true,
                 Icon = isLoan ? "account_balance" : "credit_score",
                 IsDebt = true,

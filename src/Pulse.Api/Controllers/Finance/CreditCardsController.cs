@@ -47,6 +47,9 @@ public class CreditCardsController : ControllerBase
             }
         }
 
+        var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
+        var today = TimeZoneHelper.UserToday(tz);
+
         var result = cards.Select(c => new
         {
             c.Id, c.CardName, c.CurrentBalance, c.CreditLimit, c.AprPercent,
@@ -55,7 +58,8 @@ public class CreditCardsController : ControllerBase
             c.CreatedAt, c.UpdatedAt,
             Utilization = FinanceCalculationHelper.ComputeUtilization(c.CurrentBalance, c.CreditLimit),
             summaries[c.Id].RemainingMinimumPayment,
-            summaries[c.Id].PostStatementPayments
+            summaries[c.Id].PostStatementPayments,
+            NextDueDate = ComputeNextDueDate(c.DueDay, today)
         });
         return Ok(result);
     }
@@ -379,6 +383,16 @@ public class CreditCardsController : ControllerBase
         }
 
         if (matched) await _db.SaveChangesAsync();
+    }
+
+    private static string? ComputeNextDueDate(int dueDay, DateTime today)
+    {
+        if (dueDay <= 0) return null;
+        var daysInMonth = DateTime.DaysInMonth(today.Year, today.Month);
+        var day = Math.Min(dueDay, daysInMonth);
+        var thisMonth = new DateTime(today.Year, today.Month, day);
+        var next = thisMonth > today ? thisMonth : thisMonth.AddMonths(1);
+        return next.ToString("yyyy-MM-dd");
     }
 
     [HttpGet("summary")]

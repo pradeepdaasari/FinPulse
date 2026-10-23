@@ -86,7 +86,7 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
               <th>Utilization</th>
               <th>APR</th>
               <th>Min Payment</th>
-              <th>Due Day</th>
+              <th>Next Due</th>
               <th>Promo Ends</th>
               <th>Actions</th>
             </tr>
@@ -130,7 +130,7 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
                   }
                 </td>
                 <td>
-                  <span class="due-badge">{{ card.dueDay }}</span>
+                  <span class="due-badge">{{ card.nextDueDate | localDate:'MMM d' }}</span>
                 </td>
                 <td>
                   @if (isPromoActive(card)) {
@@ -172,7 +172,7 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
               </div>
               <div class="cc-info">
                 <span class="cc-name">{{ card.cardName }}</span>
-                <span class="cc-meta">Due day {{ card.dueDay }}
+                <span class="cc-meta">Due {{ card.nextDueDate | localDate:'MMM d, y' }}
                   @if (isPromoActive(card)) {
                     · <span class="cc-promo">PROMO</span>
                   }
@@ -304,7 +304,7 @@ import { inferInstitutionIcon } from '../../../core/utils/institution-icon';
     .promo-date { color: var(--color-success); font-weight: var(--weight-medium); font-size: var(--text-sm); }
     .due-badge {
       display: inline-flex; align-items: center; justify-content: center;
-      width: 28px; height: 28px; border-radius: 8px;
+      padding: 4px 10px; border-radius: 8px; white-space: nowrap;
       background: var(--color-stat-blue-bg); font-weight: var(--weight-bold); font-size: var(--text-sm);
       color: var(--color-primary);
     }
