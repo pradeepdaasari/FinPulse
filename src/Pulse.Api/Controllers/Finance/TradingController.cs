@@ -155,9 +155,8 @@ public class TradingController : ControllerBase
     {
         if (!DateTime.TryParse(date, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)) return BadRequest();
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        var dayStart = TimeZoneHelper.ToUtc(d.Date, tz);
         var dayEnd = TimeZoneHelper.ToUtc(d.Date.AddDays(1), tz);
-        var note = await _db.PreMarketNotes.FirstOrDefaultAsync(n => n.UserId == UserId && n.Date >= dayStart && n.Date < dayEnd);
+        var note = await _db.PreMarketNotes.FirstOrDefaultAsync(n => n.UserId == UserId && n.Date >= d.Date && n.Date < dayEnd);
         if (note == null) return NotFound();
         return Ok(note);
     }
@@ -167,9 +166,8 @@ public class TradingController : ControllerBase
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
         var today = TimeZoneHelper.UserToday(tz);
-        var dayStart = TimeZoneHelper.ToUtc(today, tz);
         var dayEnd = TimeZoneHelper.ToUtc(today.AddDays(1), tz);
-        var note = await _db.PreMarketNotes.FirstOrDefaultAsync(n => n.UserId == UserId && n.Date >= dayStart && n.Date < dayEnd);
+        var note = await _db.PreMarketNotes.FirstOrDefaultAsync(n => n.UserId == UserId && n.Date >= today && n.Date < dayEnd);
         if (note == null) return NotFound();
         return Ok(note);
     }
@@ -180,7 +178,7 @@ public class TradingController : ControllerBase
         note.Id = 0;
         note.UserId = UserId;
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        note.Date = note.Date;
+        note.Date = TimeZoneHelper.ToUtc(note.Date.Date, tz);
         note.KeyLevels = note.KeyLevels?.Trim();
         note.Catalysts = note.Catalysts?.Trim();
         note.Plan = note.Plan?.Trim();
@@ -196,7 +194,7 @@ public class TradingController : ControllerBase
         if (note == null) return NotFound();
 
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        note.Date = input.Date;
+        note.Date = TimeZoneHelper.ToUtc(input.Date.Date, tz);
         note.MarketBias = input.MarketBias;
         note.KeyLevels = input.KeyLevels;
         note.Catalysts = input.Catalysts;
@@ -259,7 +257,7 @@ public class TradingController : ControllerBase
             query = query.Where(t => t.Date < toUtc);
         }
 
-        var trades = await query.OrderByDescending(t => t.Date).ThenByDescending(t => t.CreatedAt)
+        var rawTrades = await query.OrderByDescending(t => t.Date).ThenByDescending(t => t.CreatedAt)
             .Select(t => new
             {
                 t.Id, t.Date, t.SetupId,
@@ -280,6 +278,19 @@ public class TradingController : ControllerBase
                 NotesCount = t.TradeNotes.Count
             })
             .ToListAsync();
+
+        var trades = rawTrades.Select(t => new
+        {
+            t.Id, t.Date, t.SetupId, t.SetupName, t.Instrument, t.Direction,
+            t.EntryPrice, t.ExitPrice, t.Quantity, t.Pnl, t.ChecklistCompleted, t.ChecklistResponses,
+            t.EntryTime, t.ExitTime, t.Notes, t.Tags, t.IsRevengeTrading, t.EmotionAtEntry, t.CreatedAt,
+            t.AssetType, t.OptionType, t.SpreadType,
+            t.StrikePrice, t.StrikePrice2, t.StrikePrice3, t.StrikePrice4,
+            t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.Multiplier, t.BankAccountId,
+            t.CommissionFees, t.RegExchangeFees, t.TotalFees, t.NetPnl, t.PlannedRisk, t.MistakeTags,
+            t.Status, t.ClosedDate, t.NotesCount,
+            Duration = TradeDurationHelper.ComputeTradeDuration(t.EntryTime, t.ExitTime, t.Status)
+        }).ToList();
 
         if (!includeStats)
             return Ok(trades);
@@ -442,17 +453,20 @@ public class TradingController : ControllerBase
     public async Task<ActionResult> GetDisciplineStatus([FromQuery] DateTime? date = null)
     {
         var tz = await TimeZoneHelper.GetUserTimeZone(_db, UserId);
-        var targetDate = date.HasValue ? date.Value.Date : TimeZoneHelper.UserToday(tz);
-        var dayStart = TimeZoneHelper.ToUtc(targetDate, tz);
+        var targetDate = date.HasValue
+            ? (date.Value.Kind == DateTimeKind.Utc ? TimeZoneHelper.ToLocalDate(date.Value, tz) : date.Value.Date)
+            : TimeZoneHelper.UserToday(tz);
         var dayEnd = TimeZoneHelper.ToUtc(targetDate.AddDays(1), tz);
 
+        var wideStart = targetDate.Date;
         var premarket = await _db.PreMarketNotes
-            .FirstOrDefaultAsync(n => n.UserId == UserId && n.Date >= dayStart && n.Date < dayEnd);
+            .FirstOrDefaultAsync(n => n.UserId == UserId && n.Date >= wideStart && n.Date < dayEnd);
         var limits = await _db.DailyLimits.FirstOrDefaultAsync(l => l.UserId == UserId);
 
         var maxTrades = premarket?.MaxTrades ?? limits?.MaxTradesPerDay ?? 5;
         var maxLoss = premarket?.MaxLoss ?? limits?.MaxDailyLoss ?? 500;
 
+        var dayStart = TimeZoneHelper.ToUtc(targetDate, tz);
         var todayTrades = await _db.TradeEntries
             .Where(t => t.UserId == UserId && t.Date >= dayStart && t.Date < dayEnd)
             .ToListAsync();
@@ -1134,6 +1148,22 @@ public class TradingController : ControllerBase
             })
             .ToListAsync();
 
+        var tradesWithDuration = trades.Select(t => new
+        {
+            t.Id, t.Date, t.SetupId, t.SetupName, t.Instrument, t.Direction,
+            t.EntryPrice, t.ExitPrice, t.Quantity, t.Pnl, t.ChecklistCompleted,
+            t.ChecklistResponses, t.EntryTime, t.ExitTime, t.Notes, t.Tags,
+            t.IsRevengeTrading, t.EmotionAtEntry, t.CreatedAt,
+            t.AssetType, t.OptionType, t.SpreadType,
+            t.StrikePrice, t.StrikePrice2, t.StrikePrice3, t.StrikePrice4,
+            t.ExpirationDate, t.EntryPremium, t.ExitPremium, t.ExpiredWorthless, t.Multiplier,
+            t.BankAccountId, t.CommissionFees, t.RegExchangeFees, t.TotalFees, t.NetPnl,
+            t.PlannedRisk, t.StopLoss, t.ProfitTarget,
+            t.TradeThesis, t.ExitReason, t.ExitEmotion, t.LessonsLearned, t.MistakeTags,
+            t.Status, t.ClosedDate, t.IsCarryOver, t.TradeNotes,
+            Duration = TradeDurationHelper.ComputeTradeDuration(t.EntryTime, t.ExitTime, t.Status)
+        }).ToList();
+
         var review = await _db.DailyReviews
             .Where(r => r.UserId == UserId && r.Date >= dayStart && r.Date < dayEnd)
             .FirstOrDefaultAsync();
@@ -1142,7 +1172,7 @@ public class TradingController : ControllerBase
             .Where(l => l.UserId == UserId)
             .FirstOrDefaultAsync();
 
-        var closedTrades = trades.Where(t => t.Status == "Closed").ToList();
+        var closedTrades = tradesWithDuration.Where(t => t.Status == "Closed").ToList();
 
         // --- Discipline Status (reuse logic) ---
         var maxTrades = premarket?.MaxTrades ?? limits?.MaxTradesPerDay ?? 5;
@@ -1243,7 +1273,7 @@ public class TradingController : ControllerBase
         if (!isToday)
         {
             activePhase = "review";
-            allPhasesComplete = premarket != null || review != null || trades.Count > 0;
+            allPhasesComplete = premarket != null || review != null || tradesWithDuration.Count > 0;
         }
         else if (premarket == null)
             activePhase = "morning";
@@ -1263,19 +1293,19 @@ public class TradingController : ControllerBase
             {
                 Date = today.ToString("yyyy-MM-dd"),
                 Premarket = premarket,
-                Trades = trades,
+                Trades = tradesWithDuration,
                 Review = review,
                 Limits = limits,
                 Stats = new
                 {
-                    TotalTrades = trades.Count,
-                    OpenTrades = trades.Count(t => t.Status == "Open"),
+                    TotalTrades = tradesWithDuration.Count,
+                    OpenTrades = tradesWithDuration.Count(t => t.Status == "Open"),
                     ClosedTrades = closedTrades.Count,
                     TotalPnl = closedTrades.Sum(t => t.Pnl ?? 0),
                     TotalNetPnl = closedTrades.Sum(t => t.NetPnl ?? t.Pnl ?? 0),
                     TotalFees = closedTrades.Sum(t => t.TotalFees ?? 0),
                     WinRate = closedTrades.Count > 0 ? Math.Round((double)closedTrades.Count(t => (t.Pnl ?? 0) > 0) / closedTrades.Count * 100, 1) : 0,
-                    ComplianceRate = trades.Count > 0 ? Math.Round((double)trades.Count(t => t.ChecklistCompleted) / trades.Count * 100) : 0
+                    ComplianceRate = tradesWithDuration.Count > 0 ? Math.Round((double)tradesWithDuration.Count(t => t.ChecklistCompleted) / tradesWithDuration.Count * 100) : 0
                 }
             },
             DisciplineStatus = new
@@ -2540,6 +2570,29 @@ public class ChecklistResponseDto
     public int ChecklistItemId { get; set; }
     public string Label { get; set; } = string.Empty;
     public bool Checked { get; set; }
+}
+
+public static class TradeDurationHelper
+{
+    public static string? ComputeTradeDuration(string? entryTime, string? exitTime, string status)
+    {
+        if (string.IsNullOrEmpty(entryTime) || string.IsNullOrEmpty(exitTime) || status != "Closed")
+            return null;
+
+        var entryParts = entryTime.Split(':');
+        var exitParts = exitTime.Split(':');
+        if (entryParts.Length < 2 || exitParts.Length < 2) return null;
+        if (!int.TryParse(entryParts[0], out var eh) || !int.TryParse(entryParts[1], out var em)) return null;
+        if (!int.TryParse(exitParts[0], out var xh) || !int.TryParse(exitParts[1], out var xm)) return null;
+
+        var mins = (xh * 60 + xm) - (eh * 60 + em);
+        if (mins < 0) mins += 24 * 60;
+
+        if (mins < 60) return $"{mins}m";
+        var h = mins / 60;
+        var m = mins % 60;
+        return m > 0 ? $"{h}h {m}m" : $"{h}h";
+    }
 }
 
 public class ReorderDto

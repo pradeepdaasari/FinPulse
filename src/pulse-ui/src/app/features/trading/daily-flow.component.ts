@@ -140,6 +140,7 @@ import { FlowReviewComponent } from './flow-review.component';
               [limits]="data.dayView.limits"
               [setups]="data.setups"
               [isToday]="data.isToday"
+              [targetDate]="data.targetDate"
               (noteAdded)="loadData(false)"
               (tradeAdded)="loadData(false)">
             </app-flow-session>
@@ -351,6 +352,7 @@ export class DailyFlowComponent implements OnInit {
   isFutureOrToday = computed(() => {
     const data = this.flowData();
     if (!data) return true;
+    if (data.isToday) return true;
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     return data.targetDate >= todayStr;
@@ -369,15 +371,16 @@ export class DailyFlowComponent implements OnInit {
   dateLabel = computed(() => {
     const data = this.flowData();
     if (!data) return '';
-    if (data.isToday) return 'Today';
     const d = new Date(data.targetDate + 'T12:00:00');
+    const opts: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' };
+    const formatted = d.toLocaleDateString('en-US', opts);
+    if (data.isToday) return `Today • ${formatted}`;
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
-    if (data.targetDate === tomorrowStr) return 'Tomorrow';
-    const opts: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' };
-    return d.toLocaleDateString('en-US', opts);
+    if (data.targetDate === tomorrowStr) return `Tomorrow • ${formatted}`;
+    return formatted;
   });
 
   phases = [
@@ -413,7 +416,8 @@ export class DailyFlowComponent implements OnInit {
     const d = new Date(current + 'T12:00:00');
     d.setDate(d.getDate() - 1);
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    this.router.navigate(['/trading/flow', dateStr]);
+    this.selectedDate.set(dateStr);
+    this.loadData();
   }
 
   nextDay(): void {
@@ -421,18 +425,14 @@ export class DailyFlowComponent implements OnInit {
     const current = this.flowData()?.targetDate || new Date().toISOString().split('T')[0];
     const d = new Date(current + 'T12:00:00');
     d.setDate(d.getDate() + 1);
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    if (dateStr === todayStr) {
-      this.router.navigate(['/trading/flow']);
-    } else {
-      this.router.navigate(['/trading/flow', dateStr]);
-    }
+    this.selectedDate.set(dateStr);
+    this.loadData();
   }
 
   goToday(): void {
-    this.router.navigate(['/trading/flow']);
+    this.selectedDate.set(undefined);
+    this.loadData();
   }
 
   phaseStatus(key: string): 'done' | 'active' | 'upcoming' {

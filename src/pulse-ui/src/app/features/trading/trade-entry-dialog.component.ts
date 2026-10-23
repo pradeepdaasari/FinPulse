@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DecimalPipe, DatePipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -26,6 +27,7 @@ export interface TradeEntryDialogData {
   trade: TradeEntry | null;
   setups: TradingSetupSummary[];
   closeMode?: boolean;
+  targetDate?: string;
   checklistPrefill?: {
     setupId: number;
     checklistCompleted: boolean;
@@ -113,7 +115,7 @@ export interface TradeEntryDialogData {
             <div class="discipline-stats">
               <span class="discipline-chip">{{ ds.tradesToday }}/{{ ds.maxTrades }} trades</span>
               @if (!ds.hasPreMarketNote) {
-                <span class="discipline-chip chip-warn">No pre-market plan</span>
+                <span class="discipline-chip chip-warn chip-link" (click)="goToPremarket()">No pre-market plan <mat-icon class="chip-link-icon">arrow_forward</mat-icon></span>
               }
             </div>
             @if (ds.recentLoss) {
@@ -123,7 +125,13 @@ export interface TradeEntryDialogData {
               </div>
             }
             @if (ds.trafficLight === 'red' && ds.violations.length > 0) {
-              <div class="discipline-block-msg">{{ ds.violations[0] }}</div>
+              <div class="discipline-block-msg">
+                @if (!ds.hasPreMarketNote) {
+                  <span class="block-msg-link" (click)="goToPremarket()">Complete your pre-market plan to start trading <mat-icon>arrow_forward</mat-icon></span>
+                } @else {
+                  {{ ds.violations[0] }}
+                }
+              </div>
             }
           </div>
         }
@@ -934,6 +942,9 @@ export interface TradeEntryDialogData {
       color: var(--color-text-secondary);
     }
     .discipline-chip.chip-warn { color: var(--color-danger); background: color-mix(in srgb, var(--color-danger) 8%, white); }
+    .discipline-chip.chip-link { cursor: pointer; display: inline-flex; align-items: center; gap: 2px; }
+    .discipline-chip.chip-link:hover { background: color-mix(in srgb, var(--color-danger) 15%, white); }
+    .chip-link-icon { font-size: 14px !important; width: 14px !important; height: 14px !important; }
     .cooldown-warning {
       display: flex; align-items: center; gap: 6px; margin-top: 8px;
       padding: 6px 10px; border-radius: var(--radius-sm);
@@ -942,6 +953,9 @@ export interface TradeEntryDialogData {
     }
     .cooldown-warning mat-icon { font-size: 16px; width: 16px; height: 16px; }
     .discipline-block-msg { margin-top: 8px; font-size: 0.75rem; color: var(--color-danger); font-weight: 500; }
+    .block-msg-link { cursor: pointer; display: inline-flex; align-items: center; gap: 4px; text-decoration: underline; text-underline-offset: 2px; }
+    .block-msg-link:hover { opacity: 0.8; }
+    .block-msg-link mat-icon { font-size: 14px !important; width: 14px !important; height: 14px !important; }
     .reflection-section {
       border: 1px solid color-mix(in srgb, var(--color-success) 30%, var(--color-border));
       border-radius: var(--radius-md); padding: 14px 12px 8px; margin: 6px 0 10px;
@@ -1016,6 +1030,7 @@ export class TradeEntryDialogComponent implements OnInit {
   private tradingService = inject(TradingService);
   private accountService = inject(BankAccountService);
   private dialogRef = inject(MatDialogRef<TradeEntryDialogComponent>);
+  private router = inject(Router);
   private notify = inject(NotificationService);
   data: TradeEntryDialogData = inject(MAT_DIALOG_DATA);
   private cdr = inject(ChangeDetectorRef);
@@ -1068,7 +1083,7 @@ export class TradeEntryDialogComponent implements OnInit {
   }
 
   form = this.fb.group({
-    date: [this.data?.trade?.date ? new Date(this.data.trade.date) : new Date(), Validators.required],
+    date: [this.data?.trade?.date ? new Date(this.data.trade.date) : this.data?.targetDate ? new Date(this.data.targetDate + 'T12:00:00') : new Date(), Validators.required],
     time: [this.data?.trade?.entryTime || this.getTimeStr(), Validators.required],
     setupId: [this.data?.checklistPrefill?.setupId ?? this.data?.trade?.setupId ?? null, Validators.required],
     instrument: [this.data?.trade?.instrument ?? 'SPX', Validators.required],
@@ -1115,7 +1130,7 @@ export class TradeEntryDialogComponent implements OnInit {
     }
     if (!this.data?.trade) {
       this.fetchDisciplineStatus();
-      this.form.get('date')!.valueChanges.subscribe(() => this.fetchDisciplineStatus());
+      this.form.get('date')!.valueChanges.subscribe(d => this.fetchDisciplineStatus(d));
       this.form.get('tradeThesis')!.setValidators([Validators.required, Validators.maxLength(500)]);
       this.form.get('tradeThesis')!.updateValueAndValidity();
       this.form.get('stopLoss')!.setValidators([Validators.required, Validators.min(0.01)]);
@@ -1185,9 +1200,16 @@ export class TradeEntryDialogComponent implements OnInit {
     this.checkStates.set(states);
   }
 
-  private fetchDisciplineStatus(): void {
-    const d = this.form.value.date;
-    const dateParam = d instanceof Date ? d.toISOString() : undefined;
+  goToPremarket(): void {
+    this.dialogRef.close();
+    this.router.navigate(['/trading/flow']);
+  }
+
+  private fetchDisciplineStatus(dateOverride?: Date | null): void {
+    const d = dateOverride ?? this.form.value.date;
+    const dateParam = d instanceof Date
+      ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      : undefined;
     this.tradingService.getDisciplineStatus(dateParam).subscribe({
       next: ds => { this.disciplineStatus.set(ds); this.cdr.detectChanges(); },
       error: () => {}

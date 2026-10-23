@@ -61,10 +61,7 @@ interface TradeGroup {
     <div class="date-nav">
       <button mat-icon-button (click)="prevDay()"><mat-icon>chevron_left</mat-icon></button>
       <div class="date-display">
-        <span class="date-label">{{ displayDate() }}</span>
-        @if (isToday()) {
-          <span class="today-badge">TODAY</span>
-        }
+        <span class="date-label">{{ todayDisplayDate() }}</span>
       </div>
       <button mat-icon-button (click)="nextDay()" [disabled]="isToday()"><mat-icon>chevron_right</mat-icon></button>
       @if (!isToday()) {
@@ -403,14 +400,8 @@ interface TradeGroup {
       background: var(--color-surface-solid); border-radius: var(--radius-md);
       padding: 8px 12px; border: 1px solid var(--color-border);
     }
-    .date-display { flex: 1; text-align: center; }
+    .date-display { flex: 1; text-align: center; display: flex; flex-direction: column; align-items: center; }
     .date-label { font-weight: var(--weight-bold); font-size: var(--text-base); }
-    .today-badge {
-      display: inline-block; padding: 2px 8px; border-radius: var(--radius-full);
-      font-size: 0.6rem; font-weight: var(--weight-bold); text-transform: uppercase;
-      letter-spacing: 0.04em; background: var(--color-primary); color: #fff;
-      margin-left: 8px; vertical-align: middle;
-    }
     .today-btn { font-size: var(--text-xs) !important; border-radius: var(--radius-full) !important; }
 
     /* Stats Strip */
@@ -724,6 +715,14 @@ export class DayViewComponent implements OnInit {
     return this.currentDate() === toLocalDateString(new Date());
   });
 
+  todayDisplayDate = computed(() => {
+    const d = this.currentDate();
+    if (!d) return '';
+    const date = new Date(d + 'T12:00:00');
+    const formatted = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    return this.isToday() ? `Today • ${formatted}` : this.displayDate();
+  });
+
   hasOpenTrades = computed(() => {
     return (this.dayData()?.stats.openTrades ?? 0) > 0;
   });
@@ -870,6 +869,7 @@ export class DayViewComponent implements OnInit {
     this.route.params.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
       const date = params['date'];
       if (date) {
+        this.router.navigate(['/trading/flow'], { replaceUrl: true });
         this.currentDate.set(date);
         this.loadDay(date);
       } else {
@@ -898,17 +898,22 @@ export class DayViewComponent implements OnInit {
   prevDay(): void {
     const d = new Date(this.currentDate() + 'T12:00:00');
     d.setDate(d.getDate() - 1);
-    this.router.navigate(['/trading/day', toLocalDateString(d)]);
+    const date = toLocalDateString(d);
+    this.currentDate.set(date);
+    this.loadDay(date);
   }
 
   nextDay(): void {
     const d = new Date(this.currentDate() + 'T12:00:00');
     d.setDate(d.getDate() + 1);
-    this.router.navigate(['/trading/day', toLocalDateString(d)]);
+    const date = toLocalDateString(d);
+    this.currentDate.set(date);
+    this.loadDay(date);
   }
 
   goToToday(): void {
-    this.router.navigate(['/trading/day']);
+    this.currentDate.set(toLocalDateString(new Date()));
+    this.loadToday();
   }
 
   goToPremarket(): void {

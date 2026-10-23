@@ -1,6 +1,7 @@
 import { Component, signal, input, output, computed, effect, inject } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { TradeNoteDialogComponent } from './trade-note-dialog.component';
@@ -12,7 +13,7 @@ import { TradingSetupSummary } from '../../core/models/trading.model';
 @Component({
   selector: 'app-flow-session',
   standalone: true,
-  imports: [CommonModule, CurrencyPipe, DatePipe, MatIconModule, MatButtonModule],
+  imports: [CommonModule, CurrencyPipe, DatePipe, MatIconModule, MatButtonModule, MatTooltipModule],
   template: `
     <!-- Discipline Traffic Light -->
     @if (disciplineStatus(); as ds) {
@@ -98,10 +99,14 @@ import { TradingSetupSummary } from '../../core/models/trading.model';
 
     <!-- Trade Timeline -->
     @for (g of tradeGroups(); track g.trade.id; let idx = $index) {
-      <div class="fs-trade-group" [class.fs-group-carry]="g.isCarryOver"
+      <div class="fs-trade-group fs-trade-clickable" [class.fs-group-carry]="g.isCarryOver"
            [class.fs-group-open]="g.trade.status === 'Open'"
-           [class.fs-group-closed]="g.trade.status !== 'Open' && !g.isCarryOver">
-        <div class="fs-trade-number">Trade #{{ idx + 1 }}</div>
+           [class.fs-group-closed]="g.trade.status !== 'Open' && !g.isCarryOver"
+           (click)="editTrade(g.trade)">
+        <div class="fs-trade-top-row">
+          <div class="fs-trade-number">Trade #{{ idx + 1 }}</div>
+          <span class="fs-edit-label"><mat-icon>edit</mat-icon> Edit</span>
+        </div>
         <div class="fs-trade-header">
           <span class="fs-trade-badge" [class.fs-badge-open]="g.trade.status === 'Open'"
                 [class.fs-badge-carry]="g.isCarryOver">
@@ -158,7 +163,7 @@ import { TradingSetupSummary } from '../../core/models/trading.model';
 
         <!-- Checklist -->
         @if (g.trade.checklistResponses?.length > 0) {
-          <div class="fs-checklist" (click)="toggleChecklist(g.trade.id)">
+          <div class="fs-checklist" (click)="toggleChecklist(g.trade.id); $event.stopPropagation()">
             <div class="fs-checklist-header">
               <mat-icon class="fs-checklist-icon" [class.fs-checklist-pass]="g.trade.checklistCompleted">
                 {{ g.trade.checklistCompleted ? 'verified' : 'warning' }}
@@ -203,12 +208,12 @@ import { TradingSetupSummary } from '../../core/models/trading.model';
         }
 
         <!-- Actions for open trades -->
-        @if (g.trade.status === 'Open' && isToday()) {
+        @if (g.trade.status === 'Open') {
           <div class="fs-open-actions">
-            <button class="fs-add-note-btn" (click)="addNote(g.trade)">
+            <button class="fs-add-note-btn" (click)="addNote(g.trade); $event.stopPropagation()">
               <mat-icon>add_comment</mat-icon> Add Note
             </button>
-            <button class="fs-close-trade-btn" (click)="closeTrade(g.trade)">
+            <button class="fs-close-trade-btn" (click)="closeTrade(g.trade); $event.stopPropagation()">
               <mat-icon>lock</mat-icon> Close Trade
             </button>
           </div>
@@ -218,6 +223,7 @@ import { TradingSetupSummary } from '../../core/models/trading.model';
         @if (g.trade.status === 'Closed') {
           <div class="fs-close-section">
             @if (g.trade.exitTime) { <span class="fs-time">Closed {{ g.trade.exitTime }}</span> }
+            @if (g.trade.duration) { <span class="fs-duration-badge">{{ g.trade.duration }}</span> }
             <div class="fs-trade-pnl" [class.fs-pnl-win]="(g.trade.netPnl ?? g.trade.pnl ?? 0) > 0" [class.fs-pnl-loss]="(g.trade.netPnl ?? g.trade.pnl ?? 0) < 0">
               {{ (g.trade.netPnl ?? g.trade.pnl ?? 0) | currency:'USD':'symbol':'1.2-2' }}
               @if (g.trade.totalFees) {
@@ -236,7 +242,7 @@ import { TradingSetupSummary } from '../../core/models/trading.model';
     }
 
     <!-- Actions -->
-    @if (premarket() && isToday()) {
+    @if (premarket()) {
       @if (mentalGateOpen()) {
         <div class="fs-mental-gate">
           <div class="fs-gate-label">How are you feeling right now?</div>
@@ -371,6 +377,18 @@ import { TradingSetupSummary } from '../../core/models/trading.model';
       font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
       color: var(--color-text-muted); letter-spacing: 0.5px; margin-bottom: 6px;
     }
+    .fs-trade-top-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .fs-trade-top-row .fs-trade-number { margin-bottom: 0; }
+    .fs-edit-label {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted);
+      opacity: 0; transition: opacity var(--transition-fast), color var(--transition-fast);
+    }
+    .fs-edit-label mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .fs-trade-clickable { cursor: pointer; transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
+    .fs-trade-clickable:hover { border-color: var(--color-primary); box-shadow: var(--shadow-sm); }
+    .fs-trade-clickable:hover .fs-edit-label { opacity: 1; color: var(--color-primary); }
+    @media (hover: none) { .fs-edit-label { opacity: 0.6; } }
     .fs-trade-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .fs-trade-badge {
       font-size: 0.65rem; font-weight: 700; padding: 2px 8px;
@@ -503,6 +521,11 @@ import { TradingSetupSummary } from '../../core/models/trading.model';
       margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
     }
     .fs-close-section > .fs-time { font-size: 0.78rem; }
+    .fs-duration-badge {
+      font-size: 0.72rem; font-weight: 600; padding: 2px 8px;
+      border-radius: var(--radius-full); background: var(--color-surface-secondary);
+      color: var(--color-text-secondary); font-variant-numeric: tabular-nums;
+    }
     .fs-fees { font-size: 0.78rem; font-weight: 400; color: var(--color-text-muted); }
 
     .fs-trade-pnl {
@@ -631,6 +654,7 @@ export class FlowSessionComponent {
   limits = input<any | null>(null);
   setups = input<TradingSetupSummary[]>([]);
   isToday = input<boolean>(true);
+  targetDate = input<string>('');
   noteAdded = output<void>();
   tradeAdded = output<void>();
 
@@ -694,6 +718,18 @@ export class FlowSessionComponent {
     });
   }
 
+  editTrade(trade: any): void {
+    const ref = this.dialog.open(TradeEntryDialogComponent, {
+      panelClass: 'responsive-dialog-panel',
+      data: { trade, setups: this.setups() } as TradeEntryDialogData,
+      maxWidth: '600px',
+      width: '100%'
+    });
+    ref.afterClosed().subscribe(r => {
+      if (r) this.tradeAdded.emit();
+    });
+  }
+
   closeTrade(trade: any): void {
     const ref = this.dialog.open(TradeEntryDialogComponent, {
       panelClass: 'responsive-dialog-panel',
@@ -724,6 +760,7 @@ export class FlowSessionComponent {
     const dialogData: TradeEntryDialogData = {
       trade: null,
       setups: this.setups(),
+      targetDate: this.targetDate() || undefined,
       checklistPrefill: {
         setupId: 0,
         checklistCompleted: false,

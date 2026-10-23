@@ -197,7 +197,7 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
                           <span class="time-range">
                             @if (t.entryTime) { {{ formatTime12(t.entryTime) }} }
                             @if (t.entryTime && t.exitTime) { → {{ formatTime12(t.exitTime) }} }
-                            @if (t.entryTime && t.exitTime) { <span class="duration-badge">{{ getDuration(t.entryTime, t.exitTime) }}</span> }
+                            @if (t.duration) { <span class="duration-badge">{{ t.duration }}</span> }
                           </span>
                         }
                       </div>
@@ -338,7 +338,7 @@ import { TradeNotesPanelComponent } from './trade-notes-panel.component';
               @if (t.tradeThesis) {
                 <span class="mobile-thesis">{{ t.tradeThesis }}</span>
               }
-              <span class="trade-meta">{{ formatTradeDate(t) }}@if (t.entryTime && t.exitTime) { · {{ formatTime12(t.entryTime) }}→{{ formatTime12(t.exitTime) }} ({{ getDuration(t.entryTime, t.exitTime) }})} · {{ t.quantity }} contracts
+              <span class="trade-meta">{{ formatTradeDate(t) }}@if (t.entryTime && t.exitTime) { · {{ formatTime12(t.entryTime) }}→{{ formatTime12(t.exitTime) }}}@if (t.duration) { ({{ t.duration }})} · {{ t.quantity }} contracts
                 @if (t.expirationDate) { · exp {{ t.expirationDate | localDate:'M/d' }} }
                 @if (t.strikePrice) {
                   @if (t.spreadType === 'Vertical' && t.strikePrice2) {
@@ -940,14 +940,4 @@ export class JournalComponent implements OnInit {
     return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
   }
 
-  getDuration(entry: string, exit: string): string {
-    const [eh, em] = entry.split(':').map(Number);
-    const [xh, xm] = exit.split(':').map(Number);
-    let mins = (xh * 60 + xm) - (eh * 60 + em);
-    if (mins < 0) mins += 24 * 60;
-    if (mins < 60) return `${mins}m`;
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return m > 0 ? `${h}h ${m}m` : `${h}h`;
-  }
 }

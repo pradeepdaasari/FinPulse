@@ -22,10 +22,10 @@ import { toLocalDateString } from '../../core/utils/date-utils';
     RichTextEditorComponent
   ],
   template: `
-    @if (!editing() && !premarket() && !isToday()) {
-      <div class="fp-empty-past">
-        <mat-icon>event_busy</mat-icon>
-        <span>No morning prep was recorded this day</span>
+    @if (!editing() && !premarket()) {
+      <div class="fp-empty-past" (click)="editing.set(true)" style="cursor: pointer;">
+        <mat-icon>add_circle_outline</mat-icon>
+        <span>Add morning prep for this day</span>
       </div>
     } @else if (!editing()) {
       <!-- Collapsed summary card -->
@@ -34,7 +34,7 @@ import { toLocalDateString } from '../../core/utils/date-utils';
           <span class="fp-mental-dot" [class]="'dot-' + premarket()?.mentalState"></span>
           <span class="fp-bias-badge" [class]="'bias-' + premarket()?.marketBias">{{ premarket()?.marketBias }}</span>
           <span class="fp-limits">{{ premarket()?.maxTrades }} trades / {{ premarket()?.maxLoss | currency:'USD':'symbol':'1.0-0' }} max</span>
-          @if (isToday()) { <button mat-icon-button class="fp-edit-btn" (click)="editing.set(true)"><mat-icon>edit</mat-icon></button> }
+          <button mat-icon-button class="fp-edit-btn" (click)="editing.set(true)"><mat-icon>edit</mat-icon></button>
         </div>
         @if (premarket()?.plan) {
           <div class="fp-plan-snippet" [innerHTML]="premarket()!.plan"></div>
@@ -415,7 +415,7 @@ export class FlowPremarketComponent {
           plan: t?.plan || '',
           emotionalPlan: ''
         });
-        this.editing.set(this.isToday());
+        this.editing.set(true);
       }
       this.cdr.detectChanges();
     });

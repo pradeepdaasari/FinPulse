@@ -20,10 +20,10 @@ import {
     MatIconModule, MatButtonModule, MatFormFieldModule, MatInputModule
   ],
   template: `
-    @if (!review() && !editing() && !isToday()) {
-      <div class="fr-empty-past">
-        <mat-icon>event_busy</mat-icon>
-        <span>No review was recorded this day</span>
+    @if (!review() && !editing()) {
+      <div class="fr-empty-past" (click)="editing.set(true)" style="cursor: pointer;">
+        <mat-icon>add_circle_outline</mat-icon>
+        <span>Add review for this day</span>
       </div>
     } @else if (review() && !editing()) {
       <!-- Collapsed completed state -->
@@ -41,7 +41,7 @@ import {
             <span>Rules</span>
           </div>
           <span class="fr-spacer"></span>
-          @if (isToday()) { <button mat-icon-button (click)="editing.set(true)"><mat-icon>edit</mat-icon></button> }
+          <button mat-icon-button (click)="editing.set(true)"><mat-icon>edit</mat-icon></button>
         </div>
         @if (review()!.lessonsLearned) {
           <div class="fr-completed-lessons" [innerHTML]="review()!.lessonsLearned"></div>
@@ -479,7 +479,7 @@ export class FlowReviewComponent {
         this.selectedCondition.set(r.marketCondition || null);
         this.editing.set(false);
       } else {
-        this.editing.set(this.isToday());
+        this.editing.set(true);
       }
     });
   }

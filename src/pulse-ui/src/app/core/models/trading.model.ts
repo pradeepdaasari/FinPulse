@@ -100,6 +100,7 @@ export interface TradeEntry {
   status?: TradeStatus;
   closedDate?: string;
   notesCount?: number;
+  duration?: string;
 }
 
 export type TradeStatus = 'Open' | 'Closed';
